@@ -155,6 +155,16 @@ const BusinessConfig = z.object({
       /** Pedir un número para confirmar (si el canal no lo trae, como el chat web) y ofrecer dejar el correo. */
       askPhone: z.boolean().default(true),
       askEmail: z.boolean().default(true),
+      /** Recordatorio el día antes, por el canal del cliente; lo que no se puede enviar solo queda en Hoy para hacerlo a mano. */
+      reminder: z
+        .object({
+          enabled: z.boolean().default(true),
+          /** Hora local del día anterior a la que se envía (HH:MM). */
+          at: z.string().regex(/^\d{2}:\d{2}$/).default('17:00'),
+          /** WhatsApp oficial fuera de las 24 h: plantilla aprobada en Meta con {{1}} = nombre y {{2}} = fecha y hora. */
+          metaTemplate: z.object({ name: z.string().min(1), language: z.string().default('es') }).optional(),
+        })
+        .prefault({}),
     })
     .prefault({}),
   /** CRM: campos que el análisis debe capturar además de los básicos. */

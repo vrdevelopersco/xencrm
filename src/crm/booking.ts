@@ -11,6 +11,7 @@ import {
   bookAppointment,
   formatDay,
   getAppointment,
+  setCustomerReply,
   updateAppointment,
   formatSlot,
   isSlotFree,
@@ -29,7 +30,7 @@ import { formatPhone, parsePhone, ruleSignals } from './signals.js';
 const cfg = business.appointments;
 
 export interface BookingState {
-  step: 'nombre' | 'elegir' | 'telefono' | 'confirmar' | 'gestionar' | 'cancelar';
+  step: 'nombre' | 'elegir' | 'telefono' | 'confirmar' | 'gestionar' | 'cancelar' | 'recordatorio';
   /** Cita existente que se está cambiando (al confirmar la nueva, esta se cancela) o gestionando. */
   moving?: number;
   manage?: number;
@@ -63,6 +64,10 @@ const MOVE_APPT_RE =
 // Sin estas pistas, "quiero cambiar la talla" no es mover la cita.
 const APPT_CONTEXT_RE =
   /\b(?:cita|visita|reserva|hora|fecha|d[ií]a|agenda\w*)\b|\b(?:c[aá]mbi|mov|mu[eé]v|p[aá]s|c[oó]rr|cancel|reprogram|reagend|aplaz|pospon|posterg|adelant)\w*(?:la|mela)\b/i;
+// Respuestas al recordatorio: "ahí estaré" confirma; "no puedo", "se me complicó" abre cambiar o cancelar.
+const COMING_RE =
+  /\b(?:ah[ií] (?:estar[eé]|estaremos|nos vemos|voy|llego)|all[aá] (?:estar[eé]|nos vemos|voy|llego)|nos vemos|cuent[ae]n? conmigo|asistir[eé]|s[ií] voy|voy a ir|ya voy|confirmo|confirmad[oa])\b/i;
+const CANT_RE = /\bno (?:puedo|podr[eé]|voy a poder|alcanzo|me queda|creo que (?:pueda|alcance|llegue))\b|\bse me (?:complic|cruz|atraves|present)\w*|\btengo un (?:inconveniente|imprevisto|problema)\b|\bno voy\b/i;
 const KEEP_RE = /\b(?:as[ií] est[aá] bien|as[ií] (?:la )?dejamos|d[eé]jala|mantener|nada|ninguna|mejor no|no,? gracias|todo bien)\b/i;
 const ANOTHER_RE = /\b(?:otra cita|una m[aá]s|adicional|nueva cita|para otra persona)\b/i;
 
@@ -346,6 +351,30 @@ async function step(userId: string, text: string): Promise<string | null> {
     return null;
   }
 
+  if (st.step === 'recordatorio') {
+    const appt = st.manage ? getAppointment(st.manage) : null;
+    if (!appt || appt.status !== 'confirmada') {
+      save(c, null);
+      return null;
+    }
+    const w = parseWhen(text);
+    const same = w ? slotMatches(new Date(appt.startsAt), w) : false;
+    // "Cancélala", "mejor el jueves": lo mismo que con cualquier cita ("sí, el martes" con la cita el martes confirma).
+    if (/\b(?:cancel|anul)/.test(t) || (w && !same) || MOVE_APPT_RE.test(text)) return manageExisting(c, appt.id, text, userId);
+    if (CANT_RE.test(t) || NO_RE.test(t)) {
+      setCustomerReply(appt.id, 'no_puede');
+      save(getContact(userId)!, { step: 'gestionar', offered: [], manage: appt.id });
+      return 'Sin problema. ¿La pasamos para otro día o prefieres cancelarla?';
+    }
+    if (YES_RE.test(t) || COMING_RE.test(t) || same) {
+      setCustomerReply(appt.id, 'confirmó');
+      save(getContact(userId)!, null);
+      return `¡Perfecto! Te esperamos el ${formatSlot(new Date(appt.startsAt))}${cfg.location ? ` en ${cfg.location}` : ''} 🙂`;
+    }
+    save(c, null);
+    return null;
+  }
+
   if (st.step === 'gestionar' || st.step === 'cancelar') {
     const appt = st.manage ? getAppointment(st.manage) : null;
     if (!appt || appt.status !== 'confirmada') {
@@ -452,7 +481,17 @@ const EXPECTED: Record<BookingState['step'], string> = {
   confirmar: 'esperaba un sí o un no para confirmar',
   gestionar: 'esperaba si cambia, cancela o deja la cita',
   cancelar: 'esperaba que confirmara la cancelación',
+  recordatorio: 'esperaba que confirmara si viene a la cita',
 };
+
+/**
+ * Después de enviar el recordatorio, la respuesta del cliente ("sí, ahí estaré", "no puedo") se lee como respuesta a
+ * él. No pisa un flujo de cita que ya esté en curso.
+ */
+export function awaitReminderReply(userId: string, appointmentId: number): void {
+  const c = getContact(userId);
+  if (c && !state(c)) save(c, { step: 'recordatorio', offered: [], manage: appointmentId });
+}
 
 /** Qué entiende el flujo de la cita en una respuesta, sin importar el paso: para comprobar lo que se le enseña. */
 export function bookingReading(text: string): string | null {

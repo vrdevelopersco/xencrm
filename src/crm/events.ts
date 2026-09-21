@@ -1,7 +1,7 @@
 // Bus de eventos en memoria: alimenta el tablero (SSE) y el widget (respuestas humanas en vivo).
 import { EventEmitter } from 'node:events';
 
-export type CrmEventType = 'message' | 'contact' | 'analysis' | 'appointment' | 'handoff' | 'notification' | 'bot_failed' | 'engine_down' | 'verification';
+export type CrmEventType = 'message' | 'contact' | 'analysis' | 'appointment' | 'handoff' | 'notification' | 'bot_failed' | 'engine_down' | 'verification' | 'reminder_reply';
 export interface CrmEvent {
   type: CrmEventType;
   userId: string;

@@ -129,7 +129,9 @@ textarea{resize:vertical;min-height:70px}
 .cal{display:grid;grid-template-columns:1fr 340px;gap:16px;padding:16px;flex:1;min-height:0;overflow:auto}
 .day{margin-bottom:14px}.day h3{font-size:13px;margin:0 0 6px;color:var(--muted)}
 .appt{background:var(--glass-strong);border:1px solid var(--glass-border);border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:10px;margin-bottom:6px}
-.appt .t{font-weight:600;min-width:70px}.appt .grow{flex:1}
+.appt .t{font-weight:600;min-width:70px}.appt .grow{flex:1;min-width:0}
+.appt .stack{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.appt .rem{display:block;margin-top:3px}.appt .rem .chip{white-space:nowrap}
 .appt.cancelada{color:var(--muted);text-decoration:line-through}
 .panel{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
 /* Análisis */
@@ -377,6 +379,7 @@ input:focus,textarea:focus,select:focus{outline:2px solid color-mix(in srgb,var(
 .verify-learn input{margin-top:2px;width:18px;height:18px;accent-color:var(--brand)}
 .dict-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:13px}
 .dict-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .miss-teach{display:flex;flex-direction:column;gap:6px}
 .miss-teach[hidden],.feed-row .btn[hidden]{display:none}
 .miss-teach input[type=text]{min-height:44px}

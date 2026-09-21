@@ -23,6 +23,10 @@ export interface Appointment {
   notes: string;
   createdAt: number;
   contactName?: string | null;
+  /** Recordatorio del día antes: enviado (por el bot o a mano), a mano (no se pudo enviar solo) o no hacía falta. */
+  reminder: { status: 'enviado' | 'a_mano' | 'no_hace_falta'; at: number | null; note: string | null } | null;
+  /** Lo que respondió al recordatorio. */
+  reply: 'confirmó' | 'no_puede' | null;
 }
 
 // ---------- Zona horaria (sin librerías) ----------
@@ -181,7 +185,30 @@ function rowToAppointment(r: Record<string, unknown>): Appointment {
     notes: (r.notes as string) ?? '',
     createdAt: Number(r.created_at),
     contactName: (r.contact_name as string | null) ?? null,
+    reminder: r.reminder_status
+      ? { status: r.reminder_status as NonNullable<Appointment['reminder']>['status'], at: r.reminder_at == null ? null : Number(r.reminder_at), note: (r.reminder_note as string | null) ?? null }
+      : null,
+    reply: (r.customer_reply as Appointment['reply']) ?? null,
   };
+}
+
+/** Marca el recordatorio de una cita. */
+export function setReminder(id: number, status: NonNullable<Appointment['reminder']>['status'], note: string | null = null): Appointment | null {
+  getDb().prepare('UPDATE appointments SET reminder_status = ?, reminder_at = ?, reminder_note = ? WHERE id = ?').run(status, Date.now(), note, id);
+  const appt = getAppointment(id);
+  if (appt) emitEvent('appointment', appt.userId, { appointment: appt, by: 'reminder' });
+  return appt;
+}
+
+/** Guarda lo que respondió el cliente al recordatorio ("confirmó" o "no puede"). */
+export function setCustomerReply(id: number, reply: NonNullable<Appointment['reply']>): Appointment | null {
+  getDb().prepare('UPDATE appointments SET customer_reply = ? WHERE id = ?').run(reply, id);
+  const appt = getAppointment(id);
+  if (appt) {
+    addEvent(appt.userId, 'reminder_reply', { id, reply });
+    emitEvent('reminder_reply', appt.userId, { appointment: appt, reply });
+  }
+  return appt;
 }
 
 export function bookAppointment(userId: string, startsAt: Date, opts: { service?: string; notes?: string; by?: string } = {}): Appointment {

@@ -10,8 +10,9 @@ import { countDocs, getDb } from '../rag/store.js';
 import { getMessages } from '../agent/memory.js';
 import { getContact, listContacts, listEvents, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
-import { availableSlots, bookAppointment, formatSlot, listAppointments, updateAppointment } from '../crm/appointments.js';
+import { availableSlots, bookAppointment, formatSlot, listAppointments, setReminder, updateAppointment } from '../crm/appointments.js';
 import { replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
+import { reminderTime, remindersBoard } from '../crm/reminders.js';
 import { onEvent } from '../crm/events.js';
 import { listNotifications, startNotifications } from '../crm/notifications.js';
 import { usageSummary } from '../llm/usage.js';
@@ -238,6 +239,13 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     return c.json({ appointment: { ...appt, label: formatSlot(new Date(appt.startsAt)) } });
   });
 
+  // Recordatorio hecho a mano (por WhatsApp desde el teléfono del negocio): sale de "Recordar a mano".
+  app.post('/admin/api/appointments/:id/reminded', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { by?: string };
+    const appt = setReminder(Number(c.req.param('id')), 'enviado', `A mano, por ${body.by?.toString().trim().slice(0, 40) || 'el equipo'}`);
+    return appt ? c.json({ appointment: appt }) : c.json({ error: 'no existe' }, 404);
+  });
+
   app.get('/admin/api/stats', (c) => c.json({ ...stats(), stageLabels: STAGE_LABELS }));
 
   // Vista "Hoy": lo que un asesor debe atender primero, cada fila abre la conversación.
@@ -253,14 +261,16 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const open = all.filter((x) => !['vendido', 'perdido'].includes(x.stage)); // las cerradas no piden acción
     const withUpcoming = new Set(listAppointments({ from: now, status: 'confirmada', limit: 1000 }).map((a) => a.userId));
     return c.json({
-      appointments: listAppointments({ from: startOfDay.getTime(), to: endOfDay, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt), { withDay: false }) })),
+      appointments: listAppointments({ from: startOfDay.getTime(), to: endOfDay, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt), { withDay: false }), remindAt: reminderTime(a.startsAt) })),
+      // Recordatorios que no se pudieron enviar solos: el texto y el número para hacerlo desde el teléfono.
+      remind: remindersBoard(now).filter((a) => a.reminder?.status === 'a_mano'),
       // Esperan respuesta de una persona: la última palabra la tiene el cliente (bot en pausa o bot que no respondió).
       unanswered: open.filter((x) => lastFromCustomer.has(x.id)).slice(0, 20),
       unread: open.filter((x) => x.unread > 0 && !lastFromCustomer.has(x.id)).slice(0, 20),
       handoffs: open.filter((x) => x.humanMode).slice(0, 20),
       // Calientes abandonados: sin mensajes en 24 h y sin una cita ya agendada (esa ya es seguimiento).
       hot: open.filter((x) => x.score >= 60 && !withUpcoming.has(x.id) && (x.lastMessageAt ?? 0) < now - 24 * 3600_000).slice(0, 20),
-      upcoming: listAppointments({ from: endOfDay, to: endOfDay + 3 * 86400_000, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })),
+      upcoming: listAppointments({ from: endOfDay, to: endOfDay + 3 * 86400_000, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)), remindAt: reminderTime(a.startsAt) })),
       // Lo que el bot no supo y prometió verificar: el cliente espera la respuesta del equipo.
       verifications: listVerifications('pendiente').map((v) => ({ ...v, window: replyWindow(v.userId) })),
     });

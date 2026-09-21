@@ -1,6 +1,7 @@
 import { business, env } from './config.js';
 import { probeEngines, roleLabel } from './llm/engines.js';
 import { startBusySync } from './crm/busy.js';
+import { startReminders } from './crm/reminders.js';
 import { apple } from './llm/apple.js';
 import { countDocs, getDb } from './rag/store.js';
 
@@ -15,6 +16,8 @@ console.log(`   openai: ${engines.openai.available ? '✓' : '✗ ' + engines.op
 console.log(`   roles:  liviano ${roleLabel('light')} · pesado ${roleLabel('heavy')} · gate ${roleLabel('gate')} · análisis ${roleLabel('analysis')}`);
 if (!engines.ollama.available && !engines.apple.available && !engines.openai.available) console.error('⚠️  Ningún motor disponible. Arranca Ollama, compila el sidecar (pnpm build:sidecar) o configura OPENAI_API_KEY.');
 startBusySync();
+startReminders();
+if (business.appointments.enabled && business.appointments.reminder.enabled) console.log(`   recordatorios: el día antes a las ${business.appointments.reminder.at}`);
 if (env.calendarBusyIcs.length) console.log(`   calendario: ${env.calendarBusyIcs.length} calendario(s) del dueño bloquean la agenda (se leen cada 5 min)`);
 
 const docs = countDocs();

@@ -168,6 +168,10 @@ function migrate(d: DatabaseSync) {
   addUser('last_message_at', 'INTEGER');
   addUser('human_by', 'TEXT');
   addUser('human_since', 'INTEGER');
+  const appts = cols('appointments');
+  // Recordatorio del día antes: estado (enviado, a_mano, no_hace_falta), cuándo, por qué, y qué respondió el cliente.
+  for (const [name, ddl] of [['reminder_status', 'TEXT'], ['reminder_at', 'INTEGER'], ['reminder_note', 'TEXT'], ['customer_reply', 'TEXT']] as const)
+    if (!appts.has(name)) d.exec(`ALTER TABLE appointments ADD COLUMN ${name} ${ddl}`);
   const messages = cols('messages');
   if (!messages.has('author')) d.exec("ALTER TABLE messages ADD COLUMN author TEXT NOT NULL DEFAULT 'bot'");
   if (!messages.has('by')) d.exec('ALTER TABLE messages ADD COLUMN by TEXT');

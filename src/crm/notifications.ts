@@ -54,6 +54,10 @@ export function startNotifications() {
       if (a?.status === 'cancelada' && p.by === 'bot' && !/Reprogramada por el cliente/.test(a.notes ?? ''))
         push('appointment', ev.userId, `${nameOf(ev.userId)} canceló su cita`, `Era el ${formatSlot(new Date(a.startsAt))}. El espacio quedó libre.`);
     }
+    if (ev.type === 'reminder_reply' && p.reply === 'no_puede') {
+      const a = p.appointment as { startsAt: number } | undefined;
+      push('appointment', ev.userId, `${nameOf(ev.userId)} no puede ir a su cita`, `${a ? `Era el ${formatSlot(new Date(a.startsAt))}. ` : ''}${business.agent.name} le ofreció cambiarla o cancelarla.`);
+    }
     if (ev.type === 'verification') {
       const v = p.verification as { status?: string; question?: string; createdAt?: number } | undefined;
       if (v?.status === 'pendiente' && (v.createdAt ?? 0) > Date.now() - 60_000)

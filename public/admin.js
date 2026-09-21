@@ -256,16 +256,45 @@
         { t: 'Por verificar', n: t.verifications.length, html: t.verifications.map(verifyItem).join(''), empty: 'Nada pendiente: ' + (state.agentName || 'Aiva') + ' supo responder todo.' },
         { t: 'Esperan tu respuesta', n: t.unanswered.length, html: t.unanswered.map(function (c) { return contactRow(c, c.humanMode ? 'La última palabra la tiene el cliente y Aiva está en pausa.' : 'La última palabra la tiene el cliente y Aiva no respondió.'); }).join(''), empty: 'Nadie espera respuesta de una persona.' },
         { t: 'Pidieron una persona', n: t.handoffs.length, html: t.handoffs.map(function (c) { return contactRow(c); }).join(''), empty: 'Aiva lleva todas las conversaciones.' },
-        { t: 'Citas de hoy', n: t.appointments.length, html: t.appointments.map(function (a) { return '<div class="appt"><span class="t">' + esc(a.label) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b> <span class="muted small">' + esc(a.service) + '</span></span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Sin citas hoy.' },
+        { t: 'Recordar a mano', n: (t.remind || []).length, html: (t.remind || []).map(remindItem).join(''), empty: 'Los recordatorios de mañana salen solos.' },
+        { t: 'Citas de hoy', n: t.appointments.length, html: t.appointments.map(function (a) { return '<div class="appt"><span class="t">' + esc(a.label) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b> <span class="muted small">' + esc(a.service) + '</span>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Sin citas hoy.' },
         { t: 'Calientes sin seguimiento (más de 24 h)', n: t.hot.length, html: t.hot.map(function (c) { return contactRow(c); }).join(''), empty: 'Ningún prospecto caliente abandonado.' },
         { t: 'Sin leer, Aiva ya respondió', n: t.unread.length, html: t.unread.map(function (c) { return contactRow(c); }).join(''), empty: 'Todo leído.' },
-        { t: 'Próximas citas (3 días)', n: t.upcoming.length, html: t.upcoming.map(function (a) { return '<div class="appt"><span class="t" style="min-width:auto">' + esc(a.label) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b></span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Nada agendado en los próximos días.' },
+        { t: 'Próximas citas (3 días)', n: t.upcoming.length, html: t.upcoming.map(function (a) { return '<div class="appt"><span class="grow stack"><span class="small muted">' + esc(a.label) + '</span><b>' + esc(a.contactName || short(a.userId)) + '</b>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Nada agendado en los próximos días.' },
       ];
       $('today').innerHTML = sections.map(function (s) { return '<div class="panel"><h3>' + esc(s.t) + '<span class="chip">' + s.n + '</span></h3>' + (s.html || '<div class="ok">' + esc(s.empty) + '</div>') + '</div>'; }).join('');
       $('today').querySelectorAll('.row').forEach(function (r) { r.onclick = function () { go('inbox'); openContact(r.getAttribute('data-id')); }; });
       $('today').querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-open')); }; });
       bindVerifyItems();
+      $('today').querySelectorAll('[data-reminded]').forEach(function (b) {
+        b.onclick = function () {
+          b.disabled = true;
+          api('/appointments/' + b.getAttribute('data-reminded') + '/reminded', { method: 'POST', body: { by: state.name } }).then(loadToday);
+        };
+      });
     });
+  }
+  // Recordatorio del día antes: lo que respondió el cliente pesa más que si se envió.
+  function reminderChip(a) {
+    var r = a.reminder, html = '';
+    if (a.reply === 'confirmó') html = '<span class="chip v-si">Confirmó</span>';
+    else if (a.reply === 'no_puede') html = '<span class="chip v-perdido">No puede</span>';
+    else if (r && r.status === 'enviado') html = '<span class="chip" title="' + esc((r.note || 'Enviado por ' + (state.agentName || 'Aiva')) + (r.at ? ' · hace ' + rel(r.at) : '')) + '">Recordada</span>';
+    else if (r && r.status === 'a_mano') html = '<span class="chip v-posible">Recordar a mano</span>';
+    else if (!r && a.remindAt && a.remindAt > Date.now()) {
+      var at = new Date(a.remindAt), today = new Date(), tomorrow = new Date(Date.now() + 86400000);
+      var day = at.toDateString() === today.toDateString() ? 'hoy' : at.toDateString() === tomorrow.toDateString() ? 'mañana' : at.toLocaleDateString('es-CO', { weekday: 'long' });
+      html = '<span class="muted small">Se recuerda ' + day + ' a las ' + esc(at.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' })) + '</span>';
+    }
+    return html ? '<span class="rem">' + html + '</span>' : '';
+  }
+  function remindItem(a) {
+    var who = a.contactName || short(a.userId);
+    var wa = a.number ? '<a class="btn primary" target="_blank" rel="noopener" href="https://wa.me/' + esc(a.number) + '?text=' + encodeURIComponent(a.text) + '">Abrir WhatsApp</a>' : '';
+    return '<div class="verify"><div class="verify-q"><b>' + esc(who) + '</b> <span class="muted small">' + esc(a.label) + '</span>' +
+      '<div class="small">' + esc(a.reminder && a.reminder.note || '') + '</div></div>' +
+      '<div class="small muted">«' + esc(a.text) + '»</div>' +
+      '<div class="feed-row">' + wa + '<button class="btn" data-reminded="' + a.id + '">Ya se lo recordé</button><button class="btn" data-open="' + esc(a.userId) + '">Chat</button></div></div>';
   }
   // "Deja te verifico eso": pregunta del cliente, respuesta del equipo y la opción de que el bot lo aprenda.
   function verifyItem(v) {

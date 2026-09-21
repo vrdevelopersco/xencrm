@@ -139,6 +139,27 @@ cancelar pide confirmación; cambiar ofrece espacios con las mismas reglas de fe
 la nueva y solo después cancela la anterior. Si solo dice "sobre mi cita", pregunta si quiere
 cambiarla o cancelarla. El equipo recibe aviso cuando un cliente cancela o mueve su cita.
 
+**Recordatorio el día antes** (`appointments.reminder`: `at`, por defecto `"17:00"`, y `enabled`).
+Sale solo por el canal del cliente: WhatsApp por QR, o WhatsApp oficial dentro de las 24 horas.
+Fuera de las 24 horas, WhatsApp oficial solo acepta una plantilla aprobada por Meta
+(`reminder.metaTemplate`: `name`, `language`; cuerpo con `{{1}}` = nombre y `{{2}}` = fecha y hora).
+Lo que no puede salir solo queda en **Hoy › Recordar a mano**, con el motivo, el texto listo y un botón
+que abre WhatsApp con el mensaje escrito:
+
+- el cliente llegó por el chat del sitio;
+- la conversación la lleva una persona;
+- WhatsApp no está conectado;
+- no hay plantilla para escribir fuera de las 24 horas.
+
+Si agendó poco antes de la hora del recordatorio, no se le envía. La respuesta la entiende el flujo de citas:
+
+- "sí, ahí estaré" queda como **Confirmó**;
+- "no puedo" o "se me complicó" queda como **No puede** y le pregunta si la pasamos o la cancela, con aviso al equipo;
+- "cancélala" o "mejor el jueves" hacen lo de siempre.
+
+Cada cita en Hoy muestra su estado. Pruebas: `pnpm test:reminders` (usa una base temporal y no toca las citas
+reales).
+
 Desde el tablero también se agenda a mano.
 
 ### Lo que el bot no sabe: "deja te verifico eso"

@@ -6,7 +6,7 @@ import type { Hono } from 'hono';
 import type { HttpBindings } from '@hono/node-server';
 import { env } from '../config.js';
 import { handleMessage } from '../agent/agent.js';
-import { registerSender } from '../crm/outbox.js';
+import { registerSender, registerTemplateSender, type Template } from '../crm/outbox.js';
 import { channelOn } from './switches.js';
 
 const meta = {
@@ -57,6 +57,22 @@ async function graph(path: string, body: Record<string, unknown>): Promise<void>
 export async function sendMetaText(to: string, text: string): Promise<void> {
   try {
     await graph(`${meta.phoneId}/messages`, { messaging_product: 'whatsapp', to, type: 'text', text: { body: text, preview_url: false } });
+    activity.lastSentAt = Date.now();
+  } catch (err) {
+    failed(err);
+    throw err;
+  }
+}
+
+/** Plantilla aprobada en Meta, con los parámetros del cuerpo en orden ({{1}}, {{2}}…). */
+export async function sendMetaTemplate(to: string, t: Template): Promise<void> {
+  try {
+    await graph(`${meta.phoneId}/messages`, {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: { name: t.name, language: { code: t.language }, components: [{ type: 'body', parameters: t.params.map((text) => ({ type: 'text', text })) }] },
+    });
     activity.lastSentAt = Date.now();
   } catch (err) {
     failed(err);
@@ -131,6 +147,7 @@ function validSignature(raw: string, header: string | undefined): boolean {
 export function mountMeta(app: Hono<{ Bindings: HttpBindings }>) {
   if (!metaEnabled) return;
   registerSender('meta', (userId, text) => sendMetaText(userId.replace(/^meta:/, ''), text));
+  registerTemplateSender('meta', (userId, t) => sendMetaTemplate(userId.replace(/^meta:/, ''), t));
 
   // Verificación del webhook (la hace Meta al registrar la URL)
   app.get('/webhooks/meta', (c) => {

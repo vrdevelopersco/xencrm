@@ -16,12 +16,12 @@ export interface ReplyWindow {
   closesAt: number | null;
 }
 
-export function replyWindow(userId: string): ReplyWindow {
+export function replyWindow(userId: string, now = Date.now()): ReplyWindow {
   const c = getContact(userId);
   if (!c || c.channel !== 'meta') return { limited: false, open: true, closesAt: null };
   const r = getDb().prepare("SELECT MAX(ts) t FROM messages WHERE user_id = ? AND role = 'user'").get(userId) as { t: number | null };
   const closesAt = r.t ? r.t + WINDOW_MS : null;
-  return { limited: true, open: closesAt !== null && Date.now() < closesAt, closesAt };
+  return { limited: true, open: closesAt !== null && now < closesAt, closesAt };
 }
 
 export const WINDOW_CLOSED =
@@ -33,6 +33,38 @@ const senders = new Map<string, Sender>();
 /** Cada canal registra cómo entregar un texto a un usuario suyo. */
 export function registerSender(channel: string, fn: Sender) {
   senders.set(channel, fn);
+}
+
+/** ¿Hay cómo entregarle un mensaje ahora? (WhatsApp apagado o sin conectar: no.) */
+export function canDeliver(userId: string): boolean {
+  const c = getContact(userId);
+  return Boolean(c && senders.has(c.channel));
+}
+
+// Plantillas aprobadas (WhatsApp oficial): lo único que se puede enviar fuera de la ventana de 24 horas.
+export interface Template {
+  name: string;
+  language: string;
+  params: string[];
+}
+export type TemplateSender = (userId: string, template: Template) => Promise<void>;
+const templateSenders = new Map<string, TemplateSender>();
+export function registerTemplateSender(channel: string, fn: TemplateSender) {
+  templateSenders.set(channel, fn);
+}
+export function canSendTemplate(userId: string): boolean {
+  const c = getContact(userId);
+  return Boolean(c && templateSenders.has(c.channel));
+}
+
+/** Envía una plantilla; en la conversación queda `text`, lo que el cliente ve con la plantilla ya llena. */
+export async function sendTemplateToContact(userId: string, template: Template, text: string): Promise<void> {
+  const c = getContact(userId);
+  const send = c ? templateSenders.get(c.channel) : undefined;
+  if (!c || !send) throw new Error('este canal no envía plantillas');
+  await send(userId, template);
+  const id = appendMessage(userId, 'assistant', text, undefined, 'bot');
+  emitEvent('message', userId, { id, role: 'assistant', author: 'bot', by: null, content: text, ts: Date.now() });
 }
 
 export async function sendToContact(userId: string, text: string, author: Author = 'human', opts: { by?: string } = {}): Promise<void> {
