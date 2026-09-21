@@ -339,18 +339,27 @@
   $('notif-clear').onclick = function () { state.notifSeen = state.notifs.length ? Math.max.apply(null, state.notifs.map(function (n) { return n.id; })) : 0; try { localStorage.setItem('aiva.admin.notifSeen', String(state.notifSeen)); } catch (e) {} renderNotifs(); };
 
   // ---------- pipeline ----------
-  function loadPipeline() {
+  function loadPipeline(focusId) {
     api('/contacts?limit=500').then(function (list) {
+      // Al redibujar (también por un evento en vivo) el foco no se pierde: vuelve a la misma tarjeta.
+      var active = document.activeElement && document.activeElement.closest ? document.activeElement.closest('#board .card') : null;
+      focusId = focusId || (active && active.getAttribute('data-id'));
       var stages = Object.keys(state.stageLabels);
+      var moveTo = function (c) {
+        return '<select class="card-move" aria-label="Mover a ' + esc(nameOf(c)) + ' a otra etapa"><option value="" selected disabled>Mover a…</option>' +
+          stages.filter(function (k) { return k !== c.stage; }).map(function (k) { return '<option value="' + k + '">' + esc(state.stageLabels[k]) + '</option>'; }).join('') + '</select>';
+      };
       $('board').innerHTML = stages.map(function (s) {
         var cards = list.filter(function (c) { return c.stage === s; });
         return '<div class="col" data-stage="' + s + '"><h3>' + esc(state.stageLabels[s]) + '<span class="muted">' + cards.length + '</span></h3><div class="cards">' +
-          cards.map(function (c) { return '<div class="card" draggable="true" tabindex="0" role="button" aria-label="Abrir la conversación con ' + esc(nameOf(c)) + '" data-id="' + esc(c.id) + '"><div class="body"><div class="t"><span>' + esc(nameOf(c)) + '</span>' + scoreChip(c) + '</div><div class="s">' + esc(c.recap || c.summary || channelIcon(c.channel)) + '</div></div></div>'; }).join('') +
+          cards.map(function (c) { return '<div class="card" draggable="true" data-id="' + esc(c.id) + '"><div class="body"><div class="t"><button type="button" class="card-open" title="Abrir la conversación">' + esc(nameOf(c)) + '</button>' + scoreChip(c) + '</div><div class="s">' + esc(c.recap || c.summary || channelIcon(c.channel)) + '</div>' + moveTo(c) + '</div></div>'; }).join('') +
           '</div></div>';
       }).join('');
       $('board').querySelectorAll('.card').forEach(function (card) {
-        card.onclick = function () { go('inbox'); openContact(card.getAttribute('data-id')); };
-        card.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } };
+        // Clic en cualquier parte de la tarjeta abre la conversación (con teclado: el nombre es el botón); la lista no.
+        card.onclick = function (e) { if (e.target.closest('.card-move')) return; go('inbox'); openContact(card.getAttribute('data-id')); };
+        var move = card.querySelector('.card-move');
+        move.onchange = function () { moveCard(card.getAttribute('data-id'), move.value); };
         card.ondragstart = function (e) {
           e.dataTransfer.setData('text/plain', card.getAttribute('data-id'));
           setTimeout(function () { card.classList.add('dragging'); }, 0); // después de que el navegador toma la imagen que arrastra
@@ -360,8 +369,18 @@
       $('board').querySelectorAll('.col').forEach(function (col) {
         col.ondragover = function (e) { e.preventDefault(); col.classList.add('over'); };
         col.ondragleave = function () { col.classList.remove('over'); };
-        col.ondrop = function (e) { e.preventDefault(); col.classList.remove('over'); var id = e.dataTransfer.getData('text/plain'); api('/contacts/' + encodeURIComponent(id), { method: 'PATCH', body: { stage: col.getAttribute('data-stage') } }).then(loadPipeline); };
+        col.ondrop = function (e) { e.preventDefault(); col.classList.remove('over'); moveCard(e.dataTransfer.getData('text/plain'), col.getAttribute('data-stage')); };
       });
+      // Después de mover con «Mover a…», el foco sigue a la tarjeta en su nueva columna.
+      var moved = focusId && $('board').querySelector('.card[data-id="' + (window.CSS && CSS.escape ? CSS.escape(focusId) : focusId) + '"] .card-open');
+      if (moved) { moved.focus(); moved.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    });
+  }
+  function moveCard(id, stage) {
+    if (!id || !stage) return;
+    api('/contacts/' + encodeURIComponent(id), { method: 'PATCH', body: { stage: stage } }).then(function (r) {
+      $('board-status').textContent = r && r.error ? 'No se pudo mover: ' + r.error : 'Movida a ' + (state.stageLabels[stage] || stage) + '.';
+      loadPipeline(id);
     });
   }
 

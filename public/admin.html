@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aiva · Tablero</title>
 <style>
-:root{--bg:#eef0f4;--panel:#fff;--glass:rgba(255,255,255,.70);--glass-strong:rgba(255,255,255,.80);--glass-overlay:rgba(255,255,255,.92);--glass-border:rgba(17,24,39,.08);--glass-inset:inset 0 -1px 0 rgba(17,24,39,.06);--glass-shadow:0 10px 32px rgba(17,24,39,.10);--blob1:#bfe3cf;--blob2:#c7d6f5;--blob3:#f6e3c8;--line:#e2e5ea;--text:#111827;--muted:#5f6875;--brand:#276f45;--brand-soft:#e6f4ec;--warn:#a3480a;--warn-soft:#fef3c7;--bad:#b91c1c;--bad-soft:#fee2e2;--ok:#166534;--ok-soft:#dcfce7;--me:#dbeafe;--bot:#f3f4f6;--human:#fef9c3;--shadow:0 1px 2px rgba(0,0,0,.06)}
-[data-theme=dark]{--bg:#0b0d12;--panel:#171a21;--glass:rgba(24,28,36,.58);--glass-strong:rgba(24,28,36,.78);--glass-overlay:rgba(24,28,36,.92);--glass-border:rgba(255,255,255,.09);--glass-inset:inset 0 1px 0 rgba(255,255,255,.06);--glass-shadow:0 12px 36px rgba(0,0,0,.45);--blob1:#12392a;--blob2:#15264a;--blob3:#3a2a12;--line:#262a33;--text:#e5e7eb;--muted:#9aa3b2;--brand:#5fbf86;--brand-soft:#173424;--warn:#f59e0b;--warn-soft:#3a2a08;--bad:#f87171;--bad-soft:#3b1212;--ok:#4ade80;--ok-soft:#0f2e1b;--me:#1e3a5f;--bot:#20242d;--human:#3a3410;--shadow:none}
+:root{--bg:#eef0f4;--panel:#fff;--glass:rgba(255,255,255,.70);--glass-strong:rgba(255,255,255,.80);--glass-overlay:rgba(255,255,255,.92);--glass-border:rgba(17,24,39,.08);--glass-inset:inset 0 -1px 0 rgba(17,24,39,.06);--glass-shadow:0 10px 32px rgba(17,24,39,.10);--blob1:#bfe3cf;--blob2:#c7d6f5;--blob3:#f6e3c8;--line:#e2e5ea;--text:#111827;--muted:#5f6875;--brand:#276f45;--brand-soft:#e6f4ec;--cita:#276f45;--cita-soft:#e6f4ec;--si:#276f45;--si-soft:#e6f4ec;--warn:#a3480a;--warn-soft:#fef3c7;--bad:#b91c1c;--bad-soft:#fee2e2;--ok:#166534;--ok-soft:#dcfce7;--me:#dbeafe;--bot:#f3f4f6;--human:#fef9c3;--shadow:0 1px 2px rgba(0,0,0,.06)}
+[data-theme=dark]{--bg:#0b0d12;--panel:#171a21;--glass:rgba(24,28,36,.58);--glass-strong:rgba(24,28,36,.78);--glass-overlay:rgba(24,28,36,.92);--glass-border:rgba(255,255,255,.09);--glass-inset:inset 0 1px 0 rgba(255,255,255,.06);--glass-shadow:0 12px 36px rgba(0,0,0,.45);--blob1:#12392a;--blob2:#15264a;--blob3:#3a2a12;--line:#262a33;--text:#e5e7eb;--muted:#9aa3b2;--brand:#5fbf86;--brand-soft:#173424;--cita:#5fbf86;--cita-soft:#173424;--si:#5fbf86;--si-soft:#173424;--warn:#f59e0b;--warn-soft:#3a2a08;--bad:#f87171;--bad-soft:#3b1212;--ok:#4ade80;--ok-soft:#0f2e1b;--me:#1e3a5f;--bot:#20242d;--human:#3a3410;--shadow:none}
 *{box-sizing:border-box}html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 body::before{content:"";position:fixed;inset:-20%;z-index:-1;pointer-events:none;background:radial-gradient(600px 500px at 8% 10%,var(--blob1),transparent 60%),radial-gradient(700px 600px at 90% 20%,var(--blob2),transparent 60%),radial-gradient(600px 500px at 60% 100%,var(--blob3),transparent 60%);filter:blur(40px);opacity:.9}
@@ -66,7 +66,7 @@ input[type=text],input[type=search],select,textarea{border:1px solid var(--glass
 textarea{resize:vertical;min-height:70px}
 .muted{color:var(--muted)}.small{font-size:12px}
 .chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 9px;font-size:12px;border:1px solid var(--glass-border);background:var(--glass-strong)}
-.chip.stage-nuevo{background:var(--bg)}.chip.stage-conversando{background:var(--me)}.chip.stage-interesado{background:var(--warn-soft);color:var(--warn)}.chip.stage-cita_agendada{background:var(--brand-soft);color:var(--brand)}.chip.stage-vendido{background:var(--ok-soft);color:var(--ok)}.chip.stage-perdido{background:var(--bad-soft);color:var(--bad)}
+.chip.stage-nuevo{background:var(--bg)}.chip.stage-conversando{background:var(--me)}.chip.stage-interesado{background:var(--warn-soft);color:var(--warn)}.chip.stage-cita_agendada{background:var(--cita-soft);color:var(--cita)}.chip.stage-vendido{background:var(--ok-soft);color:var(--ok)}.chip.stage-perdido{background:var(--bad-soft);color:var(--bad)}
 .chip.t-caliente{background:var(--bad-soft);color:var(--bad);border-color:transparent}.chip.t-tibio{background:var(--warn-soft);color:var(--warn);border-color:transparent}.chip.t-frio{background:var(--bg);color:var(--muted)}
 .chip.human{background:var(--human);border-color:transparent}
 /* Bandeja */
@@ -205,10 +205,10 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 .msgs{background:transparent}
 .unread{box-shadow:0 2px 6px rgba(185,28,28,.35)}
 /* Veredicto de prospecto: chips opacos con texto (contraste medido) */
-.chip.v-si{background:var(--brand-soft);color:var(--brand);border-color:transparent;font-weight:600}
+.chip.v-si{background:var(--si-soft);color:var(--si);border-color:transparent;font-weight:600}
 .chip.v-posible{background:var(--warn-soft);color:var(--warn);border-color:transparent;font-weight:600}
 .chip.v-no{background:var(--glass-strong);color:var(--muted)}
-.chip.v-cita{background:var(--brand-soft);color:var(--brand);border-color:transparent;font-weight:600}
+.chip.v-cita{background:var(--cita-soft);color:var(--cita);border-color:transparent;font-weight:600}
 .chip.v-cliente{background:var(--ok-soft);color:var(--ok);border-color:transparent;font-weight:600}
 .chip.v-perdido{background:var(--bad-soft);color:var(--bad);border-color:transparent}
 .chip.stale,.chip.v-si.stale,.chip.v-posible.stale,.chip.v-cita.stale{background:var(--glass-strong);color:var(--muted);border:1px dashed var(--muted);font-weight:400;font-style:italic}
@@ -247,7 +247,7 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 .cal-col{position:relative;border-left:1px solid var(--glass-border);background-image:linear-gradient(to bottom,var(--glass-border) 1px,transparent 1px);background-size:100% var(--hour-px)}
 .cal-col.today{background-color:color-mix(in srgb,var(--brand) 5%,transparent)}
 .cal-col .closed{position:absolute;left:0;right:0;background:repeating-linear-gradient(135deg,rgba(127,127,127,.10) 0 6px,transparent 6px 12px);pointer-events:none}
-.cal-ev{position:absolute;left:3px;right:3px;border-radius:9px;padding:3px 6px;font-size:12px;line-height:1.25;overflow:hidden;cursor:pointer;background:color-mix(in srgb,var(--brand) 18%,var(--glass-strong));border-left:3px solid var(--brand);box-shadow:var(--rim)}
+.cal-ev{position:absolute;left:3px;right:3px;border-radius:9px;padding:3px 6px;font-size:12px;line-height:1.25;overflow:hidden;cursor:pointer;background:color-mix(in srgb,var(--cita) 18%,var(--glass-strong));border-left:3px solid var(--cita);box-shadow:var(--rim)}
 .cal-ev b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-ev span{color:var(--muted);font-size:11px}
 .cal-ev.completada{border-left-color:var(--ok);background:color-mix(in srgb,var(--ok) 16%,var(--glass-strong))}
@@ -269,10 +269,10 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 .cal-pop[hidden]{display:none}
 .cal-pop .acts{display:flex;gap:6px;flex-wrap:wrap}
 /* ===== Barra de probabilidad por zonas: gris (sin señales) · ámbar (posible) · verde (prospecto) ===== */
-.bar{background:linear-gradient(90deg,rgba(127,127,127,.18) 0 30%,color-mix(in srgb,var(--warn) 22%,transparent) 30% 60%,color-mix(in srgb,var(--brand) 22%,transparent) 60% 100%)}
+.bar{background:linear-gradient(90deg,rgba(127,127,127,.18) 0 30%,color-mix(in srgb,var(--warn) 22%,transparent) 30% 60%,color-mix(in srgb,var(--si) 22%,transparent) 60% 100%)}
 .bar i.z-frio{background:linear-gradient(180deg,#9aa3b2,#6b7280)}
 .bar i.z-tibio{background:linear-gradient(180deg,color-mix(in srgb,var(--warn) 70%,#fff),var(--warn))}
-.bar i.z-caliente{background:linear-gradient(180deg,color-mix(in srgb,var(--brand) 65%,#fff),var(--brand))}
+.bar i.z-caliente{background:linear-gradient(180deg,color-mix(in srgb,var(--si) 65%,#fff),var(--si))}
 .bar.stale i{background:repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)}
 .bar-legend{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px}
 .card .bar{height:5px;margin-top:6px}
@@ -312,6 +312,8 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
   --emboss:0 1px 0 rgba(255,255,255,.25);
   --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
 }
+/* Colores de dato (--cita, --si) aparte del acento (--brand): hoy comparten tono, pero si el acento cambia (otra marca,
+   otro tema) una etapa no debe cambiar de significado. El acento es para acciones y selección; los datos llevan su token. */
 /* Texto sobre color: en oscuro la marca y el rojo son claros, el texto va oscuro. */
 .filters button.on,.cal-head .d.today b{color:var(--on-brand)}
 .nav .badge,.bell .badge,.unread{color:var(--on-bad)}
@@ -341,11 +343,11 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 .seg button:focus-visible{outline:none;box-shadow:var(--ring)}
 
 /* Citas como etiquetas: cartulina con grano, pespunte y relieve. Canceladas quedan planas y rayadas. */
-.cal-ev,.cal-ev.completada,.cal-ev.no_asistio{--tag:var(--brand);border:1px solid color-mix(in srgb,var(--tag) 40%,transparent);border-radius:9px;padding:4px 6px;
+.cal-ev,.cal-ev.completada,.cal-ev.no_asistio{--tag:var(--cita);border:1px solid color-mix(in srgb,var(--tag) 40%,transparent);border-radius:9px;padding:4px 6px;
   background:var(--grain),color-mix(in srgb,var(--tag) 8%,var(--panel));box-shadow:var(--bevel-hi),var(--raise);transition:transform var(--t-press),box-shadow var(--t-press)}
 .cal-ev.completada{--tag:var(--ok)}
 .cal-ev.no_asistio{--tag:var(--bad)}
-.cal-ev::before{content:"";position:absolute;inset:3px;border:1px dashed color-mix(in srgb,var(--tag,var(--brand)) 70%,transparent);border-radius:6px;pointer-events:none}
+.cal-ev::before{content:"";position:absolute;inset:3px;border:1px dashed color-mix(in srgb,var(--tag,var(--cita)) 70%,transparent);border-radius:6px;pointer-events:none}
 .cal-ev:hover{transform:translateY(-1px);box-shadow:var(--bevel-hi),var(--raise-hover)}
 .cal-ev span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted-strong)}
 .cal-ev.cancelada{background:var(--glass-strong);border:1px dashed var(--line);box-shadow:none}
@@ -356,7 +358,8 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
    filo en su tono es decorativo, el estado lo dice el texto. Los desactualizados quedan planos, punteados e itálicos. */
 .chip{--tone:var(--muted)}
 .chip.stage-interesado,.chip.t-tibio,.chip.v-posible{--tone:var(--warn)}
-.chip.stage-cita_agendada,.chip.v-si,.chip.v-cita{--tone:var(--brand)}
+.chip.stage-cita_agendada,.chip.v-cita{--tone:var(--cita)}
+.chip.v-si{--tone:var(--si)}
 .chip.t-caliente,.chip.v-perdido{--tone:var(--bad)}
 .chip.stage-vendido,.chip.v-cliente{--tone:var(--ok)}
 .chip.who,.chip.human{--tone:var(--human-edge)}
@@ -373,7 +376,7 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
    columna de destino se hunde. El tono repite lo que ya dice el título de la columna. */
 .col{--tone:var(--muted)}
 .col[data-stage=interesado]{--tone:var(--warn)}
-.col[data-stage=cita_agendada]{--tone:var(--brand)}
+.col[data-stage=cita_agendada]{--tone:var(--cita)}
 .col[data-stage=vendido]{--tone:var(--ok)}
 .col[data-stage=perdido]{--tone:var(--bad)}
 .card{padding:4px;border-radius:12px;border:1px solid color-mix(in srgb,var(--tone) 38%,var(--glass-border));
@@ -381,9 +384,15 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
   transition:transform var(--t-press),box-shadow var(--t-press)}
 .card .body{background:var(--panel);border-radius:8px;padding:7px 9px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tone) 22%,transparent)}
 .card:hover{transform:translateY(-1px);box-shadow:var(--bevel-hi),var(--raise-hover)}
-.card .t .chip{white-space:nowrap;flex-shrink:0;align-self:flex-start}.card .t span{min-width:0;overflow-wrap:anywhere}
+.card .t .chip{white-space:nowrap;flex-shrink:0;align-self:flex-start}
+.card .card-open{background:none;border:0;padding:0;margin:0;font:inherit;font-weight:600;color:inherit;text-align:left;cursor:pointer;min-width:0;overflow-wrap:anywhere;border-radius:4px}
+.card .card-open:focus-visible{outline:none;box-shadow:var(--ring)}
+/* Cambiar de etapa sin arrastrar (teclado, lector de pantalla y celular, donde arrastrar no funciona con el dedo). */
+.card .card-move{margin-top:8px;min-height:32px;padding:2px 8px;font-size:12px;border-radius:10px;cursor:pointer}
+@media (pointer:coarse){.card .card-move{min-height:44px;font-size:14px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .card:active{cursor:grabbing}
-.card:focus-visible{outline:none;box-shadow:var(--bevel-hi),var(--raise),var(--ring)}
+.card:focus-within{box-shadow:var(--bevel-hi),var(--raise-hover)}
 .card.dragging{background:none;border:1px dashed color-mix(in srgb,var(--tone) 60%,transparent);box-shadow:none;transform:none}
 .card.dragging .body{visibility:hidden}
 .col.over{outline:none}
@@ -512,8 +521,9 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
     </section>
     <!-- Pipeline -->
     <section class="view" id="view-pipeline">
-      <div class="topbar"><h1>Prospectos</h1><span class="muted small">Arrastra una tarjeta para cambiar de etapa</span><span class="grow"></span></div>
+      <div class="topbar"><h1>Prospectos</h1><span class="muted small">Arrastra una tarjeta o usa «Mover a…» para cambiar de etapa</span><span class="grow"></span></div>
       <div class="board" id="board"></div>
+      <div class="sr-only" id="board-status" role="status"></div>
     </section>
     <!-- Calendario -->
     <section class="view" id="view-calendar">

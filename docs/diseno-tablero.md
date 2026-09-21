@@ -131,6 +131,26 @@ texto escrito en oscuro queda a 15:1.
 
 Con esto queda recorrido el orden de HRCAPOLO (chips → marco del pipeline → campos). Las burbujas del chat siguen planas.
 
+### Colores de dato aparte del acento (2026-09-21, pregunta de HRCAPOLO)
+La etapa "Cita agendada", la etiqueta "Tiene cita" y las citas del calendario usaban `--brand`, el mismo acento de
+los botones; el "Sí" del veredicto y la zona "prospecto" de la barra de probabilidad, también. Si el acento cambia
+(otra marca, otro tema), una etapa cambiaría de significado sin querer. Ahora los datos llevan su token: `--cita`
+(citas) y `--si` (veredicto "sí"). Hoy tienen el mismo valor que la marca; lo que importa es que ya no dependen de
+ella. `--brand` queda para acciones, selección y navegación.
+
+Pregunta abierta: la probabilidad de 100 se ve **roja** en la etiqueta de temperatura ("100 · caliente") y **verde**
+en la barra del detalle (vocabulario del veredicto: gris sin señales, ámbar posible, verde prospecto). Son dos
+vocabularios para el mismo número.
+
+### Cambiar de etapa sin arrastrar (2026-09-21, pregunta de HRCAPOLO)
+Solo se podía arrastrando con el mouse (o desde la ficha del contacto). En el celular, arrastrar no funciona con el
+dedo, así que desde el teléfono el tablero no dejaba mover nada. Cada tarjeta tiene ahora «Mover a…», una lista
+nativa (teclado, lector de pantalla y selector del teléfono) con las otras etapas: 32 px con mouse y 44 px con el
+dedo (`pointer: coarse`). Después de mover, el foco sigue a la tarjeta en su nueva columna y se anuncia "Movida a …"
+(región `role=status`). Para no anidar controles dentro de un botón, la tarjeta ya no es `role=button`: el nombre es
+el botón que abre la conversación (el clic en cualquier otra parte de la tarjeta también la abre, salvo en la lista).
+Al redibujarse por un evento en vivo, el foco vuelve a la misma tarjeta.
+
 Decisiones:
 - La página pública de la cita sigue el tema del sistema a propósito: es una utilidad de calendario, no una pieza de
   marca, porque aiva todavía no tiene la piel de cada cliente. Cuando la tenga, esa página debe usarla fija.
