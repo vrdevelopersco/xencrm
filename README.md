@@ -191,8 +191,11 @@ el adaptador se construye cuando haya credenciales de prueba de Meta.
 - **Meta Cloud API** (oficial, para producción): `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`,
   `META_VERIFY_TOKEN`, `META_APP_SECRET` en `.env` y el webhook `https://TU-DOMINIO/webhooks/meta`
   registrado en Meta. Requiere negocio verificado y plantillas para escribir fuera de la ventana de
-  24 horas. Este adaptador está escrito contra la documentación pero **no se ha probado con
-  credenciales reales**.
+  24 horas. aiva respeta esa ventana: si pasaron más de 24 horas desde el último mensaje del
+  cliente, no envía (ni guarda como enviado) lo que Meta rechazaría. El tablero lo advierte en la
+  conversación y en "Por verificar" (con cuánto tiempo queda cuando faltan menos de 3 horas), y la
+  verificación sigue pendiente hasta que el cliente vuelva a escribir. Este adaptador está escrito
+  contra la documentación pero **no se ha probado con credenciales reales**.
 - **Widget**: `<script src="https://TU-DOMINIO/widget.js" async></script>`. Carga el historial,
   muestra las respuestas del equipo en vivo y avisa cuando atiende una persona.
 - **Túnel** para el widget, el tablero y el webhook: `cloudflared tunnel --url http://localhost:3000`

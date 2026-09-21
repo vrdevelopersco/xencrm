@@ -11,7 +11,7 @@ import { getMessages } from '../agent/memory.js';
 import { getContact, listContacts, listEvents, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
 import { availableSlots, bookAppointment, formatSlot, listAppointments, updateAppointment } from '../crm/appointments.js';
-import { sendToContact } from '../crm/outbox.js';
+import { replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
 import { onEvent } from '../crm/events.js';
 import { listNotifications, startNotifications } from '../crm/notifications.js';
 import { usageSummary } from '../llm/usage.js';
@@ -67,6 +67,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       analyses: listAnalyses(id, 10),
       events: listEvents(id, 50),
       appointments: listAppointments({ userId: id, limit: 20 }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })),
+      replyWindow: replyWindow(id),
     });
   });
 
@@ -103,6 +104,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const contact = getContact(id);
     if (!contact) return c.json({ error: 'no existe' }, 404);
     const by = body.by?.toString().trim().slice(0, 40) || 'equipo';
+    if (!replyWindow(id).open) return c.json({ error: WINDOW_CLOSED }, 409); // antes de tomar el control
     if (!contact.humanMode) setHumanMode(id, true, by); // responder a mano toma el control
     try {
       await sendToContact(id, text, 'human', { by });
@@ -238,7 +240,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       hot: open.filter((x) => x.score >= 60 && !withUpcoming.has(x.id) && (x.lastMessageAt ?? 0) < now - 24 * 3600_000).slice(0, 20),
       upcoming: listAppointments({ from: endOfDay, to: endOfDay + 3 * 86400_000, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })),
       // Lo que el bot no supo y prometió verificar: el cliente espera la respuesta del equipo.
-      verifications: listVerifications('pendiente'),
+      verifications: listVerifications('pendiente').map((v) => ({ ...v, window: replyWindow(v.userId) })),
     });
   });
 

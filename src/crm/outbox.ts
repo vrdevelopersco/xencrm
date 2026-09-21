@@ -2,6 +2,30 @@
 import { appendMessage, type Author } from '../agent/memory.js';
 import { getContact, updateContact } from './contacts.js';
 import { emitEvent } from './events.js';
+import { getDb } from '../rag/store.js';
+
+// WhatsApp oficial (Meta) solo deja escribir texto libre hasta 24 h después del último mensaje del cliente; pasado ese
+// tiempo hace falta una plantilla aprobada. El chat web y WhatsApp por QR no tienen esa regla.
+const WINDOW_MS = 24 * 3600_000;
+
+export interface ReplyWindow {
+  /** El canal tiene ventana (WhatsApp oficial). */
+  limited: boolean;
+  open: boolean;
+  /** Cuándo se cierra (o se cerró): 24 h después del último mensaje del cliente. */
+  closesAt: number | null;
+}
+
+export function replyWindow(userId: string): ReplyWindow {
+  const c = getContact(userId);
+  if (!c || c.channel !== 'meta') return { limited: false, open: true, closesAt: null };
+  const r = getDb().prepare("SELECT MAX(ts) t FROM messages WHERE user_id = ? AND role = 'user'").get(userId) as { t: number | null };
+  const closesAt = r.t ? r.t + WINDOW_MS : null;
+  return { limited: true, open: closesAt !== null && Date.now() < closesAt, closesAt };
+}
+
+export const WINDOW_CLOSED =
+  'WhatsApp no deja escribirle ahora: pasaron más de 24 horas desde su último mensaje. Para retomar hace falta una plantilla aprobada por Meta, o esperar a que vuelva a escribir.';
 
 export type Sender = (userId: string, text: string) => Promise<void>;
 const senders = new Map<string, Sender>();
@@ -14,6 +38,8 @@ export function registerSender(channel: string, fn: Sender) {
 export async function sendToContact(userId: string, text: string, author: Author = 'human', opts: { by?: string } = {}): Promise<void> {
   const c = getContact(userId);
   if (!c) throw new Error(`contacto ${userId} no existe`);
+  // Se revisa antes de guardar nada: un mensaje que Meta va a rechazar no debe aparecer como enviado.
+  if (!replyWindow(userId).open) throw new Error(WINDOW_CLOSED);
   const send = senders.get(c.channel);
   const by = opts.by?.trim() || undefined;
   const id = appendMessage(userId, 'assistant', text, undefined, author, by);

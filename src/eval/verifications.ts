@@ -51,6 +51,37 @@ check('el saludo no queda en la pregunta', openVerification('test:verif-1', 'bue
 const c = openVerification('test:verif-1', '¿aceptan mascotas?', 'mascotas');
 check('descartar la cierra sin responder', dismissVerification(c.id)?.status === 'descartada' && getMessages('test:verif-1', 10).filter((m) => m.author === 'human').length === 1);
 
+// 3. Ventana de 24 h de WhatsApp oficial
+const { replyWindow, sendToContact } = await import('../crm/outbox.js');
+const { appendMessage } = await import('../agent/memory.js');
+const lastMessageAgo = (userId: string, hours: number) => {
+  touchUser(userId, 'meta', 'Cliente Meta');
+  appendMessage(userId, 'user', '¿tienen parqueadero?', 'info_tienda');
+  getDb().prepare("UPDATE messages SET ts = ? WHERE user_id = ? AND role = 'user'").run(Date.now() - hours * 3600_000, userId);
+};
+lastMessageAgo('test:verif-meta-viejo', 25);
+check('WhatsApp oficial, hace 25 h: ventana cerrada', !replyWindow('test:verif-meta-viejo').open && replyWindow('test:verif-meta-viejo').limited);
+let windowError = '';
+try {
+  await sendToContact('test:verif-meta-viejo', 'Sí, tenemos parqueadero.', 'human', { by: 'Laura' });
+} catch (err) {
+  windowError = (err as Error).message;
+}
+check('no se envía y dice por qué', /más de 24 horas/.test(windowError) && /plantilla/.test(windowError), windowError);
+check('no queda un mensaje "enviado" que Meta habría rechazado', getMessages('test:verif-meta-viejo', 10).every((m) => m.role === 'user'));
+const late = openVerification('test:verif-meta-viejo', '¿tienen parqueadero?');
+let lateError = '';
+try {
+  await answerVerification(late.id, 'Sí, tenemos.', 'Laura');
+} catch (err) {
+  lateError = (err as Error).message;
+}
+check('la verificación tardía sigue pendiente', /24 horas/.test(lateError) && listVerifications('pendiente').some((v) => v.id === late.id));
+lastMessageAgo('test:verif-meta-reciente', 1);
+const w = replyWindow('test:verif-meta-reciente');
+check('WhatsApp oficial, hace 1 h: se puede responder (unas 23 h más)', w.open && Math.round(((w.closesAt ?? 0) - Date.now()) / 3600_000) === 23);
+check('el chat web no tiene ventana', !replyWindow('test:verif-1').limited && replyWindow('test:verif-1').open);
+
 // Limpieza: nada de la prueba queda en la base ni en el índice
 getDb().prepare("DELETE FROM verifications WHERE user_id LIKE 'test:verif-%'").run();
 getDb().prepare('DELETE FROM docs_fts WHERE id = ?').run(`kb:respuestas-del-equipo.md#v${a.id}`);
