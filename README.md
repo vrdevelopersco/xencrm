@@ -68,9 +68,10 @@ Aiva no está amarrada a un negocio: todo lo propio de cada cliente vive en su c
 
 | Dónde | Qué va | Ejemplos |
 |---|---|---|
-| `aiva.config.json` | El negocio y cómo atiende | nombre, descripción, sitio, moneda, país e indicativo telefónico (`phoneCountryCode`, `phoneLocalDigits`), contacto humano; nombre y estilo del agente, su objetivo y lo que dice cuando no sabe algo (`agent.verifyPhrase`); fuentes (catálogo, información, páginas); zona horaria; agenda de citas (servicio, lugar, días, franjas, `askPhone`, `askEmail`); campos que captura el análisis (`crm.fields`); archivo del **diccionario** (`dictionaryFile`); **marca** (`brand.color`, `brand.logo`); escenarios y datos de demostración |
+| `aiva.config.json` | El negocio y cómo atiende | nombre, descripción, sitio, moneda, país e indicativo telefónico (`phoneCountryCode`, `phoneLocalDigits`), contacto humano; nombre y estilo del agente, su objetivo y lo que dice cuando no sabe algo (`agent.verifyPhrase`); fuentes (catálogo, información, páginas); zona horaria; agenda de citas (servicio, lugar, días, franjas, `askPhone`, `askEmail`); campos que captura el análisis (`crm.fields`); archivo del **diccionario** (`dictionaryFile`) y del **perfil** (`profileFile`); **marca** (`brand.color`, `brand.logo`); escenarios y datos de demostración |
 | `.env` | La máquina y los secretos | motores y modelos por rol, claves de OpenAI y Meta, puerto, `PUBLIC_URL`, token del tablero, calendarios del dueño |
-| Tablero › Canales | Lo que se decide en el día a día | encender o apagar el chat web, WhatsApp (con su QR), WhatsApp oficial y MCP, sin reiniciar |
+| Tablero › Perfil | Lo que el dueño confirma de su negocio | dirección, horarios, zona, contacto, pagos y abono, precios, políticas y datos propios (tallas, tiempos…) |
+| Tablero › Canales | Lo que se decide en el día a día | encender o apagar el chat web, WhatsApp (con su QR), WhatsApp oficial y MCP, sin reiniciar; credenciales de WhatsApp oficial |
 
 El **diccionario** es lo que cada cliente le enseña a aiva sin tocar código: temas que se responden
 con su información (palabras que los disparan y con qué se busca), los verbos con que su gente
@@ -107,6 +108,21 @@ Se agrupan por frase (sin tildes ni mayúsculas) con cuántas veces y cuántas p
 las reglas ya entienden la frase; si no, no se guarda y se dice por qué. La próxima vez se resuelve
 sin IA. Lo que sea del español en general va mejor a las reglas del código, con su prueba sin modelo
 (`pnpm test`). Pruebas: `pnpm test:misses`.
+
+El **perfil** (Configuración › Perfil) es lo que el dueño confirma de su negocio: nombre, qué hace, sitio, ciudad,
+dirección, horarios, zona que atienden, si es solo con cita, contacto, cómo hablar con una persona, formas de
+pago, abono, precios, políticas y datos propios del negocio (tallas, tiempos, lo que venden o no). Vive en su
+archivo (`profileFile`; el de DUNOR es `examples/dunor/profile.json`), se guarda con copia del anterior y se
+aplica al instante.
+
+- Lo confirmado va en la información fija del prompt y en la búsqueda; si contradice otra información, vale el perfil.
+- El nombre, la descripción, el sitio y el contacto humano del perfil reemplazan los de `aiva.config.json`.
+- Lo vacío queda **por confirmar**: el bot no lo supone. Si le preguntan, dice la frase de verificación y la
+  pregunta llega a Hoy › Por verificar.
+- Las notas para el equipo ("el sitio muestra un número y los botones otro") se ven en el formulario, pero no
+  llegan al bot.
+
+Pruebas: `pnpm test:profile`.
 
 La **marca** (`brand`: `color` en hex y `logo`, una URL https o un archivo png, jpg, svg o webp que aiva
 sirve en `/brand/logo`) se ve en el chat del sitio (cabecera, burbujas, botones y el logo) y en la página
@@ -244,9 +260,15 @@ el adaptador se construye cuando haya credenciales de prueba de Meta.
 
 - **Baileys** (QR con el número de la tienda): no necesita túnel ni cuenta de negocio, pero es
   protocolo no oficial; úsalo para pruebas y volúmenes bajos.
-- **Meta Cloud API** (oficial, para producción): `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`,
-  `META_VERIFY_TOKEN`, `META_APP_SECRET` en `.env` y el webhook `https://TU-DOMINIO/webhooks/meta`
-  registrado en Meta. Requiere negocio verificado y plantillas para escribir fuera de la ventana de
+- **Meta Cloud API** (oficial, para producción): las credenciales (`META_ACCESS_TOKEN`,
+  `META_PHONE_NUMBER_ID`, `META_VERIFY_TOKEN`, `META_APP_SECRET`, `META_API_VERSION`) se llenan en
+  **Canales › WhatsApp oficial › Credenciales** o en `.env`. Al guardarlas:
+  - aiva las verifica con Meta y, si Meta las rechaza, no las guarda;
+  - las escribe en `.env` (no en la base ni en el repositorio) y las aplica sin reiniciar;
+  - el tablero nunca vuelve a mostrar el token completo, solo sus últimos caracteres.
+
+  Luego se registra el webhook `https://TU-DOMINIO/webhooks/meta` en Meta, con el token de verificación.
+  Pruebas: `pnpm test:meta`. Requiere negocio verificado y plantillas para escribir fuera de la ventana de
   24 horas. aiva respeta esa ventana: si pasaron más de 24 horas desde el último mensaje del
   cliente, no envía (ni guarda como enviado) lo que Meta rechazaría. El tablero lo advierte en la
   conversación y en "Por verificar" (con cuánto tiempo queda cuando faltan menos de 3 horas), y la

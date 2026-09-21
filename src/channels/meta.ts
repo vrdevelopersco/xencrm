@@ -1,6 +1,7 @@
 // WhatsApp Cloud API (Meta, oficial): webhook de entrada y envío por Graph API.
 // Necesita META_ACCESS_TOKEN, META_PHONE_NUMBER_ID, META_VERIFY_TOKEN (y META_APP_SECRET para validar firmas)
-// y una URL pública (túnel) apuntando a POST /webhooks/meta.
+// y una URL pública (túnel) apuntando a POST /webhooks/meta. Se configuran en .env o desde el tablero (Canales),
+// que verifica con Meta, las guarda en .env y las aplica sin reiniciar.
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Hono } from 'hono';
 import type { HttpBindings } from '@hono/node-server';
@@ -9,19 +10,69 @@ import { handleMessage } from '../agent/agent.js';
 import { registerSender, registerTemplateSender, type Template } from '../crm/outbox.js';
 import { channelOn } from './switches.js';
 
-const meta = {
+export interface MetaCredentials {
+  token: string;
+  phoneId: string;
+  verifyToken: string;
+  appSecret: string;
+  version: string;
+}
+const meta: MetaCredentials = {
   token: process.env.META_ACCESS_TOKEN || '',
   phoneId: process.env.META_PHONE_NUMBER_ID || '',
   verifyToken: process.env.META_VERIFY_TOKEN || '',
   appSecret: process.env.META_APP_SECRET || '',
   version: process.env.META_API_VERSION || 'v21.0',
 };
-export const metaEnabled = Boolean(meta.token && meta.phoneId);
+export const metaConfigured = () => Boolean(meta.token && meta.phoneId);
 
 // Para el tablero (sección Canales): qué tan viva está la conexión con Meta.
-const activity = { lastWebhookAt: 0, lastSentAt: 0, lastError: '', lastErrorAt: 0 };
+const activity = { lastWebhookAt: 0, lastSentAt: 0, lastError: '', lastErrorAt: 0, verified: null as { phone: string; name: string; at: number } | null };
+const tail = (s: string) => (s ? `…${s.slice(-4)}` : '');
+/** Estado para el tablero: los secretos nunca salen completos (solo sus últimos caracteres). */
 export function metaStatus() {
-  return { configured: metaEnabled, signed: Boolean(meta.appSecret), verifyToken: meta.verifyToken, version: meta.version, ...activity };
+  return {
+    configured: metaConfigured(),
+    signed: Boolean(meta.appSecret),
+    verifyToken: meta.verifyToken,
+    version: meta.version,
+    phoneId: meta.phoneId,
+    tokenTail: tail(meta.token),
+    appSecretTail: tail(meta.appSecret),
+    ...activity,
+  };
+}
+
+/** Pregunta a Meta por el número con estas credenciales: si responde, son buenas. */
+export async function verifyMeta(c: Pick<MetaCredentials, 'token' | 'phoneId' | 'version'>): Promise<{ ok: true; phone: string; name: string } | { ok: false; error: string; network?: boolean }> {
+  try {
+    const res = await fetch(`https://graph.facebook.com/${encodeURIComponent(c.version)}/${encodeURIComponent(c.phoneId)}?fields=display_phone_number,verified_name`, {
+      headers: { authorization: `Bearer ${c.token}` },
+      signal: AbortSignal.timeout(15_000),
+    });
+    const body = (await res.json().catch(() => ({}))) as { display_phone_number?: string; verified_name?: string; error?: { message?: string } };
+    if (!res.ok) return { ok: false, error: `Meta respondió ${res.status}: ${body.error?.message ?? 'sin detalle'}`.slice(0, 300) };
+    return { ok: true, phone: body.display_phone_number ?? c.phoneId, name: body.verified_name ?? '' };
+  } catch (err) {
+    return { ok: false, network: true, error: `No se pudo hablar con Meta: ${(err as Error).message}` };
+  }
+}
+
+let sendersOn = false;
+function registerMetaSenders() {
+  if (sendersOn || !metaConfigured()) return;
+  sendersOn = true;
+  registerSender('meta', (userId, text) => sendMetaText(userId.replace(/^meta:/, ''), text));
+  registerTemplateSender('meta', (userId, t) => sendMetaTemplate(userId.replace(/^meta:/, ''), t));
+}
+
+/** Aplica credenciales nuevas al proceso en marcha (el tablero ya las guardó en .env). */
+export function applyMetaCredentials(next: Partial<MetaCredentials>, verified?: { phone: string; name: string }): void {
+  Object.assign(meta, next);
+  if (verified) activity.verified = { ...verified, at: Date.now() };
+  activity.lastError = '';
+  activity.lastErrorAt = 0;
+  registerMetaSenders();
 }
 function failed(err: unknown) {
   activity.lastError = (err as Error).message;
@@ -145,20 +196,20 @@ function validSignature(raw: string, header: string | undefined): boolean {
 }
 
 export function mountMeta(app: Hono<{ Bindings: HttpBindings }>) {
-  if (!metaEnabled) return;
-  registerSender('meta', (userId, text) => sendMetaText(userId.replace(/^meta:/, ''), text));
-  registerTemplateSender('meta', (userId, t) => sendMetaTemplate(userId.replace(/^meta:/, ''), t));
+  // Las rutas se montan siempre: las credenciales pueden llegar después, desde el tablero.
+  registerMetaSenders();
 
   // Verificación del webhook (la hace Meta al registrar la URL)
   app.get('/webhooks/meta', (c) => {
     const mode = c.req.query('hub.mode');
     const token = c.req.query('hub.verify_token');
     const challenge = c.req.query('hub.challenge') ?? '';
-    if (mode === 'subscribe' && token && token === meta.verifyToken) return c.text(challenge);
+    if (mode === 'subscribe' && token && meta.verifyToken && token === meta.verifyToken) return c.text(challenge);
     return c.text('forbidden', 403);
   });
 
   app.post('/webhooks/meta', async (c) => {
+    if (!metaConfigured()) return c.text('no configurado', 404);
     const raw = await c.req.text();
     if (!validSignature(raw, c.req.header('x-hub-signature-256'))) return c.text('bad signature', 401);
     activity.lastWebhookAt = Date.now();

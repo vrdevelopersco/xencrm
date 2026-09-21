@@ -23,6 +23,7 @@
     ]
   },
   "dictionaryFile": "examples/dunor/dictionary.json",
+  "profileFile": "examples/dunor/profile.json",
   "timezone": "America/Bogota",
   "appointments": {
     "enabled": true,

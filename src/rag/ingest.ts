@@ -5,6 +5,7 @@ import { convert } from 'html-to-text';
 import { business } from '../config.js';
 import { embed } from '../llm/ollama.js';
 import { countDocs, replaceDocs, type Doc } from './store.js';
+import { profileDocs } from './profile-index.js';
 
 export interface Product {
   id: string;
@@ -308,6 +309,9 @@ export async function runIngest(opts: { only?: 'products' | 'knowledge' | 'site'
     const kb = loadKnowledgeDir(src.knowledgeDir);
     console.log(`[ingest] ${kb.length} fragmentos de conocimiento (${src.knowledgeDir})`);
     replaceDocs('knowledge', await embedDocs(kb), 'knowledge');
+    const profile = profileDocs(); // el perfil del tablero (Configuración › Perfil)
+    replaceDocs('knowledge', await embedDocs(profile), 'profile');
+    console.log(`[ingest] perfil del negocio: ${profile.length ? 'indexado' : 'vacío'}`);
   }
   if (!opts.only || opts.only === 'site') {
     if (src.sitePages.length) {

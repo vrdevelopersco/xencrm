@@ -5,7 +5,9 @@ import { z } from 'zod';
 // ---------- Variables de entorno (.env) ----------
 // Node >= 20.6 puede cargar .env con --env-file; aquí lo hacemos manualmente para
 // que funcione igual con `tsx` y sin flags.
-function loadDotEnv(path = '.env') {
+/** El archivo de secretos de la máquina. AIVA_ENV_FILE elige otro (pruebas aisladas que no tocan el real). */
+export const ENV_FILE = process.env.AIVA_ENV_FILE || '.env';
+function loadDotEnv(path = ENV_FILE) {
   if (!existsSync(path)) return;
   for (const raw of readFileSync(path, 'utf8').split('\n')) {
     const line = raw.trim();
@@ -181,6 +183,8 @@ const BusinessConfig = z.object({
    * Ver src/agent/dictionary.ts.
    */
   dictionaryFile: z.string().default('dictionary.json'),
+  /** Perfil del negocio (dirección, horarios, pagos, precios, contacto…), editable desde el tablero. Ver src/profile.ts. */
+  profileFile: z.string().default('profile.json'),
   /** La marca del cliente en lo que ve su gente (chat del sitio, página de la cita). El contraste se ajusta solo. */
   brand: z
     .object({

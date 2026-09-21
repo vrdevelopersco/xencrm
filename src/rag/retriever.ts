@@ -1,6 +1,8 @@
 import { embed } from '../llm/ollama.js';
 import { business } from '../config.js';
 import { allDocs, ftsSearch, getDocs, vectorSearch, type Doc, type DocKind, type ScoredDoc } from './store.js';
+import { profileText } from '../profile.js';
+import { PROFILE_DOC_ID } from './profile-index.js';
 
 export interface RetrieveOptions {
   k?: number;
@@ -98,11 +100,13 @@ function formatKnowledge(knowledge: Doc[]): string {
  */
 export function businessSheet(): { text: string; tokens: number } {
   const products = allDocs(['product']);
-  const knowledge = allDocs(['knowledge']);
+  const knowledge = allDocs(['knowledge']).filter((d) => d.id !== PROFILE_DOC_ID); // el perfil va aparte, arriba
+  const profile = profileText();
   const text = [
     '## Información disponible (todo el negocio)',
     'Es todo lo que sabes del negocio y su catálogo. Lo que no esté aquí, no lo sabes.',
     `Tienda: ${business.business.name} — ${business.business.description}\nSitio web: ${business.business.siteUrl}`,
+    profile ? `### Perfil del negocio (confirmado por el negocio: si otra información lo contradice, vale esto)\n${profile}` : '',
     products.length ? `### Catálogo completo\n${formatProducts(products)}` : '### Catálogo completo\n(sin productos)',
     knowledge.length ? `### Información de la tienda\n${formatKnowledge(knowledge)}` : '',
   ]

@@ -27,6 +27,8 @@ export interface ChannelCard {
   /** Advertencias que no impiden funcionar pero hay que atender. */
   warnings: string[];
   qrSvg?: string;
+  /** WhatsApp oficial: lo que ya está guardado, sin los secretos completos (para el formulario de credenciales). */
+  credentials?: { phoneId: string; tokenTail: string; appSecretTail: string; verifyToken: string; version: string; verified: { phone: string; name: string; at: number } | null };
 }
 
 const base = () => env.publicUrl || `http://localhost:${env.port}`;
@@ -113,7 +115,7 @@ export function channelCards(): ChannelCard[] {
       metaState === 'error'
         ? `Último error: ${meta.lastError.slice(0, 160)}`
         : metaState === 'esperando'
-          ? 'Configurado, pero aún no llega ningún mensaje de Meta.'
+          ? `${meta.verified ? `Verificado con Meta: ${meta.verified.phone}${meta.verified.name ? ` (${meta.verified.name})` : ''}. ` : 'Configurado. '}Aún no llega ningún mensaje de Meta.`
           : metaState === 'conectado'
             ? 'Recibiendo mensajes de Meta.'
             : undefined,
@@ -132,11 +134,12 @@ export function channelCards(): ChannelCard[] {
         : ['Meta necesita una URL pública para el webhook: configura PUBLIC_URL (el túnel).']
       : [
           'En developers.facebook.com crea una app de tipo Negocio y agrégale el producto WhatsApp.',
-          'Copia en .env el token (META_ACCESS_TOKEN), el ID del número (META_PHONE_NUMBER_ID), un token de verificación que inventes (META_VERIFY_TOKEN) y la clave secreta de la app (META_APP_SECRET). También sirve el asistente pnpm onboard.',
-          'Reinicia aiva: aquí aparecerá la URL del webhook para registrarla en Meta y suscribir el campo "messages".',
+          'En WhatsApp › Configuración de la API copia el token de acceso y el ID del número, y pégalos abajo en «Credenciales». La clave secreta está en Configuración de la app › Básica.',
+          'Al guardar, aiva las verifica con Meta y muestra aquí la URL del webhook para registrarla en Meta (con el token de verificación) y suscribir el campo "messages".',
           'Para probar sin tocar el número real, Meta da un número de prueba gratis.',
         ],
-    warnings: meta.configured && !meta.signed ? ['Falta META_APP_SECRET: sin él aiva no verifica que los mensajes vengan de Meta, y cualquiera podría enviarle mensajes falsos.'] : [],
+    warnings: meta.configured && !meta.signed ? ['Falta la clave secreta de la app: sin ella aiva no verifica que los mensajes vengan de Meta, y cualquiera podría enviarle mensajes falsos.'] : [],
+    credentials: { phoneId: meta.phoneId, tokenTail: meta.tokenTail, appSecretTail: meta.appSecretTail, verifyToken: meta.verifyToken, version: meta.version, verified: meta.verified },
   });
 
   // Instagram y Messenger: misma plataforma de Meta; el adaptador se construye cuando haya credenciales de prueba.
@@ -186,7 +189,7 @@ export function channelCards(): ChannelCard[] {
 
 /** Enciende o apaga un canal desde el tablero; WhatsApp por QR arranca o se desconecta en el momento. */
 export async function toggleChannel(id: ChannelId, on: boolean): Promise<void> {
-  if (id === 'meta' && !metaStatus().configured) throw new Error('WhatsApp oficial no está configurado en .env');
+  if (id === 'meta' && !metaStatus().configured) throw new Error('Primero guarda las credenciales de Meta (abajo, en «Credenciales»).');
   setChannelOn(id, on);
   if (id === 'whatsapp') {
     if (on && whatsappStatus().state === 'apagado') await startWhatsApp();

@@ -20,6 +20,9 @@ import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
 import { channelCards, toggleChannel } from './registry.js';
+import { saveMetaCredentials } from './meta-credentials.js';
+import { getProfile, pendingFields, PROFILE_FIELDS, saveProfile } from '../profile.js';
+import { indexProfile } from '../rag/profile-index.js';
 import { exportDictionary, getDictionary, importDictionary } from '../agent/dictionary.js';
 import { teachExpression } from '../agent/teach.js';
 import { closeMisses, listMisses, MISS_KINDS, type MissKind } from '../crm/misses.js';
@@ -175,6 +178,21 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     }
   });
 
+  // Perfil del negocio (Configuración › Perfil): lo confirmado va al bot; lo vacío queda por confirmar.
+  app.get('/admin/api/profile', (c) =>
+    c.json({ file: business.profileFile, profile: getProfile(), fields: PROFILE_FIELDS, pending: pendingFields(), agentName: business.agent.name, verifyPhrase: business.agent.verifyPhrase }),
+  );
+  app.post('/admin/api/profile', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { profile?: unknown };
+    try {
+      const r = saveProfile(body.profile);
+      const indexed = await indexProfile();
+      return c.json({ profile: r.profile, backup: r.backup, pending: pendingFields(r.profile), indexed });
+    } catch (err) {
+      return c.json({ errors: (err as Error).message.split('\n') }, 400);
+    }
+  });
+
   // Frases que no entendimos: se enseñan como expresiones del diccionario o se marcan como revisadas.
   app.get('/admin/api/misses', (c) => c.json({ groups: listMisses() }));
   const missBody = async (c: { req: { json: () => Promise<unknown> } }) => {
@@ -197,6 +215,13 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   // Canales: estado, actividad y qué falta; encender o apagar sin reiniciar.
   app.get('/admin/api/channels', (c) => c.json(channelCards()));
+  // Credenciales de WhatsApp oficial: se verifican con Meta, van a .env y se aplican sin reiniciar.
+  app.post('/admin/api/channels/meta/credentials', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    const r = await saveMetaCredentials(body as never);
+    return r.ok ? c.json({ ...r, cards: channelCards() }) : c.json(r, 400);
+  });
+
   app.post('/admin/api/channels/:id', async (c) => {
     const id = c.req.param('id') as ChannelId;
     if (!['web', 'whatsapp', 'meta', 'mcp'].includes(id)) return c.json({ error: 'canal desconocido' }, 404);

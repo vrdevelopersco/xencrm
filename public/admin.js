@@ -15,7 +15,8 @@
     bot: '<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/>',
     book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
     bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
-    plug: '<path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/>'
+    plug: '<path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/>',
+    store: '<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/>'
   };
   document.querySelectorAll('.ic').forEach(function (el) { el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[el.getAttribute('data-ic')] || '') + '</svg>'; });
 
@@ -68,6 +69,7 @@
     if (view === 'calendar') loadCalendar();
     if (view === 'analysis') loadAnalysis();
     if (view === 'agent') loadAgent();
+    if (view === 'profile') loadProfile();
     if (view === 'channels') loadChannels();
     if (view === 'knowledge') loadKnowledge();
   }
@@ -565,6 +567,58 @@
       '<b class="small">Calendarios que bloquean la agenda</b>' + busy + '</div>';
   }
 
+  // ---------- perfil del negocio ----------
+  // Lo confirmado es lo que el bot dice; lo vacío queda "por confirmar" (si preguntan, el bot dice que lo verifica).
+  function loadProfile() { api('/profile').then(function (d) { state.profile = d; renderProfile(); }); }
+  function profGet(p, k) { return k.split('.').reduce(function (o, x) { return o ? o[x] : undefined; }, p); }
+  function profSet(p, k, v) { var ks = k.split('.'), o = p; for (var i = 0; i < ks.length - 1; i++) { o[ks[i]] = o[ks[i]] || {}; o = o[ks[i]]; } o[ks[ks.length - 1]] = v; }
+  function profField(d, f, i) {
+    var v = profGet(d.profile, f.key), id = 'pf-' + i, note = d.profile.notes && d.profile.notes[f.key];
+    if (f.bool) return '<label class="prof-check" for="' + id + '"><input type="checkbox" id="' + id + '" data-key="' + f.key + '"' + (v ? ' checked' : '') + '> ' + esc(f.label) + '</label>';
+    var empty = !String(v || '').trim();
+    var input = f.long ? '<textarea id="' + id + '" data-key="' + f.key + '" rows="2">' + esc(v || '') + '</textarea>' : '<input type="text" id="' + id + '" data-key="' + f.key + '" value="' + esc(v || '') + '">';
+    return '<div class="prof-field"><div class="lbl"><label class="small" for="' + id + '"><b>' + esc(f.label) + '</b></label>' + (empty ? '<span class="chip v-posible">Por confirmar</span>' : '') + '</div>' + input +
+      (f.hint ? '<div class="small muted">' + esc(f.hint) + '</div>' : '') + (note ? '<div class="prof-note">Nota: ' + esc(note) + '</div>' : '') + '</div>';
+  }
+  function profExtra(x, i, notes) {
+    var note = notes && notes[x.title];
+    return '<div class="prof-extra" data-extra="' + i + '"><input type="text" aria-label="Dato" value="' + esc(x.title) + '" placeholder="Qué dato (por ejemplo: Tallas)"><button class="btn sm" type="button" data-rm="' + i + '">Quitar</button>' +
+      '<textarea rows="2" aria-label="' + esc(x.title || 'Detalle') + '" placeholder="Vacío: queda por confirmar">' + esc(x.text) + '</textarea>' + (note ? '<div class="prof-note" style="grid-column:1/-1">Nota: ' + esc(note) + '</div>' : '') + '</div>';
+  }
+  function renderProfile(msg) {
+    var d = state.profile, sections = [];
+    d.fields.forEach(function (f, i) { var s = sections.filter(function (x) { return x.name === f.section; })[0]; if (!s) sections.push(s = { name: f.section, html: '' }); s.html += profField(d, f, i); });
+    var pending = d.pending.length
+      ? '<b>' + d.pending.length + (d.pending.length === 1 ? ' dato por confirmar' : ' datos por confirmar') + '</b><div class="small">Si un cliente pregunta por esto, ' + esc(d.agentName) + ' no lo supone: responde «' + esc(d.verifyPhrase) + '» y te llega a Hoy › Por verificar.</div><div class="dict-chips">' + d.pending.map(function (x) { return '<span class="chip v-posible">' + esc(x) + '</span>'; }).join('') + '</div>'
+      : '<b>Todo confirmado</b><div class="small">' + esc(d.agentName) + ' responde con estos datos.</div>';
+    $('profile').innerHTML = '<div class="panel">' + pending + '</div>' +
+      sections.map(function (s) { return '<div class="panel prof"><b>' + esc(s.name) + '</b>' + s.html + '</div>'; }).join('') +
+      '<div class="panel prof"><b>Otros datos</b><div class="small muted">Lo propio de este negocio: tallas, tiempos de entrega, lo que venden o no.</div><div id="pf-extras">' +
+      d.profile.extras.map(function (x, i) { return profExtra(x, i, d.profile.notes); }).join('') + '</div><div class="feed-row"><button class="btn" type="button" id="pf-add">Agregar dato</button></div></div>' +
+      '<div class="panel"><div class="feed-row"><button class="btn primary" id="pf-save">Guardar perfil</button></div><div id="pf-msg" class="small" role="status">' + (msg || '') + '</div><div class="small muted">Se guarda en <code>' + esc(d.file) + '</code> (con copia del anterior) y el bot lo usa al instante.</div></div>';
+    $('pf-add').onclick = function () {
+      var box = $('pf-extras'), i = box.children.length;
+      box.insertAdjacentHTML('beforeend', profExtra({ title: '', text: '' }, i, null));
+      bindExtraRemove(); box.lastElementChild.querySelector('input').focus();
+    };
+    bindExtraRemove();
+    $('pf-save').onclick = saveProfileForm;
+  }
+  function bindExtraRemove() { $('profile').querySelectorAll('[data-rm]').forEach(function (b) { b.onclick = function () { b.closest('.prof-extra').remove(); }; }); }
+  function saveProfileForm() {
+    var p = JSON.parse(JSON.stringify(state.profile.profile));
+    $('profile').querySelectorAll('[data-key]').forEach(function (el) { profSet(p, el.getAttribute('data-key'), el.type === 'checkbox' ? el.checked : el.value); });
+    p.extras = [].map.call($('profile').querySelectorAll('.prof-extra'), function (row) { return { title: row.querySelector('input').value.trim(), text: row.querySelector('textarea').value }; }).filter(function (x) { return x.title; });
+    var btn = $('pf-save'); btn.disabled = true;
+    api('/profile', { method: 'POST', body: { profile: p } }).then(function (r) {
+      if (r.errors) { $('pf-msg').innerHTML = '<span class="ch-err">No se guardó:</span><ul class="ch-steps">' + r.errors.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>'; return; }
+      state.profile.profile = r.profile; state.profile.pending = r.pending;
+      state.bizName = r.profile.identity.name || state.bizName;
+      renderProfile('Guardado: ' + esc(state.profile.agentName) + ' ya lo usa.' + (r.indexed ? '' : ' (La búsqueda lo incluye con pnpm ingest; con OpenAI ya va completo en cada respuesta.)'));
+      $('pf-msg').scrollIntoView({ block: 'nearest' });
+    }).finally(function () { if ($('pf-save')) $('pf-save').disabled = false; });
+  }
+
   // ---------- frases que no entendimos ----------
   // Lo que las reglas no entendieron: se enseña como expresión del diccionario y la próxima vez se entiende sin IA.
   var MISS_KIND = { fecha: 'Fecha u hora', frase: 'Frase', cita: 'En la cita' };
@@ -705,7 +759,40 @@
     if (ch.messages7d) return ch.messages7d + (ch.messages7d === 1 ? ' mensaje' : ' mensajes') + ' de ' + ch.people7d + (ch.people7d === 1 ? ' persona' : ' personas') + ' en 7 días · el último hace ' + rel(ch.lastInboundAt);
     return ch.lastInboundAt ? 'Sin mensajes esta semana · el último hace ' + rel(ch.lastInboundAt) : 'Aún no ha llegado ningún mensaje por aquí.';
   }
-  function renderChannels(list) {
+  // Credenciales de WhatsApp oficial: se verifican con Meta y quedan en .env; los secretos nunca vuelven completos.
+  function metaCredForm(ch) {
+    var k = ch.credentials || {};
+    var saved = function (tailv) { return tailv ? 'Guardado (termina en ' + tailv.replace('…', '') + '). Vacío = no cambiar' : ''; };
+    return '<details class="ch-cred" id="meta-cred"' + (ch.state === 'sin_configurar' ? ' open' : '') + '><summary>Credenciales</summary>' +
+      '<form id="meta-cred-form" autocomplete="off" novalidate>' +
+      '<label class="small" for="mc-token">Token de acceso</label><input type="password" id="mc-token" autocomplete="off" spellcheck="false" placeholder="' + esc(saved(k.tokenTail) || 'Pega el token de acceso') + '">' +
+      '<label class="small" for="mc-phone">ID del número de teléfono</label><input type="text" id="mc-phone" inputmode="numeric" spellcheck="false" value="' + esc(k.phoneId || '') + '" placeholder="Solo dígitos; no es el número de teléfono">' +
+      '<label class="small" for="mc-secret">Clave secreta de la app</label><input type="password" id="mc-secret" autocomplete="off" spellcheck="false" placeholder="' + esc(saved(k.appSecretTail) || 'Configuración de la app › Básica') + '">' +
+      '<label class="small" for="mc-verify">Token de verificación del webhook</label><div class="cred-row"><input type="text" id="mc-verify" spellcheck="false" value="' + esc(k.verifyToken || '') + '" placeholder="Se genera solo si lo dejas vacío"><button type="button" class="btn" id="mc-gen">Generar</button></div>' +
+      '<label class="small" for="mc-version">Versión de la API</label><input type="text" id="mc-version" spellcheck="false" value="' + esc(k.version || 'v21.0') + '">' +
+      '<div class="small muted">Antes de guardar se verifican con Meta. Quedan en el archivo .env de este equipo, no en la base ni en el repositorio, y el tablero no vuelve a mostrar el token completo.</div>' +
+      '<div class="feed-row"><button type="submit" class="btn primary">Guardar y verificar</button></div>' +
+      '<div class="small" id="mc-msg" role="status"></div></form></details>';
+  }
+  function bindMetaCred() {
+    var form = $('meta-cred-form'); if (!form) return;
+    $('mc-gen').onclick = function () { var a = new Uint8Array(12); crypto.getRandomValues(a); $('mc-verify').value = Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); };
+    form.onsubmit = function (e) {
+      e.preventDefault();
+      var btn = form.querySelector('[type=submit]'); btn.disabled = true; $('mc-msg').textContent = 'Verificando con Meta…';
+      api('/channels/meta/credentials', { method: 'POST', body: { token: $('mc-token').value, phoneId: $('mc-phone').value, appSecret: $('mc-secret').value, verifyToken: $('mc-verify').value, version: $('mc-version').value } }).then(function (r) {
+        if (!r.ok) { $('mc-msg').innerHTML = '<span class="ch-err">No se guardó.</span> ' + esc(r.error || 'Algo falló.'); return; }
+        var msg = r.verified ? 'Verificado con Meta: ' + r.verified.phone + (r.verified.name ? ' (' + r.verified.name + ')' : '') + '. Ya puedes encenderlo y registrar el webhook en Meta.' : (r.warning || 'Guardado.');
+        renderChannels(r.cards, { fresh: true }); // guardado: los campos secretos quedan vacíos
+        var box = $('meta-cred'); if (box) box.open = true;
+        if ($('mc-msg')) $('mc-msg').textContent = msg;
+      }).finally(function () { btn.disabled = false; });
+    };
+  }
+  var credDraft = null; // lo escrito en el formulario sobrevive a los redibujos automáticos
+  function renderChannels(list, opts) {
+    credDraft = null;
+    if ($('meta-cred-form') && !(opts && opts.fresh)) credDraft = { open: $('meta-cred').open, token: $('mc-token').value, phone: $('mc-phone').value, secret: $('mc-secret').value, verify: $('mc-verify').value, version: $('mc-version').value, msg: $('mc-msg').innerHTML };
     $('channels').innerHTML = list.map(function (ch) {
       var st = CH_STATE[ch.state] || [ch.state, 'v-no'];
       var toggle = ch.canToggle
@@ -722,8 +809,13 @@
         (ch.detail ? '<div class="small">' + esc(ch.detail) + '</div>' : '') +
         (channelStats(ch) ? '<div class="ch-stats">' + esc(channelStats(ch)) + '</div>' : '') +
         (ch.qrSvg ? '<div class="ch-qr" role="img" aria-label="Código QR para vincular WhatsApp">' + ch.qrSvg + '</div>' : '') +
-        steps + warnings + copy + toggle + '<div class="ch-err" id="ch-err-' + ch.id + '" role="status"></div></div>';
+        steps + warnings + copy + toggle + '<div class="ch-err" id="ch-err-' + ch.id + '" role="status"></div>' + (ch.id === 'meta' ? metaCredForm(ch) : '') + '</div>';
     }).join('');
+    if (credDraft && $('meta-cred-form')) {
+      $('meta-cred').open = credDraft.open; $('mc-token').value = credDraft.token; $('mc-phone').value = credDraft.phone; $('mc-secret').value = credDraft.secret;
+      $('mc-verify').value = credDraft.verify; $('mc-version').value = credDraft.version; $('mc-msg').innerHTML = credDraft.msg;
+    }
+    bindMetaCred();
     $('channels').querySelectorAll('[data-set]').forEach(function (b) {
       b.onclick = function () {
         var id = b.getAttribute('data-ch'), on = b.getAttribute('data-set') === '1';
@@ -746,7 +838,16 @@
     // Mientras se espera el QR o la conexión, se refresca seguido (el código cambia cada pocos segundos).
     var busy = list.some(function (ch) { return ch.state === 'esperando_qr' || ch.state === 'conectando'; });
     clearTimeout(chTimer);
-    chTimer = setTimeout(function () { if (state.view === 'channels') loadChannels(); }, busy ? 4000 : 30000);
+    chTimer = setTimeout(function () {
+      if (state.view !== 'channels') return;
+      // Mientras alguien escribe las credenciales, no se redibuja.
+      if (document.activeElement && document.activeElement.closest && document.activeElement.closest('#meta-cred')) { renderChannelsLater(); return; }
+      loadChannels();
+    }, busy ? 4000 : 30000);
+  }
+  function renderChannelsLater() {
+    clearTimeout(chTimer);
+    chTimer = setTimeout(function () { if (state.view === 'channels') loadChannels(); }, 30000);
   }
 
   // ---------- conocimiento ----------

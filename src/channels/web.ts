@@ -17,7 +17,7 @@ import { registerSender } from '../crm/outbox.js';
 import { mountAdmin } from './admin.js';
 import { mountCalendar } from './calendar.js';
 import { channelOn } from './switches.js';
-import { metaEnabled, mountMeta } from './meta.js';
+import { metaConfigured, mountMeta } from './meta.js';
 import { createMcpServer } from '../mcp/server.js';
 
 const app = new Hono<{ Bindings: HttpBindings }>();
@@ -162,7 +162,7 @@ export function startWeb() {
       console.log(`[web] demo: ${base}/   widget: <script src="${base}/widget.js" async></script>`);
       if (channelOn('mcp')) console.log(`[web] MCP remoto: ${base}/mcp`);
       console.log(`[web] tablero: ${base}/admin`);
-      if (metaEnabled) console.log(`[meta] webhook de WhatsApp Cloud API: ${base}/webhooks/meta`);
+      if (metaConfigured()) console.log(`[meta] webhook de WhatsApp Cloud API: ${base}/webhooks/meta`);
       resolve();
     });
   });

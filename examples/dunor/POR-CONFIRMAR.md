@@ -1,7 +1,8 @@
 # Datos por confirmar con DUNOR antes de salir a producción
 
 El sitio dunor.co no publica estos datos; la base de conocimiento los deja como "se confirma en la cita".
-Cuando el cliente los confirme, agrégalos a `knowledge/` y vuelve a ejecutar `pnpm ingest`.
+Se llenan en el tablero, en **Configuración › Perfil** (`profile.json`): el bot los usa al instante y lo que
+quede vacío aparece como "por confirmar". Las credenciales de WhatsApp oficial van en **Canales**.
 
 - Precios o rangos de precio: alquiler de traje, esmoquin, accesorios, diseño a la medida, asesoría.
 - Condiciones del alquiler: días incluidos, depósito, lavandería, entrega y devolución.

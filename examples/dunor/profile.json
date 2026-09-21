@@ -1,0 +1,56 @@
+{
+  "identity": {
+    "name": "DUNOR Boutique",
+    "description": "Tu armario personal de lujo en Barranquilla: alquiler premium de trajes, esmóquines y accesorios, diseño a la medida y asesoría de imagen para hombres que quieren brillar en bodas, grados y eventos especiales. Atención solo con cita previa.",
+    "siteUrl": "https://dunor.co",
+    "city": "Barranquilla"
+  },
+  "contact": {
+    "whatsapp": "",
+    "phone": "",
+    "email": "",
+    "instagram": "@dunorboutique",
+    "human": "escríbenos al WhatsApp +57 321 610 5383 o por Instagram @dunorboutique."
+  },
+  "service": {
+    "address": "",
+    "hours": "",
+    "area": "",
+    "appointmentOnly": true
+  },
+  "payments": {
+    "methods": "",
+    "deposit": ""
+  },
+  "prices": "",
+  "policies": "",
+  "extras": [
+    {
+      "title": "Condiciones del alquiler",
+      "text": ""
+    },
+    {
+      "title": "Tiempos del diseño a la medida",
+      "text": ""
+    },
+    {
+      "title": "Tallas disponibles para alquiler",
+      "text": ""
+    },
+    {
+      "title": "Zapatos",
+      "text": ""
+    }
+  ],
+  "notes": {
+    "contact.whatsapp": "El sitio muestra +57 321 610 5383 en el texto, pero los botones enlazan a wa.me/573332370192. «Cómo hablar con una persona» usa hoy el 321.",
+    "service.address": "Hoy el bot dice que la dirección exacta se comparte al confirmar la cita.",
+    "service.hours": "La agenda de citas ofrece lunes a sábado, 10:00-13:00 y 15:00-19:00 (appointments en aiva.config.json): falta que DUNOR lo confirme.",
+    "service.area": "¿Atienden a clientes fuera de Barranquilla?",
+    "payments.methods": "También: política de abono.",
+    "prices": "Alquiler de traje, esmoquin, accesorios, diseño a la medida y asesoría de imagen.",
+    "Condiciones del alquiler": "Días incluidos, depósito, lavandería, entrega y devolución.",
+    "Tiempos del diseño a la medida": "Tiempo total y número de pruebas.",
+    "Zapatos": "¿Venden o alquilan zapatos? Hoy el bot dice que no, deduciéndolo."
+  }
+}

@@ -62,7 +62,7 @@ a{color:var(--brand)}
 .btn.danger{color:var(--bad);border-color:var(--bad)}
 .btn:disabled{opacity:.5;cursor:default}
 .btn.sm{padding:4px 9px;font-size:12px}
-input[type=text],input[type=search],select,textarea{border:1px solid var(--glass-border);background:var(--glass-strong);border-radius:10px;padding:8px 10px;width:100%}
+input[type=text],input[type=search],input[type=password],input[type=email],input[type=tel],input[type=number],select,textarea{border:1px solid var(--glass-border);background:var(--glass-strong);border-radius:10px;padding:8px 10px;width:100%}
 textarea{resize:vertical;min-height:70px}
 .muted{color:var(--muted)}.small{font-size:12px}
 .chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 9px;font-size:12px;border:1px solid var(--glass-border);background:var(--glass-strong)}
@@ -422,6 +422,21 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 .dict-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:13px}
 .dict-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 a.btn{text-decoration:none;display:inline-flex;align-items:center}
+.ch-cred{border-top:1px solid var(--line);padding-top:10px}
+.ch-cred summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+.ch-cred form{display:flex;flex-direction:column;gap:6px}
+.ch-cred input[type=text],.ch-cred input[type=password]{min-height:44px}
+.cred-row{display:flex;gap:6px;align-items:center}.cred-row input{flex:1;min-width:0}.cred-row .btn{min-height:44px}
+.prof{display:flex;flex-direction:column;gap:6px}
+.prof-field{display:flex;flex-direction:column;gap:4px;padding:6px 0}
+.prof-field .lbl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.prof-field input[type=text]{min-height:44px}
+.prof-field textarea{min-height:64px}
+.prof-check{display:flex;align-items:center;gap:10px;min-height:44px}
+.prof-check input{width:20px;height:20px;accent-color:var(--brand)}
+.prof-note{font-size:12px;color:var(--muted-strong)}
+.prof-extra{display:grid;grid-template-columns:1fr auto;gap:6px;padding:8px 0;border-top:1px solid var(--line)}
+.prof-extra textarea{grid-column:1 / -1}
 .miss-teach{display:flex;flex-direction:column;gap:6px}
 .miss-teach[hidden],.feed-row .btn[hidden]{display:none}
 .miss-teach input[type=text]{min-height:44px}
@@ -454,6 +469,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       <button data-view="pipeline"><i class="ic" data-ic="columns"></i>Prospectos</button>
       <button data-view="analysis"><i class="ic" data-ic="chart"></i>Análisis</button>
       <div class="group">Configuración</div>
+      <button data-view="profile"><i class="ic" data-ic="store"></i>Perfil</button>
       <button data-view="agent"><i class="ic" data-ic="bot"></i>Agente</button>
       <button data-view="channels"><i class="ic" data-ic="plug"></i>Canales</button>
       <button data-view="knowledge"><i class="ic" data-ic="book"></i>FAQ</button>
@@ -568,6 +584,10 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       </div>
     </section>
     <!-- Agente -->
+    <section class="view" id="view-profile">
+      <div class="topbar"><h1>Perfil del negocio</h1><span class="muted small">Lo que confirmes aquí es lo que el bot dice de tu negocio</span></div>
+      <div class="pad" id="profile"></div>
+    </section>
     <section class="view" id="view-agent">
       <div class="topbar"><h1>Agente</h1></div>
       <div class="pad" id="agent"></div>
