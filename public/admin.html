@@ -187,8 +187,13 @@ body::before{animation:aurora 48s ease-in-out infinite alternate;will-change:tra
 .seg button.on{background:linear-gradient(180deg,color-mix(in srgb,var(--brand) 85%,#fff),var(--brand));box-shadow:0 2px 8px color-mix(in srgb,var(--brand) 40%,transparent)}
 .filters button{background:var(--glass-strong);border-color:var(--glass-border);box-shadow:var(--rim)}
 .filters button.on{background:linear-gradient(180deg,color-mix(in srgb,var(--brand) 85%,#fff),var(--brand));border-color:transparent}
-input[type=text],input[type=search],select,textarea{border-radius:12px;box-shadow:var(--rim)}
-input:focus,textarea:focus,select:focus{outline:2px solid color-mix(in srgb,var(--brand) 45%,transparent);outline-offset:1px}
+/* Campos: un hueco donde se escribe (bisel hundido: sombra arriba, filo de luz abajo). Sin grano: ahí se lee y se escribe. */
+input[type=text],input[type=search],input[type=password],input[type=email],input[type=tel],input[type=number],input[type=date],input[type=time],input[type=datetime-local],select,textarea{border-radius:12px;box-shadow:var(--sunk)}
+/* En oscuro el hueco es más oscuro que la superficie donde está (en claro, más claro: papel). */
+[data-theme=dark] :is(input[type=text],input[type=search],input[type=password],input[type=email],input[type=tel],input[type=number],input[type=date],input[type=time],input[type=datetime-local],select,textarea){background:#0f1217}
+/* Foco: la marca sólida (5.9:1 en claro, 7:1 en oscuro); al 45 % no llegaba a 3:1. */
+input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-offset:1px}
+::placeholder{color:var(--muted);opacity:1}
 .row:hover{background:var(--row-hover)}
 .row.sel{background:color-mix(in srgb,var(--brand) 14%,transparent);box-shadow:inset 3px 0 0 var(--brand)}
 .bubble{border-radius:18px;box-shadow:var(--rim)}
@@ -284,11 +289,12 @@ input:focus,textarea:focus,select:focus{outline:2px solid color-mix(in srgb,var(
   --human-accent:#f2cc55;--human-deep:#e0b737;--human-edge:#7a5d0c;--on-human:#111827;
   --bevel-hi:inset 0 1px 0 rgba(255,255,255,.38);
   --well:inset 0 2px 5px rgba(17,24,39,.16),inset 0 0 0 1px rgba(17,24,39,.07);
+  --sunk:inset 0 1px 2px rgba(17,24,39,.22),inset 0 3px 7px rgba(17,24,39,.07),0 1px 0 rgba(255,255,255,.8);
   --raise:0 1px 1px rgba(17,24,39,.16),0 3px 8px rgba(17,24,39,.12);
   --raise-hover:0 2px 3px rgba(17,24,39,.16),0 8px 18px rgba(17,24,39,.14);
   --pressed:inset 0 2px 5px rgba(0,0,0,.28);
   --emboss:0 -1px 0 rgba(0,0,0,.25);
-  --ring:0 0 0 3px color-mix(in srgb,var(--brand) 45%,transparent);
+  --ring:0 0 0 2px var(--panel),0 0 0 4px var(--brand); /* filo del panel + marca sólida: se ve sobre cualquier fondo */
   /* Texto secundario sobre textura: se mide contra el peor píxel del grano o del rayado, no contra el color base. */
   --muted-strong:color-mix(in srgb,var(--muted) 70%,var(--text));
   --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .11 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
@@ -299,6 +305,7 @@ input:focus,textarea:focus,select:focus{outline:2px solid color-mix(in srgb,var(
   --human-accent:#e8c350;--human-deep:#cfa935;--human-edge:#cfa935;--on-human:#0b0d12;
   --bevel-hi:inset 0 1px 0 rgba(255,255,255,.30);
   --well:inset 0 2px 6px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.05);
+  --sunk:inset 0 1px 3px rgba(0,0,0,.7),inset 0 3px 9px rgba(0,0,0,.35),0 1px 0 rgba(255,255,255,.08);
   --raise:0 1px 1px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
   --raise-hover:0 2px 3px rgba(0,0,0,.5),0 8px 20px rgba(0,0,0,.45);
   --pressed:inset 0 2px 6px rgba(0,0,0,.45);

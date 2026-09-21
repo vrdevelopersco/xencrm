@@ -116,7 +116,20 @@ lo que dice el título de la columna: no es la única señal.
 - Con movimiento reducido, no se mueve.
 
 Se abre con Enter o espacio (`role="button"`, foco visible con `--ring`). El puntaje no se parte en dos líneas: el
-que se parte es el nombre. Sigue: campos de formulario (bisel hundido, sin grano).
+que se parte es el nombre.
+
+### Campos de formulario (hecho, 2026-09-21)
+Un campo es un hueco donde se escribe: bisel hundido (`--sunk`: sombra adentro arriba, filo de luz afuera abajo),
+sin grano porque ahí se lee y se escribe. Antes llevaban `--rim`, que es relieve: la dirección contraria. En claro
+el hueco es papel blanco; en oscuro es más oscuro que la superficie (`#0f1217`), como se ve un hueco de verdad.
+
+Al medir apareció que el foco no cumplía: la marca al 45 % daba ~1.9:1 sobre el panel claro (el mínimo para un
+indicador de foco es 3:1). Ahora los campos llevan contorno de 2 px en la marca sólida (6.1:1 claro, 7.7:1 oscuro)
+y `--ring` (botones, switch, tarjetas) es un filo del color del panel más la marca sólida, que se ve sobre cualquier
+fondo, incluido el botón primario. El texto de ejemplo de los campos usa `--muted` (5.6:1 claro, 7.4:1 oscuro); el
+texto escrito en oscuro queda a 15:1.
+
+Con esto queda recorrido el orden de HRCAPOLO (chips → marco del pipeline → campos). Las burbujas del chat siguen planas.
 
 Decisiones:
 - La página pública de la cita sigue el tema del sistema a propósito: es una utilidad de calendario, no una pieza de
