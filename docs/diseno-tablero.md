@@ -104,6 +104,20 @@ antialiasing de la curva ensucia la lectura igual que un fondo en movimiento. L�
 desactualizados sirve en etiquetas cortas; si ese texto crece, itálica e interletrado apretado es lo primero que se
 vuelve ilegible.
 
+### Marco de las tarjetas del pipeline (hecho, 2026-09-21)
+Las tarjetas se toman y se sueltan: son una pieza con marco de cartulina (grano, bisel y un filo en el tono de la
+etapa de su columna: gris, ámbar, verde de marca, verde de venta, rojo). **Solo el marco lleva textura**: la zona de
+datos es una etiqueta lisa y opaca (`--panel`, no el vidrio translúcido, para que el grano no asome detrás del
+texto), así que su contraste es el de siempre (detalle 5.9:1 en claro y 7.0:1 en oscuro). El tono del marco repite
+lo que dice el título de la columna: no es la única señal.
+
+- Al pasar el cursor, se levanta.
+- Al arrastrarla, deja su hueco punteado; la columna de destino se hunde (`--well`) con un tinte de su tono.
+- Con movimiento reducido, no se mueve.
+
+Se abre con Enter o espacio (`role="button"`, foco visible con `--ring`). El puntaje no se parte en dos líneas: el
+que se parte es el nombre. Sigue: campos de formulario (bisel hundido, sin grano).
+
 Decisiones:
 - La página pública de la cita sigue el tema del sistema a propósito: es una utilidad de calendario, no una pieza de
   marca, porque aiva todavía no tiene la piel de cada cliente. Cuando la tenga, esa página debe usarla fija.
