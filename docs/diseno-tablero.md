@@ -138,9 +138,12 @@ los botones; el "Sí" del veredicto y la zona "prospecto" de la barra de probabi
 (citas) y `--si` (veredicto "sí"). Hoy tienen el mismo valor que la marca; lo que importa es que ya no dependen de
 ella. `--brand` queda para acciones, selección y navegación.
 
-Pregunta abierta: la probabilidad de 100 se ve **roja** en la etiqueta de temperatura ("100 · caliente") y **verde**
-en la barra del detalle (vocabulario del veredicto: gris sin señales, ámbar posible, verde prospecto). Son dos
-vocabularios para el mismo número.
+Temperatura y veredicto eran el mismo puntaje (0–100, cortes en 60 y 30, `temperature()` en el analizador y
+`verdict()` en el tablero) pintado con dos reglas: "100 · caliente" salía **rojo** en la tarjeta y la barra del
+detalle, **verde**. Peor: el rojo de "caliente" (el mejor prospecto) era el mismo de "Perdido" (el peor). Se unificó
+por el veredicto: caliente usa `--si` (verde), tibio el ámbar de "posible", frío el gris de "sin señales". El rojo
+queda solo para perdido y errores. Las palabras siguen siendo dos ("caliente" en tarjetas, avisos y Hoy; "prospecto
+claro" en la ficha); el color ya no las contradice.
 
 ### Cambiar de etapa sin arrastrar (2026-09-21, pregunta de HRCAPOLO)
 Solo se podía arrastrando con el mouse (o desde la ficha del contacto). En el celular, arrastrar no funciona con el

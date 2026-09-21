@@ -67,7 +67,7 @@ textarea{resize:vertical;min-height:70px}
 .muted{color:var(--muted)}.small{font-size:12px}
 .chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 9px;font-size:12px;border:1px solid var(--glass-border);background:var(--glass-strong)}
 .chip.stage-nuevo{background:var(--bg)}.chip.stage-conversando{background:var(--me)}.chip.stage-interesado{background:var(--warn-soft);color:var(--warn)}.chip.stage-cita_agendada{background:var(--cita-soft);color:var(--cita)}.chip.stage-vendido{background:var(--ok-soft);color:var(--ok)}.chip.stage-perdido{background:var(--bad-soft);color:var(--bad)}
-.chip.t-caliente{background:var(--bad-soft);color:var(--bad);border-color:transparent}.chip.t-tibio{background:var(--warn-soft);color:var(--warn);border-color:transparent}.chip.t-frio{background:var(--bg);color:var(--muted)}
+.chip.t-caliente{background:var(--si-soft);color:var(--si);border-color:transparent}.chip.t-tibio{background:var(--warn-soft);color:var(--warn);border-color:transparent}.chip.t-frio{background:var(--bg);color:var(--muted)}
 .chip.human{background:var(--human);border-color:transparent}
 /* Bandeja */
 .inbox{display:grid;grid-template-columns:320px 1fr 320px;flex:1;min-height:0}
@@ -360,7 +360,10 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 .chip.stage-interesado,.chip.t-tibio,.chip.v-posible{--tone:var(--warn)}
 .chip.stage-cita_agendada,.chip.v-cita{--tone:var(--cita)}
 .chip.v-si{--tone:var(--si)}
-.chip.t-caliente,.chip.v-perdido{--tone:var(--bad)}
+/* Temperatura y veredicto son el mismo puntaje con los mismos cortes (60 y 30): mismos colores. "Caliente" es el
+   mejor prospecto, así que va con el verde de "sí", no con el rojo, que es de "perdido". */
+.chip.t-caliente{--tone:var(--si)}
+.chip.v-perdido{--tone:var(--bad)}
 .chip.stage-vendido,.chip.v-cliente{--tone:var(--ok)}
 .chip.who,.chip.human{--tone:var(--human-edge)}
 .chip:not(.stale){background-image:var(--grain);border-color:color-mix(in srgb,var(--tone) 32%,transparent);
