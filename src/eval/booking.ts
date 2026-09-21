@@ -56,6 +56,13 @@ await run('la del medio', elegir(), chose(11));
 await run('la segunda', elegir(), chose(11));
 await run('en la mañana', elegir(), narrowed([10, 11]));
 await run('a primera hora', elegir(), narrowed([10, 11]));
+await run('a la hora del almuerzo', elegir(), chose(12));
+// Le sirve cualquiera: la primera de la lista
+await run('la que sea', elegir(), chose(10));
+await run('Cualquiera me sirve', elegir(), chose(10));
+await run('me da igual', elegir(), chose(10));
+await run('la que tú digas', elegir(), chose(10));
+await run('cualquiera, pero el jueves', elegir(), (st) => (st?.step === 'elegir' ? null : `esperaba ofrecer el jueves, no escoger; quedó ${st?.step ?? 'sin flujo'}`));
 // Más tarde el mismo día pedido
 await run('más tarde', elegir({ when: parseWhen(`el ${Number(day(offered[0]!).slice(8))}`) ?? undefined }), (st) =>
   st?.step === 'elegir' && st.offered.length > 0 && st.offered.every((o) => day(o) === day(offered[0]!) && hour(o) > 12) ? null : `esperaba espacios después de las 12 del mismo día; quedó ${st?.offered.map((o) => `${day(o)} ${hour(o)}`).join(', ')}`,

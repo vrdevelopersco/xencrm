@@ -52,6 +52,15 @@ const CASES: [string, Expect][] = [
   ['a última hora', { fromMin: 1020, label: 'a última hora' }],
   ['a primera hora el jueves', { weekdays: [4], toMin: 720 }],
   ['¿tienen espacio el sábado en la tarde?', { weekdays: [6], fromMin: 780 }],
+  ['a la hora del almuerzo', { fromMin: 720, toMin: 840, label: 'a la hora del almuerzo' }],
+  ['antes del almuerzo', { fromMin: 0, toMin: 720 }],
+  ['después del almuerzo', { fromMin: 780, toMin: 1140 }],
+  ['en ocho días', { days: ['2026-09-28'] }],
+  ['de hoy en quince', { days: ['2026-10-05'] }],
+  ['dentro de 3 días', { days: ['2026-09-24'] }],
+  ['en dos semanas', { days: ['2026-10-05'] }],
+  ['en ocho días en la tarde', { days: ['2026-09-28'], fromMin: 780 }],
+  ['el otro fin de semana', { weekdays: [6, 0], from: '2026-09-28', to: '2026-10-04' }],
   // No son fechas
   ['Andrés Peña', null],
   ['quiero agendar una cita', null],
@@ -60,6 +69,8 @@ const CASES: [string, Expect][] = [
   ['más tarde', null],
   ['la 2', null],
   ['voy a una boda', null],
+  ['hace ocho días compré un traje', null],
+  ['buenos días', null],
 ];
 
 let fail = 0;

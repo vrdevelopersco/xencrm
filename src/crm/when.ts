@@ -43,10 +43,11 @@ const WEEKDAY = `(${WEEKDAYS.join('|')})s?`;
 const monthNumber = (s: string) => (s === 'setiembre' ? 9 : MONTHS.indexOf(s) + 1);
 
 // ---------- Horas ----------
+const RELATIVE_WORDS: Record<string, number> = { un: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, diez: 10, quince: 15 };
 const HOUR_WORDS: Record<string, number> = { una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12 };
 // "5", "5:30", "cinco", "tres y media", "4 pm", "10 de la mañana"
 const H = String.raw`(\d{1,2}(?::\d{2})?|${Object.keys(HOUR_WORDS).join('|')})(?:\s+y\s+(media|cuarto))?(?:\s*(a\.?\s?m\.?|p\.?\s?m\.?|de\s+la\s+(?:manana|tarde|noche)|del\s+mediodia)(?![a-z]))?`;
-type Franja = 'manana' | 'mediodia' | 'tarde' | 'noche' | 'ultima';
+type Franja = 'manana' | 'mediodia' | 'almuerzo' | 'tarde' | 'noche' | 'ultima';
 
 function toMinutes(num: string, frac: string | undefined, meridiem: string | undefined, franja: Franja | undefined): number | null {
   let h: number;
@@ -121,7 +122,7 @@ export function parseWhen(text: string, now = new Date()): When | null {
   };
 
   // Franja del día (sin consumirla: "de la mañana" también sirve para leer la hora)
-  const franja: Franja | undefined = /\b(?:en|por|de|a)\s+la\s+mananita\b|\b(?:en|por|de|a)\s+la\s+manana\b|\b(?:en|por)\s+las\s+mananas\b|(?<!mas\s)\btemprano\b|\btempranito\b|\ba primera hora\b/.test(t)
+  const franja: Franja | undefined = /\b(?:en|por|de|a)\s+la\s+mananita\b|\b(?:en|por|de|a)\s+la\s+manana\b|\b(?:en|por)\s+las\s+mananas\b|(?<!mas\s)\btemprano\b|\btempranito\b|\ba primera hora\b|\bantes\s+del?\s+almuerzo\b/.test(t)
     ? 'manana'
     : /\b(?:al\s+)?medio\s?dia\b|\bmediodia\b/.test(t)
       ? 'mediodia'
@@ -131,7 +132,9 @@ export function parseWhen(text: string, now = new Date()): When | null {
           ? 'tarde'
           : /\b(?:en|por|de|a)\s+la\s+noche(?:cita)?\b|\b(?:en|por)\s+las\s+noches\b/.test(t)
             ? 'noche'
-            : undefined;
+            : /\bhoras?\s+del?\s+almuerzo\b|\b(?:en|a|al|durante|para)\s+(?:el\s+)?almuerzo\b/.test(t)
+              ? 'almuerzo'
+              : undefined;
 
   // Horas: rangos, "después de", "antes de", "a las"
   let fromMin: number | undefined;
@@ -184,6 +187,7 @@ export function parseWhen(text: string, now = new Date()): When | null {
     const window: Record<Franja, [number, number, string]> = {
       manana: [0, 12 * 60, 'en la mañana'],
       mediodia: [12 * 60, 13 * 60 + 30, 'al mediodía'],
+      almuerzo: [12 * 60, 14 * 60, 'a la hora del almuerzo'],
       ultima: [17 * 60, 24 * 60, 'a última hora'],
       tarde: [13 * 60, 19 * 60, 'en la tarde'], // después del almuerzo: las 12 son mediodía
       noche: [18 * 60, 24 * 60, 'en la noche'],
@@ -216,7 +220,19 @@ export function parseWhen(text: string, now = new Date()): When | null {
     date ??= thisMonth && d >= today.d ? thisMonth : validDate(today.m === 12 ? today.y + 1 : today.y, (today.m % 12) + 1, d);
   });
 
-  // Días relativos
+  // Días relativos. "En ocho días" y "de hoy en ocho" son una semana; "en quince días", dos (se cuenta el día de hoy).
+  if (!date) {
+    const count = (w: string) => (/^\d+$/.test(w) ? Number(w) : RELATIVE_WORDS[w]);
+    const inDays = /\b(?:en|dentro\s+de)\s+(\d{1,2}|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|diez|quince)\s+dias?\b|\bde\s+hoy\s+en\s+(ocho|quince|8|15)\b/.exec(t);
+    const inWeeks = /\b(?:en|dentro\s+de)\s+(un|una|dos|tres|1|2|3)\s+semanas?\b/.exec(t);
+    if (inDays) {
+      const n = count(inDays[1] ?? inDays[2]!);
+      if (n !== undefined && n >= 1 && n <= 60) date = addDays(today, n === 8 ? 7 : n === 15 ? 14 : n);
+    } else if (inWeeks) {
+      const n = count(inWeeks[1]!);
+      if (n !== undefined) date = addDays(today, n * 7);
+    }
+  }
   if (!date) {
     if (/\bpasado\s+manana\b/.test(t)) date = addDays(today, 2);
     else if (/(?<!\b(?:la|las|pasado|de)\s)\bmanana\b/.test(t)) date = addDays(today, 1);
@@ -231,7 +247,8 @@ export function parseWhen(text: string, now = new Date()): When | null {
   const wd = tp.wd;
   const nextMonday = addDays(today, ((8 - wd) % 7) || 7);
   let range: { from: YMD; to: YMD; label: string } | null = null;
-  if (/\b(?:(?:la\s+)?(?:proxima|otra|siguiente|entrante)\s+semana|semana\s+(?:que\s+viene|entrante|siguiente))\b/.test(t)) {
+  // "El otro fin de semana" es el de la próxima semana, no este.
+  if (/\b(?:(?:la\s+)?(?:proxima|otra|siguiente|entrante)\s+semana|semana\s+(?:que\s+viene|entrante|siguiente))\b|\botro\s+(?:fin(?:de)?\s+de\s+semana|finde)\b/.test(t)) {
     range = { from: nextMonday, to: addDays(nextMonday, 6), label: 'la próxima semana' };
   } else if (/\besta\s+semana\b/.test(t)) {
     range = { from: today, to: addDays(today, (7 - wd) % 7), label: 'esta semana' };
@@ -279,7 +296,7 @@ export function refineWhen(prev: When | undefined, next: When): When {
 // ---------- Respaldo con el modelo ----------
 // Palabras que indican que el cliente habla de cuándo, aunque las reglas no lo entiendan ("después del puente").
 const TEMPORAL_RE = new RegExp(
-  String.raw`\b(semana|mes|quincena|festivo|puente|feriado|fecha|hora|temprano|tarde|noche|manana|mediodia|proxim\w*|siguiente|despues|antes|luego|cumple\w*|navidad|finde|hoy|${WEEKDAYS.join('|')}|${MONTHS.join('|')})\b`,
+  String.raw`\b(semana|mes|quincena|dias|almuerzo|festivo|puente|feriado|fecha|hora|temprano|tarde|noche|manana|mediodia|proxim\w*|siguiente|despues|antes|luego|cumple\w*|navidad|finde|hoy|${WEEKDAYS.join('|')}|${MONTHS.join('|')})\b`,
 );
 export function mentionsTime(text: string): boolean {
   return TEMPORAL_RE.test(fold(text));

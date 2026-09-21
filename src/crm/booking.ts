@@ -47,6 +47,9 @@ const CHANGE_RE = /\b(?:mejor|otr[oa]s?\s+(?:d[ií]a|hora|fecha|opci[oó]n)|camb
 const FIRST_RE = /\b(?:la|el)\s+(?:m[aá]s\s+(?:temprano|pronto|pronta|cercana|cercano))\b|\bcuanto antes\b|\blo (?:m[aá]s )?(?:antes|pronto) (?:posible|que se pueda)\b/i;
 const LAST_RE = /\b(?:la|el)\s+(?:[uú]ltim[oa]|m[aá]s\s+tarde|de\s+m[aá]s\s+tarde)\b/i;
 const MIDDLE_RE = /\b(?:la|el)\s+del\s+medio\b/i;
+// "La que sea", "cualquiera", "me da igual": le sirve cualquiera de la lista; se toma la primera (sobre el texto sin tildes).
+const ANY_RE =
+  /^(?:(?:si|pues|bueno|ok|listo|dale|ah|no se)[\s,]+)*(?:cualquiera|cualquier\s+(?:hora|dia|opcion)|a\s+cualquier\s+hora|(?:la|el)\s+que\s+(?:sea|haya|tengas|tenga|(?:t[eu]|le)\s+(?:quede|sirva)\s+mejor|me\s+(?:des|de|recomiendes|recomiende)|(?:tu|usted)\s+(?:digas|diga|prefieras|prefiera|quieras|quiera)|digas|diga|prefieras|prefiera|quieras|quiera)|me\s+da\s+(?:igual|lo\s+mismo)|como\s+(?:tu\s+|usted\s+)?(?:quieras|quiera|prefieras|prefiera|veas|vea))\b/;
 const NO_RE = /^(no|nop|otra|otro|ninguna|ninguno|cambia|mejor otra|no me sirve|no puedo)\b/i;
 const ORDINALS: Record<string, number> = { primera: 1, primero: 1, segunda: 2, segundo: 2, tercera: 3, tercero: 3 };
 // "la segunda" es una opción; "a primera hora" o "la segunda semana" no.
@@ -318,6 +321,7 @@ async function step(userId: string, text: string): Promise<string | null> {
       }
       return offer(c, { when: refineWhen(st.when, w) });
     }
+    if (ANY_RE.test(t)) return choose(st.offered[0]); // después de las fechas: "cualquiera, pero el jueves" pide el jueves
     if (/m[aá]s temprano/.test(t) && st.offered.length) {
       // Antes de lo ofrecido, el mismo día o franja que ya se había pedido.
       const first = tzParts(new Date(Math.min(...st.offered.map((iso) => new Date(iso).getTime()))));
@@ -461,6 +465,7 @@ export function bookingReading(text: string): string | null {
   if (MIDDLE_RE.test(t)) return 'la opción del medio';
   const w = parseWhen(text);
   if (w) return w.label;
+  if (ANY_RE.test(t)) return 'cualquiera: la primera opción';
   if (CANCEL_RE.test(t)) return 'dejar la cita para después';
   if (KEEP_RE.test(t)) return 'dejar la cita como está';
   if (YES_RE.test(t) && !CHANGE_RE.test(t)) return 'sí';
