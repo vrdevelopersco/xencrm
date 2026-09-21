@@ -1,0 +1,14 @@
+node_modules/
+.env
+# sesión de WhatsApp (credenciales): NUNCA subir
+auth/
+data/*.db
+data/*.db-*
+data/knowledge/crawled/
+*.log
+.DS_Store
+sidecar/bin/
+# claves sueltas que llegan por fuera del .env
+*.jaja
+# copias de seguridad del diccionario al importar desde el tablero
+*.anterior.json

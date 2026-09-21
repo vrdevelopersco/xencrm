@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aiva · Tablero</title>
+<style>
+:root{--bg:#eef0f4;--panel:#fff;--glass:rgba(255,255,255,.70);--glass-strong:rgba(255,255,255,.80);--glass-overlay:rgba(255,255,255,.92);--glass-border:rgba(17,24,39,.08);--glass-inset:inset 0 -1px 0 rgba(17,24,39,.06);--glass-shadow:0 10px 32px rgba(17,24,39,.10);--blob1:#bfe3cf;--blob2:#c7d6f5;--blob3:#f6e3c8;--line:#e2e5ea;--text:#111827;--muted:#5f6875;--brand:#276f45;--brand-soft:#e6f4ec;--warn:#a3480a;--warn-soft:#fef3c7;--bad:#b91c1c;--bad-soft:#fee2e2;--ok:#166534;--ok-soft:#dcfce7;--me:#dbeafe;--bot:#f3f4f6;--human:#fef9c3;--shadow:0 1px 2px rgba(0,0,0,.06)}
+[data-theme=dark]{--bg:#0b0d12;--panel:#171a21;--glass:rgba(24,28,36,.58);--glass-strong:rgba(24,28,36,.78);--glass-overlay:rgba(24,28,36,.92);--glass-border:rgba(255,255,255,.09);--glass-inset:inset 0 1px 0 rgba(255,255,255,.06);--glass-shadow:0 12px 36px rgba(0,0,0,.45);--blob1:#12392a;--blob2:#15264a;--blob3:#3a2a12;--line:#262a33;--text:#e5e7eb;--muted:#9aa3b2;--brand:#5fbf86;--brand-soft:#173424;--warn:#f59e0b;--warn-soft:#3a2a08;--bad:#f87171;--bad-soft:#3b1212;--ok:#4ade80;--ok-soft:#0f2e1b;--me:#1e3a5f;--bot:#20242d;--human:#3a3410;--shadow:none}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body::before{content:"";position:fixed;inset:-20%;z-index:-1;pointer-events:none;background:radial-gradient(600px 500px at 8% 10%,var(--blob1),transparent 60%),radial-gradient(700px 600px at 90% 20%,var(--blob2),transparent 60%),radial-gradient(600px 500px at 60% 100%,var(--blob3),transparent 60%);filter:blur(40px);opacity:.9}
+/* Liquid glass: superficies translúcidas con desenfoque y borde con brillo. Solo en contenedores, no en filas ni burbujas. */
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow)}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--brand)}
+.app{display:grid;grid-template-columns:220px 1fr;height:100vh}
+.side{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);border-right:1px solid var(--glass-border);display:flex;flex-direction:column;padding:14px 10px;gap:4px}
+.brand{font-weight:700;font-size:16px;padding:6px 10px 12px;display:flex;align-items:center;gap:8px}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:none;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--text)}
+.nav button:hover{background:rgba(127,127,127,.1)}.nav button.active{background:color-mix(in srgb,var(--brand) 16%,transparent);color:var(--brand);font-weight:600}
+.nav .badge{margin-left:auto;background:var(--bad);color:#fff;border-radius:10px;font-size:11px;padding:1px 7px;min-width:20px;text-align:center}
+.nav .badge:empty{display:none}
+.ic{display:inline-flex;width:18px;height:18px;flex:0 0 18px;color:var(--muted)}.nav button.active .ic{color:var(--brand)}.ic svg{width:100%;height:100%}
+.bell .ic{width:16px;height:16px;color:var(--text)}
+.stale{color:var(--muted);font-style:italic}
+.chip.stale{background:var(--glass-strong);color:var(--muted);border:1px dashed var(--muted)}
+.score.stale b{color:var(--muted)}
+.bar.stale i{background:repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)}
+.chip.who{background:var(--human);border-color:transparent}
+.nav .group{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 10px 4px}
+.bell{position:relative;margin-left:auto}
+.bell .badge{position:absolute;top:-6px;right:-6px;background:var(--bad);color:#fff;border-radius:10px;font-size:10px;padding:0 5px;min-width:16px;text-align:center}
+.bell .badge:empty{display:none}
+.notif{position:fixed;left:230px;top:12px;width:360px;max-width:calc(100vw - 32px);max-height:70vh;overflow:auto;background:var(--glass-overlay);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);border:1px solid var(--glass-border);border-radius:16px;box-shadow:var(--glass-inset),0 16px 48px rgba(0,0,0,.25);z-index:60;display:none}
+.notif.open{display:block}
+.notif h4{margin:0;padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;display:flex;justify-content:space-between}
+.notif .n{padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.notif .n:hover{background:var(--bg)}.notif .n b{display:block;font-size:13px}.notif .n span{color:var(--muted);font-size:12px}
+.notif .n.unseen{border-left:3px solid var(--brand)}
+#today{padding:16px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.today .panel h3{margin:0 0 4px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.today .panel h3 .chip{font-weight:400}
+.today .row{grid-template-columns:1fr auto}
+.today .ok{color:var(--muted);font-size:13px;padding:8px 0}
+@media(max-width:900px){.notif{left:16px;top:56px}.nav .group{display:none}}
+.side .spacer{flex:1}
+.side .foot{display:flex;flex-direction:column;gap:6px;padding:8px 6px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.side .foot .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.icon-btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:5px 8px;cursor:pointer;font-size:13px}
+.icon-btn.on{border-color:var(--brand);color:var(--brand)}
+.main{overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.view{display:none;height:100%;min-height:0}.view.active{display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--glass-border);background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%)}
+.topbar h1{font-size:16px;margin:0;font-weight:600}
+.topbar .grow{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 12px;cursor:pointer}
+.btn.primary{background:linear-gradient(180deg,color-mix(in srgb,var(--brand) 85%,#fff),var(--brand));border-color:transparent;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 4px 14px color-mix(in srgb,var(--brand) 35%,transparent)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sm{padding:4px 9px;font-size:12px}
+input[type=text],input[type=search],select,textarea{border:1px solid var(--glass-border);background:var(--glass-strong);border-radius:10px;padding:8px 10px;width:100%}
+textarea{resize:vertical;min-height:70px}
+.muted{color:var(--muted)}.small{font-size:12px}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 9px;font-size:12px;border:1px solid var(--glass-border);background:var(--glass-strong)}
+.chip.stage-nuevo{background:var(--bg)}.chip.stage-conversando{background:var(--me)}.chip.stage-interesado{background:var(--warn-soft);color:var(--warn)}.chip.stage-cita_agendada{background:var(--brand-soft);color:var(--brand)}.chip.stage-vendido{background:var(--ok-soft);color:var(--ok)}.chip.stage-perdido{background:var(--bad-soft);color:var(--bad)}
+.chip.t-caliente{background:var(--bad-soft);color:var(--bad);border-color:transparent}.chip.t-tibio{background:var(--warn-soft);color:var(--warn);border-color:transparent}.chip.t-frio{background:var(--bg);color:var(--muted)}
+.chip.human{background:var(--human);border-color:transparent}
+/* Bandeja */
+.inbox{display:grid;grid-template-columns:320px 1fr 320px;flex:1;min-height:0}
+.list{border-right:1px solid var(--glass-border);display:flex;flex-direction:column;min-height:0;background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%)}
+.list .tools{padding:10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.filters button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer}
+.filters button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.rows{overflow-y:auto;flex:1}
+.row{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px 8px}
+.row:hover{background:var(--bg)}.row.sel{background:color-mix(in srgb,var(--brand) 14%,transparent)}
+.row .name{font-weight:600;display:flex;align-items:center;gap:6px;min-width:0}
+.row .name span.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .time{color:var(--muted);font-size:11px;text-align:right}
+.row .snip{grid-column:1/-1;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .meta{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.unread{background:var(--bad);color:#fff;border-radius:10px;font-size:11px;padding:0 6px}
+.chat{display:flex;flex-direction:column;min-height:0;background:transparent}
+.chat .head{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--glass-border);background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);flex-wrap:wrap}
+.chat .head .who{font-weight:600}
+.chat .head .meta-line{font-size:12px;color:var(--muted)}
+.chat .head .meta-line b{color:var(--text);font-weight:600}
+.chat .head .meta-line.stale{font-style:italic}
+.chat .head .meta-line.stale b{color:var(--muted)}
+.chat .head .seg-row{display:flex;align-items:center;gap:8px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:6px 12px;cursor:pointer}
+.seg button.on{background:var(--brand);color:#fff}
+.msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
+.bubble{max-width:72%;padding:8px 12px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word;box-shadow:var(--shadow);position:relative}
+.bubble.customer{align-self:flex-start;background:var(--glass-strong);border:1px solid var(--glass-border);border-bottom-left-radius:4px}
+.bubble.bot{align-self:flex-end;background:var(--bot);border-bottom-right-radius:4px}
+.bubble.human{align-self:flex-end;background:var(--human);border-bottom-right-radius:4px}
+.bubble .who{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+.bubble .ts{display:block;font-size:10px;color:var(--muted);margin-top:4px;text-align:right}
+.sysline{align-self:center;font-size:12px;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:999px;padding:3px 10px}
+.composer{display:flex;gap:8px;padding:10px;border-top:1px solid var(--glass-border);background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);align-items:flex-end}
+.composer textarea{min-height:44px;max-height:140px}
+.composer .hint{flex:1;color:var(--muted);font-size:13px;padding:10px}
+.details{border-left:1px solid var(--glass-border);overflow-y:auto;background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);padding:14px;display:flex;flex-direction:column;gap:14px}
+.details h3{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.score{display:flex;align-items:baseline;gap:8px}.score b{font-size:28px}
+.bar{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;border:1px solid var(--line)}.bar i{display:block;height:100%;background:var(--brand)}
+.factors{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:13px}
+.factors li{display:flex;justify-content:space-between}.factors .pos{color:var(--ok)}.factors .neg{color:var(--bad)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:13px}.kv dt{color:var(--muted)}.kv dd{margin:0}
+.timeline{list-style:none;margin:0;padding:0;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+/* Pipeline */
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:12px;padding:16px;overflow-x:auto;flex:1;min-height:0}
+.col{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow);border-radius:16px;display:flex;flex-direction:column;min-height:0}
+.col h3{margin:0;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+.col .cards{padding:8px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;min-height:60px}
+.col.over{outline:2px dashed var(--brand)}
+.card{background:var(--glass-strong);border:1px solid var(--glass-border);border-radius:12px;padding:8px 10px;cursor:grab}
+.card .t{font-weight:600;display:flex;justify-content:space-between;gap:6px}
+.card .s{font-size:12px;color:var(--muted);margin-top:3px}
+/* Calendario */
+.cal{display:grid;grid-template-columns:1fr 340px;gap:16px;padding:16px;flex:1;min-height:0;overflow:auto}
+.day{margin-bottom:14px}.day h3{font-size:13px;margin:0 0 6px;color:var(--muted)}
+.appt{background:var(--glass-strong);border:1px solid var(--glass-border);border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.appt .t{font-weight:600;min-width:70px}.appt .grow{flex:1}
+.appt.cancelada{color:var(--muted);text-decoration:line-through}
+.panel{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+/* Análisis */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;padding:16px 16px 0}
+.tile{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow);border-radius:16px;padding:12px 14px;cursor:pointer;text-align:left}
+.tile:hover{border-color:var(--brand)}.tile b{font-size:24px;display:block}.tile span{color:var(--muted);font-size:12px}
+.tile .go{color:var(--brand);font-size:12px;margin-top:4px;display:block}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
+.funnel .f{display:grid;grid-template-columns:130px 1fr 40px;align-items:center;gap:8px;margin:6px 0;cursor:pointer}
+.funnel .f .bar{height:14px}
+.hot .row{grid-template-columns:1fr auto}
+/* Agente / Conocimiento */
+.pad{padding:16px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+code,pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 6px;font-size:12px}
+pre{padding:10px;overflow:auto;white-space:pre-wrap}
+.doc{background:var(--glass-strong);border:1px solid var(--glass-border);border-radius:12px;padding:10px 12px}
+.doc h4{margin:0 0 4px;font-size:13px}.doc p{margin:0;white-space:pre-wrap;font-size:13px;color:var(--muted)}
+/* Toasts */
+.toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50}
+.toast{background:var(--glass-overlay);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);color:var(--text);border:1px solid var(--glass-border);padding:10px 14px;border-radius:14px;box-shadow:var(--glass-inset),0 10px 30px rgba(0,0,0,.22);cursor:pointer;max-width:320px}
+/* Login */
+.login{position:fixed;inset:0;background:transparent;display:flex;align-items:center;justify-content:center;z-index:100}
+.login .box{background:var(--glass-overlay);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow);border-radius:18px;padding:24px;width:min(360px,90vw);display:flex;flex-direction:column;gap:10px}
+.login[hidden]{display:none}
+@media(max-width:900px){.chat .head .seg-row{flex-basis:100%;justify-content:flex-end}
+/* Área de toque de 44 px (Apple HIG / Material) sin agrandar el botón a la vista: padding invisible con pseudo-elemento. */
+#back-list,#details-btn,.seg button,.icon-btn,.bell{position:relative}
+#back-list::after,#details-btn::after,.seg button::after,.icon-btn::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+.btn.sm{min-height:36px;min-width:36px}.app{grid-template-columns:1fr}.side{flex-direction:row;align-items:center;padding:6px 8px;gap:4px;overflow-x:auto}.brand{padding:0 8px;font-size:14px}.brand small{display:none}.nav{flex-direction:row}.nav button{padding:6px 9px;white-space:nowrap}.side .spacer,.side .foot .row span.lbl{display:none}.side .foot{border:0;padding:0;flex-direction:row}
+.inbox{grid-template-columns:1fr}.list,.chat,.details{display:none}.inbox[data-pane=list] .list,.inbox[data-pane=chat] .chat,.inbox[data-pane=details] .details{display:flex}.cal{grid-template-columns:1fr}.charts{grid-template-columns:1fr}.bubble{max-width:88%}}
+
+/* ===== Liquid glass, capa 2 ===== */
+:root{--rim:inset 1px 1px 0 rgba(255,255,255,.55),inset -1px -1px 0 rgba(17,24,39,.05),inset 0 -1px 0 rgba(17,24,39,.06);--lift:0 8px 24px rgba(17,24,39,.10);--row-hover:rgba(255,255,255,.38)}
+[data-theme=dark]{--rim:inset 1px 1px 0 rgba(255,255,255,.10),inset -1px -1px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);--lift:0 10px 28px rgba(0,0,0,.45);--row-hover:rgba(255,255,255,.05)}
+body::before{animation:aurora 48s ease-in-out infinite alternate;will-change:transform}
+@keyframes aurora{from{transform:translate3d(-2%,-1.5%,0) rotate(-1.5deg) scale(1.02)}to{transform:translate3d(2%,2%,0) rotate(2deg) scale(1.06)}}
+@media(prefers-reduced-motion:reduce){body::before{animation:none}}
+.side,.topbar,.list,.details,.chat .head,.composer,.col,.panel,.tile,.notif,.login .box,.toast,.card,.appt,.doc{box-shadow:var(--rim),var(--glass-shadow)}
+.side{-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%)}
+.panel,.tile,.col,.notif,.login .box{border-radius:20px}
+.card,.appt,.doc{border-radius:14px}
+.tile:hover,.card:hover,.panel:hover{box-shadow:var(--rim),var(--lift);transform:translateY(-1px);transition:transform .15s,box-shadow .15s}
+.nav button{border-radius:999px;transition:background .15s,box-shadow .15s}
+.nav button:hover{background:var(--row-hover)}
+.nav button.active{background:var(--glass-strong);box-shadow:var(--rim),0 4px 14px rgba(17,24,39,.08)}
+[data-theme=dark] .nav button.active{box-shadow:var(--rim),0 4px 14px rgba(0,0,0,.4)}
+.btn{background:var(--glass-strong);border:1px solid var(--glass-border);border-radius:12px;box-shadow:var(--rim);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transition:transform .12s,box-shadow .12s}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--rim),0 6px 16px rgba(17,24,39,.12)}
+.btn.primary{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 18px color-mix(in srgb,var(--brand) 40%,transparent)}
+.icon-btn{border-radius:999px;background:var(--glass-strong);border:1px solid var(--glass-border);box-shadow:var(--rim)}
+.seg{border-radius:999px;background:var(--glass-strong);border:1px solid var(--glass-border);box-shadow:var(--rim);padding:2px}
+.seg button{border-radius:999px;background:transparent}
+.seg button.on{background:linear-gradient(180deg,color-mix(in srgb,var(--brand) 85%,#fff),var(--brand));box-shadow:0 2px 8px color-mix(in srgb,var(--brand) 40%,transparent)}
+.filters button{background:var(--glass-strong);border-color:var(--glass-border);box-shadow:var(--rim)}
+.filters button.on{background:linear-gradient(180deg,color-mix(in srgb,var(--brand) 85%,#fff),var(--brand));border-color:transparent}
+input[type=text],input[type=search],select,textarea{border-radius:12px;box-shadow:var(--rim)}
+input:focus,textarea:focus,select:focus{outline:2px solid color-mix(in srgb,var(--brand) 45%,transparent);outline-offset:1px}
+.row:hover{background:var(--row-hover)}
+.row.sel{background:color-mix(in srgb,var(--brand) 14%,transparent);box-shadow:inset 3px 0 0 var(--brand)}
+.bubble{border-radius:18px;box-shadow:var(--rim)}
+.bubble.customer{border-bottom-left-radius:6px}.bubble.bot,.bubble.human{border-bottom-right-radius:6px}
+.chip{box-shadow:var(--rim)}
+.bar{height:10px;border:0;border-radius:999px;background:rgba(127,127,127,.16);box-shadow:inset 0 1px 3px rgba(0,0,0,.18)}
+.bar i{border-radius:999px;background:linear-gradient(180deg,color-mix(in srgb,var(--brand) 65%,#fff),var(--brand));box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.bar.stale i{background:repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)}
+.msgs{background:transparent}
+.unread{box-shadow:0 2px 6px rgba(185,28,28,.35)}
+/* Veredicto de prospecto: chips opacos con texto (contraste medido) */
+.chip.v-si{background:var(--brand-soft);color:var(--brand);border-color:transparent;font-weight:600}
+.chip.v-posible{background:var(--warn-soft);color:var(--warn);border-color:transparent;font-weight:600}
+.chip.v-no{background:var(--glass-strong);color:var(--muted)}
+.chip.v-cita{background:var(--brand-soft);color:var(--brand);border-color:transparent;font-weight:600}
+.chip.v-cliente{background:var(--ok-soft);color:var(--ok);border-color:transparent;font-weight:600}
+.chip.v-perdido{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.chip.stale,.chip.v-si.stale,.chip.v-posible.stale,.chip.v-cita.stale{background:var(--glass-strong);color:var(--muted);border:1px dashed var(--muted);font-weight:400;font-style:italic}
+.verdict{display:flex;flex-direction:column;gap:6px}
+.verdict .big{font-size:20px;font-weight:700;line-height:1.2}
+.verdict .why{color:var(--muted);font-size:13px}
+.linkbtn{background:none;border:0;color:var(--brand);cursor:pointer;padding:0;font-weight:600;font-size:13px}
+.detail-more[hidden]{display:none}
+/* Celular: barra flotante en cápsula abajo */
+@media(max-width:900px){
+  .app{grid-template-rows:1fr}
+  .main{height:calc(100vh - 86px - env(safe-area-inset-bottom))}
+  .side{position:fixed;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom));top:auto;z-index:40;border-radius:26px;border:1px solid var(--glass-border);padding:6px 8px;gap:2px;flex-direction:row;align-items:center;overflow-x:auto;scrollbar-width:none}
+  .side::-webkit-scrollbar{display:none}
+  .brand{padding:0 4px;gap:0}.brand #brand-name{display:none}
+  .nav{flex:1;flex-direction:row;gap:0;justify-content:space-around}
+  .nav button{flex-direction:column;gap:3px;padding:6px 8px;min-width:56px;font-size:10px;position:relative;white-space:nowrap}
+  .nav button .badge{position:absolute;top:0;right:4px;margin:0}
+  .nav .ic{width:20px;height:20px;flex-basis:20px}
+  .side .foot{border:0;padding:0 2px;flex-direction:row;gap:4px}.side .foot .row:last-child{display:none}
+  .notif{left:10px;right:10px;width:auto;top:auto;bottom:calc(78px + env(safe-area-inset-bottom));max-height:60vh}
+  .toasts{bottom:calc(84px + env(safe-area-inset-bottom))}
+}
+
+/* ===== Calendario semanal ===== */
+.grid-wrap{flex:1;min-height:0;overflow:auto;background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--glass-border);border-radius:20px;box-shadow:var(--rim),var(--glass-shadow);position:relative}
+.cal-head{display:grid;grid-template-columns:56px repeat(7,minmax(90px,1fr));position:sticky;top:0;z-index:3;background:var(--glass-strong);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-bottom:1px solid var(--glass-border)}
+.cal-head .d{padding:8px 4px 6px;text-align:center;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.cal-head .d b{display:block;font-size:17px;color:var(--text);width:30px;height:30px;line-height:30px;margin:2px auto 0;border-radius:999px;text-transform:none;letter-spacing:0}
+.cal-head .d.today b{background:var(--brand);color:#fff}
+.cal-head .d.closed{color:color-mix(in srgb,var(--muted) 60%,transparent)}
+.cal-body{display:grid;grid-template-columns:56px repeat(7,minmax(90px,1fr));position:relative}
+.cal-hours{position:relative}
+.cal-hours .h{position:absolute;right:6px;transform:translateY(-50%);font-size:11px;color:var(--muted)}
+.cal-col{position:relative;border-left:1px solid var(--glass-border);background-image:linear-gradient(to bottom,var(--glass-border) 1px,transparent 1px);background-size:100% var(--hour-px)}
+.cal-col.today{background-color:color-mix(in srgb,var(--brand) 5%,transparent)}
+.cal-col .closed{position:absolute;left:0;right:0;background:repeating-linear-gradient(135deg,rgba(127,127,127,.10) 0 6px,transparent 6px 12px);pointer-events:none}
+.cal-ev{position:absolute;left:3px;right:3px;border-radius:9px;padding:3px 6px;font-size:12px;line-height:1.25;overflow:hidden;cursor:pointer;background:color-mix(in srgb,var(--brand) 18%,var(--glass-strong));border-left:3px solid var(--brand);box-shadow:var(--rim)}
+.cal-ev b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-ev span{color:var(--muted);font-size:11px}
+.cal-ev.completada{border-left-color:var(--ok);background:color-mix(in srgb,var(--ok) 16%,var(--glass-strong))}
+.cal-ev.no_asistio{border-left-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--glass-strong))}
+.cal-busy{position:absolute;left:0;right:0;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--muted) 16%,transparent) 0 6px,color-mix(in srgb,var(--muted) 6%,transparent) 6px 12px);border-left:3px solid var(--muted);pointer-events:none;overflow:hidden}
+.cal-busy span{display:block;padding:2px 6px;font-size:11px;color:var(--muted-strong)}
+.usage{width:100%;border-collapse:collapse;font-size:13px}
+.usage th,.usage td{text-align:left;padding:6px;border-bottom:1px solid var(--line);vertical-align:top}
+.usage th{font-weight:600;color:var(--muted);font-size:12px}
+.usage .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.feed-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.feed-row input{flex:1 1 240px;min-width:0;min-height:44px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:12px ui-monospace,SFMono-Regular,Menlo,monospace}
+.feed-row .btn{min-height:44px;display:inline-flex;align-items:center}
+.feed-row .btn.primary{min-height:44px}
+.cal-ev.cancelada{border-left-color:var(--muted);background:var(--glass-strong);color:var(--muted);text-decoration:line-through}
+.cal-now{position:absolute;left:0;right:0;height:2px;background:var(--bad);z-index:2;pointer-events:none}
+.cal-now::before{content:"";position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--bad)}
+.cal-pop{position:fixed;z-index:70;width:280px;max-width:calc(100vw - 24px);background:var(--glass-overlay);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);border:1px solid var(--glass-border);border-radius:16px;box-shadow:var(--rim),0 16px 48px rgba(0,0,0,.25);padding:12px;display:flex;flex-direction:column;gap:8px}
+.cal-pop[hidden]{display:none}
+.cal-pop .acts{display:flex;gap:6px;flex-wrap:wrap}
+/* ===== Barra de probabilidad por zonas: gris (sin señales) · ámbar (posible) · verde (prospecto) ===== */
+.bar{background:linear-gradient(90deg,rgba(127,127,127,.18) 0 30%,color-mix(in srgb,var(--warn) 22%,transparent) 30% 60%,color-mix(in srgb,var(--brand) 22%,transparent) 60% 100%)}
+.bar i.z-frio{background:linear-gradient(180deg,#9aa3b2,#6b7280)}
+.bar i.z-tibio{background:linear-gradient(180deg,color-mix(in srgb,var(--warn) 70%,#fff),var(--warn))}
+.bar i.z-caliente{background:linear-gradient(180deg,color-mix(in srgb,var(--brand) 65%,#fff),var(--brand))}
+.bar.stale i{background:repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)}
+.bar-legend{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px}
+.card .bar{height:5px;margin-top:6px}
+@media(max-width:900px){.cal{grid-template-columns:1fr}.cal-head,.cal-body{grid-template-columns:44px repeat(7,minmax(74px,1fr))}}
+
+/* ===== Material, capa 3: profundidad, tacto y grano =====
+   Las piezas tienen grosor y se hunden al presionarlas; el grano es el del vidrio y la cartulina.
+   El relieve acompaña, nunca es la única señal: cada estado cambia también color, texto o peso.
+   Contrastes medidos: texto sobre marca 6.1:1 (claro) y 8.6:1 (oscuro); "Tú" 11.4:1 en ambos.
+   Reglas (con HRCAPOLO): todo relleno de color lleva su --on-* medido; la textura va en lo que se toca o se
+   escanea, nunca en lo que se lee de corrido; el grabado se valida al tamaño real (solo en el botón primario). */
+:root{
+  --on-brand:#fff;--brand-deep:#205b39;--on-bad:#fff;
+  --human-accent:#f2cc55;--human-deep:#e0b737;--human-edge:#7a5d0c;--on-human:#111827;
+  --bevel-hi:inset 0 1px 0 rgba(255,255,255,.38);
+  --well:inset 0 2px 5px rgba(17,24,39,.16),inset 0 0 0 1px rgba(17,24,39,.07);
+  --raise:0 1px 1px rgba(17,24,39,.16),0 3px 8px rgba(17,24,39,.12);
+  --raise-hover:0 2px 3px rgba(17,24,39,.16),0 8px 18px rgba(17,24,39,.14);
+  --pressed:inset 0 2px 5px rgba(0,0,0,.28);
+  --emboss:0 -1px 0 rgba(0,0,0,.25);
+  --ring:0 0 0 3px color-mix(in srgb,var(--brand) 45%,transparent);
+  /* Texto secundario sobre textura: se mide contra el peor píxel del grano o del rayado, no contra el color base. */
+  --muted-strong:color-mix(in srgb,var(--muted) 70%,var(--text));
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .11 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  --t-press:80ms;--t-slide:220ms cubic-bezier(.2,.8,.2,1);
+}
+[data-theme=dark]{
+  --on-brand:#0b0d12;--brand-deep:#52a473;--on-bad:#0b0d12;
+  --human-accent:#e8c350;--human-deep:#cfa935;--human-edge:#cfa935;--on-human:#0b0d12;
+  --bevel-hi:inset 0 1px 0 rgba(255,255,255,.30);
+  --well:inset 0 2px 6px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.05);
+  --raise:0 1px 1px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
+  --raise-hover:0 2px 3px rgba(0,0,0,.5),0 8px 20px rgba(0,0,0,.45);
+  --pressed:inset 0 2px 6px rgba(0,0,0,.45);
+  --emboss:0 1px 0 rgba(255,255,255,.25);
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+/* Texto sobre color: en oscuro la marca y el rojo son claros, el texto va oscuro. */
+.filters button.on,.cal-head .d.today b{color:var(--on-brand)}
+.nav .badge,.bell .badge,.unread{color:var(--on-bad)}
+
+/* Botón primario: una pieza con grosor (el borde inferior) que se hunde al presionarla. */
+.btn.primary{min-height:44px;color:var(--on-brand);font-weight:600;text-shadow:var(--emboss);border:1px solid var(--brand-deep);
+  background:linear-gradient(180deg,var(--brand),var(--brand-deep));
+  box-shadow:var(--bevel-hi),0 2px 0 var(--brand-deep),var(--raise);
+  transition:transform var(--t-press),box-shadow var(--t-press),filter var(--t-press)}
+.btn.primary:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.05);box-shadow:var(--bevel-hi),0 3px 0 var(--brand-deep),var(--raise-hover)}
+.btn.primary:active:not(:disabled){transform:translateY(2px);filter:none;box-shadow:var(--pressed)}
+.btn.primary:focus-visible{outline:none;box-shadow:var(--bevel-hi),0 2px 0 var(--brand-deep),var(--ring)}
+
+/* Switch "Responde": canal hundido con grano y una perilla que se desliza.
+   Aiva = verde de marca; Tú = el amarillo de "lo lleva una persona" (--human, el de los mensajes del equipo),
+   no el ámbar de advertencia. Color, posición, peso del texto y aria-pressed dicen quién contesta. */
+.seg{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:999px;border:1px solid var(--glass-border);
+  background:var(--grain),var(--glass-strong);box-shadow:var(--well)}
+.seg::before{content:"";position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:999px;
+  background:linear-gradient(180deg,var(--brand),var(--brand-deep));box-shadow:var(--bevel-hi),var(--raise);
+  transition:transform var(--t-slide),background var(--t-slide)}
+.seg[data-on=human]::before{transform:translateX(100%);background:linear-gradient(180deg,var(--human-accent),var(--human-deep));box-shadow:inset 0 0 0 1px var(--human-edge),var(--bevel-hi),var(--raise)}
+.seg button,.seg button.on{position:relative;z-index:1;min-width:64px;min-height:36px;padding:6px 14px;background:transparent;box-shadow:none;border-radius:999px;transition:color var(--t-slide)}
+.seg button{color:var(--text);font-weight:500}
+.seg button.on{color:var(--on-brand);font-weight:700}
+.seg[data-on=human] button.on{color:var(--on-human)}
+.seg button:focus-visible{outline:none;box-shadow:var(--ring)}
+
+/* Citas como etiquetas: cartulina con grano, pespunte y relieve. Canceladas quedan planas y rayadas. */
+.cal-ev,.cal-ev.completada,.cal-ev.no_asistio{--tag:var(--brand);border:1px solid color-mix(in srgb,var(--tag) 40%,transparent);border-radius:9px;padding:4px 6px;
+  background:var(--grain),color-mix(in srgb,var(--tag) 8%,var(--panel));box-shadow:var(--bevel-hi),var(--raise);transition:transform var(--t-press),box-shadow var(--t-press)}
+.cal-ev.completada{--tag:var(--ok)}
+.cal-ev.no_asistio{--tag:var(--bad)}
+.cal-ev::before{content:"";position:absolute;inset:3px;border:1px dashed color-mix(in srgb,var(--tag,var(--brand)) 70%,transparent);border-radius:6px;pointer-events:none}
+.cal-ev:hover{transform:translateY(-1px);box-shadow:var(--bevel-hi),var(--raise-hover)}
+.cal-ev span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted-strong)}
+.cal-ev.cancelada{background:var(--glass-strong);border:1px dashed var(--line);box-shadow:none}
+.cal-ev.cancelada::before{display:none}
+
+/* Chips: etiquetas esmaltadas. Se escanean de un vistazo, así que llevan grano; no se presionan, así que no tienen
+   grosor ni estado presionado. El texto de cada chip es su tinta propia (medida contra el peor píxel del grano); el
+   filo en su tono es decorativo, el estado lo dice el texto. Los desactualizados quedan planos, punteados e itálicos. */
+.chip{--tone:var(--muted)}
+.chip.stage-interesado,.chip.t-tibio,.chip.v-posible{--tone:var(--warn)}
+.chip.stage-cita_agendada,.chip.v-si,.chip.v-cita{--tone:var(--brand)}
+.chip.t-caliente,.chip.v-perdido{--tone:var(--bad)}
+.chip.stage-vendido,.chip.v-cliente{--tone:var(--ok)}
+.chip.who,.chip.human{--tone:var(--human-edge)}
+.chip:not(.stale){background-image:var(--grain);border-color:color-mix(in srgb,var(--tone) 32%,transparent);
+  box-shadow:var(--bevel-hi),inset 0 -1px 0 color-mix(in srgb,var(--tone) 20%,transparent)}
+.chip.stage-perdido{--tone:var(--bad)}
+/* Tinta sobre grano (medida contra el peor píxel): el tono mezclado con --text, que en claro oscurece y en oscuro aclara. */
+.chip.stage-interesado,.chip.t-tibio,.chip.v-posible,.chip.stage-cita_agendada,.chip.v-si,.chip.v-cita,.chip.t-caliente,.chip.v-perdido,.chip.stage-perdido,.chip.stage-vendido,.chip.v-cliente{color:color-mix(in srgb,var(--tone) 78%,var(--text))}
+.chip.t-frio,.chip.v-no{color:var(--muted-strong)}
+
+/* Canales: una tarjeta por canal. El interruptor usa el mismo material del switch "Responde". */
+.channels{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:14px;align-content:start}
+.ch-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.ch-head h2{margin:0;font-size:16px}
+.ch-head .chip{white-space:nowrap;flex-shrink:0}
+.ch-stats{font-size:13px;color:var(--muted-strong)}
+.ch-steps{margin:0;padding-left:20px;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.ch-warn{font-size:13px;padding:8px 10px;border-radius:10px;background:var(--warn-soft);color:color-mix(in srgb,var(--warn) 78%,var(--text))}
+.ch-qr{align-self:center;width:min(240px,100%);padding:10px;background:#fff;border-radius:12px;box-shadow:var(--bevel-hi),var(--raise)}
+.ch-qr svg{display:block;width:100%;height:auto}
+.ch-err{font-size:13px;color:var(--bad)}
+.verify{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-top:1px solid var(--line)}
+.verify:first-of-type{border-top:0;padding-top:4px}
+.verify-q div{margin-top:2px}
+.verify textarea{width:100%;min-height:64px;resize:vertical;padding:8px 10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit}
+.verify-learn{display:flex;gap:8px;align-items:flex-start;min-height:44px;padding-top:4px}
+.verify-learn input{margin-top:2px;width:18px;height:18px;accent-color:var(--brand)}
+.dict-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.dict-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.seg[data-on=off]::before{transform:translateX(100%);background:linear-gradient(180deg,var(--glass-strong),var(--bg));box-shadow:inset 0 0 0 1px var(--line),var(--bevel-hi),var(--raise)}
+.seg[data-on=off] button.on{color:var(--text)}
+
+@media(prefers-reduced-motion:reduce){.seg::before,.seg button,.btn.primary,.cal-ev{transition:none}.btn.primary:hover:not(:disabled),.btn.primary:active:not(:disabled),.cal-ev:hover{transform:none}}
+</style>
+</head>
+<body>
+<div class="login" id="login">
+  <div class="box">
+    <b id="login-title">Aiva · Tablero</b>
+    <span class="muted small">Ingresa el token de administración (ADMIN_TOKEN, o el que imprime el servidor al arrancar).</span>
+    <input type="text" id="login-name" placeholder="Tu nombre (así te verá el cliente)" autocomplete="off">
+    <input type="text" id="login-token" placeholder="token" autocomplete="off">
+    <button class="btn primary" id="login-btn">Entrar</button>
+    <span class="small" id="login-err" style="color:var(--bad)"></span>
+  </div>
+</div>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span id="brand-name">Aiva<small id="brand-biz"></small></span><button class="icon-btn bell" id="bell-btn" title="Notificaciones"><i class="ic" data-ic="bell"></i><span class="badge" id="badge-notif"></span></button></div>
+    <nav class="nav">
+      <div class="group">Trabajo</div>
+      <button data-view="today" class="active"><i class="ic" data-ic="sun"></i>Hoy</button>
+      <button data-view="inbox"><i class="ic" data-ic="message"></i>Conversaciones <span class="badge" id="badge-unread"></span></button>
+      <button data-view="calendar"><i class="ic" data-ic="calendar"></i>Calendario <span class="badge" id="badge-cal"></span></button>
+      <div class="group">Ventas</div>
+      <button data-view="pipeline"><i class="ic" data-ic="columns"></i>Prospectos</button>
+      <button data-view="analysis"><i class="ic" data-ic="chart"></i>Análisis</button>
+      <div class="group">Configuración</div>
+      <button data-view="agent"><i class="ic" data-ic="bot"></i>Agente</button>
+      <button data-view="channels"><i class="ic" data-ic="plug"></i>Canales</button>
+      <button data-view="knowledge"><i class="ic" data-ic="book"></i>FAQ</button>
+    </nav>
+    <div class="spacer"></div>
+    <div class="foot">
+      <div class="row"><span class="lbl" id="foot-user">asesor</span></div>
+      <div class="row">
+        <button class="icon-btn" id="theme-btn" title="Modo oscuro / claro">🌙</button>
+        <button class="icon-btn" id="sound-btn" title="Sonido de notificaciones">🔔</button>
+        <button class="icon-btn" id="logout-btn" title="Cerrar sesión">Salir</button>
+      </div>
+      <div class="row small"><span id="conn">● conectando…</span></div>
+    </div>
+  </aside>
+  <div class="notif" id="notif"><h4>Notificaciones <button class="btn sm" id="notif-clear">Marcar leídas</button></h4><div id="notif-list"><div class="empty">Nada todavía.</div></div></div>
+  <main class="main">
+    <!-- Hoy -->
+    <section class="view active" id="view-today">
+      <div class="topbar"><h1 id="today-title">Hoy</h1><span class="muted small" id="today-sub"></span><span class="grow"></span><button class="btn sm" id="today-refresh">Actualizar</button></div>
+      <div class="today" id="today"></div>
+    </section>
+    <!-- Conversaciones -->
+    <section class="view" id="view-inbox">
+      <div class="inbox" id="inbox" data-pane="list">
+        <div class="list">
+          <div class="tools">
+            <input type="search" id="q" placeholder="Buscar por nombre, teléfono o resumen…">
+            <div class="filters" id="filters">
+              <button data-f="all" class="on">Todos</button>
+              <button data-f="unread">Sin leer</button>
+              <button data-f="human">Con una persona</button>
+              <button data-f="hot">Prospectos</button>
+              <button data-f="stage:interesado">Interesados</button>
+              <button data-f="stage:cita_agendada">Con cita</button>
+            </div>
+          </div>
+          <div class="rows" id="rows"><div class="empty">Sin conversaciones todavía.</div></div>
+        </div>
+        <div class="chat" id="chat">
+          <div class="empty" id="chat-empty" style="margin:auto">Elige una conversación.</div>
+          <div class="head" id="chat-head" hidden>
+            <button class="btn sm" id="back-list" style="display:none">←</button>
+            <span class="who" id="chat-name"></span>
+            <span class="chip" id="chat-channel"></span>
+            <span class="chip" id="chat-stage"></span>
+            <span class="meta-line" id="chat-temp"></span>
+            <span class="grow"></span>
+            <div class="seg-row">
+              <span class="small muted">Responde:</span>
+              <div class="seg" id="seg" data-on="bot" role="group" aria-label="Quién responde">
+                <button data-mode="bot" class="on" id="seg-bot" aria-pressed="true">Aiva</button>
+                <button data-mode="human" id="seg-human" aria-pressed="false">Tú</button>
+              </div>
+              <button class="btn sm" id="details-btn" style="display:none">Ficha</button>
+            </div>
+          </div>
+          <div class="msgs" id="msgs" hidden></div>
+          <div class="composer" id="composer" hidden>
+            <div class="hint" id="composer-hint">Aiva está respondiendo esta conversación. Cambia a <b>Tú</b> para escribir.</div>
+            <textarea id="reply" placeholder="Escribe tu respuesta… (Enter envía, Shift+Enter salto)" hidden></textarea>
+            <button class="btn primary" id="send" hidden>Enviar</button>
+          </div>
+        </div>
+        <div class="details" id="details"><div class="empty">Sin ficha.</div></div>
+      </div>
+    </section>
+    <!-- Pipeline -->
+    <section class="view" id="view-pipeline">
+      <div class="topbar"><h1>Prospectos</h1><span class="muted small">Arrastra una tarjeta para cambiar de etapa</span><span class="grow"></span></div>
+      <div class="board" id="board"></div>
+    </section>
+    <!-- Calendario -->
+    <section class="view" id="view-calendar">
+      <div class="topbar">
+        <h1>Calendario</h1>
+        <div class="seg"><button class="on" id="cal-week-btn">Semana</button><button id="cal-agenda-btn">Agenda</button></div>
+        <span class="grow"></span>
+        <button class="btn sm" id="cal-prev" aria-label="Semana anterior">←</button>
+        <button class="btn sm" id="cal-today">Hoy</button>
+        <button class="btn sm" id="cal-next" aria-label="Semana siguiente">→</button>
+        <b id="cal-label" class="small"></b>
+      </div>
+      <div class="cal">
+        <div id="cal-main" style="min-height:0;display:flex;flex-direction:column">
+          <div id="cal-grid" class="grid-wrap"></div>
+          <div id="cal-list" hidden><div class="empty">Sin citas próximas.</div></div>
+        </div>
+        <div class="panel">
+          <b>Agendar cita</b>
+          <span class="small muted">Haz clic en un hueco libre de la semana o elige la fecha y hora.</span>
+          <label class="small muted">Contacto<select id="book-contact"></select></label>
+          <label class="small muted">Fecha y hora<input type="datetime-local" id="book-when" step="900"></label>
+          <input type="text" id="book-notes" placeholder="Nota (opcional)">
+          <button class="btn primary" id="book-btn">Agendar</button>
+          <span class="small" id="book-msg"></span>
+        </div>
+      </div>
+      <div class="cal-pop" id="cal-pop" hidden></div>
+    </section>
+    <!-- Análisis -->
+    <section class="view" id="view-analysis">
+      <div class="topbar"><h1>Análisis</h1><span class="muted small">Cada número abre la lista correspondiente</span></div>
+      <div style="overflow:auto">
+        <div class="tiles" id="tiles"></div>
+        <div class="charts">
+          <div class="panel funnel"><b>Embudo por etapa</b><div id="funnel"></div></div>
+          <div class="panel"><b>Ánimo de los clientes</b><div id="sentiments" class="small"></div><div class="small muted" style="margin-top:8px">Los prospectos calientes se atienden desde <b>Hoy</b> (sin seguimiento) o con el filtro "Calientes" en Conversaciones.</div></div>
+        </div>
+      </div>
+    </section>
+    <!-- Agente -->
+    <section class="view" id="view-agent">
+      <div class="topbar"><h1>Agente</h1></div>
+      <div class="pad" id="agent"></div>
+    </section>
+    <!-- Canales -->
+    <section class="view" id="view-channels">
+      <div class="topbar"><h1>Canales</h1></div>
+      <div class="pad"><div class="channels" id="channels"></div></div>
+    </section>
+    <!-- Conocimiento -->
+    <section class="view" id="view-knowledge">
+      <div class="topbar"><h1>FAQ · lo que sabe el agente</h1><span class="grow"></span><div class="seg"><button class="on" data-kind="knowledge" id="k-kn">Información</button><button data-kind="product" id="k-pr">Productos</button></div></div>
+      <div class="pad">
+        <input type="search" id="k-q" placeholder="Buscar en lo que sabe el agente…">
+        <div id="k-list"></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toasts" id="toasts"></div>
+<script src="/admin.js"></script>
+</body>
+</html>

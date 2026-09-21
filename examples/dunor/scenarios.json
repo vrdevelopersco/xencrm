@@ -1,0 +1,465 @@
+[
+  {
+    "name": "novio: alquiler o diseño y cita",
+    "turns": [
+      {
+        "text": "hola",
+        "expect": {
+          "intent": "saludo"
+        }
+      },
+      {
+        "text": "me caso en diciembre y busco traje, ustedes alquilan o hacen a la medida?",
+        "expect": {
+          "intent": "compra",
+          "includesAny": [
+            "alquiler",
+            "Alquiler",
+            "medida"
+          ],
+          "noGreeting": true
+        }
+      },
+      {
+        "text": "y cuánto cuesta el alquiler?",
+        "expect": {
+          "includesAny": [
+            "cita",
+            "Cita",
+            "depende",
+            "define",
+            "confirm"
+          ],
+          "excludes": [
+            "$",
+            ".000"
+          ],
+          "noGreeting": true
+        }
+      },
+      {
+        "text": "listo, agendemos",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "nombre",
+            "1)"
+          ]
+        }
+      },
+      {
+        "text": "Andrés Peña",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "1)",
+            "2)"
+          ]
+        }
+      },
+      {
+        "text": "la 2",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "número"
+          ]
+        }
+      },
+      {
+        "text": "3001234567",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "confirmo"
+          ]
+        }
+      },
+      {
+        "text": "dale",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "300 123 4567"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "asesoría de imagen y proceso",
+    "turns": [
+      {
+        "text": "qué incluye la asesoría de imagen?",
+        "expect": {
+          "includesAny": [
+            "colorimetr",
+            "morfolog",
+            "estilo"
+          ]
+        }
+      },
+      {
+        "text": "y cómo funciona todo el proceso?",
+        "expect": {
+          "includesAny": [
+            "cita",
+            "medidas",
+            "ajust",
+            "asesor"
+          ],
+          "noGreeting": true
+        }
+      }
+    ]
+  },
+  {
+    "name": "ubicación y horario",
+    "turns": [
+      {
+        "text": "dónde quedan y a qué hora atienden?",
+        "expect": {
+          "intent": "info_tienda",
+          "includesAny": [
+            "Barranquilla",
+            "cita"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "límites y traspaso a humano",
+    "turns": [
+      {
+        "text": "me recomiendas una serie para ver este fin de semana?",
+        "expect": {
+          "intent": "fuera_de_alcance",
+          "engine": "template"
+        }
+      },
+      {
+        "text": "quiero hablar con una persona",
+        "expect": {
+          "intent": "humano",
+          "engine": "template",
+          "includesAny": [
+            "equipo",
+            "persona"
+          ]
+        }
+      },
+      {
+        "text": "es para reclamar por un traje",
+        "expect": {
+          "silent": true
+        }
+      }
+    ]
+  },
+  {
+    "name": "lo que no hacemos",
+    "turns": [
+      {
+        "text": "tienen vestidos de novia?",
+        "expect": {
+          "excludes": [
+            "http"
+          ],
+          "includesAny": [
+            "no",
+            "No",
+            "masculin",
+            "hombre",
+            "caballero"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "cita: franja y cambio de día",
+    "turns": [
+      {
+        "text": "hola, ¿tienen espacio el sábado en la tarde?",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "nombre"
+          ]
+        }
+      },
+      {
+        "text": "Carlos Ruiz",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "sábado"
+          ],
+          "excludes": [
+            "a. m."
+          ]
+        }
+      },
+      {
+        "text": "mejor el martes temprano",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "martes"
+          ],
+          "excludes": [
+            "p. m."
+          ]
+        }
+      },
+      {
+        "text": "la 1",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "número"
+          ]
+        }
+      },
+      {
+        "text": "3001234567",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "confirmo"
+          ]
+        }
+      },
+      {
+        "text": "sí",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "300 123 4567"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "cita: día cerrado, fecha exacta y frase libre",
+    "turns": [
+      {
+        "text": "quiero agendar una cita",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "nombre"
+          ]
+        }
+      },
+      {
+        "text": "Luis Gómez",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "1)"
+          ]
+        }
+      },
+      {
+        "text": "el domingo?",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "no atendemos"
+          ]
+        }
+      },
+      {
+        "text": "mejor después del puente festivo de octubre",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "octubre"
+          ]
+        }
+      },
+      {
+        "text": "o el 2 de octubre a las 4",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "2 de octubre"
+          ]
+        }
+      },
+      {
+        "text": "la 1",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "número"
+          ]
+        }
+      },
+      {
+        "text": "3001234567",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "confirmo"
+          ]
+        }
+      },
+      {
+        "text": "dale",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "300 123 4567"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "lo que no sabe: lo verifica",
+    "turns": [
+      {
+        "text": "¿tienen wifi?",
+        "expect": {
+          "excludes": [
+            "tenemos wifi",
+            "no tenemos wifi",
+            "no manejamos wifi"
+          ],
+          "includesAny": [
+            "verific",
+            "Verific"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "cita: cambiar y cancelar",
+    "turns": [
+      {
+        "text": "quiero agendar una cita",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "nombre"
+          ]
+        }
+      },
+      {
+        "text": "Pedro Pérez",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "1)"
+          ]
+        }
+      },
+      {
+        "text": "la 1",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "número"
+          ]
+        }
+      },
+      {
+        "text": "3001234567",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "confirmo"
+          ]
+        }
+      },
+      {
+        "text": "sí",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "300 123 4567"
+          ]
+        }
+      },
+      {
+        "text": "¿la puedo pasar para el jueves en la tarde?",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "otro espacio"
+          ]
+        }
+      },
+      {
+        "text": "la 1",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "confirmo"
+          ]
+        }
+      },
+      {
+        "text": "sí",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "Moví tu"
+          ]
+        }
+      },
+      {
+        "text": "mejor cancélala",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "Confirmas que cancelo"
+          ]
+        }
+      },
+      {
+        "text": "sí",
+        "expect": {
+          "intent": "cita",
+          "engine": "template",
+          "includesAny": [
+            "cancelé"
+          ]
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,103 @@
+import { embed } from '../llm/ollama.js';
+import { business } from '../config.js';
+import { ftsSearch, getDocs, vectorSearch, type DocKind, type ScoredDoc } from './store.js';
+
+export interface RetrieveOptions {
+  k?: number;
+  kinds?: DocKind[];
+  /** Similitud coseno mínima para considerar "relevante" un hit vectorial */
+  minSim?: number;
+}
+
+/** Búsqueda híbrida: vectorial (bge-m3) + léxica (FTS5/BM25), fusionadas con RRF. */
+export async function retrieve(query: string, opts: RetrieveOptions = {}): Promise<ScoredDoc[]> {
+  const k = opts.k ?? 6;
+  const [qvec] = await embed([query]);
+  const vec = qvec ? vectorSearch(qvec, k * 2, opts.kinds) : [];
+  const fts = ftsSearch(query, k * 2, opts.kinds);
+
+  const RRF_K = 60;
+  const scores = new Map<string, { score: number; sim: number; fts: boolean }>();
+  vec.forEach((h, i) => {
+    const s = scores.get(h.id) ?? { score: 0, sim: 0, fts: false };
+    s.score += 1 / (RRF_K + i);
+    s.sim = h.sim;
+    scores.set(h.id, s);
+  });
+  fts.forEach((id, i) => {
+    const s = scores.get(id) ?? { score: 0, sim: 0, fts: false };
+    s.score += 1 / (RRF_K + i);
+    s.fts = true;
+    scores.set(id, s);
+  });
+
+  const minSim = opts.minSim ?? 0.4;
+  const ranked = [...scores.entries()]
+    .filter(([, s]) => s.fts || s.sim >= minSim)
+    .sort((a, b) => b[1].score - a[1].score)
+    .slice(0, k);
+
+  const docs = getDocs(ranked.map(([id]) => id));
+  return ranked.flatMap(([id, s]) => {
+    const d = docs.get(id);
+    return d ? [{ ...d, score: s.score, vectorSim: s.sim, ftsHit: s.fts }] : [];
+  });
+}
+
+/** Da formato a los resultados como bloque de contexto para el prompt. */
+export function formatContext(products: ScoredDoc[], knowledge: ScoredDoc[], opts: { omitEmptyProducts?: boolean } = {}): string {
+  const parts: string[] = [];
+  parts.push(`Tienda: ${business.business.name} — ${business.business.description}\nSitio web: ${business.business.siteUrl}`);
+
+  const WEAK_SIM = 0.5; // bajo esto (bge-m3, coseno) la coincidencia suele ser solo por una palabra suelta
+  if (products.length > 0) {
+    const weak = products.every((p) => p.vectorSim < WEAK_SIM && !p.ftsHit) || (products[0]!.vectorSim < WEAK_SIM);
+    parts.push(
+      '### Productos encontrados en el catálogo' +
+        (weak
+          ? '\n(coincidencias débiles: probablemente NINGUNO es exactamente lo que pide el cliente. Dile que eso como tal no lo tenemos; si alguno se parece, ofrécelo como alternativa preguntando si es lo que busca, sin afirmar que es el mismo producto)'
+          : '') +
+        '\n' +
+        products
+          .map((p, i) => {
+            const m = p.meta as Record<string, unknown>;
+            const price = m.price != null ? `${formatPrice(Number(m.price), String(m.currency ?? business.business.currency))}` : 'sin precio';
+            const stock = m.inStock === false ? 'AGOTADO' : 'en stock';
+            const specs = m.specs && typeof m.specs === 'object' ? Object.entries(m.specs as Record<string, unknown>).map(([k, v]) => `${k}: ${v}`).join(' · ') : '';
+            return [
+              `${i + 1}. ${p.title}${m.category ? ` (${m.category})` : ''}`,
+              `   Descripción: ${oneLine(String(m.description ?? p.content), 600)}`,
+              specs ? `   Ficha técnica: ${specs}` : '',
+              `   Disponibilidad: ${stock} · Precio: ${price}`,
+              `   Enlace de compra: ${p.url ?? 'no disponible'}`,
+            ]
+              .filter(Boolean)
+              .join('\n');
+          })
+          .join('\n'),
+    );
+  } else if (!opts.omitEmptyProducts) {
+    parts.push('### Productos encontrados en el catálogo\n(ninguno coincide con lo que pide el cliente: dilo y pregunta qué busca)');
+  }
+
+  if (knowledge.length > 0) {
+    parts.push(
+      '### Información de la tienda\n' +
+        knowledge.map((d) => `#### ${d.title}\n${d.content.trim()}${d.url ? `\n(Más info: ${d.url})` : ''}`).join('\n\n'),
+    );
+  }
+  return parts.join('\n\n');
+}
+
+export function formatPrice(n: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat('es', { style: 'currency', currency, maximumFractionDigits: currency === 'COP' ? 0 : 2 }).format(n);
+  } catch {
+    return `${n} ${currency}`;
+  }
+}
+
+function oneLine(s: string, max: number): string {
+  const t = s.replace(/\s+/g, ' ').trim();
+  return t.length > max ? t.slice(0, max - 1) + '…' : t;
+}

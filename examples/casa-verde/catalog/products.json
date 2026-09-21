@@ -1,0 +1,320 @@
+[
+  {
+    "id": "p001",
+    "name": "Sansevieria (lengua de suegra) 30 cm",
+    "description": "Planta de interior casi indestructible: tolera poca luz y riegos espaciados (cada 2-3 semanas). Purifica el aire. Viene en maceta plástica de vivero de 14 cm.",
+    "price": 38000,
+    "category": "Plantas de interior",
+    "tags": [
+      "poca luz",
+      "fácil cuidado",
+      "purificadora",
+      "principiantes"
+    ],
+    "url": "https://casaverde.example.com/productos/sansevieria-30cm",
+    "inStock": true,
+    "specs": {
+      "Altura": "30 cm aprox.",
+      "Maceta": "plástica de vivero, 14 cm de diámetro",
+      "Luz": "poca a media; tolera sombra",
+      "Riego": "cada 2-3 semanas, dejar secar la tierra",
+      "Hojas": "verdes con bordes amarillos, erguidas",
+      "Mascotas": "tóxica si se ingiere",
+      "Incluye": "guía de cuidados impresa"
+    }
+  },
+  {
+    "id": "p002",
+    "name": "Pothos dorado colgante",
+    "description": "Enredadera de interior de crecimiento rápido, ideal para repisas y colgar. Tolera luz media y baja. Riego semanal. Maceta colgante de 15 cm incluida.",
+    "price": 42000,
+    "category": "Plantas de interior",
+    "tags": [
+      "colgante",
+      "poca luz",
+      "fácil cuidado",
+      "enredadera"
+    ],
+    "url": "https://casaverde.example.com/productos/pothos-dorado",
+    "inStock": true,
+    "specs": {
+      "Largo de las guías": "40-60 cm al momento de la entrega",
+      "Maceta": "colgante de 15 cm con gancho",
+      "Luz": "media a baja; evitar sol directo",
+      "Riego": "semanal, cuando la tierra esté seca al tacto",
+      "Crecimiento": "rápido, hasta 1 m al año en interior",
+      "Mascotas": "tóxica si se ingiere",
+      "Incluye": "guía de cuidados impresa"
+    }
+  },
+  {
+    "id": "p003",
+    "name": "Monstera deliciosa 60 cm",
+    "description": "La clásica costilla de Adán, hojas grandes y perforadas. Necesita luz indirecta brillante y riego cada 7-10 días. Incluye tutor de musgo. Maceta de vivero de 21 cm.",
+    "price": 95000,
+    "category": "Plantas de interior",
+    "tags": [
+      "luz indirecta",
+      "decorativa",
+      "hojas grandes"
+    ],
+    "url": "https://casaverde.example.com/productos/monstera-60cm",
+    "inStock": true,
+    "specs": {
+      "Altura": "60 cm aprox.",
+      "Maceta": "plástica de vivero, 21 cm",
+      "Luz": "indirecta brillante",
+      "Riego": "cada 7-10 días",
+      "Tutor": "de musgo incluido, 60 cm",
+      "Hojas": "perforadas, 5-8 al momento de la entrega",
+      "Mascotas": "tóxica si se ingiere"
+    }
+  },
+  {
+    "id": "p004",
+    "name": "Suculentas mini x3 (surtidas)",
+    "description": "Trío de suculentas surtidas en macetas de barro de 6 cm. Necesitan sol directo o luz muy brillante y riego cada 15 días. Perfectas para escritorio o regalo.",
+    "price": 29000,
+    "category": "Suculentas y cactus",
+    "tags": [
+      "sol",
+      "regalo",
+      "escritorio",
+      "mini"
+    ],
+    "url": "https://casaverde.example.com/productos/suculentas-mini-x3",
+    "inStock": true,
+    "specs": {
+      "Cantidad": "3 suculentas surtidas",
+      "Maceta": "barro de 6 cm, con drenaje",
+      "Luz": "sol directo o luz muy brillante",
+      "Riego": "cada 15 días, muy poco",
+      "Tamaño": "5-8 cm cada una",
+      "Mascotas": "no tóxicas"
+    }
+  },
+  {
+    "id": "p005",
+    "name": "Cactus San Pedro 25 cm",
+    "description": "Cactus columnar de crecimiento rápido para exterior o ventana muy soleada. Riego cada 3 semanas. Maceta de barro de 12 cm.",
+    "price": 35000,
+    "category": "Suculentas y cactus",
+    "tags": [
+      "sol",
+      "exterior",
+      "resistente"
+    ],
+    "url": "https://casaverde.example.com/productos/cactus-san-pedro",
+    "inStock": false,
+    "specs": {
+      "Altura": "25 cm",
+      "Maceta": "barro de 12 cm",
+      "Luz": "sol directo",
+      "Riego": "cada 3 semanas",
+      "Crecimiento": "rápido, 20-30 cm al año en exterior"
+    }
+  },
+  {
+    "id": "p006",
+    "name": "Helecho Boston colgante",
+    "description": "Helecho frondoso que ama la humedad: ideal para baños con ventana o cocinas. Luz indirecta, riego 2 veces por semana. Maceta colgante de 18 cm.",
+    "price": 48000,
+    "category": "Plantas de interior",
+    "tags": [
+      "colgante",
+      "humedad",
+      "baño",
+      "luz indirecta"
+    ],
+    "url": "https://casaverde.example.com/productos/helecho-boston",
+    "inStock": true,
+    "specs": {
+      "Diámetro del follaje": "35-45 cm",
+      "Maceta": "colgante de 18 cm",
+      "Luz": "indirecta; no sol directo",
+      "Riego": "2 veces por semana; le gusta la humedad",
+      "Ideal para": "baños con ventana y cocinas",
+      "Mascotas": "no tóxico"
+    }
+  },
+  {
+    "id": "p007",
+    "name": "Kit de hierbas aromáticas (albahaca, menta, cilantro)",
+    "description": "Tres plántulas listas para cocina en macetas de 10 cm con bandeja. Necesitan al menos 4 horas de sol. Riego diario en verano.",
+    "price": 45000,
+    "category": "Huerta y aromáticas",
+    "tags": [
+      "cocina",
+      "sol",
+      "comestible",
+      "regalo"
+    ],
+    "url": "https://casaverde.example.com/productos/kit-aromaticas",
+    "inStock": true,
+    "specs": {
+      "Contenido": "albahaca, menta y cilantro",
+      "Maceta": "3 de 10 cm con bandeja",
+      "Luz": "mínimo 4 horas de sol",
+      "Riego": "diario en clima cálido",
+      "Uso": "comestible, cosecha desde la semana 2"
+    }
+  },
+  {
+    "id": "p008",
+    "name": "Maceta de cerámica esmaltada 18 cm (terracota)",
+    "description": "Maceta de cerámica con orificio de drenaje y plato incluido. Diámetro 18 cm, alto 16 cm. Disponible también en 24 cm.",
+    "price": 32000,
+    "category": "Macetas",
+    "tags": [
+      "cerámica",
+      "drenaje",
+      "con plato",
+      "18 cm"
+    ],
+    "url": "https://casaverde.example.com/productos/maceta-ceramica-18",
+    "inStock": true,
+    "specs": {
+      "Diámetro": "18 cm",
+      "Alto": "16 cm",
+      "Material": "cerámica esmaltada",
+      "Drenaje": "orificio inferior",
+      "Incluye": "plato",
+      "Color": "terracota",
+      "Peso": "1.1 kg"
+    }
+  },
+  {
+    "id": "p009",
+    "name": "Maceta de cerámica esmaltada 24 cm (terracota)",
+    "description": "Versión grande de nuestra maceta de cerámica esmaltada, con orificio de drenaje y plato. Diámetro 24 cm, alto 22 cm. Ideal para monsteras y plantas medianas.",
+    "price": 54000,
+    "category": "Macetas",
+    "tags": [
+      "cerámica",
+      "drenaje",
+      "con plato",
+      "24 cm",
+      "grande"
+    ],
+    "url": "https://casaverde.example.com/productos/maceta-ceramica-24",
+    "inStock": true,
+    "specs": {
+      "Diámetro": "24 cm",
+      "Alto": "22 cm",
+      "Material": "cerámica esmaltada",
+      "Drenaje": "orificio inferior",
+      "Incluye": "plato",
+      "Color": "terracota",
+      "Peso": "2.3 kg",
+      "Ideal para": "monsteras y plantas medianas"
+    }
+  },
+  {
+    "id": "p010",
+    "name": "Matera colgante de macramé (algodón crudo)",
+    "description": "Colgante tejido a mano en algodón crudo de 90 cm de largo, para macetas de hasta 18 cm. No incluye maceta ni planta.",
+    "price": 26000,
+    "category": "Macetas",
+    "tags": [
+      "colgante",
+      "macramé",
+      "decoración",
+      "hecho a mano"
+    ],
+    "url": "https://casaverde.example.com/productos/macrame-colgante",
+    "inStock": true,
+    "specs": {
+      "Largo": "90 cm",
+      "Material": "algodón crudo, tejido a mano",
+      "Capacidad": "macetas de hasta 18 cm de diámetro",
+      "Incluye": "anillo metálico para colgar",
+      "No incluye": "maceta ni planta",
+      "Lavado": "a mano, agua fría"
+    }
+  },
+  {
+    "id": "p011",
+    "name": "Sustrato premium para interior 5 L",
+    "description": "Mezcla de turba, fibra de coco y perlita, lista para usar en plantas de interior. Bolsa de 5 litros.",
+    "price": 18000,
+    "category": "Sustratos y abonos",
+    "tags": [
+      "sustrato",
+      "tierra",
+      "interior"
+    ],
+    "url": "https://casaverde.example.com/productos/sustrato-interior-5l",
+    "inStock": true,
+    "specs": {
+      "Volumen": "5 L",
+      "Composición": "turba, fibra de coco y perlita",
+      "Uso": "plantas de interior",
+      "Rinde": "2-3 macetas de 18 cm"
+    }
+  },
+  {
+    "id": "p012",
+    "name": "Abono líquido universal 250 ml",
+    "description": "Fertilizante líquido concentrado NPK para plantas de interior y exterior. Diluir 5 ml por litro de agua, aplicar cada 15 días.",
+    "price": 22000,
+    "category": "Sustratos y abonos",
+    "tags": [
+      "abono",
+      "fertilizante",
+      "universal"
+    ],
+    "url": "https://casaverde.example.com/productos/abono-liquido-250",
+    "inStock": true,
+    "specs": {
+      "Volumen": "250 ml",
+      "Tipo": "fertilizante líquido NPK concentrado",
+      "Dosis": "5 ml por litro de agua",
+      "Frecuencia": "cada 15 días",
+      "Rinde": "50 litros de mezcla"
+    }
+  },
+  {
+    "id": "p013",
+    "name": "Regadera metálica 1.5 L (verde oliva)",
+    "description": "Regadera de acero pintado con pico largo para riego preciso. Capacidad 1.5 litros.",
+    "price": 39000,
+    "category": "Herramientas",
+    "tags": [
+      "regadera",
+      "riego",
+      "herramienta",
+      "regalo"
+    ],
+    "url": "https://casaverde.example.com/productos/regadera-1-5l",
+    "inStock": true,
+    "specs": {
+      "Capacidad": "1.5 L",
+      "Material": "acero pintado",
+      "Color": "verde oliva",
+      "Pico": "largo, para riego preciso",
+      "Alto": "18 cm"
+    }
+  },
+  {
+    "id": "p014",
+    "name": "Caja regalo 'Primera planta' (pothos + maceta cerámica 18 cm + tarjeta)",
+    "description": "Combo listo para regalar: pothos dorado, maceta de cerámica esmaltada de 18 cm, guía de cuidados y tarjeta personalizable. Empaque en caja kraft con papel seda.",
+    "price": 79000,
+    "category": "Regalos",
+    "tags": [
+      "regalo",
+      "combo",
+      "principiantes",
+      "poca luz"
+    ],
+    "url": "https://casaverde.example.com/productos/caja-regalo-primera-planta",
+    "inStock": true,
+    "specs": {
+      "Incluye": "pothos dorado, maceta de cerámica esmaltada 18 cm, guía de cuidados y tarjeta personalizable",
+      "Empaque": "caja kraft con papel seda",
+      "Luz": "media a baja",
+      "Riego": "semanal",
+      "Personalización": "mensaje en la tarjeta (hasta 200 caracteres) en las notas del pedido"
+    }
+  }
+]

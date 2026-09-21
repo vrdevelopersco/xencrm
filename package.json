@@ -1,0 +1,50 @@
+{
+  "name": "aiva",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Asistente de compras local (Ollama) accesible por WhatsApp, widget web y MCP",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "start": "tsx src/index.ts",
+    "ingest": "tsx src/rag/ingest.ts",
+    "chat": "tsx src/cli.ts",
+    "mcp": "tsx src/mcp/stdio.ts",
+    "typecheck": "tsc --noEmit",
+    "build:sidecar": "sh sidecar/build.sh",
+    "test:scenarios": "tsx src/eval/scenarios.ts",
+    "onboard": "tsx src/onboard.ts",
+    "seed": "tsx src/seed.ts",
+    "test:when": "tsx src/eval/when.ts",
+    "usage": "tsx src/eval/usage.ts",
+    "replay": "tsx src/eval/replay.ts",
+    "test:calendar": "tsx src/eval/calendar.ts",
+    "test:signals": "tsx src/eval/signals.ts",
+    "test": "tsx src/eval/when.ts && tsx src/eval/calendar.ts && tsx src/eval/signals.ts && tsx src/eval/gate.ts && tsx src/eval/booking.ts && tsx src/eval/dictionary.ts && tsx src/eval/guards.ts && tsx src/eval/verifications.ts",
+    "test:gate": "tsx src/eval/gate.ts",
+    "test:booking": "tsx src/eval/booking.ts",
+    "test:dictionary": "tsx src/eval/dictionary.ts",
+    "test:guards": "tsx src/eval/guards.ts",
+    "test:verifications": "tsx src/eval/verifications.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "hono": "^4.13.7",
+    "html-to-text": "^10.0.1",
+    "pino": "^10.3.1",
+    "qrcode-terminal": "^0.12.0",
+    "zod": "^4.6.1"
+  },
+  "devDependencies": {
+    "@types/html-to-text": "^9.0.4",
+    "@types/node": "^22.20.2",
+    "@types/qrcode-terminal": "^0.12.2",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3"
+  }
+}

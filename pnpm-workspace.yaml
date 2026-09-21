@@ -1,0 +1,6 @@
+# pnpm 11: qué dependencias pueden ejecutar scripts de instalación.
+# baileys y protobufjs no lo necesitan (vienen compilados); esbuild solo valida su binario.
+allowBuilds:
+  '@whiskeysockets/baileys': false
+  esbuild: true
+  protobufjs: false

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "573001234567", "name": "Andrés Peña", "stage": "cita_agendada", "sentiment": "positivo", "lastMinutesAgo": 40, "unread": 0,
+    "summary": "Novio, boda el 6 de diciembre en Barranquilla; quiere traje a la medida, cita agendada.",
+    "data": { "servicio": "diseño a la medida", "prenda": "traje", "ocasion": "boda (novio)", "fecha_evento": "6 de diciembre", "ciudad": "Barranquilla" },
+    "signals": { "interes": 3, "quiere_cita": true, "pidio_precio": true, "urgencia": "media", "sentimiento": "positivo" },
+    "appointmentInHours": 30,
+    "messages": [
+      { "role": "user", "text": "Hola, me caso el 6 de diciembre y quiero algo diferente, ¿hacen trajes a la medida?" },
+      { "role": "assistant", "text": "¡Hola, Andrés! Felicitaciones 🎉 Sí: diseñamos trajes exclusivos a tu medida, con telas premium, corte y cada detalle a tu gusto, y con varias pruebas. Para diciembre vamos bien de tiempo. ¿Te gustaría agendar tu cita privada en la boutique?" },
+      { "role": "user", "text": "Sí, ¿cuánto vale más o menos?" },
+      { "role": "assistant", "text": "El precio se define en la cita según la tela y el diseño que elijas, ahí te damos la cifra exacta antes de confirmar. ¿Agendamos? Tengo estos espacios:\n1) sábado, 10:00 a. m.\n2) lunes, 11:00 a. m.\n3) martes, 3:00 p. m." },
+      { "role": "user", "text": "La 2" },
+      { "role": "assistant", "text": "¡Agendada, Andrés! 🗓️ Te esperamos el lunes a las 11:00 a. m. en DUNOR Boutique, Barranquilla. Si necesitas cambiarla, me escribes por aquí." }
+    ]
+  },
+  {
+    "id": "573015550123", "name": "Camilo Restrepo", "stage": "interesado", "sentiment": "neutral", "lastMinutesAgo": 12, "unread": 1, "humanMode": true, "humanBy": "Laura", "humanSinceMinutesAgo": 25,
+    "summary": "Padrino de boda en octubre; pregunta por alquiler de esmoquin y quiere hablar con alguien por la fecha.",
+    "data": { "servicio": "alquiler premium", "prenda": "esmoquin", "ocasion": "boda (padrino)", "fecha_evento": "18 de octubre" },
+    "signals": { "interes": 2, "quiere_cita": false, "pidio_precio": true, "urgencia": "alta", "sentimiento": "neutral", "tiene_objecion": true, "objecion": "no sabe si alcanza el tiempo" },
+    "messages": [
+      { "role": "user", "text": "Buenas, soy padrino en una boda el 18 de octubre, ¿alquilan esmoquin?" },
+      { "role": "assistant", "text": "¡Claro, Camilo! Tenemos esmóquines de las mejores marcas, con los ajustes incluidos y asesoría de imagen para que el look quede perfecto para la boda. ¿Es de noche o de día?" },
+      { "role": "user", "text": "De noche. Es que estoy corto de tiempo, quiero hablar con alguien" },
+      { "role": "assistant", "text": "Claro que sí, te paso con alguien del equipo. En un momento te escriben por aquí mismo." },
+      { "role": "assistant", "author": "human", "by": "Laura", "text": "Hola Camilo, soy Laura de DUNOR. Para el 18 de octubre alcanzamos sin problema; si vienes esta semana dejamos el esmoquin listo con tiempo. ¿Qué día te queda bien?" },
+      { "role": "user", "text": "Podría el jueves en la tarde, ¿qué hora tienen?" }
+    ]
+  },
+  {
+    "id": "573207778899", "name": "Sebastián Molina", "stage": "interesado", "sentiment": "positivo", "lastMinutesAgo": 1700, "unread": 0,
+    "summary": "Grado en noviembre; le interesa alquilar traje azul, pidió precio, quedó de confirmar.",
+    "data": { "servicio": "alquiler premium", "prenda": "traje azul", "ocasion": "grado", "fecha_evento": "noviembre" },
+    "signals": { "interes": 2, "quiere_cita": true, "pidio_precio": true, "urgencia": "baja", "sentimiento": "positivo" },
+    "messages": [
+      { "role": "user", "text": "Hola, me gradúo en noviembre y quiero un traje azul, ¿alquilan?" },
+      { "role": "assistant", "text": "¡Hola, Sebastián! Sí, en alquiler premium tenemos trajes de las mejores marcas, azul incluido, con ajustes y asesoría para que quede impecable el día del grado. ¿Agendamos tu cita privada para verlos?" },
+      { "role": "user", "text": "Sí, pero ¿cuánto cuesta el alquiler?" },
+      { "role": "assistant", "text": "Depende del traje y del evento; la cifra exacta te la damos en la cita, sin compromiso. ¿Te propongo espacios para esta semana?" },
+      { "role": "user", "text": "Dale, déjame revisar mi agenda y te confirmo" },
+      { "role": "assistant", "text": "Perfecto, cuando quieras me dices el día y te agendo 🙂" }
+    ]
+  },
+  {
+    "id": "573112223344", "name": "Julián Torres", "stage": "conversando", "sentiment": "neutral", "lastMinutesAgo": 5, "unread": 2,
+    "summary": "Gala de empresa en dos semanas; pregunta qué incluye la asesoría de imagen.",
+    "data": { "servicio": "asesoría de imagen", "ocasion": "gala de empresa", "fecha_evento": "en dos semanas" },
+    "signals": { "interes": 1, "quiere_cita": false, "pidio_precio": false, "urgencia": "media", "sentimiento": "neutral" },
+    "messages": [
+      { "role": "user", "text": "Tengo una gala de la empresa en dos semanas, ¿qué incluye la asesoría de imagen?" },
+      { "role": "assistant", "text": "Nuestros expertos te guían para descubrir tu estilo y proyectar tu mejor versión: análisis de colorimetría, estudio de morfología, recomendaciones personalizadas y seguimiento después del evento. Para una gala en dos semanas, la cita puede incluir la elección del traje. ¿Quieres que la agendemos?" },
+      { "role": "user", "text": "¿Y eso cuánto se demora?" },
+      { "role": "user", "text": "¿Es en la boutique o puede ser virtual?" }
+    ]
+  },
+  {
+    "id": "573158889900", "name": "Ricardo Vélez", "stage": "vendido", "sentiment": "positivo", "lastMinutesAgo": 4300, "unread": 0, "stageLocked": true,
+    "summary": "Novio, boda de agosto; alquiló esmoquin y accesorios, evento cumplido.",
+    "data": { "servicio": "alquiler premium", "prenda": "esmoquin y accesorios", "ocasion": "boda (novio)", "fecha_evento": "23 de agosto" },
+    "signals": { "interes": 3, "quiere_cita": true, "pidio_precio": true, "urgencia": "baja", "sentimiento": "positivo" },
+    "messages": [
+      { "role": "user", "text": "Gracias por todo, el esmoquin quedó perfecto. Todo el mundo preguntó dónde lo conseguí" },
+      { "role": "assistant", "text": "¡Qué alegría leer eso, Ricardo! Gracias por confiar en DUNOR. Cuando quieras volver a brillar, aquí estamos 🤍" }
+    ]
+  },
+  {
+    "id": "573043334455", "name": "Mateo Herrera", "stage": "perdido", "sentiment": "negativo", "lastMinutesAgo": 2900, "unread": 0, "stageLocked": true,
+    "summary": "Buscaba traje para el fin de semana; el tiempo no alcanzaba y desistió.",
+    "data": { "servicio": "alquiler premium", "prenda": "traje", "ocasion": "evento", "fecha_evento": "este sábado" },
+    "signals": { "interes": 1, "quiere_cita": false, "pidio_precio": false, "urgencia": "alta", "sentimiento": "negativo", "tiene_objecion": true, "objecion": "no hay tiempo para la cita" },
+    "messages": [
+      { "role": "user", "text": "Necesito un traje para este sábado, ¿me lo pueden tener mañana?" },
+      { "role": "assistant", "text": "Entiendo la urgencia, Mateo. Atendemos con cita previa y el ajuste toma su tiempo; puedo agendarte mañana a primera hora para revisar qué es posible. ¿Te sirve?" },
+      { "role": "user", "text": "No, así no me sirve. Gracias" }
+    ]
+  },
+  {
+    "id": "573176667788", "name": "Daniel Ospina", "stage": "cita_agendada", "sentiment": "positivo", "lastMinutesAgo": 1500, "unread": 0,
+    "summary": "Invitado a boda en noviembre; cita de asesoría agendada para hoy.",
+    "data": { "servicio": "alquiler premium", "prenda": "traje", "ocasion": "boda (invitado)", "fecha_evento": "15 de noviembre" },
+    "signals": { "interes": 3, "quiere_cita": true, "pidio_precio": false, "urgencia": "media", "sentimiento": "positivo" },
+    "appointmentInHours": 6,
+    "messages": [
+      { "role": "user", "text": "Hola, voy a una boda en noviembre y quiero algo elegante sin ser el novio jaja" },
+      { "role": "assistant", "text": "Jaja, perfecto, Daniel: elegante y con estilo propio. En la cita privada vemos opciones de alquiler y tu asesor te ayuda a elegir según la boda. ¿Te agendo?" },
+      { "role": "user", "text": "Sí, mañana si se puede" },
+      { "role": "assistant", "text": "¡Listo, quedó! Tu cita privada de asesoría es mañana a las 4:00 p. m. en DUNOR Boutique, Barranquilla. Cualquier cambio, me avisas por aquí 🙂" }
+    ]
+  },
+  {
+    "id": "573129990011", "name": null, "stage": "nuevo", "sentiment": null, "lastMinutesAgo": 2, "unread": 1,
+    "summary": null, "data": {}, "signals": null,
+    "messages": [
+      { "role": "user", "text": "Buenas tardes, ¿tienen guayaberas para una boda en la playa?" }
+    ]
+  }
+]

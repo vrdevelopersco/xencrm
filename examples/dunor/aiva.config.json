@@ -1,0 +1,80 @@
+{
+  "business": {
+    "name": "DUNOR Boutique",
+    "description": "Tu armario personal de lujo en Barranquilla: alquiler premium de trajes, esmóquines y accesorios, diseño a la medida y asesoría de imagen para hombres que quieren brillar en bodas, grados y eventos especiales. Atención solo con cita previa.",
+    "siteUrl": "https://dunor.co",
+    "currency": "COP",
+    "country": "Colombia",
+    "humanContact": "escríbenos al WhatsApp +57 321 610 5383 o por Instagram @dunorboutique.",
+    "phoneCountryCode": "57",
+    "phoneLocalDigits": 10
+  },
+  "agent": {
+    "name": "Aiva",
+    "style": "elegante, cálido y cercano; tutea; mensajes cortos tipo WhatsApp; con la calidez de Barranquilla, sin exagerar",
+    "language": "es",
+    "goal": "Tu objetivo es entender el evento del cliente (qué ocasión, cuándo es, qué papel juega, qué busca) y llevarlo con naturalidad a agendar su cita privada en la boutique. Los precios y los detalles finales se definen en la cita: nunca inventes cifras."
+  },
+  "sources": {
+    "productsFile": "examples/dunor/catalog/products.json",
+    "knowledgeDir": "examples/dunor/knowledge",
+    "sitePages": [
+      "https://dunor.co/"
+    ]
+  },
+  "dictionaryFile": "examples/dunor/dictionary.json",
+  "timezone": "America/Bogota",
+  "appointments": {
+    "enabled": true,
+    "service": "cita privada de asesoría",
+    "location": "DUNOR Boutique, Barranquilla",
+    "durationMin": 60,
+    "days": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "hours": [
+      [
+        "10:00",
+        "13:00"
+      ],
+      [
+        "15:00",
+        "19:00"
+      ]
+    ],
+    "capacity": 1,
+    "minLeadHours": 12,
+    "maxDaysAhead": 30
+  },
+  "crm": {
+    "fields": [
+      {
+        "name": "servicio",
+        "description": "Servicio que busca: alquiler premium, diseño a la medida o asesoría de imagen"
+      },
+      {
+        "name": "prenda",
+        "description": "Prenda o piezas: traje, esmoquin, accesorios, camisa, etc."
+      },
+      {
+        "name": "ocasion",
+        "description": "Evento y su papel en él: boda (novio, padrino, invitado), grado, gala, quince, fiesta..."
+      },
+      {
+        "name": "fecha_evento",
+        "description": "Fecha o plazo del evento, tal como lo dijo el cliente"
+      },
+      {
+        "name": "talla_o_medidas",
+        "description": "Talla aproximada o medidas que haya mencionado"
+      }
+    ]
+  },
+  "evalFile": "examples/dunor/scenarios.json",
+  "seedFile": "examples/dunor/seed.json"
+}

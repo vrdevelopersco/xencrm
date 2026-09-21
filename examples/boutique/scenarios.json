@@ -1,0 +1,30 @@
+[
+  { "name": "onboarding, proceso y cita", "turns": [
+    { "text": "hola buenas", "expect": { "intent": "saludo" } },
+    { "text": "quiero un traje para mi grado en noviembre, cómo funciona?", "expect": { "intent": "compra", "includesAny": ["medidas", "cita", "prueba", "semana"] , "noGreeting": true } },
+    { "text": "listo, quiero agendar la cita", "expect": { "intent": "cita", "engine": "template", "includesAny": ["nombre", "1)"] } },
+    { "text": "Camilo Rojas", "expect": { "intent": "cita", "engine": "template", "includesAny": ["1)", "2)"] } },
+    { "text": "la 1", "expect": { "intent": "cita", "engine": "template", "includesAny": ["confirmo", "Confirmo", "confirmar"] } },
+    { "text": "sí", "expect": { "intent": "cita", "engine": "template", "includesAny": ["Agendada", "quedó", "Listo"] } },
+    { "text": "gracias!", "expect": { "intent": "saludo", "noGreeting": true } }
+  ]},
+  { "name": "precios y pagos", "turns": [
+    { "text": "cuánto vale una camisa a la medida?", "expect": { "intent": "compra", "includesAny": ["240.000"] } },
+    { "text": "y cómo se paga?", "expect": { "intent": "info_tienda", "includesAny": ["50", "abono", "Nequi", "tarjeta", "transferencia"], "noGreeting": true } }
+  ]},
+  { "name": "telas y tiempos (detalle)", "turns": [
+    { "text": "qué telas manejan para trajes?", "expect": { "includesAny": ["lana", "lino"] } },
+    { "text": "y cuánto se demora un traje?", "expect": { "includesAny": ["semana"], "noGreeting": true } }
+  ]},
+  { "name": "ajustes de prendas propias", "turns": [
+    { "text": "hacen arreglos de un pantalón que ya tengo?", "expect": { "intent": "compra", "includesAny": ["ajuste", "Ajuste", "arreglo", "dobladillo", "45.000", "sí", "Sí", "claro", "Claro"] } }
+  ]},
+  { "name": "límites y traspaso a humano", "turns": [
+    { "text": "me ayudas con una tarea de física?", "expect": { "intent": "fuera_de_alcance", "engine": "template" } },
+    { "text": "quiero hablar con una persona", "expect": { "intent": "humano", "engine": "template", "includesAny": ["equipo", "persona"] } },
+    { "text": "es que mi saco quedó apretado", "expect": { "silent": true } }
+  ]},
+  { "name": "producto que no hacemos", "turns": [
+    { "text": "venden zapatos de cuero?", "expect": { "excludes": ["http"], "includesAny": ["no", "No", "solo", "Solo", "prendas", "ropa", "trajes"] } }
+  ]}
+]

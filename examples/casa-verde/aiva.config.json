@@ -1,0 +1,24 @@
+{
+  "business": {
+    "name": "Casa Verde",
+    "description": "Tienda online de plantas, macetas y accesorios de jardinería con envíos a toda Colombia.",
+    "siteUrl": "https://casaverde.example.com",
+    "currency": "COP",
+    "country": "Colombia",
+    "humanContact": "escríbenos a hola@casaverde.example.com o al +57 300 000 0000 (lunes a viernes, 9am a 6pm).",
+    "phoneCountryCode": "57",
+    "phoneLocalDigits": 10
+  },
+  "agent": {
+    "name": "Aiva",
+    "style": "cálido, cercano, tutea, mensajes cortos tipo WhatsApp, colombiano neutro",
+    "language": "es"
+  },
+  "sources": {
+    "productsFile": "examples/casa-verde/catalog/products.json",
+    "knowledgeDir": "examples/casa-verde/knowledge",
+    "sitePages": []
+  },
+  "dictionaryFile": "examples/casa-verde/dictionary.json",
+  "evalFile": "examples/casa-verde/scenarios.json"
+}
