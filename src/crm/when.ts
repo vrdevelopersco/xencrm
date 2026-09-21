@@ -3,6 +3,7 @@
 // mensaje habla de tiempo y las reglas no lo entienden, el modelo traduce la frase a un filtro. La disponibilidad
 // real siempre la calcula availableSlots: el modelo nunca elige la fecha.
 import { business } from '../config.js';
+import { expandExpressions } from '../agent/dictionary.js';
 import { classify, fallbackOrder, roleEngine } from '../llm/engines.js';
 import type { SchemaSpec } from '../llm/apple.js';
 import { dayKey, formatDay, tzParts, zoned, type When } from './appointments.js';
@@ -102,7 +103,7 @@ function finish(w: Omit<When, 'label'>): When {
 // ---------- Reglas ----------
 /** Interpreta la fecha y la franja con reglas. null si el mensaje no habla de cuándo. */
 export function parseWhen(text: string, now = new Date()): When | null {
-  let t = ` ${fold(text).replace(/[¿?¡!,;]/g, ' ').replace(/\s+/g, ' ')} `
+  let t = ` ${fold(expandExpressions(text)).replace(/[¿?¡!,;]/g, ' ').replace(/\s+/g, ' ')} `
     // Muletillas: "12m" y "12 del día" son mediodía; "la de las 3" y "las 3" a secas son una hora.
     .replace(/\b(12|doce)\s*(?:m\b\.?|del dia\b)/g, '12 del mediodia')
     .replace(/\b(?:la|el)\s+de\s+(las?\s+)/g, ' a $1')

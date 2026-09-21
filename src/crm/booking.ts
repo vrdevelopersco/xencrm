@@ -3,6 +3,9 @@
 // no lo entienden, el modelo traduce la frase a un filtro; los espacios siempre salen de la agenda real.
 import { business } from '../config.js';
 import { pick } from '../agent/prompts.js';
+import { expandExpressions } from '../agent/dictionary.js';
+import { GREETING_RE } from '../agent/gate.js';
+import { noteMiss } from './misses.js';
 import {
   availableSlots,
   bookAppointment,
@@ -204,9 +207,16 @@ async function book(c: Contact, userId: string, chosen: string): Promise<string>
   );
 }
 
-/** Fecha o franja del mensaje: reglas primero; el modelo solo si habla de tiempo y las reglas no entendieron. */
+/**
+ * Fecha o franja del mensaje: reglas primero; el modelo solo si habla de tiempo y las reglas no entendieron.
+ * Lo que entendió el modelo queda en "frases que no entendimos" para enseñárselo a las reglas.
+ */
 async function interpret(text: string, opts: { model: boolean; userId?: string }): Promise<When | null> {
-  return parseWhen(text) ?? (opts.model && mentionsTime(text) ? askModelWhen(text, { userId: opts.userId }) : null);
+  const byRule = parseWhen(text);
+  if (byRule || !opts.model || !mentionsTime(text)) return byRule;
+  const byModel = await askModelWhen(text, { userId: opts.userId });
+  if (byModel && opts.userId) noteMiss(opts.userId, 'fecha', text, { reading: byModel.label, suggestion: byModel.label });
+  return byModel;
 }
 
 async function start(userId: string, text = ''): Promise<string> {
@@ -255,7 +265,7 @@ async function step(userId: string, text: string): Promise<string | null> {
   const c = getContact(userId);
   const st = c ? state(c) : null;
   if (!c || !st) return null;
-  const t = fold(text.trim());
+  const t = fold(expandExpressions(text.trim())); // "la que sea" → lo que el negocio enseñó (p. ej. "la primera")
 
   if (st.step === 'nombre') {
     const w = parseWhen(text);
@@ -421,8 +431,41 @@ export async function startBooking(userId: string, text = ''): Promise<string> {
  * Devuelve la respuesta, o null si el mensaje no encaja en el flujo (el agente lo atiende normalmente).
  */
 export async function bookingStep(userId: string, text: string): Promise<string | null> {
+  const c = getContact(userId);
+  const was = c ? state(c) : null;
   const r = await step(userId, text);
+  // Una respuesta corta que no encajó ("la que sea", "hágale") sacó al cliente del flujo: queda para enseñarla.
+  // Las preguntas y las cortesías salen del flujo a propósito.
+  if (r === null && was && was.step !== 'nombre' && text.trim().length <= 60 && !/\?/.test(text) && !GREETING_RE.test(text.trim()))
+    noteMiss(userId, 'cita', text, { reading: EXPECTED[was.step] });
   return r === null ? null : tidy(r);
+}
+
+const EXPECTED: Record<BookingState['step'], string> = {
+  nombre: 'esperaba el nombre',
+  elegir: 'esperaba que eligiera uno de los horarios',
+  telefono: 'esperaba el número de teléfono',
+  confirmar: 'esperaba un sí o un no para confirmar',
+  gestionar: 'esperaba si cambia, cancela o deja la cita',
+  cancelar: 'esperaba que confirmara la cancelación',
+};
+
+/** Qué entiende el flujo de la cita en una respuesta, sin importar el paso: para comprobar lo que se le enseña. */
+export function bookingReading(text: string): string | null {
+  const t = fold(expandExpressions(text.trim()));
+  const ordinal = ORDINAL_RE.exec(t)?.[1];
+  const num = OPTION_RE.exec(t)?.[1] ?? (ordinal ? ORDINALS[ordinal] : undefined);
+  if (num) return `la opción ${num}`;
+  if (FIRST_RE.test(t)) return 'la primera opción';
+  if (LAST_RE.test(t)) return 'la última opción';
+  if (MIDDLE_RE.test(t)) return 'la opción del medio';
+  const w = parseWhen(text);
+  if (w) return w.label;
+  if (CANCEL_RE.test(t)) return 'dejar la cita para después';
+  if (KEEP_RE.test(t)) return 'dejar la cita como está';
+  if (YES_RE.test(t) && !CHANGE_RE.test(t)) return 'sí';
+  if (NO_RE.test(t)) return 'no, otra opción';
+  return null;
 }
 
 export function hasBookingInProgress(userId: string): boolean {

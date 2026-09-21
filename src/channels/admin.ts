@@ -20,6 +20,8 @@ import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
 import { channelCards, toggleChannel } from './registry.js';
 import { exportDictionary, getDictionary, importDictionary } from '../agent/dictionary.js';
+import { teachExpression } from '../agent/teach.js';
+import { closeMisses, listMisses, MISS_KINDS, type MissKind } from '../crm/misses.js';
 import { answerVerification, dismissVerification, listVerifications } from '../crm/verifications.js';
 import type { ChannelId } from './switches.js';
 import type { Contact } from '../crm/contacts.js';
@@ -170,6 +172,26 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     } catch (err) {
       return c.json({ errors: (err as Error).message.split('\n') }, 400);
     }
+  });
+
+  // Frases que no entendimos: se enseñan como expresiones del diccionario o se marcan como revisadas.
+  app.get('/admin/api/misses', (c) => c.json({ groups: listMisses() }));
+  const missBody = async (c: { req: { json: () => Promise<unknown> } }) => {
+    const b = (await c.req.json().catch(() => ({}))) as { kind?: string; key?: string; says?: string; means?: string };
+    const kind = MISS_KINDS.find((k) => k === b.kind);
+    return kind && b.key ? { kind: kind as MissKind, key: b.key.toString(), says: b.says?.toString() ?? '', means: b.means?.toString() ?? '' } : null;
+  };
+  app.post('/admin/api/misses/review', async (c) => {
+    const b = await missBody(c);
+    if (!b) return c.json({ error: 'falta la frase' }, 400);
+    return c.json({ closed: closeMisses(b.kind, b.key, 'revisada') });
+  });
+  app.post('/admin/api/misses/teach', async (c) => {
+    const b = await missBody(c);
+    if (!b) return c.json({ error: 'falta la frase' }, 400);
+    if (!b.says.trim() || !b.means.trim()) return c.json({ ok: false, reason: 'Escribe qué dice el cliente y qué quiere decir.' }, 400);
+    const r = teachExpression(b.kind, b.key, b.says, b.means);
+    return c.json(r, r.ok ? 200 : 422);
   });
 
   // Canales: estado, actividad y qué falta; encender o apagar sin reiniciar.

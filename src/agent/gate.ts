@@ -2,7 +2,8 @@ import type { ChatMessage } from '../llm/ollama.js';
 import { classify as classifyWith, fallbackOrder, roleEngine, type Engine } from '../llm/engines.js';
 import { business } from '../config.js';
 import { asksAvailability } from '../crm/when.js';
-import { dictionaryVersion, getDictionary } from './dictionary.js';
+import { dictionaryVersion, expandExpressions, getDictionary } from './dictionary.js';
+import { noteMiss } from '../crm/misses.js';
 import { gatePrompt, GATE_SCHEMA, INTENTS, type Intent } from './prompts.js';
 
 export interface GateResult {
@@ -96,7 +97,7 @@ function subject(text: string): string {
  * anterior ("¿y eso cuánto vale?") y todo lo que podría estar fuera de tema (eso nunca lo decide una regla).
  */
 export function ruleIntent(text: string, history: ChatMessage[] = []): GateResult | null {
-  const t = text.trim();
+  const t = expandExpressions(text.trim()); // "cuadrar una vueltica" → lo que el negocio enseñó que quiere decir
   if (t.length <= 40 && GREETING_RE.test(t)) return { intent: 'saludo', query: '', via: 'regex' };
   if (HUMAN_RE.test(t)) return { intent: 'humano', query: '', via: 'regex' };
   if (business.appointments.enabled && CITA_RE.test(t) && t.length <= 120) return { intent: 'cita', query: '', via: 'regex' };
@@ -126,6 +127,22 @@ export function ruleIntent(text: string, history: ChatMessage[] = []): GateResul
   return null;
 }
 
+// Lo que el modelo clasificó y una regla podría haber resuelto: frases cortas que son un saludo, un pedido de cita,
+// pedir una persona o una pregunta de la tienda. Lo largo, lo que depende del turno anterior y lo que mezcla compra con
+// pregunta va al modelo a propósito: no se anota.
+const TEACHABLE: Partial<Record<Intent, { reading: string; suggestion: string }>> = {
+  saludo: { reading: 'un saludo', suggestion: 'hola' },
+  cita: { reading: 'quiere una cita', suggestion: 'quiero agendar una cita' },
+  humano: { reading: 'quiere hablar con una persona', suggestion: 'quiero hablar con una persona' },
+  info_tienda: { reading: 'pregunta de la tienda', suggestion: '' },
+};
+function noteRuleMiss(userId: string, t: string, history: ChatMessage[], intent: Intent, query: string) {
+  const teach = TEACHABLE[intent];
+  if (!teach || t.length > 80 || WANTS_RE.test(t) || (history.length > 0 && REFERENCE_RE.test(t))) return;
+  const about = intent === 'info_tienda' && query ? query : '';
+  noteMiss(userId, 'frase', t, { reading: about ? `${teach.reading}: ${about}` : teach.reading, suggestion: about || teach.suggestion });
+}
+
 /** Clasifica el mensaje: reglas baratas primero, luego el motor del gate con salida JSON (y el otro motor de respaldo). */
 export async function classify(text: string, history: ChatMessage[], userId?: string): Promise<GateResult> {
   const t = text.trim();
@@ -145,7 +162,9 @@ export async function classify(text: string, history: ChatMessage[], userId?: st
       let intent = INTENTS.find((i) => i === parsed.intent);
       if (!intent) throw new Error(`intent inválido: ${parsed.intent}`);
       if (intent === 'cita' && !business.appointments.enabled) intent = 'info_tienda';
-      return { intent, query: (parsed.consulta_busqueda ?? '').trim() || (intent === 'info_tienda' ? 'cómo visitar la tienda, horarios y citas' : ''), via: engine };
+      const query = (parsed.consulta_busqueda ?? '').trim();
+      if (userId) noteRuleMiss(userId, t, history, intent, query);
+      return { intent, query: query || (intent === 'info_tienda' ? 'cómo visitar la tienda, horarios y citas' : ''), via: engine };
     } catch (err) {
       console.warn(`[gate] ${engine} falló: ${(err as Error).message}`);
     }

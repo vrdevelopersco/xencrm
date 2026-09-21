@@ -73,14 +73,17 @@ Aiva no está amarrada a un negocio: todo lo propio de cada cliente vive en su c
 | Tablero › Canales | Lo que se decide en el día a día | encender o apagar el chat web, WhatsApp (con su QR), WhatsApp oficial y MCP, sin reiniciar |
 
 El **diccionario** es lo que cada cliente le enseña a aiva sin tocar código: temas que se responden
-con su información (palabras que los disparan y con qué se busca) y los verbos con que su gente
-pregunta por lo que ofrece. Vive en su propio archivo (`dictionaryFile` en `aiva.config.json`; el de
+con su información (palabras que los disparan y con qué se busca), los verbos con que su gente
+pregunta por lo que ofrece y las **expresiones** propias de sus clientes, que se leen como otra cosa
+antes de aplicar las reglas (fechas, temas y el flujo de la cita), sin importar tildes ni mayúsculas.
+Vive en su propio archivo (`dictionaryFile` en `aiva.config.json`; el de
 DUNOR es `examples/dunor/dictionary.json`):
 
 ```json
 {
   "offerVerbs": ["alquilan", "confeccionan", "arreglan", "diseñan"],
-  "topics": [{ "keywords": ["nequi", "daviplata", "pse", "bancolombia"], "query": "formas de pago" }]
+  "topics": [{ "keywords": ["nequi", "daviplata", "pse", "bancolombia"], "query": "formas de pago" }],
+  "expressions": [{ "says": "a la hora del cafecito", "means": "a las 3" }]
 }
 ```
 
@@ -91,11 +94,24 @@ después de confirmar. Se valida antes de guardar (los errores dicen qué y dón
 de la versión anterior (`.anterior.json`) y se aplica sin reiniciar. Pruebas: `pnpm test:dictionary`.
 
 Lo genérico del español (dónde quedan, horario, pagos, envíos, cambios, parqueadero, "¿tienen…?",
-"¿venden…?") ya viene en el código. Cada frase que un cliente real no logre entender se agrega a su
-diccionario o a las reglas y a su prueba sin modelo (`pnpm test`), para que no vuelva a fallar.
+"¿venden…?") ya viene en el código. Lo que un cliente real no logra que las reglas entiendan queda en
+**Agente › Frases que no entendimos**:
+
+- **Fechas y horas** que tuvo que interpretar la IA ("a la hora del almuerzo").
+- **Frases cortas** que clasificó la IA y una regla podría resolver (un saludo, un pedido de cita,
+  pedir una persona, una pregunta de la tienda).
+- **Respuestas cortas** que sacaron al cliente del flujo de la cita ("la que sea").
+
+Se agrupan por frase (sin tildes ni mayúsculas) con cuántas veces y cuántas personas. Con
+**Enseñar** se escribe qué quiere decir y se guarda como expresión del diccionario, solo si con eso
+las reglas ya entienden la frase; si no, no se guarda y se dice por qué. La próxima vez se resuelve
+sin IA. Lo que sea del español en general va mejor a las reglas del código, con su prueba sin modelo
+(`pnpm test`). Pruebas: `pnpm test:misses`.
 
 Un cliente por proceso: para varios clientes, una carpeta, un `.env` y un puerto por cada uno
-(`pnpm onboard` arma los dos archivos, desde cero o desde un ejemplo).
+(`pnpm onboard` arma los dos archivos, desde cero o desde un ejemplo). `AIVA_CONFIG` y `DB_PATH`
+permiten usar otro archivo de configuración y otra base desde la misma carpeta (por ejemplo, una
+copia para pruebas que no toquen el diccionario ni los datos reales).
 
 ### Catálogo e información
 - `sources.productsFile`: JSON o CSV con `id, name, description, price, currency, category, tags, url, inStock, image` y opcionalmente `specs` (ficha técnica clave/valor: lo que el bot usa cuando piden detalles).

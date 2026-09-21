@@ -121,6 +121,19 @@ export function getDb(): DatabaseSync {
       answered_at INTEGER
     );
     CREATE INDEX IF NOT EXISTS verifications_status ON verifications(status, created_at);
+    -- Frases que las reglas no entendieron (una fecha, un saludo, una respuesta en la cita): se enseñan desde el tablero.
+    CREATE TABLE IF NOT EXISTS misses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      text TEXT NOT NULL,
+      key TEXT NOT NULL,
+      reading TEXT,
+      suggestion TEXT,
+      status TEXT NOT NULL DEFAULT 'nueva',
+      ts INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS misses_status ON misses(status, kind, key);
     -- Decisiones tomadas desde el tablero (p. ej. qué canales están encendidos); los secretos siguen en .env.
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,

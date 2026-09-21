@@ -208,13 +208,13 @@ export function stats() {
  *  El consumo de IA (llm_usage) se conserva: es gasto real. */
 export function deleteContactsByPrefix(prefix: string): number {
   const db = getDb();
-  for (const t of ['messages', 'analyses', 'events', 'appointments', 'verifications']) db.prepare(`DELETE FROM ${t} WHERE user_id LIKE ?`).run(`${prefix}%`);
+  for (const t of ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses']) db.prepare(`DELETE FROM ${t} WHERE user_id LIKE ?`).run(`${prefix}%`);
   return Number(db.prepare('DELETE FROM users WHERE id LIKE ?').run(`${prefix}%`).changes);
 }
 
 export function purgeContact(userId: string) {
   const db = getDb();
-  for (const t of ['messages', 'analyses', 'events', 'appointments', 'verifications']) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(userId);
+  for (const t of ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses']) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(userId);
   db.prepare(
     "UPDATE users SET name = NULL, phone = NULL, stage = 'nuevo', stage_locked = 0, score = 0, score_factors = '[]', sentiment = NULL, human_mode = 0, data = '{}', tags = '[]', notes = '', summary = NULL, unread = 0, last_message_at = NULL WHERE id = ?",
   ).run(userId);

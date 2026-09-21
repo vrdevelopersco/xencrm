@@ -182,4 +182,5 @@ export function loadBusinessConfig(path = 'aiva.config.json'): BusinessConfig {
   return BusinessConfig.parse(JSON.parse(readFileSync(abs, 'utf8')));
 }
 
-export const business = loadBusinessConfig();
+// AIVA_CONFIG elige otro archivo: un proceso por cliente, o una copia para pruebas que no toquen el diccionario real.
+export const business = loadBusinessConfig(process.env.AIVA_CONFIG || 'aiva.config.json');
