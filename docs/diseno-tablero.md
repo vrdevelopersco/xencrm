@@ -143,7 +143,12 @@ Temperatura y veredicto eran el mismo puntaje (0–100, cortes en 60 y 30, `temp
 detalle, **verde**. Peor: el rojo de "caliente" (el mejor prospecto) era el mismo de "Perdido" (el peor). Se unificó
 por el veredicto: caliente usa `--si` (verde), tibio el ámbar de "posible", frío el gris de "sin señales". El rojo
 queda solo para perdido y errores. Las palabras siguen siendo dos ("caliente" en tarjetas, avisos y Hoy; "prospecto
-claro" en la ficha); el color ya no las contradice.
+claro" en la ficha); el color ya no las contradice. Por criterio de HRCAPOLO las palabras **no** se unifican: el
+color es lo que tiene que ser uno solo; "caliente" es lenguaje de momento (tarjetas, avisos, Hoy: mirar ahora) y
+"prospecto claro" es lenguaje de juicio (la ficha: evaluar con calma). Como puente, la ficha dice bajo la barra
+"Probabilidad 100 (en tarjetas y avisos: caliente)": nombra el mismo número en el otro vocabulario, sin inventar una
+explicación del puntaje (no es de actividad: sale de las señales de compra de la conversación). "Frío" se muestra
+con tilde (el valor interno sigue siendo `frio`).
 
 ### Cambiar de etapa sin arrastrar (2026-09-21, pregunta de HRCAPOLO)
 Solo se podía arrastrando con el mouse (o desde la ficha del contacto). En el celular, arrastrar no funciona con el

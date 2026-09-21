@@ -115,7 +115,8 @@
   function whoHas(c) { return c.humanBy && c.humanBy !== 'bot' ? c.humanBy : 'el equipo'; }
   function verdictChip(c) { var v = verdict(c); return '<span class="chip ' + v.cls + (isStale(c) ? ' stale' : '') + '" title="Probabilidad ' + c.score + (c.scoreAt ? ' · calculada hace ' + rel(c.scoreAt) : '') + '">' + esc(v.label) + '</span>'; }
   function isStale(c) { return c.scoreAt && c.lastMessageAt && c.lastMessageAt > c.scoreAt + 20000; }
-  function scoreChip(c) { return '<span class="chip t-' + c.temperature + (isStale(c) ? ' stale' : '') + '" title="' + (c.scoreAt ? 'Calculado hace ' + rel(c.scoreAt) : 'Sin análisis') + '">' + c.score + ' · ' + c.temperature + (isStale(c) ? ' (desactualizado)' : '') + '</span>'; }
+  function tempLabel(t) { return t === 'frio' ? 'frío' : t; } // el valor interno va sin tilde; la palabra, con
+  function scoreChip(c) { return '<span class="chip t-' + c.temperature + (isStale(c) ? ' stale' : '') + '" title="' + (c.scoreAt ? 'Calculado hace ' + rel(c.scoreAt) : 'Sin análisis') + '">' + c.score + ' · ' + tempLabel(c.temperature) + (isStale(c) ? ' (desactualizado)' : '') + '</span>'; }
   function sentIcon(s) { return { positivo: '😊 positivo', neutral: '😐 neutral', negativo: '😠 negativo' }[s] || s; }
   function updateBadges() {
     var unread = state.contacts.reduce(function (a, c) { return a + (c.unread || 0); }, 0);
@@ -207,7 +208,7 @@
       '<div class="verdict' + (isStale(c) ? ' stale' : '') + '"><h3>¿Es un prospecto?</h3><div class="big">' + esc(v.label) + '</div><div class="why">' + esc(v.why || '') + (c.summary ? ' ' + esc(c.summary) : '') + '</div>' +
         (quick ? '<div class="small">' + quick + '</div>' : '') +
         '<div class="bar' + (isStale(c) ? ' stale' : '') + '" title="Probabilidad ' + c.score + '"><i class="z-' + c.temperature + '" style="width:' + c.score + '%"></i></div><div class="bar-legend"><span>sin señales</span><span>posible</span><span>prospecto</span></div>' +
-        '<div class="small muted">Probabilidad ' + c.score + (c.scoreAt ? ' · hace ' + rel(c.scoreAt) : '') + (isStale(c) ? ' · <b style="color:var(--warn)">hay mensajes nuevos, se recalcula solo</b>' : '') + ' · <button class="linkbtn" id="toggle-detail">' + (state.detailOpen ? 'Ocultar detalle' : 'Ver detalle') + '</button></div>' +
+        '<div class="small muted">Probabilidad ' + c.score + ' (en tarjetas y avisos: ' + esc(tempLabel(c.temperature)) + ')' + (c.scoreAt ? ' · hace ' + rel(c.scoreAt) : '') + (isStale(c) ? ' · <b style="color:var(--warn)">hay mensajes nuevos, se recalcula solo</b>' : '') + ' · <button class="linkbtn" id="toggle-detail">' + (state.detailOpen ? 'Ocultar detalle' : 'Ver detalle') + '</button></div>' +
       '</div>' +
       '<div class="detail-more" id="detail-more"' + (state.detailOpen ? '' : ' hidden') + '>' +
         '<div><h3>Por qué</h3><ul class="factors">' + factors + '</ul>' + (c.sentiment ? '<div class="small muted" style="margin-top:6px">Ánimo: ' + sentIcon(c.sentiment) + (data.urgencia ? ' · urgencia ' + esc(data.urgencia) : '') + '</div>' : '') + '</div>' +
