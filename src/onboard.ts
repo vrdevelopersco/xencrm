@@ -28,6 +28,14 @@ if (existsSync('aiva.config.json') && !(await yes('Ya existe aiva.config.json. �
   process.exit(0);
 }
 
+/** Color y logo del cliente para el chat del sitio y la página de la cita (el contraste se ajusta solo). */
+async function askBrand(prev: { color?: string; logo?: string }): Promise<{ color: string; logo?: string }> {
+  let color = '';
+  while (!/^#[0-9a-fA-F]{6}$/.test(color)) color = await ask('Color de la marca (hex, como #C5A47E)', prev.color ?? '#2f7d4f');
+  const logo = await ask('Logo (URL https o archivo png/jpg/svg; vacío si no hay)', prev.logo ?? '');
+  return logo ? { color, logo } : { color };
+}
+
 const mode = await ask('¿Empezar desde un ejemplo (dunor | boutique | casa-verde) o desde cero (nuevo)?', 'nuevo');
 let config: Record<string, unknown>;
 
@@ -39,6 +47,7 @@ if (mode === 'dunor' || mode === 'boutique' || mode === 'casa-verde') {
   biz.siteUrl = await ask('Sitio web', biz.siteUrl);
   biz.humanContact = await ask('Cómo contactar a una persona del equipo', biz.humanContact);
   (config.agent as Record<string, string>).name = await ask('Nombre del asistente', (config.agent as Record<string, string>).name);
+  config.brand = await askBrand((config.brand as { color?: string; logo?: string } | undefined) ?? {});
   if (await yes('¿Copiar el catálogo y la información del ejemplo a data/ para editarlos?', true)) {
     mkdirSync('data', { recursive: true });
     cpSync(`examples/${mode}/catalog`, 'data/catalog', { recursive: true });
@@ -70,6 +79,7 @@ if (mode === 'dunor' || mode === 'boutique' || mode === 'casa-verde') {
       language: 'es',
     },
     sources: { productsFile: 'data/catalog/products.json', knowledgeDir: 'data/knowledge', sitePages: [] },
+    brand: await askBrand({}),
     timezone: await ask('Zona horaria', 'America/Bogota'),
     appointments: { enabled: false },
     crm: { fields: [{ name: 'producto_interes', description: 'Producto o servicio que le interesa al cliente, si lo dijo' }] },

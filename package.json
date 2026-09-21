@@ -23,14 +23,15 @@
     "replay": "tsx src/eval/replay.ts",
     "test:calendar": "tsx src/eval/calendar.ts",
     "test:signals": "tsx src/eval/signals.ts",
-    "test": "tsx src/eval/when.ts && tsx src/eval/calendar.ts && tsx src/eval/signals.ts && tsx src/eval/gate.ts && tsx src/eval/booking.ts && tsx src/eval/dictionary.ts && tsx src/eval/guards.ts && tsx src/eval/verifications.ts && tsx src/eval/misses.ts && tsx src/eval/reminders.ts",
+    "test": "tsx src/eval/when.ts && tsx src/eval/calendar.ts && tsx src/eval/signals.ts && tsx src/eval/gate.ts && tsx src/eval/booking.ts && tsx src/eval/dictionary.ts && tsx src/eval/guards.ts && tsx src/eval/verifications.ts && tsx src/eval/misses.ts && tsx src/eval/reminders.ts && tsx src/eval/brand.ts",
     "test:gate": "tsx src/eval/gate.ts",
     "test:booking": "tsx src/eval/booking.ts",
     "test:dictionary": "tsx src/eval/dictionary.ts",
     "test:guards": "tsx src/eval/guards.ts",
     "test:verifications": "tsx src/eval/verifications.ts",
     "test:misses": "tsx src/eval/misses.ts",
-    "test:reminders": "tsx src/eval/reminders.ts"
+    "test:reminders": "tsx src/eval/reminders.ts",
+    "test:brand": "tsx src/eval/brand.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",

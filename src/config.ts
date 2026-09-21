@@ -181,6 +181,15 @@ const BusinessConfig = z.object({
    * Ver src/agent/dictionary.ts.
    */
   dictionaryFile: z.string().default('dictionary.json'),
+  /** La marca del cliente en lo que ve su gente (chat del sitio, página de la cita). El contraste se ajusta solo. */
+  brand: z
+    .object({
+      /** Color principal, hex (#C5A47E). */
+      color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#2f7d4f'),
+      /** Logo: URL https o archivo local (png, jpg, svg, webp) que aiva sirve en /brand/logo. */
+      logo: z.string().optional(),
+    })
+    .prefault({}),
   /** Versiones anteriores lo traían aquí mismo; si el archivo no existe todavía, se usa esto. */
   dictionary: z.unknown().optional(),
   /** Batería de escenarios de este cliente (pnpm test:scenarios). */

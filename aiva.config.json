@@ -76,5 +76,9 @@
     ]
   },
   "evalFile": "examples/dunor/scenarios.json",
-  "seedFile": "examples/dunor/seed.json"
+  "seedFile": "examples/dunor/seed.json",
+  "brand": {
+    "color": "#C5A47E",
+    "logo": "https://dunor.co/Logo_dunor.jpg"
+  }
 }

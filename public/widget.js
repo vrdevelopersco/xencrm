@@ -1,11 +1,26 @@
 /* Aiva widget — se embebe con: <script src="https://TU-DOMINIO/widget.js" async></script>
-   Atributos opcionales en el <script>: data-color="#2f7d4f" data-greeting="¡Hola! ..." data-position="left" */
+   Atributos opcionales en el <script>: data-color="#2f7d4f" data-greeting="¡Hola! ..." data-position="left"
+   El color y el logo salen de la marca del cliente (aiva.config.json > brand); data-color la cambia solo en ese sitio. */
 (function () {
   if (window.__aivaLoaded) return;
   window.__aivaLoaded = true;
   var script = document.currentScript;
   var BASE = script && script.src ? new URL(script.src).origin : '';
-  var COLOR = (script && script.getAttribute('data-color')) || '#2f7d4f';
+  var RAW = (script && script.getAttribute('data-color')) || '__BRAND_COLOR__';
+  if (!/^#[0-9a-fA-F]{6}$/.test(RAW)) RAW = '#2f7d4f';
+  var LOGO = '__BRAND_LOGO__';
+  if (LOGO && LOGO.charAt(0) === '/') LOGO = BASE + LOGO;
+  // Contraste (WCAG): el texto sobre el color de marca y el color de marca sobre blanco se ajustan para leerse.
+  function rgb(h) { return [1, 3, 5].map(function (i) { return parseInt(h.slice(i, i + 2), 16); }); }
+  function hex(c) { return '#' + c.map(function (v) { return ('0' + Math.round(v).toString(16)).slice(-2); }).join(''); }
+  function lum(h) { var c = rgb(h).map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
+  function ratio(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+  function mix(a, b, t) { var x = rgb(a), y = rgb(b); return hex(x.map(function (v, i) { return v + (y[i] - v) * t; })); }
+  function toward(c, target, bg, min) { var out = c; for (var t = 0.05; ratio(out, bg) < min && t <= 1; t += 0.05) out = mix(c, target, t); return out; }
+  var ON = ratio(RAW, '#ffffff') >= ratio(RAW, '#111827') ? '#ffffff' : '#111827';
+  var COLOR = toward(RAW, ON === '#ffffff' ? '#000000' : '#ffffff', ON, 4.5); // fondo de marca con su texto a 4.5:1
+  var ACCENT = toward(RAW, '#000000', '#ffffff', 4.5); // marca como texto sobre blanco
+  var EDGE = toward(RAW, '#000000', '#ffffff', 3); // marca como borde o foco sobre blanco
   var AGENT = '__AGENT_NAME__';
   var STORE = '__STORE_NAME__';
   var GREETING = (script && script.getAttribute('data-greeting')) || ('¡Hola! Soy ' + AGENT + ', de ' + STORE + '. ¿Qué estás buscando hoy?');
@@ -13,20 +28,21 @@
   var KEY = 'aiva.session.' + BASE;
 
   var css = '\
-  .aiva-btn{position:fixed;bottom:20px;' + (LEFT ? 'left' : 'right') + ':20px;width:58px;height:58px;border-radius:50%;border:0;background:' + COLOR + ';color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;z-index:2147483000;display:flex;align-items:center;justify-content:center;transition:transform .15s}\
+  .aiva-btn{position:fixed;bottom:20px;' + (LEFT ? 'left' : 'right') + ':20px;width:58px;height:58px;border-radius:50%;border:0;background:' + COLOR + ';color:' + ON + ';box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;z-index:2147483000;display:flex;align-items:center;justify-content:center;transition:transform .15s}\
   .aiva-btn:hover{transform:scale(1.06)}\
   .aiva-btn svg{width:28px;height:28px}\
   .aiva-panel{position:fixed;bottom:90px;' + (LEFT ? 'left' : 'right') + ':20px;width:360px;max-width:calc(100vw - 32px);height:520px;max-height:calc(100vh - 110px);background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);border:1px solid rgba(255,255,255,.7);border-radius:20px;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 16px 48px rgba(0,0,0,.24);display:none;flex-direction:column;overflow:hidden;z-index:2147483000;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1f2937}\
   .aiva-panel.open{display:flex}\
-  .aiva-head{background:' + COLOR + ';color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}\
+  .aiva-head{background:' + COLOR + ';color:' + ON + ';padding:14px 16px;display:flex;align-items:center;gap:10px}\
+  .aiva-logo{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.6);flex:0 0 36px}\
   .aiva-head b{font-size:15px}.aiva-head small{opacity:.85;display:block;font-size:12px}\
-  .aiva-close{margin-left:auto;background:none;border:0;color:#fff;font-size:22px;cursor:pointer;line-height:1}\
+  .aiva-close{margin-left:auto;background:none;border:0;color:' + ON + ';font-size:22px;cursor:pointer;line-height:1}\
   .aiva-msgs{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:8px;background:rgba(246,247,249,.6)}\
   .aiva-m{max-width:85%;padding:9px 12px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word}\
   .aiva-m.bot{background:#fff;border-bottom-left-radius:4px;align-self:flex-start;box-shadow:0 1px 2px rgba(0,0,0,.08)}\
-  .aiva-m.me{background:' + COLOR + ';color:#fff;border-bottom-right-radius:4px;align-self:flex-end}\
-  .aiva-m.human{border-left:3px solid ' + COLOR + '}\
-  .aiva-m.human::before{content:attr(data-author);display:block;font-size:11px;color:' + COLOR + ';font-weight:600;margin-bottom:2px}\
+  .aiva-m.me{background:' + COLOR + ';color:' + ON + ';border-bottom-right-radius:4px;align-self:flex-end}\
+  .aiva-m.human{border-left:3px solid ' + EDGE + '}\
+  .aiva-m.human::before{content:attr(data-author);display:block;font-size:11px;color:' + ACCENT + ';font-weight:600;margin-bottom:2px}\
   .aiva-sys{background:transparent;box-shadow:none;color:#6b7280;font-size:12px;align-self:center;text-align:center}\
   .aiva-m a{color:inherit;text-decoration:underline}\
   .aiva-typing span{display:inline-block;width:6px;height:6px;margin:0 2px;background:#9ca3af;border-radius:50%;animation:aivab 1s infinite}\
@@ -34,8 +50,8 @@
   @keyframes aivab{0%,80%,100%{opacity:.3}40%{opacity:1}}\
   .aiva-form{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 10px calc(10px + env(safe-area-inset-bottom));border-top:1px solid rgba(0,0,0,.06);background:rgba(255,255,255,.7)}\
   .aiva-form input{flex:1 1 auto;min-width:0;border:1px solid #e5e7eb;border-radius:22px;padding:11px 14px;font:inherit;font-size:16px;outline:none;background:#fff}\
-  .aiva-form input:focus{border-color:' + COLOR + '}\
-  .aiva-form button{flex:0 0 auto;width:42px;height:42px;border:0;border-radius:50%;background:' + COLOR + ';color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}\
+  .aiva-form input:focus{border-color:' + EDGE + ';box-shadow:0 0 0 1px ' + EDGE + '}\
+  .aiva-form button{flex:0 0 auto;width:42px;height:42px;border:0;border-radius:50%;background:' + COLOR + ';color:' + ON + ';display:flex;align-items:center;justify-content:center;cursor:pointer}\
   .aiva-form button svg{width:20px;height:20px}\
   .aiva-form button:disabled{opacity:.45;cursor:default}\
   @media(max-width:480px){.aiva-panel{position:fixed;inset:0;width:100%;max-width:100%;height:100dvh;max-height:100dvh;border-radius:0}.aiva-btn{bottom:16px}}';
@@ -51,7 +67,7 @@
   var panel = document.createElement('div');
   panel.className = 'aiva-panel';
   panel.innerHTML =
-    '<div class="aiva-head"><div><b>' + esc(AGENT) + '</b><small>' + esc(STORE) + ' · normalmente responde en segundos</small></div><button class="aiva-close" aria-label="Cerrar">×</button></div>' +
+    '<div class="aiva-head">' + (LOGO ? '<img class="aiva-logo" alt="" src="' + esc(LOGO) + '">' : '') + '<div><b>' + esc(AGENT) + '</b><small>' + esc(STORE) + ' · normalmente responde en segundos</small></div><button class="aiva-close" aria-label="Cerrar">×</button></div>' +
     '<div class="aiva-msgs"></div>' +
     '<form class="aiva-form"><input type="text" placeholder="Escribe tu mensaje..." maxlength="1000" autocomplete="off" enterkeyhint="send"><button type="submit" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg></button></form>';
   document.body.appendChild(btn);

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { logoUrl, readLogo } from '../brand.js';
 import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -118,10 +119,19 @@ mountAdmin(app);
 mountMeta(app);
 mountCalendar(app);
 
+// Logo del cliente cuando es un archivo local (aiva.config.json > brand.logo).
+app.get('/brand/logo', (c) => {
+  const logo = readLogo();
+  if (!logo) return c.text('sin logo', 404);
+  return c.body(new Uint8Array(logo.body), 200, { 'content-type': logo.type, 'cache-control': 'public, max-age=3600', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'" });
+});
+
 app.get('/widget.js', (c) => {
   const js = readFileSync(new URL('../../public/widget.js', import.meta.url), 'utf8')
     .replace('__AGENT_NAME__', business.agent.name)
-    .replace('__STORE_NAME__', business.business.name);
+    .replace('__STORE_NAME__', business.business.name)
+    .replace('__BRAND_COLOR__', business.brand.color)
+    .replace('__BRAND_LOGO__', logoUrl() ?? '');
   return c.body(js, 200, { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'public, max-age=60' });
 });
 

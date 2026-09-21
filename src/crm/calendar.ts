@@ -3,6 +3,7 @@
 // - "agregar a mi calendario" para el cliente: Google, Outlook.com y archivo .ics (iPhone, Mac, Outlook).
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { business, env } from '../config.js';
+import { accentOn, logoUrl, onBrand } from '../brand.js';
 import { formatSlot, listAppointments, nextAppointmentFor, type Appointment } from './appointments.js';
 import { recap } from './recap.js';
 import { getContact } from './contacts.js';
@@ -167,19 +168,26 @@ export function customerPage(a: Appointment): string {
     <a class="btn" href="${html(ics)}">iPhone o Mac (Apple Calendar)</a>
     <a class="btn" href="${html(ics)}">Outlook en el computador</a>
     <a class="btn" href="${html(links.outlook)}">Outlook.com</a>`;
+  // La marca del cliente, con el contraste ajustado en claro y en oscuro.
+  const color = business.brand.color;
+  const light = onBrand(color);
+  const dark = onBrand(accentOn(color, '#171a21', 3));
+  const logo = logoUrl();
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${html(customerTitle(a))}</title>
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--text:#111827;--muted:#4b5563;--brand:#1f5c3a;--line:#d6d9de}
-@media (prefers-color-scheme:dark){:root{--bg:#0b0d12;--card:#171a21;--text:#e5e7eb;--muted:#aab2bf;--brand:#6fd39a;--line:#2a2f39}}
+:root{--bg:#f6f7f9;--card:#fff;--text:#111827;--muted:#4b5563;--brand:${light.bg};--on-brand:${light.text};--focus:${accentOn(color, '#ffffff', 3)};--line:#d6d9de}
+@media (prefers-color-scheme:dark){:root{--bg:#0b0d12;--card:#171a21;--text:#e5e7eb;--muted:#aab2bf;--brand:${dark.bg};--on-brand:${dark.text};--focus:${accentOn(color, '#171a21', 3)};--line:#2a2f39}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;display:flex;justify-content:center;padding:24px 16px}
 main{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px}
 h1{font-size:20px;margin:0 0 4px}.when{font-size:18px;font-weight:600;margin:16px 0 4px}.where,.note{color:var(--muted);margin:0 0 20px}
 .btn{display:flex;align-items:center;justify-content:center;min-height:48px;margin-top:10px;border-radius:12px;border:1px solid var(--line);color:var(--text);text-decoration:none;font-weight:600}
-.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--card)}
-.btn:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.logo{display:block;width:64px;height:64px;border-radius:50%;object-fit:cover;margin:0 0 12px;border:1px solid var(--line)}
 </style></head><body><main>
+${logo ? `<img class="logo" src="${html(logo)}" alt="">` : ''}
 <h1>${html(business.business.name)}</h1>
 <p class="where">${html(cap(a.service))}</p>
 <p class="when">${html(cap(formatSlot(new Date(a.startsAt)))).replace(/ ([ap])\. m\./g, '&nbsp;$1.&nbsp;m.')}</p>

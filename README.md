@@ -68,7 +68,7 @@ Aiva no está amarrada a un negocio: todo lo propio de cada cliente vive en su c
 
 | Dónde | Qué va | Ejemplos |
 |---|---|---|
-| `aiva.config.json` | El negocio y cómo atiende | nombre, descripción, sitio, moneda, país e indicativo telefónico (`phoneCountryCode`, `phoneLocalDigits`), contacto humano; nombre y estilo del agente, su objetivo y lo que dice cuando no sabe algo (`agent.verifyPhrase`); fuentes (catálogo, información, páginas); zona horaria; agenda de citas (servicio, lugar, días, franjas, `askPhone`, `askEmail`); campos que captura el análisis (`crm.fields`); archivo del **diccionario** (`dictionaryFile`); escenarios y datos de demostración |
+| `aiva.config.json` | El negocio y cómo atiende | nombre, descripción, sitio, moneda, país e indicativo telefónico (`phoneCountryCode`, `phoneLocalDigits`), contacto humano; nombre y estilo del agente, su objetivo y lo que dice cuando no sabe algo (`agent.verifyPhrase`); fuentes (catálogo, información, páginas); zona horaria; agenda de citas (servicio, lugar, días, franjas, `askPhone`, `askEmail`); campos que captura el análisis (`crm.fields`); archivo del **diccionario** (`dictionaryFile`); **marca** (`brand.color`, `brand.logo`); escenarios y datos de demostración |
 | `.env` | La máquina y los secretos | motores y modelos por rol, claves de OpenAI y Meta, puerto, `PUBLIC_URL`, token del tablero, calendarios del dueño |
 | Tablero › Canales | Lo que se decide en el día a día | encender o apagar el chat web, WhatsApp (con su QR), WhatsApp oficial y MCP, sin reiniciar |
 
@@ -107,6 +107,13 @@ Se agrupan por frase (sin tildes ni mayúsculas) con cuántas veces y cuántas p
 las reglas ya entienden la frase; si no, no se guarda y se dice por qué. La próxima vez se resuelve
 sin IA. Lo que sea del español en general va mejor a las reglas del código, con su prueba sin modelo
 (`pnpm test`). Pruebas: `pnpm test:misses`.
+
+La **marca** (`brand`: `color` en hex y `logo`, una URL https o un archivo png, jpg, svg o webp que aiva
+sirve en `/brand/logo`) se ve en el chat del sitio (cabecera, burbujas, botones y el logo) y en la página
+de la cita. El color puede ser cualquiera: aiva calcula si el texto encima va blanco u oscuro y, si
+ninguno se lee a 4.5:1, oscurece o aclara el color lo justo, en claro y en oscuro (`pnpm test:brand`
+lo prueba con 500 colores). `data-color` en el `<script>` del chat lo cambia solo en ese sitio.
+`pnpm onboard` pregunta la marca.
 
 Un cliente por proceso: para varios clientes, una carpeta, un `.env` y un puerto por cada uno
 (`pnpm onboard` arma los dos archivos, desde cero o desde un ejemplo). `AIVA_CONFIG` y `DB_PATH`

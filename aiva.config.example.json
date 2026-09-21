@@ -16,5 +16,9 @@
     "productsFile": "data/catalog/products.json",
     "knowledgeDir": "data/knowledge",
     "sitePages": []
+  },
+  "brand": {
+    "color": "#2f7d4f",
+    "logo": ""
   }
 }
