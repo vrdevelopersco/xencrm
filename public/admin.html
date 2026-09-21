@@ -360,6 +360,29 @@ input:focus,textarea:focus,select:focus{outline:2px solid color-mix(in srgb,var(
 .chip.stage-interesado,.chip.t-tibio,.chip.v-posible,.chip.stage-cita_agendada,.chip.v-si,.chip.v-cita,.chip.t-caliente,.chip.v-perdido,.chip.stage-perdido,.chip.stage-vendido,.chip.v-cliente{color:color-mix(in srgb,var(--tone) 78%,var(--text))}
 .chip.t-frio,.chip.v-no{color:var(--muted-strong)}
 
+/* Tarjetas del pipeline: se toman y se sueltan, así que son una pieza con marco de cartulina (grano, bisel, filo en
+   el tono de la etapa) y se levantan al pasar o al arrastrar. Solo el marco lleva textura: la zona de datos es una
+   etiqueta lisa y opaca (--panel), y su texto se mide como siempre. Al arrastrarla queda su hueco punteado y la
+   columna de destino se hunde. El tono repite lo que ya dice el título de la columna. */
+.col{--tone:var(--muted)}
+.col[data-stage=interesado]{--tone:var(--warn)}
+.col[data-stage=cita_agendada]{--tone:var(--brand)}
+.col[data-stage=vendido]{--tone:var(--ok)}
+.col[data-stage=perdido]{--tone:var(--bad)}
+.card{padding:4px;border-radius:12px;border:1px solid color-mix(in srgb,var(--tone) 38%,var(--glass-border));
+  background:var(--grain),color-mix(in srgb,var(--tone) 14%,var(--panel));box-shadow:var(--bevel-hi),var(--raise);
+  transition:transform var(--t-press),box-shadow var(--t-press)}
+.card .body{background:var(--panel);border-radius:8px;padding:7px 9px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tone) 22%,transparent)}
+.card:hover{transform:translateY(-1px);box-shadow:var(--bevel-hi),var(--raise-hover)}
+.card .t .chip{white-space:nowrap;flex-shrink:0;align-self:flex-start}.card .t span{min-width:0;overflow-wrap:anywhere}
+.card:active{cursor:grabbing}
+.card:focus-visible{outline:none;box-shadow:var(--bevel-hi),var(--raise),var(--ring)}
+.card.dragging{background:none;border:1px dashed color-mix(in srgb,var(--tone) 60%,transparent);box-shadow:none;transform:none}
+.card.dragging .body{visibility:hidden}
+.col.over{outline:none}
+.col.over .cards{border-radius:12px;box-shadow:var(--well);background:color-mix(in srgb,var(--tone) 6%,transparent)}
+@media (prefers-reduced-motion:reduce){.card,.card:hover{transition:none;transform:none}}
+
 /* Canales: una tarjeta por canal. El interruptor usa el mismo material del switch "Responde". */
 .channels{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:14px;align-content:start}
 .ch-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}

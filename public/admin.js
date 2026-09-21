@@ -345,12 +345,17 @@
       $('board').innerHTML = stages.map(function (s) {
         var cards = list.filter(function (c) { return c.stage === s; });
         return '<div class="col" data-stage="' + s + '"><h3>' + esc(state.stageLabels[s]) + '<span class="muted">' + cards.length + '</span></h3><div class="cards">' +
-          cards.map(function (c) { return '<div class="card" draggable="true" data-id="' + esc(c.id) + '"><div class="t"><span>' + esc(nameOf(c)) + '</span>' + scoreChip(c) + '</div><div class="s">' + esc(c.recap || c.summary || channelIcon(c.channel)) + '</div></div>'; }).join('') +
+          cards.map(function (c) { return '<div class="card" draggable="true" tabindex="0" role="button" aria-label="Abrir la conversación con ' + esc(nameOf(c)) + '" data-id="' + esc(c.id) + '"><div class="body"><div class="t"><span>' + esc(nameOf(c)) + '</span>' + scoreChip(c) + '</div><div class="s">' + esc(c.recap || c.summary || channelIcon(c.channel)) + '</div></div></div>'; }).join('') +
           '</div></div>';
       }).join('');
       $('board').querySelectorAll('.card').forEach(function (card) {
         card.onclick = function () { go('inbox'); openContact(card.getAttribute('data-id')); };
-        card.ondragstart = function (e) { e.dataTransfer.setData('text/plain', card.getAttribute('data-id')); };
+        card.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } };
+        card.ondragstart = function (e) {
+          e.dataTransfer.setData('text/plain', card.getAttribute('data-id'));
+          setTimeout(function () { card.classList.add('dragging'); }, 0); // después de que el navegador toma la imagen que arrastra
+        };
+        card.ondragend = function () { card.classList.remove('dragging'); };
       });
       $('board').querySelectorAll('.col').forEach(function (col) {
         col.ondragover = function (e) { e.preventDefault(); col.classList.add('over'); };
