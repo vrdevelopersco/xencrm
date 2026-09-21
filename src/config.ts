@@ -124,6 +124,12 @@ const BusinessConfig = z.object({
     goal: z.string().optional(),
     /** Lo que dice cuando no sabe algo: la pregunta queda "por verificar" en el tablero y el equipo responde. */
     verifyPhrase: z.string().default('Deja te verifico eso con el equipo y te confirmo por aquí 🙂'),
+    /**
+     * Con OpenAI, si toda la información del negocio (catálogo + información + páginas) cabe en estos tokens, va
+     * entera y fija al inicio del prompt: el modelo la ve completa y OpenAI la cobra desde su caché (90 % menos).
+     * Catálogos más grandes, Apple y Ollama usan la búsqueda. 0 = siempre la búsqueda.
+     */
+    fullInfoMaxTokens: z.number().int().min(0).default(6000),
   }),
   sources: z.object({
     productsFile: z.string().default('data/catalog/products.json'),

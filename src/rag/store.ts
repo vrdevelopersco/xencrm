@@ -309,6 +309,12 @@ function rowToDoc(r: Record<string, unknown>): Doc {
   };
 }
 
+/** Todos los documentos de estos tipos, siempre en el mismo orden (el prompt que se arma con ellos debe ser idéntico). */
+export function allDocs(kinds: DocKind[]): Doc[] {
+  const placeholders = kinds.map(() => '?').join(',');
+  return (getDb().prepare(`SELECT id, kind, title, content, url, meta FROM docs WHERE kind IN (${placeholders}) ORDER BY kind, id`).all(...kinds) as Record<string, unknown>[]).map(rowToDoc);
+}
+
 export function getDocs(ids: string[]): Map<string, Doc> {
   if (ids.length === 0) return new Map();
   const placeholders = ids.map(() => '?').join(',');

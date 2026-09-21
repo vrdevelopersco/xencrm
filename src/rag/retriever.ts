@@ -1,6 +1,6 @@
 import { embed } from '../llm/ollama.js';
 import { business } from '../config.js';
-import { ftsSearch, getDocs, vectorSearch, type DocKind, type ScoredDoc } from './store.js';
+import { allDocs, ftsSearch, getDocs, vectorSearch, type Doc, type DocKind, type ScoredDoc } from './store.js';
 
 export interface RetrieveOptions {
   k?: number;
@@ -58,35 +58,57 @@ export function formatContext(products: ScoredDoc[], knowledge: ScoredDoc[], opt
           ? '\n(coincidencias débiles: probablemente NINGUNO es exactamente lo que pide el cliente. Dile que eso como tal no lo tenemos; si alguno se parece, ofrécelo como alternativa preguntando si es lo que busca, sin afirmar que es el mismo producto)'
           : '') +
         '\n' +
-        products
-          .map((p, i) => {
-            const m = p.meta as Record<string, unknown>;
-            const price = m.price != null ? `${formatPrice(Number(m.price), String(m.currency ?? business.business.currency))}` : 'sin precio';
-            const stock = m.inStock === false ? 'AGOTADO' : 'en stock';
-            const specs = m.specs && typeof m.specs === 'object' ? Object.entries(m.specs as Record<string, unknown>).map(([k, v]) => `${k}: ${v}`).join(' · ') : '';
-            return [
-              `${i + 1}. ${p.title}${m.category ? ` (${m.category})` : ''}`,
-              `   Descripción: ${oneLine(String(m.description ?? p.content), 600)}`,
-              specs ? `   Ficha técnica: ${specs}` : '',
-              `   Disponibilidad: ${stock} · Precio: ${price}`,
-              `   Enlace de compra: ${p.url ?? 'no disponible'}`,
-            ]
-              .filter(Boolean)
-              .join('\n');
-          })
-          .join('\n'),
+        formatProducts(products),
     );
   } else if (!opts.omitEmptyProducts) {
     parts.push('### Productos encontrados en el catálogo\n(ninguno coincide con lo que pide el cliente: dilo y pregunta qué busca)');
   }
 
-  if (knowledge.length > 0) {
-    parts.push(
-      '### Información de la tienda\n' +
-        knowledge.map((d) => `#### ${d.title}\n${d.content.trim()}${d.url ? `\n(Más info: ${d.url})` : ''}`).join('\n\n'),
-    );
-  }
+  if (knowledge.length > 0) parts.push('### Información de la tienda\n' + formatKnowledge(knowledge));
   return parts.join('\n\n');
+}
+
+function formatProducts(products: Doc[]): string {
+  return products
+    .map((p, i) => {
+      const m = p.meta as Record<string, unknown>;
+      const price = m.price != null ? `${formatPrice(Number(m.price), String(m.currency ?? business.business.currency))}` : 'sin precio';
+      const stock = m.inStock === false ? 'AGOTADO' : 'en stock';
+      const specs = m.specs && typeof m.specs === 'object' ? Object.entries(m.specs as Record<string, unknown>).map(([k, v]) => `${k}: ${v}`).join(' · ') : '';
+      return [
+        `${i + 1}. ${p.title}${m.category ? ` (${m.category})` : ''}`,
+        `   Descripción: ${oneLine(String(m.description ?? p.content), 600)}`,
+        specs ? `   Ficha técnica: ${specs}` : '',
+        `   Disponibilidad: ${stock} · Precio: ${price}`,
+        `   Enlace de compra: ${p.url ?? 'no disponible'}`,
+      ]
+        .filter(Boolean)
+        .join('\n');
+    })
+    .join('\n');
+}
+
+function formatKnowledge(knowledge: Doc[]): string {
+  return knowledge.map((d) => `#### ${d.title}\n${d.content.trim()}${d.url ? `\n(Más info: ${d.url})` : ''}`).join('\n\n');
+}
+
+/**
+ * Toda la información del negocio en un bloque fijo (mismo texto mientras no cambie la información), para ir al
+ * inicio del prompt: el modelo la ve completa y OpenAI la sirve desde su caché. `tokens` es un estimado.
+ */
+export function businessSheet(): { text: string; tokens: number } {
+  const products = allDocs(['product']);
+  const knowledge = allDocs(['knowledge']);
+  const text = [
+    '## Información disponible (todo el negocio)',
+    'Es todo lo que sabes del negocio y su catálogo. Lo que no esté aquí, no lo sabes.',
+    `Tienda: ${business.business.name} — ${business.business.description}\nSitio web: ${business.business.siteUrl}`,
+    products.length ? `### Catálogo completo\n${formatProducts(products)}` : '### Catálogo completo\n(sin productos)',
+    knowledge.length ? `### Información de la tienda\n${formatKnowledge(knowledge)}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+  return { text, tokens: Math.ceil(text.length / 3.5) };
 }
 
 export function formatPrice(n: number, currency: string): string {

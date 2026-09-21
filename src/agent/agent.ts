@@ -1,5 +1,5 @@
 import { business, env } from '../config.js';
-import { retrieve, formatContext } from '../rag/retriever.js';
+import { businessSheet, retrieve, formatContext } from '../rag/retriever.js';
 import { getDocs, productsMentionedIn, type ScoredDoc } from '../rag/store.js';
 import { generate, estimateTokens, fallbackOrder, type Engine } from '../llm/engines.js';
 import { openaiModel } from '../llm/openai.js';
@@ -176,7 +176,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   }
   const sources = [...products, ...knowledge];
 
-  const persona = personaPrompt({ customerName: user.name });
+  const persona = personaPrompt();
   let note: string | undefined;
   const details = gate.intent === 'compra' && DETAILS_RE.test(text);
   if (details) {
@@ -210,19 +210,27 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     details,
   });
   const order = fallbackOrder(chosen.engine);
+  // Negocio chico + OpenAI: toda la información va fija al inicio del prompt (completa y desde la caché de OpenAI);
+  // de la búsqueda solo queda una pista de qué es lo más relacionado con el mensaje.
+  const maxSheet = business.agent.fullInfoMaxTokens;
+  const sheet = maxSheet > 0 && order.includes('openai') ? businessSheet() : null;
+  const useSheet = Boolean(sheet && sheet.tokens <= maxSheet);
+  const related = [...new Set(sources.map((d) => d.title))].slice(0, 4);
+  const hint = related.length ? `Lo más relacionado con este mensaje en la información: ${related.join('; ')}.` : '';
   let raw: string | undefined;
   let verifyTopic: string | null = null; // lo que no sabía, si la guarda de afirmaciones lo detectó
   let engine: AgentReply['engine'] = 'none';
   let route = `${chosen.reason} → sin motor`;
   for (let i = 0; i < order.length; i++) {
     const e = order[i]!;
-    const context = e === 'apple' ? liteContext : fullContext;
+    const withSheet = useSheet && e === 'openai';
     try {
       const input = {
         sessionId: msg.userId,
-        persona,
-        context,
-        note,
+        persona: withSheet ? `${persona}\n\n${sheet!.text}` : persona,
+        context: withSheet ? '' : e === 'apple' ? liteContext : fullContext,
+        note: withSheet ? [note, hint].filter(Boolean).join('\n') || undefined : note,
+        customerName: user.name,
         userText: text,
         history,
         fresh: e === 'apple' && lastEngine.get(msg.userId) !== 'apple',
@@ -231,7 +239,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       };
       let candidate = await generate(e, input);
       // Verificación de cifras: un precio que no está en el contexto (ni lo dijo el cliente) es inventado -> probar el otro motor.
-      const reference = [persona, context, text, ...history.slice(-4).map((m) => m.content)].join('\n');
+      const reference = [input.persona, input.context, text, ...history.slice(-4).map((m) => m.content)].join('\n');
       const bad = ungroundedNumbers(candidate, reference);
       if (bad.length && i < order.length - 1) {
         console.warn(`[agent] ${e} inventó cifras (${bad.join(', ')}); reintento con ${order[i + 1]}`);
@@ -241,7 +249,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       if (bad.length) console.warn(`[agent] ${e} respondió con cifras no fundamentadas: ${bad.join(', ')}`);
       // Afirmaciones sin respaldo: "¿tienen wifi?" → "Sí, tenemos wifi" sin que la información lo diga. Se rehace
       // pidiendo no suponer; si insiste, una respuesta fija y honesta.
-      const grounding = `${persona}\n${context}`;
+      const grounding = `${input.persona}\n${input.context}`;
       const claim = ungroundedClaim(text, candidate, grounding);
       if (claim) {
         verifyTopic = claim;
@@ -265,8 +273,9 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     reply = pick(ERROR_REPLIES);
     emitEvent('bot_failed', msg.userId, { reason: route, text });
   } else {
-    // Enlaces permitidos: los de las fuentes de este turno y los que aparecen en el texto del contexto.
-    const allowed = [...sources.flatMap((s) => (s.url ? [s.url] : [])), ...(fullContext.match(/https?:\/\/[^\s<>()"']+/g) ?? [])];
+    // Enlaces permitidos: los de las fuentes de este turno y los que aparecen en la información que vio el modelo.
+    const seen = engine === 'openai' && useSheet ? sheet!.text : fullContext;
+    const allowed = [...sources.flatMap((s) => (s.url ? [s.url] : [])), ...(seen.match(/https?:\/\/[^\s<>()"']+/g) ?? [])];
     let cleaned = history.length > 0 ? stripRepeatedGreeting(raw) : raw;
     if (details || !ASKS_PRICE_OR_LINK_RE.test(text)) {
       const lastAssistant = [...history].reverse().find((m) => m.role === 'assistant')?.content ?? '';

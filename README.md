@@ -170,6 +170,18 @@ por mensaje, con la tarifa estándar de OpenAI. `pnpm replay` repasa las convers
 cliente (`seedFile` y `evalFile`) con los motores configurados y proyecta el costo por 1.000
 conversaciones.
 
+**Caché de OpenAI.** OpenAI cobra 90 % menos por el inicio del prompt que ya vio. En la práctica,
+con `gpt-5.4-mini` solo pega cuando el inicio común pasa de unos 1.450 tokens (medido, no
+documentado). La persona y las reglas solas (unos 1.100) no alcanzan. Por eso, si toda la
+información del negocio cabe en `agent.fullInfoMaxTokens` (6.000 por defecto), va entera y fija
+después de la persona: el modelo la ve completa y el inicio común pasa de 3.000 tokens. Lo que
+cambia en cada turno (nombre del cliente, pistas de la búsqueda, nota) va después del historial.
+En los escenarios de DUNOR, con la caché caliente, una respuesta liviana bajó de $0.0015 a $0.0009
+(87 % de la entrada desde caché) y una pesada de $0.0067 a $0.0053. Con la caché fría cuesta más
+que antes, por eso se pide retención de 24 horas (`prompt_cache_retention`) y una clave por negocio
+y tarea (`prompt_cache_key`). Si la API no los acepta, se omiten solos. Catálogos grandes, Apple y
+Ollama siguen con la búsqueda. El clasificador y el análisis no llegan al mínimo y no usan caché.
+
 ### Análisis comercial
 `crm.fields`: además de sentimiento, interés, urgencia, objeciones, presupuesto, nombre y ciudad,
 el análisis captura los campos que definas (para la boutique: prenda, ocasión, fecha del evento,

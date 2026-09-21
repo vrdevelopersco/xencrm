@@ -1,5 +1,5 @@
 // Motor de nube: OpenAI Chat Completions (o cualquier API compatible vía OPENAI_BASE_URL).
-import { env } from '../config.js';
+import { business, env } from '../config.js';
 import { EngineError } from './errors.js';
 import type { ChatMessage } from './ollama.js';
 import type { SchemaSpec } from './apple.js';
@@ -35,6 +35,13 @@ const noEffort = new Set<string>();
 const reasoningModels = new Set<string>();
 const REASONING_BUDGET = 4000;
 
+// Caché de prompts: OpenAI cobra 90 % menos por el prefijo que ya vio (desde 1024 tokens). La clave agrupa las llamadas
+// de un negocio y una tarea para que lleguen a la misma caché; la retención de 24 h la mantiene entre conversaciones
+// espaciadas (la normal dura minutos). Si la API (u otra compatible, vía OPENAI_BASE_URL) no los acepta, se omiten.
+const noRetention = new Set<string>();
+let noCacheKey = false;
+const slug = business.business.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'aiva';
+
 export async function openaiChat(input: OpenAIChatInput): Promise<string> {
   if (!env.openaiApiKey) throw new EngineError('openai', 'not_configured', 'falta OPENAI_API_KEY');
   const model = input.model || env.openaiModel;
@@ -55,17 +62,25 @@ export async function openaiChat(input: OpenAIChatInput): Promise<string> {
   };
   if (reasoningModels.has(model)) asReasoning();
   if (input.effort && !noEffort.has(model)) body.reasoning_effort = input.effort;
+  if (!noCacheKey) body.prompt_cache_key = `${slug}-${input.usage?.task ?? 'chat'}`;
+  if (!noRetention.has(model)) body.prompt_cache_retention = '24h';
   for (let attempt = 0; ; attempt++) {
     try {
       return await request(body, input.usage);
     } catch (err) {
-      const rejected = err instanceof EngineError && err.code === 'bad_request' && attempt < 2 ? err.message : '';
+      const rejected = err instanceof EngineError && err.code === 'bad_request' && attempt < 4 ? err.message : '';
       if ('temperature' in body && /'temperature'/.test(rejected)) {
         reasoningModels.add(model);
         asReasoning();
       } else if ('reasoning_effort' in body && /reasoning/.test(rejected)) {
         noEffort.add(model);
         delete body.reasoning_effort;
+      } else if ('prompt_cache_retention' in body && /prompt_cache_retention/.test(rejected)) {
+        noRetention.add(model);
+        delete body.prompt_cache_retention;
+      } else if ('prompt_cache_key' in body && /prompt_cache_key/.test(rejected)) {
+        noCacheKey = true;
+        delete body.prompt_cache_key;
       } else throw err;
     }
   }

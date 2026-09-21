@@ -19,6 +19,8 @@ export interface GenerateInput {
   context: string;
   /** Nota puntual para este turno (p. ej. "es el primer mensaje"). */
   note?: string;
+  /** Nombre del cliente, si se sabe: va con lo del turno, no en la persona (que debe ser idéntica para todos). */
+  customerName?: string | null;
   userText: string;
   history: ChatMessage[];
   /** El turno anterior lo respondió otro motor: Apple debe rehacer la sesión con el historial. */
@@ -157,10 +159,16 @@ export async function generate(engine: Engine, input: GenerateInput): Promise<st
   const usage = { task: (input.role ?? 'light') as Task, userId: input.sessionId };
   try {
     let out: string;
+    // Lo que cambia en cada turno: información encontrada, nombre del cliente y nota.
+    const turn = [
+      input.context ? contextBlock(input.context) : '', // vacío: la información ya va completa en la persona
+      input.customerName ? `## El cliente\nSe llama ${input.customerName}; úsalo con naturalidad.` : '',
+      input.note ? `## Nota para este turno\n${input.note}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
     if (engine === 'apple') {
-      const prompt = [contextBlock(input.context), input.note ? `## Nota para este turno\n${input.note}` : '', `## Mensaje del cliente\n${input.userText}`]
-        .filter(Boolean)
-        .join('\n\n');
+      const prompt = `${turn}\n\n## Mensaje del cliente\n${input.userText}`;
       const r = await apple.chat({
         session: input.sessionId,
         instructions: input.persona,
@@ -171,13 +179,19 @@ export async function generate(engine: Engine, input: GenerateInput): Promise<st
         maxTokens: input.maxTokens ?? 300,
       });
       out = r.content;
+    } else if (engine === 'ollama') {
+      const messages: ChatMessage[] = [{ role: 'system', content: `${input.persona}\n\n${turn}` }, ...input.history, { role: 'user', content: input.userText }];
+      out = await chat({ messages, temperature: input.temperature, numPredict: input.maxTokens ?? 350, usage });
     } else {
-      const system = [input.persona, contextBlock(input.context), input.note ? `## Nota para este turno\n${input.note}` : ''].filter(Boolean).join('\n\n');
-      const messages: ChatMessage[] = [{ role: 'system', content: system }, ...input.history, { role: 'user', content: input.userText }];
-      out =
-        engine === 'ollama'
-          ? await chat({ messages, temperature: input.temperature, numPredict: input.maxTokens ?? 350, usage })
-          : await openaiChat({ messages, temperature: input.temperature, maxTokens: input.maxTokens ?? 350, model: openaiModel(input.role), effort: openaiEffort(input.role), usage });
+      // OpenAI reutiliza el prefijo idéntico más largo (desde 1024 tokens): la persona es igual para todos los clientes
+      // y el historial crece turno a turno; lo del turno va al final para no romper ese prefijo.
+      const messages: ChatMessage[] = [
+        { role: 'system', content: input.persona },
+        ...input.history,
+        { role: 'system', content: turn },
+        { role: 'user', content: input.userText },
+      ];
+      out = await openaiChat({ messages, temperature: input.temperature, maxTokens: input.maxTokens ?? 350, model: openaiModel(input.role), effort: openaiEffort(input.role), usage });
     }
     markUp(engine);
     return out;
