@@ -1,0 +1,140 @@
+# Guía del tablero
+
+Para quien atiende a los clientes del negocio: qué hay en cada pantalla y qué hacer con cada cosa. No hace falta
+saber nada técnico. Los ejemplos son de DUNOR Boutique, pero el tablero es igual para cualquier negocio.
+
+## Cómo entrar
+
+Abre la dirección del tablero (termina en `/admin`) desde el computador o el celular y escribe el token que te
+dieron. En el celular el menú queda abajo; desliza hacia los lados para ver Perfil, Agente, Canales y FAQ.
+**Salir** está al pie del menú.
+
+## La idea
+
+El asistente (Aiva, o el nombre que tenga tu negocio) responde solo, a cualquier hora. Tú entras cuando hace
+falta una persona:
+
+- el asistente no sabía algo;
+- el cliente pidió hablar con alguien;
+- hay que recordar una cita a mano;
+- quieres tomar tú la conversación.
+
+Todo se actualiza en vivo: no hace falta recargar. La campana avisa lo importante (conversación nueva, alguien pidió
+una persona, un prospecto se puso caliente, una cita agendada, movida o cancelada, alguien que no puede ir, una
+pregunta que el asistente no supo responder, o un mensaje que el asistente no pudo responder por una falla).
+
+## Hoy
+
+Lo que hay que atender, ordenado por lo que cuesta dejarlo esperando. Cada fila abre la conversación.
+
+- **Por verificar**: preguntas que el asistente no pudo responder con lo que sabe. Al cliente ya le dijo «Deja te
+  verifico eso con el equipo y te confirmo por aquí». Escribe la respuesta y dale **Enviar respuesta**: le llega al
+  cliente por el mismo chat, sin quitarle la conversación al asistente. Si dejas marcado «Agregar a la
+  información», el asistente lo aprende y la próxima vez responde solo. Si no aplica, **Descartar**.
+- **Esperan tu respuesta**: el cliente dijo lo último y nadie le ha contestado.
+- **Pidieron una persona**: el asistente se calló y le avisó al cliente que alguien del equipo le escribe.
+- **Recordar a mano**: citas de mañana cuyo recordatorio no pudo salir solo. Muestra el porqué (llegó por el chat del
+  sitio, la conversación la lleva una persona, WhatsApp no está conectado…) y el texto listo. **Abrir WhatsApp** abre
+  el chat con el mensaje escrito; después dale **Ya se lo recordé**.
+- **Citas de hoy** y **Próximas citas**: cada una dice cómo va su recordatorio: *Se recuerda hoy a las 5:00 p. m.*,
+  *Recordada*, *Confirmó* (dijo que viene) o *No puede* (dijo que no puede; el asistente ya le ofreció moverla o
+  cancelarla).
+- **Calientes sin seguimiento**: buenos prospectos que llevan más de un día sin hablar y no tienen cita.
+- **Sin leer, el asistente ya respondió**: para darles una mirada.
+
+Si una conversación llegó por **WhatsApp oficial** y pasaron más de 24 horas desde el último mensaje del cliente,
+WhatsApp no deja escribirle. El tablero lo advierte antes de que escribas. Toca esperar a que el cliente vuelva a
+escribir o usar una plantilla aprobada por Meta.
+
+## Conversaciones
+
+A la izquierda la lista, con filtros: *Todos*, *Sin leer*, *Con una persona*, *Prospectos*, *Interesados* y
+*Con cita*. En el centro, el chat. A la derecha, la ficha del cliente.
+
+**Quién responde.** Arriba del chat está el switch **Responde: Aiva | Tú**. En *Tú*, el asistente no contesta y tú
+escribes; en *Aiva*, vuelve a responder solo. Escribir a mano también te pasa la conversación. En WhatsApp el
+cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo número.
+
+**La ficha.**
+
+- **¿Es un prospecto?**: el veredicto (*Sin señales aún*, *Posible prospecto*, *Prospecto claro*, *Prospecto con
+  cita*, *Cliente*, *Perdido*) con la barra de probabilidad. Debajo dice el número y cómo se ve en tarjetas y avisos
+  (*frío*, *tibio*, *caliente*): es el mismo puntaje.
+- **Por qué**: los puntos que suman o restan ("Pidió cita +30", "Objeción −10").
+- **Datos capturados**: lo que el asistente entendió de la conversación (prenda, ocasión, fecha del evento,
+  presupuesto, teléfono…).
+- **Ficha**: nombre, teléfono, etapa, etiquetas y notas, que puedes corregir y **Guardar**.
+- **Re-analizar**: vuelve a leer toda la conversación.
+- **Citas** y **Línea de tiempo**: su historial.
+
+Si llegaron mensajes nuevos después del último análisis, la ficha lo dice y se recalcula sola.
+
+## Calendario
+
+La semana con las citas. Toca una para ver el detalle o cambiar su estado (completada, no asistió, cancelada), o
+agenda una a mano. Si el dueño conectó su calendario personal, sus eventos salen como bloques *Ocupado* y el
+asistente no ofrece esas horas; desde aquí sí puedes agendar encima si hace falta.
+
+## Prospectos
+
+Una columna por etapa: *Nuevo*, *Conversando*, *Interesado*, *Cita agendada*, *Vendido*, *Perdido*. Para cambiar a
+alguien de etapa, arrastra la tarjeta o usa **Mover a…**, que también funciona en el celular. Tocar el nombre abre la
+conversación. El asistente mueve las etapas solo según la conversación; lo que muevas tú, él no lo deshace.
+
+## Análisis
+
+Los números del negocio: embudo por etapa, ánimo de los clientes y más. Cada número abre la lista de conversaciones
+que lo explica.
+
+## Perfil
+
+Lo que el asistente dice de tu negocio: nombre, dirección, horarios, zona que atienden, contacto, formas de pago,
+abono, precios, políticas y datos propios (tallas, tiempos, lo que venden o no).
+
+- Lo que llenes, el asistente lo usa **al instante** y manda sobre cualquier otra información.
+- Lo que quede vacío sale como **Por confirmar**. Si un cliente pregunta por eso, el asistente no se lo inventa:
+  responde «Deja te verifico eso…» y la pregunta te llega a Hoy › Por verificar.
+- Las **notas** en gris son para el equipo (por ejemplo, qué falta averiguar); el asistente no las ve.
+- **Agregar dato** suma algo propio del negocio. Si lo dejas sin texto, queda por confirmar.
+- **Guardar perfil** guarda y deja una copia de la versión anterior.
+
+## Agente
+
+- **Consumo de IA**: cuánto cuestan las respuestas por conversación y por mensaje.
+- **Calendario**: el enlace para ver las citas en Google Calendar, Outlook o Apple Calendar. Es secreto: quien lo
+  tenga ve nombres y teléfonos.
+- **Frases que no entendimos**: fechas, frases cortas o respuestas que el asistente no entendió por sus reglas
+  ("a la hora del cafecito", "la madrugadora"). Con **Enseñar** escribes qué quieren decir ("a las 3", "la
+  primera"); solo se guarda si con eso ya se entiende. La próxima vez lo entiende sin gastar IA. **Ya lo revisé** la
+  saca de la lista.
+- **Diccionario del negocio**: los temas, verbos y expresiones que el asistente ya conoce. Se puede exportar e
+  importar como archivo.
+
+## Canales
+
+Por dónde llegan los clientes. Cada canal dice si está conectado, cuántos mensajes llegaron en la semana y qué
+falta. Encender o apagar un canal aplica al momento.
+
+- **Chat del sitio web**: el código para pegar en el sitio. Lleva el color y el logo del negocio.
+- **WhatsApp (código QR)**: se vincula escaneando el código desde WhatsApp › Dispositivos vinculados. Sirve para
+  empezar; no es la vía oficial de Meta y puede bloquear el número.
+- **WhatsApp oficial (Meta)**: en **Credenciales** se pegan el token de acceso, el ID del número y la clave secreta
+  de la app, que están en la app del negocio en developers.facebook.com. Al darle **Guardar y verificar**, se
+  comprueban con Meta: si Meta las rechaza, no se guardan y te dice por qué. El token no se vuelve a mostrar
+  completo. Después hay que registrar en Meta la URL del webhook y el token de verificación que aparecen en la
+  tarjeta.
+- **Instagram** y **Messenger**: todavía no están; la tarjeta dice qué hace falta.
+- **Otros asistentes de IA (MCP)**: para que asistentes como Claude o ChatGPT consulten el catálogo.
+
+## FAQ
+
+La información que el asistente tiene indexada (catálogo e información del negocio), para buscar qué sabe de un
+tema.
+
+## Lo que el asistente nunca hace
+
+- Inventar precios, fechas, políticas o productos. Lo que no sabe, lo verifica con el equipo.
+- Elegir una fecha por su cuenta: las citas salen siempre de la agenda real.
+- Cancelar o mover una cita sin que el cliente lo confirme.
+- Escribirle por WhatsApp oficial a alguien fuera de las 24 horas sin plantilla.
+- Seguir respondiendo cuando una persona del equipo tomó la conversación.

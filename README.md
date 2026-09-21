@@ -1,46 +1,59 @@
-# Aiva · CRM conversacional con IA local para WhatsApp
+# Aiva · CRM conversacional con IA para WhatsApp
 
-Aiva atiende clientes por WhatsApp y por un widget web con un agente de IA que **corre en tu Mac**
-(Apple Foundation Models + Gemma en Ollama, u OpenAI si lo prefieres), y convierte cada
-conversación en un prospecto con **puntaje explicable de probabilidad de cita o venta**,
-**análisis de sentimiento**, **datos capturados**, **citas agendadas** y **traspaso a una persona
-del equipo** desde un tablero en vivo.
+Aiva atiende clientes por WhatsApp y por el chat del sitio con un agente de IA que resuelve lo que puede con
+reglas y usa el modelo cuando hace falta: OpenAI con un modelo por tarea, o motores que corren en el Mac (Gemma en
+Ollama y Apple Foundation Models). Convierte cada conversación en un prospecto con **puntaje explicable**,
+**análisis de sentimiento**, **datos capturados**, **citas agendadas con recordatorio** y **traspaso a una persona
+del equipo**, desde un tablero en vivo. Lo que no sabe no lo inventa: lo verifica con el equipo y lo aprende.
 
 Nació como asistente de compras y hoy es un CRM conversacional configurable por cliente. El primer
 cliente es **DUNOR Boutique** (dunor.co): alquiler premium y diseño a la medida de moda masculina en
 Barranquilla, solo con cita previa. Su configuración está en `examples/dunor` (con `POR-CONFIRMAR.md`:
 lo que el sitio no publica y hay que preguntarle al cliente). Otros ejemplos: `examples/boutique`
-(sastrería con precios) y `examples/casa-verde` (tienda de plantas).
+(sastrería con precios) y `examples/casa-verde` (tienda de plantas). DUNOR corre con OpenAI: `gpt-5.4-mini`
+para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
+
+## Documentación
+
+- Este README: qué hace, cómo se instala y cómo se configura un cliente.
+- [`docs/guia-del-tablero.md`](docs/guia-del-tablero.md): para el equipo del negocio, qué hay en cada pantalla y qué
+  hacer con cada cosa.
+- [`docs/arquitectura.md`](docs/arquitectura.md): para quien cambia el código. Cubre el recorrido de un mensaje,
+  los módulos, los datos, la configuración por capas, las pruebas y cómo extender aiva.
+- [`docs/diseno-tablero.md`](docs/diseno-tablero.md): las reglas de diseño del tablero (contraste, material,
+  colores de dato), con sus mediciones.
+- `examples/dunor/POR-CONFIRMAR.md`: lo que falta confirmar con DUNOR (se llena en el Perfil).
 
 ## Qué hace
 
 | Pieza | Qué resuelve |
 |---|---|
-| **Agente** | Responde con la persona del negocio, solo con su catálogo e información (RAG). Guarda el alcance: nada de tareas, poemas ni temas ajenos. Las preguntas típicas (dónde quedan, horario, pagos, envíos, "¿cuánto cuesta el alquiler de un esmoquin?") las clasifican reglas sin modelo; lo ambiguo o fuera de tema, el modelo (`pnpm test:gate` mide la cobertura). |
-| **Dos motores por rol** | Uno liviano y rápido (Apple) para saludos, info y compras puntuales; uno pesado (Gemma u OpenAI) para recomendar, comparar y explicar. Cada uno es respaldo del otro. |
+| **Agente** | Responde con la persona del negocio, solo con su catálogo, su información y su perfil. Guarda el alcance: nada de tareas, poemas ni temas ajenos. Las preguntas típicas (dónde quedan, horario, pagos, envíos, "¿cuánto cuesta el alquiler de un esmoquin?") las clasifican reglas sin modelo; lo ambiguo o fuera de tema, el modelo (`pnpm test:gate` mide la cobertura). |
+| **No inventa** | Guardas contra cifras, enlaces y afirmaciones sin respaldo. Lo que no sabe lo dice ("Deja te verifico eso…") y queda en **Hoy › Por verificar**; la respuesta del equipo le llega al cliente y el bot la aprende. |
+| **Motores por rol** | Uno liviano para saludos, info y compras puntuales; uno pesado para recomendar, comparar y explicar; uno para clasificar y otro para el análisis. Cada uno puede ser OpenAI (con su modelo), Gemma u Apple, y hay respaldo si uno falla. |
+| **Aprende las frases de sus clientes** | Lo que las reglas no entienden ("a la hora del cafecito", "la madrugadora") queda en **Frases que no entendimos** y se enseña desde el tablero; la próxima vez se entiende sin IA. |
+| **Perfil del negocio** | Dirección, horarios, pagos, precios, políticas y datos propios, editables desde el tablero; lo vacío queda "por confirmar" y el bot no lo supone. |
 | **Análisis comercial por turno** | Sentimiento, interés, urgencia, objeciones, presupuesto y los campos que definas (prenda, ocasión, fecha del evento…). |
 | **Puntaje explicable** | 0 a 100 con factores visibles ("Pidió cita +30", "Objeción −10"). Etapas: nuevo, conversando, interesado, cita agendada, vendido, perdido. |
-| **Citas** | Flujo determinista: ofrece espacios reales según tu agenda, confirma y registra. El modelo nunca inventa fechas. |
+| **Citas** | Flujo determinista: ofrece espacios reales según tu agenda, entiende muletillas ("al medio día", "la que sea", "en ocho días"), confirma, cambia o cancela por el chat y **recuerda la cita el día antes**. El modelo nunca inventa fechas. |
 | **Traspaso humano** | El cliente pide una persona o el equipo toma el control desde el tablero; el bot se calla y las respuestas humanas llegan al mismo chat (WhatsApp o widget). |
-| **Tablero** | Bandeja en vivo, conversación, ficha, pipeline arrastrable, calendario, análisis accionable, estado del agente y base de conocimiento. |
-| **Canales** | WhatsApp por Baileys (QR) o por Meta Cloud API (oficial), widget web embebible, MCP para otros agentes. |
+| **Tablero** | Hoy (lo que hay que atender), conversaciones con ficha, calendario, prospectos, análisis, perfil, agente y canales. En vivo, en el computador o el celular. |
+| **Canales** | WhatsApp por QR (Baileys) o por Meta Cloud API (oficial, con credenciales desde el tablero), chat del sitio con la marca del cliente, MCP para otros agentes. |
 
 ## Arquitectura
 
 ```
-WhatsApp (Baileys / Meta) ─┐                               ┌─► Apple FM  (liviano)
-Widget web ────────────────┼─► gate ─► RAG ─► enrutador ───┼─► Gemma/Ollama (pesado) ─► post-proceso ─► respuesta
-MCP ───────────────────────┘    │                          └─► OpenAI (nube, opcional)         │
-                                │                                                              │
-                                └──► modo humano / flujo de citas (deterministas)              └─► análisis por turno ─► ficha, puntaje, etapa ─► tablero (SSE)
+WhatsApp (QR / Meta) ─┐    modo humano · flujo de citas (deterministas)
+Chat del sitio ───────┼─► clasificador ─► búsqueda o ficha completa ─► enrutador ─► motor del rol ─► guardas ─► respuesta
+MCP ──────────────────┘   (reglas → modelo)   (catálogo, info, perfil)              (OpenAI / Gemma / Apple)    │
+                                                                                                                ├─► "por verificar" (equipo)
+recordatorios (cada minuto) ─► WhatsApp / plantilla / a mano                                                    └─► análisis ─► ficha, puntaje, etapa ─► tablero (SSE)
 ```
 
-- `src/agent/` gate de intención, enrutador, prompts, post-proceso.
-- `src/llm/` motores (`ollama.ts`, `apple.ts` + `sidecar/`, `openai.ts`) y la capa por roles (`engines.ts`).
-- `src/rag/` índice SQLite (vectorial + FTS5) e ingesta de catálogo, markdown, páginas del sitio o Shopify.
-- `src/crm/` contactos, análisis y puntaje, citas, flujo de agendamiento, eventos, envío al cliente.
-- `src/channels/` WhatsApp (Baileys), Meta Cloud API, web + widget, API del tablero.
-- `public/` widget embebible y tablero. `examples/` clientes de ejemplo. `sidecar/` Apple Foundation Models.
+Detalle de cada paso, los módulos y los datos en [`docs/arquitectura.md`](docs/arquitectura.md). En corto:
+`src/agent/` (recorrido, clasificador, guardas, diccionario), `src/llm/` (motores y consumo), `src/rag/` (índice e
+ingesta), `src/crm/` (contactos, análisis, citas, recordatorios, verificaciones), `src/channels/` (canales y API del
+tablero), `public/` (tablero y widget), `examples/` (clientes), `sidecar/` (Apple Foundation Models).
 
 ## Requisitos
 
@@ -245,9 +258,23 @@ Para no gastar tokens de más (`src/crm/signals.ts`):
 
 ## Tablero
 
-`http://localhost:3000/admin` con el token `ADMIN_TOKEN` (si está vacío, el servidor imprime uno
-al arrancar). Todo se actualiza en vivo. Cada número del Análisis abre la lista que lo explica.
-"Responde: Aiva | Tú" cambia quién lleva cada conversación; escribir a mano toma el control.
+`http://localhost:3000/admin` con el token `ADMIN_TOKEN` (si está vacío, el servidor imprime uno al arrancar).
+Todo se actualiza en vivo y funciona en el celular.
+
+- **Hoy**: por verificar, esperan respuesta, pidieron una persona, recordar a mano, citas y calientes sin
+  seguimiento.
+- **Conversaciones**: chat y ficha. "Responde: Aiva | Tú" cambia quién lleva la conversación; escribir a mano toma
+  el control.
+- **Calendario**.
+- **Prospectos**: se arrastra o se usa «Mover a…».
+- **Análisis**: cada número abre la lista que lo explica.
+- **Perfil**.
+- **Agente**: consumo, calendario, frases que no entendimos y diccionario.
+- **Canales**.
+- **FAQ**.
+
+La guía para el equipo está en [`docs/guia-del-tablero.md`](docs/guia-del-tablero.md) y las reglas de diseño en
+[`docs/diseno-tablero.md`](docs/diseno-tablero.md).
 
 ## Canales
 
@@ -278,6 +305,19 @@ el adaptador se construye cuando haya credenciales de prueba de Meta.
   muestra las respuestas del equipo en vivo y avisa cuando atiende una persona.
 - **Túnel** para el widget, el tablero y el webhook: `cloudflared tunnel --url http://localhost:3000`
   (pon la URL en `PUBLIC_URL` y restringe `ALLOWED_ORIGINS`).
+
+## Pruebas
+
+```bash
+pnpm test              # todas las pruebas sin modelo (fechas, citas, recordatorios, guardas, diccionario, perfil…)
+pnpm test:scenarios    # las conversaciones del cliente con los motores reales, con su consumo
+pnpm replay            # repasa conversaciones sintéticas y proyecta el costo por 1.000 conversaciones
+pnpm typecheck
+```
+
+Las pruebas que escriben usan una base, un `.env` y archivos temporales, o contactos `test:` que se borran al
+terminar: nunca tocan la información real del cliente. La lista completa y cómo levantar un servidor aislado
+(`AIVA_CONFIG`, `DB_PATH`, `AIVA_ENV_FILE`) están en [`docs/arquitectura.md`](docs/arquitectura.md#pruebas).
 
 ## Motores
 
@@ -318,6 +358,10 @@ pm2 save && pm2 startup
 ## Advertencias
 
 - Un cliente por proceso: para varios clientes, una carpeta, un `.env` y un puerto por cada uno.
+- WhatsApp oficial (Meta) está escrito contra la documentación, pero no se ha probado con credenciales reales.
+  Instagram y Messenger aún no están.
+- El túnel de `cloudflared` sin cuenta cambia de dirección al reiniciarse: para producción hace falta un túnel fijo
+  con dominio propio.
 - Apple Foundation Models aplica un límite de peticiones en segundo plano (no documentado) y sus
   guardrails pueden rechazar mensajes inocuos: en ambos casos el turno cae al otro motor.
 - El puntaje es una estimación explicable, no una probabilidad calibrada, hasta tener resultados
