@@ -3,10 +3,15 @@
 Para quien atiende a los clientes del negocio: qué hay en cada pantalla y qué hacer con cada cosa. No hace falta
 saber nada técnico. Los ejemplos son de DUNOR Boutique, pero el tablero es igual para cualquier negocio.
 
+Lo esencial está dentro del mismo tablero, en **Ayuda**: un tutorial rápido de seis pasos (cada uno lleva a su
+pantalla), preguntas frecuentes y lo que el asistente nunca hace. La primera vez que alguien entra, Hoy le muestra
+un aviso que lleva al tutorial. Esta guía es la referencia completa, para entrenar al equipo.
+
 ## Cómo entrar
 
 Abre la dirección del tablero (termina en `/admin`) desde el computador o el celular y escribe el token que te
-dieron. En el celular el menú queda abajo; desliza hacia los lados para ver Perfil, Agente, Canales y FAQ.
+dieron. En el celular el menú queda abajo; desliza hacia los lados para ver Perfil, Agente, Canales,
+Lo que sabe y Ayuda.
 **Salir** está al pie del menú.
 
 ## La idea
@@ -126,10 +131,16 @@ falta. Encender o apagar un canal aplica al momento.
 - **Instagram** y **Messenger**: todavía no están; la tarjeta dice qué hace falta.
 - **Otros asistentes de IA (MCP)**: para que asistentes como Claude o ChatGPT consulten el catálogo.
 
-## FAQ
+## Lo que sabe
 
-La información que el asistente tiene indexada (catálogo e información del negocio), para buscar qué sabe de un
-tema.
+La información que el asistente tiene (catálogo y textos del negocio), para buscar qué sabe de un tema.
+
+## Ayuda
+
+- **Tutorial rápido**: seis pasos, cada uno con un botón a su pantalla y «Ya lo hice», que se recuerda en ese
+  navegador.
+- **Preguntas frecuentes**.
+- **Lo que el asistente nunca hace**.
 
 ## Lo que el asistente nunca hace
 

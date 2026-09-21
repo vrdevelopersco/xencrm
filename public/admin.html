@@ -41,7 +41,7 @@ a{color:var(--brand)}
 .notif .n{padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer}
 .notif .n:hover{background:var(--bg)}.notif .n b{display:block;font-size:13px}.notif .n span{color:var(--muted);font-size:12px}
 .notif .n.unseen{border-left:3px solid var(--brand)}
-#today{padding:16px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+#today{padding:16px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;align-content:start}
 .today .panel h3{margin:0 0 4px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
 .today .panel h3 .chip{font-weight:400}
 .today .row{grid-template-columns:1fr auto}
@@ -427,6 +427,18 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .ch-cred form{display:flex;flex-direction:column;gap:6px}
 .ch-cred input[type=text],.ch-cred input[type=password]{min-height:44px}
 .cred-row{display:flex;gap:6px;align-items:center}.cred-row input{flex:1;min-width:0}.cred-row .btn{min-height:44px}
+/* Ayuda: tutorial rápido (una secuencia real, por eso numerada) y preguntas frecuentes. */
+.help-step{display:grid;grid-template-columns:32px 1fr;gap:4px 12px;padding:12px 0;border-top:1px solid var(--line)}
+.help-step:first-of-type{border-top:0}
+.help-step .n{grid-row:span 3;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:var(--glass-strong);border:1px solid var(--glass-border);box-shadow:var(--bevel-hi),var(--raise)}
+.help-step.done .n{background:var(--si-soft);color:var(--si);border-color:color-mix(in srgb,var(--si) 40%,transparent)}
+.help-step h3{margin:0;font-size:15px}
+.help-step p{margin:0;color:var(--text)}
+.help-faq details{border-top:1px solid var(--line)}
+.help-faq summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}
+.help-faq details p{margin:0 0 12px;color:var(--text)}
+.help-first{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px;grid-column:1 / -1}
+.help-first .grow{flex:1 1 240px}
 .prof{display:flex;flex-direction:column;gap:6px}
 .prof-field{display:flex;flex-direction:column;gap:4px;padding:6px 0}
 .prof-field .lbl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -472,7 +484,8 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       <button data-view="profile"><i class="ic" data-ic="store"></i>Perfil</button>
       <button data-view="agent"><i class="ic" data-ic="bot"></i>Agente</button>
       <button data-view="channels"><i class="ic" data-ic="plug"></i>Canales</button>
-      <button data-view="knowledge"><i class="ic" data-ic="book"></i>FAQ</button>
+      <button data-view="knowledge"><i class="ic" data-ic="book"></i>Lo que sabe</button>
+      <button data-view="help"><i class="ic" data-ic="help"></i>Ayuda</button>
     </nav>
     <div class="spacer"></div>
     <div class="foot">
@@ -584,6 +597,10 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       </div>
     </section>
     <!-- Agente -->
+    <section class="view" id="view-help">
+      <div class="topbar"><h1>Ayuda</h1><span class="muted small">Lo esencial del tablero en dos minutos</span></div>
+      <div class="pad" id="help"></div>
+    </section>
     <section class="view" id="view-profile">
       <div class="topbar"><h1>Perfil del negocio</h1><span class="muted small">Lo que confirmes aquí es lo que el bot dice de tu negocio</span></div>
       <div class="pad" id="profile"></div>
@@ -599,7 +616,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
     </section>
     <!-- Conocimiento -->
     <section class="view" id="view-knowledge">
-      <div class="topbar"><h1>FAQ · lo que sabe el agente</h1><span class="grow"></span><div class="seg"><button class="on" data-kind="knowledge" id="k-kn">Información</button><button data-kind="product" id="k-pr">Productos</button></div></div>
+      <div class="topbar"><h1>Lo que sabe el agente</h1><span class="grow"></span><div class="seg"><button class="on" data-kind="knowledge" id="k-kn">Información</button><button data-kind="product" id="k-pr">Productos</button></div></div>
       <div class="pad">
         <input type="search" id="k-q" placeholder="Buscar en lo que sabe el agente…">
         <div id="k-list"></div>

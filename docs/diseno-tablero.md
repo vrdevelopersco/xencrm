@@ -4,7 +4,7 @@ Revisado con HRCAPOLO (sesión de UX) el 2026-09-11. Todo lo de abajo está medi
 no a ojo. Si tocas un color, vuelve a medir (el script está en el historial: luminancia relativa + composición alfa).
 
 ## Jerarquía
-- Barra lateral agrupada: Trabajo (Hoy, Conversaciones, Calendario) · Ventas (Prospectos, Análisis) · Configuración (Agente, FAQ).
+- Barra lateral agrupada: Trabajo (Hoy, Conversaciones, Calendario) · Ventas (Prospectos, Análisis) · Configuración (Perfil, Agente, Canales, Lo que sabe, Ayuda).
 - "Hoy" es la pantalla de entrada, ordenada por costo del silencio: esperan tu respuesta → pidieron una persona →
   citas de hoy → calientes sin seguimiento (>24 h, sin cita agendada) → sin leer con Aiva ya respondió → próximas citas.
   Las conversaciones vendidas o perdidas no piden acción.

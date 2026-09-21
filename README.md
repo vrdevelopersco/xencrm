@@ -16,8 +16,9 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
 ## Documentación
 
 - Este README: qué hace, cómo se instala y cómo se configura un cliente.
-- [`docs/guia-del-tablero.md`](docs/guia-del-tablero.md): para el equipo del negocio, qué hay en cada pantalla y qué
-  hacer con cada cosa.
+- **Ayuda**, dentro del tablero: el tutorial rápido para el equipo del negocio.
+- [`docs/guia-del-tablero.md`](docs/guia-del-tablero.md): la referencia completa del tablero, para entrenar al
+  equipo: qué hay en cada pantalla y qué hacer con cada cosa.
 - [`docs/arquitectura.md`](docs/arquitectura.md): para quien cambia el código. Cubre el recorrido de un mensaje,
   los módulos, los datos, la configuración por capas, las pruebas y cómo extender aiva.
 - [`docs/diseno-tablero.md`](docs/diseno-tablero.md): las reglas de diseño del tablero (contraste, material,
@@ -271,7 +272,9 @@ Todo se actualiza en vivo y funciona en el celular.
 - **Perfil**.
 - **Agente**: consumo, calendario, frases que no entendimos y diccionario.
 - **Canales**.
-- **FAQ**.
+- **Lo que sabe**: la información que tiene el agente.
+- **Ayuda**: tutorial rápido de seis pasos, preguntas frecuentes y lo que el asistente nunca hace. La primera vez,
+  Hoy muestra un aviso que lleva ahí.
 
 La guía para el equipo está en [`docs/guia-del-tablero.md`](docs/guia-del-tablero.md) y las reglas de diseño en
 [`docs/diseno-tablero.md`](docs/diseno-tablero.md).
