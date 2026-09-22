@@ -9,6 +9,25 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### El puntaje se enfría solo, y los pesos calibrados con lo que pasó · `29645de`
+El puntaje solo se recalculaba al llegar un mensaje, así que quedaba congelado en su mejor momento: en la base real
+había tres fichas en 100 con once y doce días sin hablar, y una en 87 de hace doce días. Así la lista de calientes
+no sirve para decidir a quién llamar hoy.
+- Ahora envejece al leer la ficha: 3 días −10, una semana −25, dos semanas −40, con el motivo a la vista. Con cita
+  agendada o ya vendido no se enfría, porque el siguiente paso ya está puesto.
+- La ficha guarda el puntaje de la conversación y lo dice ("llegó a 65 cuando hablaron"); "Calientes sin
+  seguimiento" se arma con ese, que es justo lo que hay que retomar, y ya no repite a quien está esperando el
+  resultado de una cita pasada.
+- Los pesos son un **estimado** con las 10 conversaciones reales (3 con cita, 1 venta): pedir cita, el interés y el
+  afán son lo que aparece antes de una cita; dar el nombre (5→2) y preguntar precio (10→6) aparecían igual o más en
+  los que no agendaron, y los datos capturados pasaron de 6 cada uno a 4, 3, 2, 1 porque cuatro datos saturaban el
+  100 y nadie se podía ordenar. Se afinan cuando haya ~20 citas con resultado.
+- `pnpm rescore` pasa las fichas viejas a la escala nueva con los análisis ya guardados, sin llamar al modelo.
+
+Medido sobre una copia de la base real: los tres con cita quedan en 92/89/83 (antes 100/100/100), el vendido en 75
+y el prospecto de hace 12 días pasa de "87 caliente" a "40 tibio, llegó a 65". `pnpm test:score` (25 casos) y las
+23 suites en verde.
+
 ### Llevarse los contactos y las citas en CSV · `e5f1ac3`
 Los datos son del negocio y no había forma de sacarlos sin abrir la base a mano. Análisis tiene ahora **Contactos
 (CSV)** y **Citas (CSV)**, con separador ";" y BOM (lo que Excel en español abre bien de una vez), la etapa con su
