@@ -56,8 +56,8 @@ escribir o usar una plantilla aprobada por Meta.
 
 ## Conversaciones
 
-A la izquierda la lista, con filtros: *Todos*, *Sin leer*, *Con una persona*, *Prospectos*, *Interesados* y
-*Con cita*. En el centro, el chat. A la derecha, la ficha del cliente.
+A la izquierda la lista, con filtros: *Todos*, *Sin leer*, *Con una persona*, *Prospectos*, *Interesados*,
+*Con cita* y *Archivados*. En el centro, el chat. A la derecha, la ficha del cliente.
 
 **Quién responde.** Arriba del chat está el switch **Responde: Aiva | Tú**. En *Tú*, el asistente no contesta y tú
 escribes; en *Aiva*, vuelve a responder solo. Escribir a mano también te pasa la conversación. En WhatsApp el
@@ -72,6 +72,11 @@ cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo nú
 - **Datos capturados**: lo que el asistente entendió de la conversación (prenda, ocasión, fecha del evento,
   presupuesto, teléfono…).
 - **Ficha**: nombre, teléfono, etapa, etiquetas y notas, que puedes corregir y **Guardar**.
+- **Archivar**: saca la conversación de las listas, del embudo y de los números, sin perder nada. Sirve para
+  pruebas, equivocados o spam. Si esa persona vuelve a escribir, reaparece sola. Con el filtro *Archivados* las ves
+  y las devuelves.
+- **Borrar**: elimina la ficha con su conversación, sus citas y su análisis. No se puede deshacer, así que pide
+  confirmación (si algo se va por error, está el respaldo del día anterior).
 - **¿Es la misma persona?**: si otra ficha tiene el mismo número (por ejemplo, escribió por el chat del sitio y
   después por WhatsApp), aparece arriba con **Unir fichas**. Se conserva la ficha donde escribió más recientemente,
   que es por donde le llegan las respuestas, y se le suman la conversación, las citas y el análisis de la otra.

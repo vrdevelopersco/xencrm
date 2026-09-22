@@ -8,7 +8,7 @@ import { business, env } from '../config.js';
 import { engineStatus, roleLabel } from '../llm/engines.js';
 import { countDocs, getDb } from '../rag/store.js';
 import { getMessages } from '../agent/memory.js';
-import { getContact, listContacts, listEvents, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_LABELS, type Stage } from '../crm/contacts.js';
+import { deleteContact, getContact, listContacts, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
 import { availableSlots, bookAppointment, formatSlot, listAppointments, setReminder, updateAppointment } from '../crm/appointments.js';
 import { replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
@@ -61,7 +61,12 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const stage = c.req.query('stage') as Stage | undefined;
     const q = c.req.query('q') || undefined;
     const human = c.req.query('human');
-    const contacts = listContacts({ stage: stage && STAGES.includes(stage) ? stage : undefined, q, humanMode: human === undefined ? undefined : human === '1' });
+    const contacts = listContacts({
+      stage: stage && STAGES.includes(stage) ? stage : undefined,
+      q,
+      humanMode: human === undefined ? undefined : human === '1',
+      archived: c.req.query('archived') === '1',
+    });
     return c.json(forBoard(contacts));
   });
 
@@ -79,6 +84,14 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       replyWindow: replyWindow(id),
     });
   });
+
+  // Archivar (sale de las listas, vuelve si el cliente escribe) y borrar (no se deshace).
+  app.post('/admin/api/contacts/:id/archive', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { on?: boolean };
+    const contact = setArchived(c.req.param('id'), body.on !== false);
+    return contact ? c.json({ contact }) : c.json({ error: 'no existe' }, 404);
+  });
+  app.delete('/admin/api/contacts/:id', (c) => (deleteContact(c.req.param('id')) ? c.json({ ok: true }) : c.json({ error: 'no existe' }, 404)));
 
   // Un mismo cliente por dos canales: fichas que parecen la misma persona, y unirlas en una sola.
   app.get('/admin/api/contacts/:id/duplicates', (c) => {

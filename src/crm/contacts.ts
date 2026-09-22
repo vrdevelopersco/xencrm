@@ -42,6 +42,8 @@ export interface Contact {
   lastSeen: number;
   lastMessageAt: number | null;
   messageCount: number;
+  /** Archivada: no sale en listas ni en el embudo. Vuelve sola si el cliente escribe de nuevo. */
+  archived: boolean;
 }
 
 const SELECT = `SELECT u.*, (SELECT COUNT(*) FROM messages m WHERE m.user_id = u.id AND m.role = 'user') AS message_count, (SELECT MAX(ts) FROM analyses a WHERE a.user_id = u.id) AS score_at FROM users u`;
@@ -77,6 +79,7 @@ function rowToContact(r: Record<string, unknown>): Contact {
     lastSeen: Number(r.last_seen),
     lastMessageAt: r.last_message_at == null ? null : Number(r.last_message_at),
     messageCount: Number(r.message_count ?? 0),
+    archived: Boolean(r.archived),
   };
 }
 
@@ -85,8 +88,8 @@ export function getContact(id: string): Contact | null {
   return r ? rowToContact(r) : null;
 }
 
-export function listContacts(opts: { stage?: Stage; humanMode?: boolean; q?: string; limit?: number } = {}): Contact[] {
-  const where: string[] = [];
+export function listContacts(opts: { stage?: Stage; humanMode?: boolean; q?: string; limit?: number; archived?: boolean } = {}): Contact[] {
+  const where: string[] = [`u.archived = ${opts.archived ? 1 : 0}`]; // por defecto, sin las archivadas
   const params: unknown[] = [];
   if (opts.stage) {
     where.push('u.stage = ?');
@@ -187,12 +190,12 @@ export function listEvents(userId: string, limit = 50): { id: number; ts: number
 export function stats() {
   const db = getDb();
   const byStage = Object.fromEntries(STAGES.map((s) => [s, 0])) as Record<Stage, number>;
-  for (const r of db.prepare('SELECT stage, COUNT(*) n FROM users GROUP BY stage').all() as { stage: Stage; n: number }[]) byStage[r.stage] = r.n;
-  const total = (db.prepare('SELECT COUNT(*) n FROM users').get() as { n: number }).n;
-  const avgScore = (db.prepare('SELECT AVG(score) a FROM users').get() as { a: number | null }).a ?? 0;
-  const hot = (db.prepare('SELECT COUNT(*) n FROM users WHERE score >= 60').get() as { n: number }).n;
-  const human = (db.prepare('SELECT COUNT(*) n FROM users WHERE human_mode = 1').get() as { n: number }).n;
-  const unread = (db.prepare('SELECT COALESCE(SUM(unread), 0) n FROM users').get() as { n: number }).n;
+  for (const r of db.prepare('SELECT stage, COUNT(*) n FROM users WHERE archived = 0 GROUP BY stage').all() as { stage: Stage; n: number }[]) byStage[r.stage] = r.n;
+  const total = (db.prepare('SELECT COUNT(*) n FROM users WHERE archived = 0').get() as { n: number }).n;
+  const avgScore = (db.prepare('SELECT AVG(score) a FROM users WHERE archived = 0').get() as { a: number | null }).a ?? 0;
+  const hot = (db.prepare('SELECT COUNT(*) n FROM users WHERE score >= 60 AND archived = 0').get() as { n: number }).n;
+  const human = (db.prepare('SELECT COUNT(*) n FROM users WHERE human_mode = 1 AND archived = 0').get() as { n: number }).n;
+  const unread = (db.prepare('SELECT COALESCE(SUM(unread), 0) n FROM users WHERE archived = 0').get() as { n: number }).n;
   const sentiments = Object.fromEntries(
     (db.prepare('SELECT sentiment, COUNT(*) n FROM users WHERE sentiment IS NOT NULL GROUP BY sentiment').all() as { sentiment: string; n: number }[]).map((r) => [r.sentiment, r.n]),
   );
@@ -210,6 +213,35 @@ export function deleteContactsByPrefix(prefix: string): number {
   const db = getDb();
   for (const t of ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses']) db.prepare(`DELETE FROM ${t} WHERE user_id LIKE ?`).run(`${prefix}%`);
   return Number(db.prepare('DELETE FROM users WHERE id LIKE ?').run(`${prefix}%`).changes);
+}
+
+/** Archiva o desarchiva: no borra nada, solo la saca (o la devuelve) de las listas. */
+export function setArchived(id: string, on: boolean): Contact | null {
+  getDb().prepare('UPDATE users SET archived = ? WHERE id = ?').run(on ? 1 : 0, id);
+  const c = getContact(id);
+  if (c) {
+    addEvent(id, on ? 'archivada' : 'desarchivada');
+    emitEvent('contact', id, { contact: c });
+  }
+  return c;
+}
+
+/** Borra la ficha y todo lo suyo (conversación, citas, análisis, consumo). No se deshace. */
+export function deleteContact(id: string): boolean {
+  const db = getDb();
+  const c = getContact(id);
+  if (!c) return false;
+  db.exec('BEGIN');
+  try {
+    for (const t of ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses', 'llm_usage']) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(id);
+    db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  emitEvent('contact', id, { deleted: true });
+  return true;
 }
 
 export function purgeContact(userId: string) {

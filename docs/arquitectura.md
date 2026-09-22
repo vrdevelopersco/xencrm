@@ -87,7 +87,7 @@ Una base SQLite por cliente (`DB_PATH`, WAL):
 | Tabla | Qué guarda |
 |---|---|
 | `docs` (+ `docs_fts`) | catálogo e información indexados, con su vector y su fuente (`knowledge`, `site`, `profile`) |
-| `users` | contactos: canal, nombre, teléfono, etapa (y si se fijó a mano), puntaje y factores, ánimo, modo humano y quién lo tiene, datos capturados, etiquetas, notas, resumen |
+| `users` | contactos: canal, nombre, teléfono, etapa (y si se fijó a mano), puntaje y factores, ánimo, modo humano y quién lo tiene, datos capturados, etiquetas, notas, resumen, archivada |
 | `messages` | la conversación, con autor (`customer`, `bot`, `human`) y quién del equipo escribió |
 | `analyses` | cada análisis: motor, ánimo, señales, puntaje y factores (el costo está en `llm_usage`) |
 | `appointments` | citas con estado, recordatorio (estado, cuándo, por qué) y respuesta del cliente |
@@ -190,6 +190,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:profile` | perfil: guardar, aplicar, lo que llega al bot | no |
 | `pnpm test:router` | qué modelo responde: el pesado solo para lo específico | no |
 | `pnpm test:schedule` | cuándo corre el análisis: ráfaga, conversación activa, flush | no |
+| `pnpm test:archive` | archivar (sale de listas y cuentas, vuelve al escribir) y borrar | no |
 | `pnpm test:merge` | unir fichas: detección por número y que no se pierda nada | no |
 | `pnpm test:backup` | respaldo: la copia trae los datos, permisos 600, conserva las últimas N | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |

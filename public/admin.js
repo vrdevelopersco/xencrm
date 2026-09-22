@@ -109,6 +109,7 @@
     if (state.q) params.push('q=' + encodeURIComponent(state.q));
     if (state.filter.indexOf('stage:') === 0) params.push('stage=' + state.filter.slice(6));
     if (state.filter === 'human') params.push('human=1');
+    if (state.filter === 'archived') params.push('archived=1');
     return api('/contacts' + (params.length ? '?' + params.join('&') : '')).then(function (list) {
       if (state.filter === 'unread') list = list.filter(function (c) { return c.unread > 0; });
       if (state.filter === 'hot') list = list.filter(function (c) { return c.score >= 60 || c.stage === 'cita_agendada'; });
@@ -157,6 +158,7 @@
     return api('/contacts/' + encodeURIComponent(id)).then(function (d) {
       state.detail = d; renderChat(); renderDetails();
       api('/contacts/' + encodeURIComponent(id) + '/duplicates').then(renderDuplicates); // ¿otra ficha de la misma persona?
+      bindArchive();
       var row = state.contacts.find(function (c) { return c.id === id; }); if (row) { row.unread = 0; renderRows(); updateBadges(); }
     });
   }
@@ -248,6 +250,33 @@
       };
     };
   }
+  // Archivar saca la conversación de las listas (vuelve sola si el cliente escribe); borrar no se deshace.
+  function bindArchive() {
+    var c = state.detail && state.detail.contact; if (!c || !$('arch-btn')) return;
+    $('arch-btn').onclick = function () {
+      api('/contacts/' + encodeURIComponent(c.id) + '/archive', { method: 'POST', body: { on: !c.archived } }).then(function (r) {
+        if (r.error) { toast('No se pudo: ' + r.error); return; }
+        toast(c.archived ? 'Conversación de vuelta en las listas' : 'Conversación archivada');
+        loadContacts(); openContact(c.id);
+      });
+    };
+    $('del-btn').onclick = function () {
+      $('del-msg').innerHTML = 'Se borra la ficha de <b>' + esc(nameOf(c)) + '</b> con su conversación, sus citas y su análisis. No se puede deshacer.' +
+        '<div class="feed-row"><button class="btn primary" id="del-yes">Borrar definitivamente</button><button class="btn" id="del-no">Cancelar</button></div>';
+      $('del-no').onclick = function () { $('del-msg').textContent = ''; };
+      $('del-yes').onclick = function () {
+        $('del-yes').disabled = true;
+        api('/contacts/' + encodeURIComponent(c.id), { method: 'DELETE' }).then(function (r) {
+          if (r.error) { $('del-msg').innerHTML = '<span class="ch-err">No se pudo borrar:</span> ' + esc(r.error); return; }
+          toast('Conversación borrada');
+          state.detail = null; state.current = null;
+          $('details').innerHTML = '<div class="empty">Sin ficha.</div>';
+          $('inbox').setAttribute('data-pane', 'list');
+          loadContacts();
+        });
+      };
+    };
+  }
   function renderDetails() {
     var d = state.detail; if (!d) return;
     var c = d.contact, data = c.data || {};
@@ -276,6 +305,7 @@
         '<input type="text" id="f-tags" placeholder="Etiquetas separadas por coma" value="' + esc((c.tags || []).join(', ')) + '">' +
         '<textarea id="f-notes" placeholder="Notas internas">' + esc(c.notes || '') + '</textarea>' +
         '<div style="display:flex;gap:6px"><button class="btn sm primary" id="f-save">Guardar</button><button class="btn sm" id="f-analyze">Re-analizar</button></div>' +
+        '<div class="feed-row" style="margin-top:8px"><button class="btn sm" id="arch-btn">' + (c.archived ? 'Devolver a las listas' : 'Archivar') + '</button><button class="btn sm" id="del-btn">Borrar</button></div><div class="small" id="del-msg" role="status"></div>' +
       '</div></div>' +
       '<div><h3>Citas</h3>' + appts + '</div>' +
       '<div><h3>Línea de tiempo</h3><ul class="timeline">' + events + '</ul></div>' +

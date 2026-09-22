@@ -17,7 +17,8 @@ export function touchUser(id: string, channel: string, name?: string | null): Us
   db.prepare(
     `INSERT INTO users (id, channel, name, first_seen, last_seen) VALUES (?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET last_seen = excluded.last_seen,
-       name = COALESCE(excluded.name, users.name)`,
+       name = COALESCE(excluded.name, users.name),
+       archived = 0`, // si estaba archivada y el cliente vuelve a escribir, reaparece
   ).run(id, channel, name ?? null, now, now);
   const row = db.prepare('SELECT id, channel, name, first_seen, last_seen FROM users WHERE id = ?').get(id) as Record<
     string,
