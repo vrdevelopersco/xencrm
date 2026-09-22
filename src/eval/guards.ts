@@ -49,6 +49,16 @@ check('"es una excelente opción" no es alcance', ungroundedDenial('¿venden zap
 check('sin la descripción, ese mismo "no" se verifica', ungroundedDenial('tienen vestidos de novia?', 'Hola. No, eso no lo vendemos: somos una boutique de moda masculina.', info), 'vestidos novia');
 check('un "no" a mitad del mensaje también cuenta', ungroundedDenial('¿venden zapatos?', 'Hola, soy Aiva de DUNOR. No, eso no lo manejamos.', info, scope), 'zapatos');
 check('un alcance que no está en la descripción no respalda', ungroundedDenial('¿venden zapatos?', 'No, solo vendemos camisas.', info, scope), 'zapatos');
+
+// Negativas suaves: responden que no sin decir "no"
+check('lo dice al revés: "Zapatos no tenemos"', ungroundedDenial('¿venden zapatos?', 'Zapatos no tenemos, pero el traje azul te queda perfecto.', info), 'zapatos');
+check('sin nombrarlo: "Eso no lo manejamos"', ungroundedDenial('¿venden zapatos?', 'Eso no lo manejamos, pero te ayudo con el traje.', info), 'zapatos');
+check('"lo más parecido que manejamos es…"', ungroundedDenial('¿tienen frac?', 'Lo más parecido que manejamos es el esmoquin negro clásico.', info), 'frac');
+check('"solo manejamos trajes y esmóquines"', ungroundedDenial('¿venden zapatos?', 'Por ahora solo manejamos trajes y esmóquines 🙂', info), 'zapatos');
+check('"en su lugar te ofrecemos…"', ungroundedDenial('¿tienen frac?', 'En su lugar te ofrecemos el esmoquin negro, que luce igual de elegante.', info), 'frac');
+check('cortesía: "no hay problema" no es negar', ungroundedDenial('¿puedo llevar a mi pareja?', 'Claro, no hay problema en que vengan los dos a la cita previa.', info), null);
+check('lo suave con respaldo pasa: el esmoquin sí está en la información', ungroundedDenial('¿tienen esmoquin?', 'Lo más parecido que manejamos es el esmoquin negro clásico.', info), null);
+check('lo suave con el alcance del negocio también pasa', ungroundedDenial('¿tienen vestidos de novia?', 'Solo manejamos moda masculina, pero te ayudo con el traje del novio.', info, scope), null);
 check('por confirmar en el perfil: "Zapatos"', touchesPending('¿venden zapatos?', ['Condiciones del alquiler', 'Zapatos']), 'Zapatos');
 check('por confirmar: "tallas" toca "Tallas disponibles para alquiler"', touchesPending('¿qué tallas manejan?', ['Tallas disponibles para alquiler']), 'Tallas disponibles para alquiler');
 check('lo que no toca nada pendiente', touchesPending('¿cuánto vale el traje azul?', ['Zapatos', 'Tallas disponibles para alquiler']), null);

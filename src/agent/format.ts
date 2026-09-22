@@ -120,6 +120,13 @@ export function ungroundedClaim(question: string, reply: string, reference: stri
 // modelo lo dedujo; puede ser falso (el negocio sí los tiene y no está escrito). Lo honesto es verificarlo.
 const DENY_START_RE = /^[\s¡!"'«]*(?:no|nop|lamentablemente|desafortunadamente|por (?:ahora|el momento) no|de momento no|actualmente no)\b/;
 const DENY_VERB = String.raw`\bno\s+(?:\w+\s+)?(?:tenemos|contamos con|manejamos|aceptamos|ofrecemos|vendemos|alquilamos|hacemos|incluimos|incluye|permitimos|recibimos|trabajamos con|hay|se puede)\b`;
+// Negativas suaves: responden que no sin decir "no". "Lo más parecido que manejamos es…", "solo manejamos
+// trajes", "en su lugar te ofrecemos…". Son la misma deducción, dicha con más tacto.
+const SOFT_DENY_RE =
+  /\blo (?:mas (?:parecido|cercano|similar)|que mas se (?:acerca|parece))\b|\ben (?:su lugar|lugar de eso|cambio)\b|\b(?:solo|solamente|unicamente|exclusivamente)\s+(?:\w+\s+){0,2}(?:tenemos|contamos|manejamos|ofrecemos|vendemos|alquilamos|trabajamos|hacemos|atendemos)\b|\b(?:tenemos|contamos con|manejamos|ofrecemos|vendemos|alquilamos|trabajamos|hacemos|atendemos)\s+(?:solo|solamente|unicamente|exclusivamente)\b/;
+// "No hay problema", "no hay lío": cortesía, no una negativa.
+const POLITE_RE = /\bno\s+hay\s+(?:problema|lio|drama|inconveniente|apuro|afan)\b/g;
+
 // "No lo tengo confirmado, lo verifico": eso no es negar, es lo que se le pide al modelo.
 const HONEST_RE = /\b(?:verific\w*|averigu\w*|consult\w* con el equipo|te confirmo|te confirmamos|no (?:te lo |lo )?(?:puedo|podemos) confirmar|no (?:te lo )?tengo (?:confirmado|a la mano|claro))\b/;
 
@@ -155,8 +162,12 @@ export function ungroundedDenial(question: string, reply: string, reference: str
   if (!words.length) return null;
   const r = foldText(reply);
   if (HONEST_RE.test(r)) return null;
-  // Cada frase cuenta: "Hola, soy Aiva. No, eso no lo vendemos" también niega.
-  const denied = r.split(/(?<=[.!?:\n])\s+/).some((s) => DENY_START_RE.test(s)) || words.some((w) => new RegExp(`${DENY_VERB}[^.!?\\n]{0,40}\\b${stem(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(r));
+  // Cada frase cuenta, diga "no" al principio ("Hola, soy Aiva. No, eso no lo vendemos"), en la mitad ("Zapatos no
+  // tenemos"), sin nombrar lo preguntado ("Eso no lo manejamos") o sin decir "no" ("solo manejamos trajes").
+  const denyVerb = new RegExp(DENY_VERB);
+  const denied = r
+    .split(/(?<=[.!?:\n])\s+/)
+    .some((s) => DENY_START_RE.test(s) || SOFT_DENY_RE.test(s) || denyVerb.test(s.replace(POLITE_RE, ' ')));
   if (!denied) return null;
   const ref = foldText(reference);
   const missing = words.filter((w) => !ref.includes(stem(w)));

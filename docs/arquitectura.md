@@ -55,7 +55,9 @@ y por qué.
       información no los menciona) se rehace pidiendo no suponer; si insiste, sale la frase de verificación
       (`unsupportedAnswer`: `ungroundedClaim` y `ungroundedDenial`). Un "no" pasa si lo negado está en la información
       o si se apoya en el alcance del negocio según su descripción ("somos moda masculina", que también cubre
-      "para hombres").
+      "para hombres"). La negativa cuenta dígala como la diga: al derecho ("no tenemos zapatos"), al revés
+      ("zapatos no tenemos"), sin nombrarla ("eso no lo manejamos") o sin decir "no" ("lo más parecido que
+      manejamos es…", "solo manejamos trajes"). La cortesía no cuenta ("no hay problema").
     - Una respuesta que da por hecha una cita que no existe ("te esperamos en la cita") se rehace: solo el flujo de
       citas agenda (`claimsBooked` + `nextAppointmentFor`).
     - Lo que el Perfil marca "por confirmar" ("Zapatos") nunca recibe un sí ni un no. Se le avisa al modelo antes de
