@@ -22,7 +22,7 @@ const meta: MetaCredentials = {
   phoneId: process.env.META_PHONE_NUMBER_ID || '',
   verifyToken: process.env.META_VERIFY_TOKEN || '',
   appSecret: process.env.META_APP_SECRET || '',
-  version: process.env.META_API_VERSION || 'v21.0',
+  version: process.env.META_API_VERSION || 'v26.0',
 };
 export const metaConfigured = () => Boolean(meta.token && meta.phoneId);
 

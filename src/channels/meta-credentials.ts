@@ -39,7 +39,7 @@ export async function saveMetaCredentials(input: MetaCredentialsInput, verify = 
   const appSecret = next.appSecret ?? process.env.META_APP_SECRET ?? '';
   if (!token) return { ok: false, error: 'Falta el token de acceso (META_ACCESS_TOKEN).' };
   if (!/^\d{6,20}$/.test(next.phoneId)) return { ok: false, error: 'El ID del número son solo dígitos (lo da Meta en WhatsApp › Configuración de la API; no es el número de teléfono).' };
-  if (!/^v\d{1,3}\.\d$/.test(next.version)) return { ok: false, error: 'La versión de la API se escribe como v21.0.' };
+  if (!/^v\d{1,3}\.\d$/.test(next.version)) return { ok: false, error: 'La versión de la API se escribe como v26.0.' };
   if (/\s/.test(token) || /\s/.test(appSecret) || /\s/.test(next.verifyToken)) return { ok: false, error: 'Los tokens no llevan espacios: revisa que se hayan copiado completos.' };
 
   const check = await verify({ token, phoneId: next.phoneId, version: next.version });

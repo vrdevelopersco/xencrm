@@ -43,7 +43,7 @@ check('la tarjeta dice con qué número quedó verificado', /\+57 321 610 5383/.
 r = await saveMetaCredentials({ version: 'v23.0' }, accept);
 check('lo que se deja en blanco conserva su valor', r.ok && envText().includes(`META_ACCESS_TOKEN=${TOKEN}`) && envText().includes('META_API_VERSION=v23.0') && metaStatus().appSecretTail === '…pp99');
 r = await saveMetaCredentials({ version: '23' }, accept);
-check('versión mal escrita: no se guarda', !r.ok && /v21\.0/.test(r.error));
+check('versión mal escrita: no se guarda', !r.ok && /v26\.0/.test(r.error));
 r = await saveMetaCredentials({ token: 'EAAGotro0000000000wxyz' }, offline);
 check('sin conexión con Meta se guarda, avisando que no se verificó', r.ok && !r.verified && /sin verificar/.test(r.warning ?? '') && envText().includes('META_ACCESS_TOKEN=EAAGotro0000000000wxyz'));
 

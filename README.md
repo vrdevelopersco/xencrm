@@ -297,7 +297,7 @@ el adaptador se construye cuando haya credenciales de prueba de Meta.
 - **Baileys** (QR con el número de la tienda): no necesita túnel ni cuenta de negocio, pero es
   protocolo no oficial; úsalo para pruebas y volúmenes bajos.
 - **Meta Cloud API** (oficial, para producción): las credenciales (`META_ACCESS_TOKEN`,
-  `META_PHONE_NUMBER_ID`, `META_VERIFY_TOKEN`, `META_APP_SECRET`, `META_API_VERSION`) se llenan en
+  `META_PHONE_NUMBER_ID`, `META_VERIFY_TOKEN`, `META_APP_SECRET`, `META_API_VERSION`, por defecto v26.0) se llenan en
   **Canales › WhatsApp oficial › Credenciales** o en `.env`. Al guardarlas:
   - aiva las verifica con Meta y, si Meta las rechaza, no las guarda;
   - las escribe en `.env` (no en la base ni en el repositorio) y las aplica sin reiniciar;
