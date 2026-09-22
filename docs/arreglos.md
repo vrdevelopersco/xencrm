@@ -9,6 +9,14 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### Archivar y borrar conversaciones · `33e7083`
+Las pruebas, los equivocados y el spam solo se podían limpiar por código, así que ensuciaban listas, embudo y
+números. La ficha ahora tiene **Archivar** (sale de las listas, del embudo y de las cuentas sin perder nada; vuelve
+sola si el cliente escribe; filtro «Archivados» para verlas y devolverlas) y **Borrar** (se lleva ficha,
+conversación, citas, análisis, eventos, verificaciones y consumo; pide confirmación porque no se deshace, con el
+respaldo diario como red). `pnpm test:archive` (10 casos) y probado en el tablero: archivar bajó la lista de 51 a
+50, el filtro mostró las archivadas y borrar limpió la ficha.
+
 ### Unir fichas de la misma persona · `9a0d2e5`
 Si alguien escribía por el chat del sitio, dejaba su número y después escribía por WhatsApp, quedaban dos contactos,
 dos historias y dos puntajes. La ficha ahora muestra "¿Es la misma persona?" cuando otra tiene el mismo número
