@@ -9,6 +9,16 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### Escribirle al cliente y buscar dentro de los mensajes · `eaa6d57`
+El buscador de Conversaciones solo miraba nombre, teléfono y resumen: lo que el cliente dijo ("esmoquin azul", "para
+el 12") no aparecía. Ahora busca también dentro de la conversación y cada fila trae el pedacito donde aparece, con
+quién lo dijo y lo buscado resaltado. Y el teléfono de la ficha era texto muerto: ahora tiene **Escribirle por
+WhatsApp** y **Llamar**. El número se arma igual que para unir fichas (el que dejó o el de su dirección de
+WhatsApp, con indicativo), y esa función quedó en un solo lugar: el recordatorio a mano ya no puede armar un wa.me
+con un número local sin indicativo. `pnpm test:buscar` (14 casos) y probado en el tablero: «esmoquin» dio 14
+conversaciones con su fragmento resaltado y la ficha abrió wa.me/573005551234 y tel:+573005551234, con botones de
+44 px.
+
 ### Archivar y borrar conversaciones · `33e7083`
 Las pruebas, los equivocados y el spam solo se podían limpiar por código, así que ensuciaban listas, embudo y
 números. La ficha ahora tiene **Archivar** (sale de las listas, del embudo y de las cuentas sin perder nada; vuelve
