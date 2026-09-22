@@ -1,14 +1,15 @@
 # Bitácora de arreglos
 
 Qué se arregló, qué fallaba y cómo se comprobó. Lo más nuevo, arriba. Cada entrada lleva su commit
-(`git show <commit>` muestra el cambio completo).
+(`git show <commit>` muestra el cambio completo). El arreglo se commitea primero y su entrada después, con el hash
+ya definitivo.
 
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
 ## 2026-09-22
 
-### Calendario en el celular · `6929172`
+### Calendario en el celular · `04f5c19`
 La semana (siete columnas) medía 562 px en una pantalla de 390: tocaba desplazarse en horizontal, el selector
 «Semana | Agenda» salía cortado, el rango de fechas ocupaba cuatro líneas y el formulario "Agendar cita" se salía.
 Además, la fila de cada cita pedía 455 px porque sus seis elementos iban en una sola línea.
