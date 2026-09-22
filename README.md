@@ -335,8 +335,8 @@ terminar: nunca tocan la información real del cliente. La lista completa y cóm
 
 | Rol | Variable | Por defecto | Para qué |
 |---|---|---|---|
-| liviano | `LIGHT_ENGINE` | apple | saludos, info de tienda, compras puntuales |
-| pesado | `HEAVY_ENGINE` | ollama | recomendar, comparar, detalles, montos, seguimientos |
+| liviano | `LIGHT_ENGINE` | apple | casi todo: saludos, info de la tienda, si hay o no una prenda, precios, tomar apuntes |
+| pesado | `HEAVY_ENGINE` | ollama | cuando el cliente pide algo específico: recomendar o comparar, detalles de una prenda (tela, corte, qué incluye), medidas o tallas, una prenda con características ("quiero un traje azul oscuro slim"), y su seguimiento corto |
 | gate | `GATE_ENGINE` | ollama | clasificación de intención (JSON) |
 | análisis | `ANALYSIS_ENGINE` | = gate | análisis comercial por turno |
 

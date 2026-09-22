@@ -44,7 +44,7 @@ export interface AgentReply {
 }
 
 // Señales de lo que pide el cliente dentro de una compra (para orientar al modelo en ese turno).
-const DETAILS_RE = /informaci[oó]n|especificaci|detalle|caracter[ií]stica|cuidad|c[oó]mo se (usa|cuida|riega|hace|confecciona)|medida|tama[ñn]o|material|tela|de qu[eé] (es|est[aá]|tama)|qu[eé] (trae|incluye)|descri|cu[aá]nto (tarda|demora)/i;
+const DETAILS_RE = /informaci[oó]n|especificaci|detalle|caracter[ií]stica|cuidad|c[oó]mo se (usa|cuida|riega|hace|confecciona)|(?<!a la )medida|tama[ñn]o|material|tela|de qu[eé] (es|est[aá]|tama)|qu[eé] (trae|incluye)|descri|cu[aá]nto (tarda|demora)/i;
 const STOCK_RE = /\b(stock|disponible|disponibilidad|hay|tienen|queda[n]?)\b/i;
 // "¿Cómo funciona?", "¿qué tengo que hacer?": el cliente quiere el proceso, no solo el producto.
 const PROCESS_RE = /c[oó]mo (funciona|es el proceso|se hace|se pide|se compra|se agenda|empiezo|empezamos|lo hacemos)|qu[eé] (tengo|debo|hay) que hacer|cu[aá]les son los pasos|paso a paso/i;
@@ -200,16 +200,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const liteContext = formatContext(products.slice(0, 3), knowledge.slice(0, 3), ctxOpts);
   const estimatedTokens = estimateTokens(persona + liteContext + text) + Math.min(history.length, 12) * 60;
 
-  const outOfStock = products.slice(0, 3).some((p) => (p.meta as { inStock?: boolean }).inStock === false);
-  const chosen = chooseEngine({
-    intent: gate.intent,
-    userText: text,
-    historyLength: history.length,
-    estimatedTokens,
-    outOfStock,
-    lastRole: lastRole.get(msg.userId),
-    details,
-  });
+  const chosen = chooseEngine({ intent: gate.intent, userText: text, estimatedTokens, lastRole: lastRole.get(msg.userId) });
   const order = fallbackOrder(chosen.engine);
   // Negocio chico + OpenAI: toda la información va fija al inicio del prompt (completa y desde la caché de OpenAI);
   // de la búsqueda solo queda una pista de qué es lo más relacionado con el mensaje.

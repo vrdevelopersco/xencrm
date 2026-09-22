@@ -35,8 +35,16 @@ y por qué.
    `humano` y `fuera_de_alcance`.
 6. **Respuestas fijas**: fuera de alcance, pedir una persona (activa el modo humano) y cita (arranca el flujo).
 7. **Búsqueda** (`rag/retriever.ts`): productos e información por vectores (bge-m3 en Ollama) y texto (FTS5).
-8. **Motor** (`agent/router.ts › chooseEngine`): rol liviano o pesado según la intención, los detalles, el
-   historial, los montos y la continuidad. El otro motor queda de respaldo (`fallbackOrder`).
+8. **Motor** (`agent/router.ts › chooseEngine`): el pesado solo cuando el cliente pide algo específico
+   (`heavyReason`):
+   - recomendar o comparar;
+   - detalles de una prenda (tela, corte, qué incluye);
+   - medidas o tallas;
+   - una prenda pedida con características ("quiero un traje azul oscuro");
+   - el seguimiento corto de eso.
+
+   Saludar, agendar, decir si hay o no algo (aunque traiga color o talla), dar un precio o tomar apuntes va al
+   liviano. El otro motor queda de respaldo (`fallbackOrder`).
 9. **Prompt** (`llm/engines.ts › generate`): la persona (idéntica para todos los clientes del negocio), el
    historial y lo del turno (información encontrada, nombre del cliente, nota). Con OpenAI, si toda la información
    del negocio cabe en `agent.fullInfoMaxTokens`, va entera y fija después de la persona (`businessSheet`: perfil,
@@ -175,6 +183,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:brand` | contraste de la marca con 500 colores | no |
 | `pnpm test:meta` | credenciales de Meta: validar, verificar, guardar | no (Meta simulado) |
 | `pnpm test:profile` | perfil: guardar, aplicar, lo que llega al bot | no |
+| `pnpm test:router` | qué modelo responde: el pesado solo para lo específico | no |
 | `pnpm test:schedule` | cuándo corre el análisis: ráfaga, conversación activa, flush | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |

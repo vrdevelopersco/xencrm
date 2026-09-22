@@ -23,7 +23,7 @@
     "replay": "tsx src/eval/replay.ts",
     "test:calendar": "tsx src/eval/calendar.ts",
     "test:signals": "tsx src/eval/signals.ts",
-    "test": "tsx src/eval/when.ts && tsx src/eval/calendar.ts && tsx src/eval/signals.ts && tsx src/eval/gate.ts && tsx src/eval/booking.ts && tsx src/eval/dictionary.ts && tsx src/eval/guards.ts && tsx src/eval/verifications.ts && tsx src/eval/misses.ts && tsx src/eval/reminders.ts && tsx src/eval/brand.ts && tsx src/eval/meta-credentials.ts && tsx src/eval/profile.ts && tsx src/eval/public-check.ts && tsx src/eval/analysis-schedule.ts",
+    "test": "tsx src/eval/when.ts && tsx src/eval/calendar.ts && tsx src/eval/signals.ts && tsx src/eval/gate.ts && tsx src/eval/booking.ts && tsx src/eval/dictionary.ts && tsx src/eval/guards.ts && tsx src/eval/verifications.ts && tsx src/eval/misses.ts && tsx src/eval/reminders.ts && tsx src/eval/brand.ts && tsx src/eval/meta-credentials.ts && tsx src/eval/profile.ts && tsx src/eval/public-check.ts && tsx src/eval/analysis-schedule.ts && tsx src/eval/router.ts",
     "test:gate": "tsx src/eval/gate.ts",
     "test:booking": "tsx src/eval/booking.ts",
     "test:dictionary": "tsx src/eval/dictionary.ts",
@@ -35,7 +35,8 @@
     "test:meta": "tsx src/eval/meta-credentials.ts",
     "test:profile": "tsx src/eval/profile.ts",
     "test:public": "tsx src/eval/public-check.ts",
-    "test:schedule": "tsx src/eval/analysis-schedule.ts"
+    "test:schedule": "tsx src/eval/analysis-schedule.ts",
+    "test:router": "tsx src/eval/router.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
