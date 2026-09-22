@@ -195,6 +195,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:archive` | archivar (sale de listas y cuentas, vuelve al escribir) y borrar | no |
 | `pnpm test:merge` | unir fichas: detección por número y que no se pierda nada | no |
 | `pnpm test:buscar` | buscar dentro de la conversación y el número para escribir o llamar | no |
+| `pnpm test:followup` | posponer el seguimiento de un caliente y su regreso a la lista | no |
 | `pnpm test:backup` | respaldo: la copia trae los datos, permisos 600, conserva las últimas N | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |

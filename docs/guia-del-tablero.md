@@ -47,7 +47,10 @@ Lo que hay que atender, ordenado por lo que cuesta dejarlo esperando. Cada fila 
 - **Citas de hoy** y **Próximas citas**: cada una dice cómo va su recordatorio: *Se recuerda hoy a las 5:00 p. m.*,
   *Recordada*, *Confirmó* (dijo que viene) o *No puede* (dijo que no puede; el asistente ya le ofreció moverla o
   cancelarla).
-- **Calientes sin seguimiento**: buenos prospectos que llevan más de un día sin hablar y no tienen cita.
+- **Calientes sin seguimiento**: buenos prospectos que llevan más de un día sin hablar y no tienen cita. Cada uno
+  trae dos botones: **Escribirle** abre su conversación, te la pasa a ti y deja un borrador listo con lo que él
+  mismo dijo ("lo de tu traje para tu boda"), para que lo ajustes y lo envíes; **Dejarlo por ahora** lo saca de la
+  lista una semana (si escribe antes, vuelve enseguida). Así la lista se puede vaciar y se puede confiar en ella.
 - **Sin leer, el asistente ya respondió**: para darles una mirada.
 
 Si una conversación llegó por **WhatsApp oficial** y pasaron más de 24 horas desde el último mensaje del cliente,

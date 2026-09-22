@@ -160,7 +160,7 @@
     $('badge-unread').textContent = unread ? String(unread) : '';
   }
 
-  function openContact(id) {
+  function openContact(id, draft) {
     state.current = id;
     renderRows();
     $('inbox').setAttribute('data-pane', 'chat');
@@ -169,6 +169,12 @@
       api('/contacts/' + encodeURIComponent(id) + '/duplicates').then(renderDuplicates); // ¿otra ficha de la misma persona?
       bindArchive();
       var row = state.contacts.find(function (c) { return c.id === id; }); if (row) { row.unread = 0; renderRows(); updateBadges(); }
+      // Retomar a un caliente: la conversación pasa a la persona y el borrador queda listo para ajustarlo y enviarlo.
+      if (draft) {
+        var put = function () { $('reply').value = draft; $('reply').focus(); $('reply').setSelectionRange(draft.length, draft.length); toast('Borrador listo: revísalo y envíalo'); };
+        if (d.contact.humanMode) put();
+        else api('/contacts/' + encodeURIComponent(id) + '/human', { method: 'POST', body: { on: true } }).then(function () { return openContact(id); }).then(put);
+      }
     });
   }
   // Ventana de 24 h de WhatsApp oficial: se avisa antes de escribir, no después de que Meta rechace el mensaje.
@@ -289,7 +295,7 @@
   function renderDetails() {
     var d = state.detail; if (!d) return;
     var c = d.contact, data = c.data || {};
-    var hidden = { booking: 1, interes: 1, urgencia: 1 };
+    var hidden = { booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1 };
     var dataRows = Object.keys(data).filter(function (k) { return !hidden[k] && data[k] !== '' && data[k] != null; }).map(function (k) { return '<dt>' + esc(k.replace(/_/g, ' ')) + '</dt><dd>' + esc(data[k]) + '</dd>'; }).join('');
     var factors = (c.scoreFactors || []).map(function (f) { return '<li><span>' + esc(f.label) + '</span><span class="' + (f.points >= 0 ? 'pos' : 'neg') + '">' + (f.points >= 0 ? '+' : '') + f.points + '</span></li>'; }).join('') || '<li class="muted">Aún sin análisis.</li>';
     var stages = Object.keys(state.stageLabels).map(function (k) { return '<option value="' + k + '"' + (k === c.stage ? ' selected' : '') + '>' + esc(state.stageLabels[k]) + '</option>'; }).join('');
@@ -338,13 +344,24 @@
       case 'human_off': return 'Aiva retoma la conversación';
       case 'appointment_booked': return 'Cita agendada';
       case 'appointment_updated': return 'Cita ' + (p.status || 'actualizada');
+      case 'followup_snooze': return 'Seguimiento pospuesto ' + (p.days || 7) + ' días';
       default: return e.type;
     }
   }
 
   // ---------- hoy ----------
-  function contactRow(c, extra) {
-    return '<div class="row" data-id="' + esc(c.id) + '"><div class="name"><span class="n">' + esc(nameOf(c)) + '</span>' + (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div><div class="time">' + rel(c.lastMessageAt) + '</div><div class="snip">' + esc(extra || c.recap || c.summary || '') + '</div><div class="meta"><span class="chip stage-' + c.stage + '">' + esc(state.stageLabels[c.stage] || c.stage) + '</span>' + scoreChip(c) + (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '') + '</div></div>';
+  // Borrador para retomar a un prospecto caliente: solo con lo que él mismo dijo (prenda, ocasión). Sin precios ni
+  // fechas inventadas, y queda en el cajón de escribir para que la persona lo ajuste antes de enviarlo.
+  function followupDraft(c) {
+    var d = c.data || {}, first = (nameOf(c) || '').split(' ')[0], biz = state.bizName ? ' de ' + state.bizName : '';
+    var prenda = (d.prenda || d.servicio || '').toString().replace(/\s*\(.*?\)/g, '').trim();
+    var ocasion = (d.ocasion || '').toString().replace(/\s*\(.*?\)/g, '').trim();
+    var asunto = prenda ? 'lo de tu ' + prenda + (ocasion ? ' para tu ' + ocasion : '') : 'lo que hablamos' + (ocasion ? ' para tu ' + ocasion : '');
+    return 'Hola' + (first && !/^(web|wa|meta|cli|mcp)$/.test(first) ? ' ' + first : '') + ' 🙂 Te escribo' + biz + ' para saber si seguimos con ' + asunto +
+      '. Si quieres, te aparto una cita y lo vemos con calma; dime qué día te sirve.';
+  }
+  function contactRow(c, extra, actions) {
+    return '<div class="row" data-id="' + esc(c.id) + '"><div class="name"><span class="n">' + esc(nameOf(c)) + '</span>' + (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div><div class="time">' + rel(c.lastMessageAt) + '</div><div class="snip">' + esc(extra || c.recap || c.summary || '') + '</div><div class="meta"><span class="chip stage-' + c.stage + '">' + esc(state.stageLabels[c.stage] || c.stage) + '</span>' + scoreChip(c) + (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '') + '</div>' + (actions ? '<div class="acts">' + actions + '</div>' : '') + '</div>';
   }
   function loadToday() {
     api('/today').then(function (t) {
@@ -358,7 +375,9 @@
         { t: '¿Cómo les fue? (citas que ya pasaron)', n: (t.past || []).length, html: (t.past || []).map(pastItem).join(''), empty: 'Ninguna cita pasada sin resultado.' },
         { t: 'Recordar a mano', n: (t.remind || []).length, html: (t.remind || []).map(remindItem).join(''), empty: 'Los recordatorios de mañana salen solos.' },
         { t: 'Citas de hoy', n: t.appointments.length, html: t.appointments.map(function (a) { return '<div class="appt"><span class="t">' + esc(a.label) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b> <span class="muted small">' + esc(a.service) + '</span>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Sin citas hoy.' },
-        { t: 'Calientes sin seguimiento (más de 24 h)', n: t.hot.length, html: t.hot.map(function (c) { return contactRow(c); }).join(''), empty: 'Ningún prospecto caliente abandonado.' },
+        { t: 'Calientes sin seguimiento (más de 24 h)', n: t.hot.length, html: t.hot.map(function (c) {
+          return contactRow(c, null, '<button class="btn sm primary" data-follow="' + esc(c.id) + '">Escribirle</button><button class="btn sm" data-snooze="' + esc(c.id) + '">Dejarlo por ahora</button>');
+        }).join(''), empty: 'Ningún prospecto caliente abandonado.' },
         { t: 'Sin leer, Aiva ya respondió', n: t.unread.length, html: t.unread.map(function (c) { return contactRow(c); }).join(''), empty: 'Todo leído.' },
         { t: 'Próximas citas (3 días)', n: t.upcoming.length, html: t.upcoming.map(function (a) { return '<div class="appt"><span class="grow stack"><span class="small muted">' + esc(a.label) + '</span><b>' + esc(a.contactName || short(a.userId)) + '</b>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Nada agendado en los próximos días.' },
       ];
@@ -371,6 +390,21 @@
       $('today').querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
       if ($('help-hide')) $('help-hide').onclick = function () { helpSet('aiva.help.seen', true); loadToday(); };
       bindVerifyItems();
+      $('today').querySelectorAll('[data-follow]').forEach(function (b) {
+        b.onclick = function (e) {
+          e.stopPropagation();
+          var c = t.hot.find(function (x) { return x.id === b.getAttribute('data-follow'); });
+          go('inbox'); openContact(c.id, followupDraft(c));
+        };
+      });
+      $('today').querySelectorAll('[data-snooze]').forEach(function (b) {
+        b.onclick = function (e) {
+          e.stopPropagation();
+          b.disabled = true;
+          api('/contacts/' + encodeURIComponent(b.getAttribute('data-snooze')) + '/snooze', { method: 'POST', body: { days: 7 } })
+            .then(function () { toast('Lo dejamos por ahora: vuelve a la lista en una semana'); loadToday(); });
+        };
+      });
       $('today').querySelectorAll('[data-outcome]').forEach(function (b) {
         b.onclick = function () {
           var row = b.closest('.appt'), id = row.getAttribute('data-appt'), user = row.getAttribute('data-user'), o = b.getAttribute('data-outcome');

@@ -12,6 +12,7 @@ import { contactNumber, deleteContact, getContact, listContacts, messageHit, lis
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
 import { availableSlots, bookAppointment, formatSlot, listAppointments, setReminder, updateAppointment } from '../crm/appointments.js';
 import { replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
+import { isSnoozed, snoozeFollowup } from '../crm/followup.js';
 import { reminderTime, remindersBoard } from '../crm/reminders.js';
 import { onEvent } from '../crm/events.js';
 import { listNotifications, startNotifications } from '../crm/notifications.js';
@@ -95,6 +96,13 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     return contact ? c.json({ contact }) : c.json({ error: 'no existe' }, 404);
   });
   app.delete('/admin/api/contacts/:id', (c) => (deleteContact(c.req.param('id')) ? c.json({ ok: true }) : c.json({ error: 'no existe' }, 404)));
+
+  // Seguimiento pospuesto: sale de "Calientes sin seguimiento" hasta la fecha (por defecto, una semana).
+  app.post('/admin/api/contacts/:id/snooze', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { days?: number };
+    const done = snoozeFollowup(c.req.param('id'), body.days ?? 7);
+    return done ? c.json(done) : c.json({ error: 'no existe' }, 404);
+  });
 
   // Un mismo cliente por dos canales: fichas que parecen la misma persona, y unirlas en una sola.
   app.get('/admin/api/contacts/:id/duplicates', (c) => {
@@ -359,8 +367,11 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       unanswered: open.filter((x) => lastFromCustomer.has(x.id)).slice(0, 20),
       unread: open.filter((x) => x.unread > 0 && !lastFromCustomer.has(x.id)).slice(0, 20),
       handoffs: open.filter((x) => x.humanMode).slice(0, 20),
-      // Calientes abandonados: sin mensajes en 24 h y sin una cita ya agendada (esa ya es seguimiento).
-      hot: open.filter((x) => x.score >= 60 && !withUpcoming.has(x.id) && (x.lastMessageAt ?? 0) < now - 24 * 3600_000).slice(0, 20),
+      // Calientes abandonados: sin mensajes en 24 h, sin una cita ya agendada (esa ya es seguimiento) y sin
+      // posponer (si el equipo dijo "por ahora no", la lista no lo repite).
+      hot: open
+        .filter((x) => x.score >= 60 && !withUpcoming.has(x.id) && (x.lastMessageAt ?? 0) < now - 24 * 3600_000 && !isSnoozed(x, now))
+        .slice(0, 20),
       upcoming: listAppointments({ from: endOfDay, to: endOfDay + 3 * 86400_000, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)), remindAt: reminderTime(a.startsAt) })),
       // Lo que el bot no supo y prometió verificar: el cliente espera la respuesta del equipo.
       verifications: listVerifications('pendiente').map((v) => ({ ...v, window: replyWindow(v.userId) })),
