@@ -4,7 +4,7 @@
 import { business } from '../config.js';
 import { formatSlot, getAppointment, listAppointments, setReminder, tzParts, zoned, type Appointment } from './appointments.js';
 import { awaitReminderReply } from './booking.js';
-import { getContact, type Contact } from './contacts.js';
+import { contactNumber, getContact, type Contact } from './contacts.js';
 import { canDeliver, canSendTemplate, replyWindow, sendTemplateToContact, sendToContact } from './outbox.js';
 
 const cfg = business.appointments;
@@ -25,15 +25,6 @@ export function reminderText(appt: Appointment, contact: Contact | null, now = D
   const day = tzParts(new Date(appt.startsAt));
   const when = tomorrow.y === day.y && tomorrow.m === day.m && tomorrow.d === day.d ? `de mañana, ${formatSlot(new Date(appt.startsAt))}` : `del ${formatSlot(new Date(appt.startsAt))}`;
   return `Hola${first ? `, ${first}` : ''} 🙂 Te recordamos tu ${appt.service} ${when}${appt.location ? `, en ${appt.location}` : ''}. ¿Nos confirmas que vienes? Si necesitas cambiarla, me dices por aquí.`;
-}
-
-/** Número del cliente para escribirle a mano (wa.me), si lo hay. */
-export function contactNumber(c: Contact | null): string | null {
-  if (!c) return null;
-  const m = /^(?:wa:(\d{8,15})@s\.whatsapp\.net|meta:(\d{8,15}))$/.exec(c.id);
-  const raw = c.phone ?? (m ? (m[1] ?? m[2]!) : null);
-  const digits = raw?.replace(/\D/g, '') ?? '';
-  return digits.length >= 8 ? digits : null;
 }
 
 /** Por qué no se puede enviar solo; null si se puede. */

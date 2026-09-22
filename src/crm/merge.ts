@@ -2,24 +2,11 @@
 // escribe por WhatsApp. Aquí se detectan (mismo número) y se unen en una sola: la conversación, las citas, el
 // análisis y el consumo quedan en la ficha que se conserva, y la otra desaparece. No se puede deshacer, así que el
 // tablero lo pregunta antes (el respaldo diario es la red de seguridad).
-import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
-import { addEvent, getContact, STAGES, type Contact, type Stage } from './contacts.js';
+import { addEvent, contactNumber, getContact, STAGES, type Contact, type Stage } from './contacts.js';
 import { emitEvent } from './events.js';
 
 const TABLES = ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses', 'llm_usage'];
-
-/** El número de un contacto: el que dio o el de su WhatsApp (la dirección trae el número). Solo dígitos. */
-export function contactNumber(c: Contact): string | null {
-  const m = /^(?:wa:(\d{8,15})@s\.whatsapp\.net|meta:(\d{8,15}))$/.exec(c.id);
-  const raw = c.phone ?? (m ? (m[1] ?? m[2]!) : null);
-  if (!raw) return null;
-  let digits = raw.replace(/\D/g, '');
-  // "300 123 4567" y "+57 300 123 4567" son el mismo número.
-  const cc = business.business.phoneCountryCode;
-  if (digits.length === business.business.phoneLocalDigits) digits = cc + digits;
-  return digits.length >= 8 ? digits : null;
-}
 
 /** Otras fichas que parecen la misma persona (mismo número, otro canal). */
 export function findDuplicates(id: string): { contact: Contact; reason: string }[] {

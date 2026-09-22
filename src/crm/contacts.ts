@@ -1,4 +1,5 @@
 // Ficha de prospecto (contacto) sobre la tabla users, con etapa, puntaje explicable y modo humano.
+import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { emitEvent } from './events.js';
 
@@ -88,6 +89,21 @@ export function getContact(id: string): Contact | null {
   return r ? rowToContact(r) : null;
 }
 
+/**
+ * El número del contacto, solo dígitos y con indicativo: el que dio o el de su WhatsApp (la dirección lo trae).
+ * Sirve para escribirle, llamarlo y para saber si dos fichas son la misma persona.
+ */
+export function contactNumber(c: Contact | null): string | null {
+  if (!c) return null;
+  const m = /^(?:wa:(\d{8,15})@s\.whatsapp\.net|meta:(\d{8,15}))$/.exec(c.id);
+  const raw = c.phone ?? (m ? (m[1] ?? m[2]!) : null);
+  if (!raw) return null;
+  let digits = raw.replace(/\D/g, '');
+  // "300 123 4567" y "+57 300 123 4567" son el mismo número.
+  if (digits.length === business.business.phoneLocalDigits) digits = business.business.phoneCountryCode + digits;
+  return digits.length >= 8 ? digits : null;
+}
+
 export function listContacts(opts: { stage?: Stage; humanMode?: boolean; q?: string; limit?: number; archived?: boolean } = {}): Contact[] {
   const where: string[] = [`u.archived = ${opts.archived ? 1 : 0}`]; // por defecto, sin las archivadas
   const params: unknown[] = [];
@@ -100,13 +116,22 @@ export function listContacts(opts: { stage?: Stage; humanMode?: boolean; q?: str
     params.push(opts.humanMode ? 1 : 0);
   }
   if (opts.q) {
-    where.push('(u.name LIKE ? OR u.id LIKE ? OR u.phone LIKE ? OR u.summary LIKE ?)');
+    // También dentro de la conversación: "el vestido azul" aparece aunque no esté en el nombre ni en el resumen.
+    where.push('(u.name LIKE ? OR u.id LIKE ? OR u.phone LIKE ? OR u.summary LIKE ? OR EXISTS (SELECT 1 FROM messages m WHERE m.user_id = u.id AND m.content LIKE ?))');
     const like = `%${opts.q}%`;
-    params.push(like, like, like, like);
+    params.push(like, like, like, like, like);
   }
   const sql = `${SELECT}${where.length ? ' WHERE ' + where.join(' AND ') : ''} ORDER BY COALESCE(u.last_message_at, u.last_seen) DESC LIMIT ?`;
   params.push(opts.limit ?? 200);
   return (getDb().prepare(sql).all(...(params as (string | number)[])) as Record<string, unknown>[]).map(rowToContact);
+}
+
+/** El mensaje más reciente donde aparece lo buscado, para mostrarlo en la lista. */
+export function messageHit(userId: string, q: string): { role: string; content: string; ts: number } | null {
+  const row = getDb()
+    .prepare('SELECT role, content, ts FROM messages WHERE user_id = ? AND content LIKE ? ORDER BY ts DESC LIMIT 1')
+    .get(userId, `%${q}%`) as { role: string; content: string; ts: number } | undefined;
+  return row ?? null;
 }
 
 export interface ContactPatch {

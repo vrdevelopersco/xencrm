@@ -83,6 +83,9 @@ textarea{resize:vertical;min-height:70px}
 .row .name span.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row .time{color:var(--muted);font-size:11px;text-align:right}
 .row .snip{grid-column:1/-1;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .snip.hit{color:var(--text)}
+.row .snip .who{color:var(--muted)}
+.row .snip mark{background:var(--find);color:inherit;border-radius:3px;padding:0 2px}
 .row .meta{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .unread{background:var(--bad);color:#fff;border-radius:10px;font-size:11px;padding:0 6px}
 .chat{display:flex;flex-direction:column;min-height:0;background:transparent}
@@ -164,8 +167,8 @@ pre{padding:10px;overflow:auto;white-space:pre-wrap}
 .inbox{grid-template-columns:1fr}.list,.chat,.details{display:none}.inbox[data-pane=list] .list,.inbox[data-pane=chat] .chat,.inbox[data-pane=details] .details{display:flex}.cal{grid-template-columns:1fr}.charts{grid-template-columns:1fr}.bubble{max-width:88%}}
 
 /* ===== Liquid glass, capa 2 ===== */
-:root{--rim:inset 1px 1px 0 rgba(255,255,255,.55),inset -1px -1px 0 rgba(17,24,39,.05),inset 0 -1px 0 rgba(17,24,39,.06);--lift:0 8px 24px rgba(17,24,39,.10);--row-hover:rgba(255,255,255,.38)}
-[data-theme=dark]{--rim:inset 1px 1px 0 rgba(255,255,255,.10),inset -1px -1px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);--lift:0 10px 28px rgba(0,0,0,.45);--row-hover:rgba(255,255,255,.05)}
+:root{--find:#fde68a;--rim:inset 1px 1px 0 rgba(255,255,255,.55),inset -1px -1px 0 rgba(17,24,39,.05),inset 0 -1px 0 rgba(17,24,39,.06);--lift:0 8px 24px rgba(17,24,39,.10);--row-hover:rgba(255,255,255,.38)}
+[data-theme=dark]{--find:#4a3d10;--rim:inset 1px 1px 0 rgba(255,255,255,.10),inset -1px -1px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);--lift:0 10px 28px rgba(0,0,0,.45);--row-hover:rgba(255,255,255,.05)}
 body::before{animation:aurora 48s ease-in-out infinite alternate;will-change:transform}
 @keyframes aurora{from{transform:translate3d(-2%,-1.5%,0) rotate(-1.5deg) scale(1.02)}to{transform:translate3d(2%,2%,0) rotate(2deg) scale(1.06)}}
 @media(prefers-reduced-motion:reduce){body::before{animation:none}}
@@ -558,7 +561,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       <div class="inbox" id="inbox" data-pane="list">
         <div class="list">
           <div class="tools">
-            <input type="search" id="q" placeholder="Buscar por nombre, teléfono o resumen…">
+            <input type="search" id="q" placeholder="Buscar por nombre, teléfono o lo que se dijo…">
             <div class="filters" id="filters">
               <button data-f="all" class="on">Todos</button>
               <button data-f="unread">Sin leer</button>
@@ -566,7 +569,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
               <button data-f="hot">Prospectos</button>
               <button data-f="stage:interesado">Interesados</button>
               <button data-f="stage:cita_agendada">Con cita</button>
-        <button data-f="archived">Archivados</button>
+              <button data-f="archived">Archivados</button>
             </div>
           </div>
           <div class="rows" id="rows"><div class="empty">Sin conversaciones todavía.</div></div>

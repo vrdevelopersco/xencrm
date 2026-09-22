@@ -59,6 +59,10 @@ escribir o usar una plantilla aprobada por Meta.
 A la izquierda la lista, con filtros: *Todos*, *Sin leer*, *Con una persona*, *Prospectos*, *Interesados*,
 *Con cita* y *Archivados*. En el centro, el chat. A la derecha, la ficha del cliente.
 
+**Buscar.** El buscador de arriba mira el nombre, el teléfono, el resumen y **lo que se dijo en la conversación**:
+escribe "esmoquin azul" y salen las conversaciones donde aparece, cada una con el pedacito donde se dijo y quién lo
+dijo.
+
 **Quién responde.** Arriba del chat está el switch **Responde: Aiva | Tú**. En *Tú*, el asistente no contesta y tú
 escribes; en *Aiva*, vuelve a responder solo. Escribir a mano también te pasa la conversación. En WhatsApp el
 cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo número.
@@ -72,6 +76,9 @@ cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo nú
 - **Datos capturados**: lo que el asistente entendió de la conversación (prenda, ocasión, fecha del evento,
   presupuesto, teléfono…).
 - **Ficha**: nombre, teléfono, etapa, etiquetas y notas, que puedes corregir y **Guardar**.
+- **Escribirle por WhatsApp** y **Llamar**: al lado del teléfono, para buscarlo tú por fuera del tablero (por
+  ejemplo, si llegó por el chat del sitio o si ya pasaron las 24 horas de WhatsApp oficial). WhatsApp abre desde tu
+  propio número, no desde el del negocio. Si no dejó teléfono, lo dice.
 - **Archivar**: saca la conversación de las listas, del embudo y de los números, sin perder nada. Sirve para
   pruebas, equivocados o spam. Si esa persona vuelve a escribir, reaparece sola. Con el filtro *Archivados* las ves
   y las devuelves.

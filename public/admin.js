@@ -24,6 +24,13 @@
 
   // ---------- utilidades ----------
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  // Lo buscado, dentro de la frase donde apareció: un pedacito alrededor y resaltado (el texto va escapado).
+  function mark(text, q) {
+    var s = String(text || ''), i = q ? s.toLowerCase().indexOf(q.toLowerCase()) : -1;
+    if (i < 0) return esc(s.slice(0, 90)) + (s.length > 90 ? '…' : '');
+    var from = Math.max(0, i - 28), to = Math.min(s.length, i + q.length + 46);
+    return (from ? '…' : '') + esc(s.slice(from, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length, to)) + (to < s.length ? '…' : '');
+  }
   function rel(ts) { if (!ts) return ''; var d = Date.now() - ts, m = Math.round(d / 60000); if (m < 1) return 'ahora'; if (m < 60) return m + ' min'; var h = Math.round(m / 60); if (h < 24) return h + ' h'; var dd = Math.round(h / 24); return dd + ' d'; }
   function hhmm(ts) { return new Date(ts).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }); }
   function short(id) { var m = /^(wa|meta|web|cli|mcp):(.*)$/.exec(id); if (!m) return id; var v = m[2].replace(/@.*$/, ''); return m[1] === 'web' ? 'web · ' + v.slice(0, 8) : v; }
@@ -123,7 +130,9 @@
       return '<div class="row' + (state.current === c.id ? ' sel' : '') + '" data-id="' + esc(c.id) + '">' +
         '<div class="name"><span class="n">' + esc(nameOf(c)) + '</span>' + (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div>' +
         '<div class="time">' + rel(c.lastMessageAt) + '</div>' +
-        '<div class="snip"' + (c.summary ? ' title="' + esc(c.summary) + '"' : '') + '>' + esc(c.recap || c.summary || '') + '</div>' +
+        (c.hit
+          ? '<div class="snip hit"><span class="who">' + esc(c.hit.role === 'user' ? nameOf(c) : state.agentName || 'Aiva') + ':</span> ' + mark(c.hit.content, state.q) + '</div>'
+          : '<div class="snip"' + (c.summary ? ' title="' + esc(c.summary) + '"' : '') + '>' + esc(c.recap || c.summary || '') + '</div>') +
         '<div class="meta">' + verdictChip(c) + (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '') + '</div>' +
         '</div>';
     }).join('');
@@ -301,6 +310,10 @@
       '<div><h3>Ficha</h3><div style="display:flex;flex-direction:column;gap:6px">' +
         '<input type="text" id="f-name" placeholder="Nombre" value="' + esc(c.name || '') + '">' +
         '<input type="text" id="f-phone" placeholder="Teléfono" value="' + esc(c.phone || '') + '">' +
+        (d.number
+          ? '<div class="feed-row"><a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/' + esc(d.number) + '">Escribirle por WhatsApp</a>' +
+            '<a class="btn sm" href="tel:+' + esc(d.number) + '">Llamar</a></div>'
+          : '<div class="small muted">Sin número: no dejó teléfono todavía.</div>') +
         '<select id="f-stage">' + stages + '</select>' +
         '<input type="text" id="f-tags" placeholder="Etiquetas separadas por coma" value="' + esc((c.tags || []).join(', ')) + '">' +
         '<textarea id="f-notes" placeholder="Notas internas">' + esc(c.notes || '') + '</textarea>' +

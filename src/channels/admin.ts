@@ -8,7 +8,7 @@ import { business, env } from '../config.js';
 import { engineStatus, roleLabel } from '../llm/engines.js';
 import { countDocs, getDb } from '../rag/store.js';
 import { getMessages } from '../agent/memory.js';
-import { deleteContact, getContact, listContacts, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_LABELS, type Stage } from '../crm/contacts.js';
+import { contactNumber, deleteContact, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
 import { availableSlots, bookAppointment, formatSlot, listAppointments, setReminder, updateAppointment } from '../crm/appointments.js';
 import { replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
@@ -67,7 +67,9 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       humanMode: human === undefined ? undefined : human === '1',
       archived: c.req.query('archived') === '1',
     });
-    return c.json(forBoard(contacts));
+    const board = forBoard(contacts);
+    // Con búsqueda, cada fila trae el pedacito de conversación donde aparece lo buscado.
+    return c.json(q ? board.map((b) => ({ ...b, hit: messageHit(b.id, q) })) : board);
   });
 
   app.get('/admin/api/contacts/:id', (c) => {
@@ -82,6 +84,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       events: listEvents(id, 50),
       appointments: listAppointments({ userId: id, limit: 20 }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })),
       replyWindow: replyWindow(id),
+      number: contactNumber(contact), // para escribirle o llamarlo desde el tablero
     });
   });
 
