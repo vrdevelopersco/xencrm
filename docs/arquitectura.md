@@ -93,6 +93,12 @@ Una base SQLite por cliente (`DB_PATH`, WAL):
 | `messages` | la conversación, con autor (`customer`, `bot`, `human`) y quién del equipo escribió |
 | `analyses` | cada análisis: motor, ánimo, señales, puntaje y factores (el costo está en `llm_usage`) |
 
+**Fechas sueltas.** Un día de la semana sin más ("el jueves") es el de la semana en curso, el que viene: se
+entiende que se está hablando de esta semana salvo que el cliente diga otra cosa ("el otro jueves", "el jueves de
+la próxima"). Dicho el mismo día de la semana ("el martes", un martes) es el de la otra semana, porque para hoy se
+dice "hoy". Si ese día ya no tiene espacios, se dice y se ofrece lo más cercano, en vez de saltar a la semana
+siguiente sin avisar (`crm/when.ts` y `whyNoSlots` en `crm/booking.ts`).
+
 **El puntaje.** `computeScore` (en `analyzer.ts`) suma factores explicables con las señales del análisis; se guarda
 en `users.score` y solo se recalcula cuando llega un mensaje. Al leer la ficha, `crm/score.ts` le descuenta el
 silencio (3 días −10, una semana −25, dos semanas −40; nada si tiene cita o ya compró) y agrega ese descuento como

@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-merge-')), 'aiva.db');
 const { touchUser, appendMessage } = await import('../agent/memory.js');
-const { getContact, updateContact, setStage, addEvent, contactNumber } = await import('../crm/contacts.js');
+const { getContact, updateContact, setStage, addEvent, contactNumber, listEvents } = await import('../crm/contacts.js');
 const { findDuplicates, keeperOf, mergeContacts } = await import('../crm/merge.js');
 const { getDb } = await import('../rag/store.js');
 
@@ -74,6 +74,18 @@ check('la cita del otro canal cuenta como suya', suya?.userId === 'web:lucia', S
 check('la ficha con la cita la ve igual', nextAppointmentForPerson('web:lucia')?.userId === 'web:lucia');
 touchUser('web:ajeno', 'web', 'Otro');
 check('quien no es la misma persona no hereda citas', nextAppointmentForPerson('web:ajeno') === null);
+
+// Si la cancela desde el otro canal, las dos líneas de tiempo lo cuentan (la cita no cambia de ficha).
+const { bookingStep, startBooking } = await import('../crm/booking.js');
+await startBooking('wa:573007778899@s.whatsapp.net', 'quiero cancelar mi cita');
+await bookingStep('wa:573007778899@s.whatsapp.net', 'sí');
+const { getAppointment } = await import('../crm/appointments.js');
+const citaId = suya!.id;
+check('la cita quedó cancelada aunque sea de la otra ficha', getAppointment(citaId)?.status === 'cancelada', String(getAppointment(citaId)?.status));
+check('la nota dice desde dónde la cancelaron', /desde WhatsApp/.test(getAppointment(citaId)?.notes ?? ''), getAppointment(citaId)?.notes);
+check('queda en la línea de tiempo de quien escribió', listEvents('wa:573007778899@s.whatsapp.net').some((e) => e.type === 'appointment_cross'));
+check('y en la de la ficha donde vive la cita', listEvents('web:lucia').some((e) => e.type === 'appointment_cross'));
+check('la cita no se mudó de ficha', getAppointment(citaId)?.userId === 'web:lucia');
 
 console.log(`\n${fail ? `${fail} fallos` : 'todo ok'}`);
 process.exit(fail ? 1 : 0);

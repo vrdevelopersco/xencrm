@@ -356,6 +356,7 @@
       case 'appointment_booked': return 'Cita agendada';
       case 'appointment_updated': return 'Cita ' + (p.status || 'actualizada');
       case 'followup_snooze': return 'Seguimiento pospuesto ' + (p.days || 7) + ' días';
+      case 'appointment_cross': return p.desde ? 'Cita ' + esc(p.what) + ' por el cliente desde ' + esc(p.desde) : 'Cita ' + esc(p.what) + ', de su otra ficha';
       default: return e.type;
     }
   }

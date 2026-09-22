@@ -7,7 +7,8 @@ const NOW = new Date('2026-09-21T14:00:00Z');
 type Expect = Partial<Omit<When, 'dayLabel' | 'timeLabel'>> | null;
 
 const CASES: [string, Expect][] = [
-  ['el sábado en la tarde', { weekdays: [6], fromMin: 780, toMin: 1140, label: 'el sábado en la tarde' }],
+  // Un día de la semana suelto es el de esta semana, el que viene (hoy es lunes 21): "el sábado" es el 26.
+  ['el sábado en la tarde', { days: ['2026-09-26'], fromMin: 780, toMin: 1140, label: 'el sábado en la tarde' }],
   ['mañana después de las 5', { days: ['2026-09-22'], fromMin: 1020, label: 'mañana después de las 5:00 p. m.' }],
   ['mañana en la mañana', { days: ['2026-09-22'], fromMin: 0, toMin: 720 }],
   ['pasado mañana', { days: ['2026-09-23'], label: 'pasado mañana' }],
@@ -24,9 +25,10 @@ const CASES: [string, Expect][] = [
   ['el martes de la próxima semana', { weekdays: [2], from: '2026-09-28', to: '2026-10-04', label: 'el martes de la próxima semana' }],
   ['el otro jueves', { weekdays: [4], from: '2026-09-28', to: '2026-10-04' }],
   ['esta semana', { from: '2026-09-21', to: '2026-09-27' }],
-  ['este fin de semana', { weekdays: [6, 0], label: 'el fin de semana' }],
+  ['este fin de semana', { days: ['2026-09-26', '2026-09-27'], label: 'el fin de semana' }],
   ['entre semana en la noche', { weekdays: [1, 2, 3, 4, 5], fromMin: 1080, label: 'entre semana en la noche' }],
-  ['el lunes o el martes', { weekdays: [1, 2] }],
+  // "El lunes" dicho un lunes es el de la otra semana: para hoy se dice "hoy".
+  ['el lunes o el martes', { days: ['2026-09-22', '2026-09-28'] }],
   ['entre las 3 y las 5', { fromMin: 900, toMin: 1020, label: 'entre las 3:00 p. m. y las 5:00 p. m.' }],
   ['de 10 a 12', { fromMin: 600, toMin: 720 }],
   ['antes de las 12', { toMin: 720, label: 'antes de las 12:00 p. m.' }],
@@ -37,7 +39,7 @@ const CASES: [string, Expect][] = [
   ['5pm', { fromMin: 1020 }],
   ['a las 17:30', { fromMin: 1050 }],
   ['mañana a las 11 am', { days: ['2026-09-22'], fromMin: 660 }],
-  ['el jueves a las 6 de la tarde', { weekdays: [4], fromMin: 1080 }],
+  ['el jueves a las 6 de la tarde', { days: ['2026-09-24'], fromMin: 1080 }],
   ['a las 4 en la tarde', { fromMin: 960 }],
   ['al mediodía', { fromMin: 720, toMin: 810 }],
   ['Al medio dia', { fromMin: 720, toMin: 810, label: 'al mediodía' }],
@@ -50,8 +52,8 @@ const CASES: [string, Expect][] = [
   ['tempranito', { fromMin: 0, toMin: 720 }],
   ['por la tardecita', { fromMin: 780, toMin: 1140 }],
   ['a última hora', { fromMin: 1020, label: 'a última hora' }],
-  ['a primera hora el jueves', { weekdays: [4], toMin: 720 }],
-  ['¿tienen espacio el sábado en la tarde?', { weekdays: [6], fromMin: 780 }],
+  ['a primera hora el jueves', { days: ['2026-09-24'], toMin: 720 }],
+  ['¿tienen espacio el sábado en la tarde?', { days: ['2026-09-26'], fromMin: 780 }],
   ['a la hora del almuerzo', { fromMin: 720, toMin: 840, label: 'a la hora del almuerzo' }],
   ['antes del almuerzo', { fromMin: 0, toMin: 720 }],
   ['después del almuerzo', { fromMin: 780, toMin: 1140 }],

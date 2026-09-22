@@ -1,6 +1,10 @@
 // Pruebas del flujo de citas con muletillas (sin modelo): pnpm test:booking
 // Reproduce la lista que ve el cliente (10, 11 y 12 de un día) y verifica que "al medio día", "la última" o
 // "sisas" hagan lo que una persona entendería. Falla si alguna respuesta tuvo que llamar al modelo.
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-booking-')), 'aiva.db'); // agenda propia: no toca la del negocio
 const { touchUser } = await import('../agent/memory.js');
 const { getContact, updateContact, deleteContactsByPrefix } = await import('../crm/contacts.js');
 const { availableSlots, tzParts, dayKey, listAppointments, formatDay } = await import('../crm/appointments.js');
@@ -203,6 +207,35 @@ await flow('"así está bien" la deja como está', ['hola, sobre mi cita', 'así
   console.log(`${ok2 ? '✓' : '✗'} pedir otra hora del mismo día sí la mueve${ok2 ? '' : `\n   ${r2.replace(/\n/g, ' ⏎ ').slice(0, 130)}`}`);
 }
 
+
+// "El jueves" es el de esta semana: si está lleno, se dice y se ofrece lo más cercano, no el jueves siguiente.
+{
+  const proximoJueves = (() => {
+    for (let d = 1; d <= 7; d++) {
+      const p = tzParts(new Date(Date.now() + d * 86400_000));
+      if (p.wd === 4) return dayKey(p.y, p.m, p.d);
+    }
+    return '';
+  })();
+  let llenos = 0;
+  for (let i = 0; i < 30; i++) {
+    const slot = availableSlots({ count: 1, when: { days: [proximoJueves], label: 'el jueves' } })[0];
+    if (!slot) break;
+    const u = `test:booking-lleno-${i}`;
+    touchUser(u, 'cli', 'Relleno');
+    updateContact(u, { name: 'Relleno', phone: '+573000000000' }, { silent: true });
+    bookAppointment(u, slot.startsAt, { by: 'admin' });
+    llenos++;
+  }
+  const u = `test:booking-${++n}`;
+  touchUser(u, 'cli', 'Marta');
+  updateContact(u, { name: 'Marta', phone: '+573001112233' }, { silent: true });
+  const r = await startBooking(u, '¿puedo ir el jueves?');
+  const ofrecidos = [...r.matchAll(/\d\) (.+)/g)].map((m) => m[1]!);
+  const ok = llenos > 0 && /ya no me quedan espacios/.test(r) && /Lo más cercano/.test(r) && !ofrecidos.some((o) => /jueves/.test(o));
+  if (!ok) fail++;
+  console.log(`${ok ? '✓' : '✗'} el día pedido lleno se dice, no se salta a la otra semana${ok ? '' : `\n   (${llenos} ocupados) ${r.replace(/\n/g, ' ⏎ ').slice(0, 150)}`}`);
+}
 
 const usageAfter = (getDb().prepare('SELECT COUNT(*) n FROM llm_usage').get() as { n: number }).n;
 if (usageAfter !== usageBefore) {

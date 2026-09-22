@@ -22,7 +22,7 @@ import {
   type Slot,
   type When,
 } from './appointments.js';
-import { getContact, updateContact, type Contact } from './contacts.js';
+import { addEvent, getContact, updateContact, type Contact } from './contacts.js';
 import { customerLinks } from './calendar.js';
 import { askModelWhen, eventDeadline, fold, formatMinutes, mentionsTime, parseWhen, refineWhen, weekdayOfKey } from './when.js';
 import { formatPhone, parsePhone, ruleSignals } from './signals.js';
@@ -194,7 +194,8 @@ async function book(c: Contact, userId: string, chosen: string): Promise<string>
   // Mover: primero se agenda la nueva y solo después se cancela la anterior, así nunca se queda sin cita.
   const old = moving ? getAppointment(moving) : null;
   if (old && old.status === 'confirmada') {
-    updateAppointment(old.id, { status: 'cancelada', notes: `${old.notes ? `${old.notes} · ` : ''}Reprogramada por el cliente` }, 'bot');
+    noteCrossFicha(old, userId, 'movida');
+    updateAppointment(old.id, { status: 'cancelada', notes: `${old.notes ? `${old.notes} · ` : ''}Reprogramada por el cliente desde ${channelName(getContact(userId))}` }, 'bot');
     const fresh = getContact(userId);
     const phone = fresh ? contactPhone(fresh) : null;
     return (
@@ -247,6 +248,22 @@ async function start(userId: string, text = ''): Promise<string> {
     return hello + pick(['¡Con gusto! ¿A nombre de quién agendo la cita?', 'Claro que sí. Dime tu nombre para agendarla, por favor.'] as const);
   }
   return offer(c, when ? { when } : {});
+}
+
+// Canal por donde está escribiendo, para que la cita diga desde dónde la tocaron.
+const CHANNEL_NAME: Record<string, string> = { whatsapp: 'WhatsApp', meta: 'WhatsApp', web: 'el chat del sitio' };
+const channelName = (c: Contact | null) => (c ? (CHANNEL_NAME[c.channel] ?? 'otro canal') : 'otro canal');
+
+/**
+ * La cita puede estar en otra ficha de la misma persona (agendó por el chat del sitio y ahora escribe por
+ * WhatsApp). Cuando eso pasa, queda anotado en las dos líneas de tiempo: la ficha donde está la cita no puede
+ * quedarse muda, y la ficha desde donde escribió tampoco.
+ */
+function noteCrossFicha(appt: { id: number; userId: string }, userId: string, what: string) {
+  if (appt.userId === userId) return;
+  const desde = channelName(getContact(userId));
+  addEvent(userId, 'appointment_cross', { id: appt.id, what, ficha: appt.userId });
+  addEvent(appt.userId, 'appointment_cross', { id: appt.id, what, desde });
 }
 
 const slotOf = (id: number) => {
@@ -402,7 +419,8 @@ async function step(userId: string, text: string): Promise<string | null> {
     const slot = formatSlot(new Date(appt.startsAt));
     if (st.step === 'cancelar') {
       if (YES_RE.test(t) && !CHANGE_RE.test(t)) {
-        updateAppointment(appt.id, { status: 'cancelada', notes: `${appt.notes ? `${appt.notes} · ` : ''}Cancelada por el cliente por chat` }, 'bot');
+        noteCrossFicha(appt, userId, 'cancelada');
+        updateAppointment(appt.id, { status: 'cancelada', notes: `${appt.notes ? `${appt.notes} · ` : ''}Cancelada por el cliente desde ${channelName(c)}` }, 'bot');
         save(getContact(userId)!, null);
         return `Listo, cancelé tu ${appt.service} del ${slot}. Si quieres agendar otra, me escribes por aquí 🙂`;
       }

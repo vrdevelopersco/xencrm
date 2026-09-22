@@ -264,7 +264,12 @@ export function parseWhen(text: string, now = new Date()): When | null {
   }
   if (!date) {
     if (weekdays.length) {
-      out.weekdays = weekdays;
+      // "El jueves" es el jueves de esta semana, el que viene: se está hablando de esta semana salvo que el cliente
+      // diga otra cosa ("el otro jueves", "el jueves de la próxima"). Si no, con la agenda llena ese día se saltaba
+      // a la semana siguiente sin avisar. "Entre semana" no se ancla: es una disponibilidad general, no un día.
+      // Decir "el martes" un martes es el de la otra semana: para hoy se dice "hoy" o "esta tarde".
+      if (!range && !midweek) out.days = weekdays.map((w) => keyOf(addDays(today, ((w - wd + 7) % 7) || 7))).sort();
+      else out.weekdays = weekdays;
       out.dayLabel = midweek && weekdays.length === 5 ? 'entre semana' : weekdaysText(weekdays) + (range ? ` de ${range.label}` : '');
     } else if (range) {
       out.dayLabel = range.label;
