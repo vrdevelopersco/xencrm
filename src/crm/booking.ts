@@ -56,11 +56,14 @@ const ORDINALS: Record<string, number> = { primera: 1, primero: 1, segunda: 2, s
 // "la segunda" es una opción; "a primera hora" o "la segunda semana" no.
 const ORDINAL_RE = /\b(primer[ao]|segund[ao]|tercer[ao])\b(?!\s+(?:hora|semana|quincena))/;
 const CANCEL_RE = /^(cancel|olv[ií]d|ya no|no quiero)/;
+// Preguntas sobre la cita que ya tiene: quiere saber, no cambiar.
+const ASK_APPT_RE =
+  /\b(?:a\s+qu[eé]\s+hora|qu[eé]\s+hora|cu[aá]ndo|qu[eé]\s+d[ií]a|d[oó]nde|en\s+d[oó]nde|sigue\s+(?:en\s+pie|igual|ah[ií])|qued[oó]\s+(?:en\s+pie|igual)|me\s+confirmas|confirmarme|recu[eé]rdame|me\s+recuerdas|ten[ií]a\s+la\s+cita|es\s+la\s+cita)\b/i;
 
 // ---------- Cambiar o cancelar una cita que ya existe ----------
 const CANCEL_APPT_RE = /\b(?:canc[eé]l\w*|anul\w*|ya no (?:voy|puedo ir|podr[eé] ir|asisto|la necesito)|no (?:voy a|podr[eé]|puedo) (?:ir|asistir|llegar)|no alcanzo a (?:ir|llegar))\b/i;
 const MOVE_APPT_RE =
-  /\b(?:cambi\w*|mover(?:la)?|mu[eé]v\w*|reprogram\w*|reagend\w*|correr(?:la)?|c[oó]rre(?:la|mela)|pasar(?:la|mela)?\s+(?:para|al|a)|p[aá]sa(?:la|mela)\s+(?:para|al|a)|aplaz\w*|pospon\w*|posterg\w*|adelant\w*|otro d[ií]a|otra (?:fecha|hora))\b/i;
+  /\b(?:c[aá]mbi\w*|mover(?:la)?|mu[eé]v\w*|reprogram\w*|reagend\w*|correr(?:la)?|c[oó]rre(?:la|mela)|pasar(?:la|mela)?\s+(?:para|al|a)|p[aá]sa(?:la|mela)\s+(?:para|al|a)|aplaz\w*|pospon\w*|posterg\w*|adelant\w*|otro d[ií]a|otra (?:fecha|hora))\b/i;
 // Sin estas pistas, "quiero cambiar la talla" no es mover la cita.
 const APPT_CONTEXT_RE =
   /\b(?:cita|visita|reserva|hora|fecha|d[ií]a|agenda\w*)\b|\b(?:c[aá]mbi|mov|mu[eé]v|p[aá]s|c[oó]rr|cancel|reprogram|reagend|aplaz|pospon|posterg|adelant)\w*(?:la|mela)\b/i;
@@ -274,6 +277,14 @@ const slotOf = (id: number) => {
 /** Ya tiene una cita: cancelarla (con confirmación), cambiarla (ofrece espacios) o preguntar qué quiere hacer. */
 async function manageExisting(c: Contact, id: number, text: string, userId: string): Promise<string> {
   const intent = manageIntent(text);
+  // "¿A qué hora era?", "¿sigue en pie?": está preguntando por su cita, no pidiendo cambiarla.
+  if (!intent && ASK_APPT_RE.test(text)) {
+    const a = getAppointment(id);
+    save(c, { step: 'gestionar', offered: [], manage: id }); // si después dice "cámbiala", sigue el hilo
+    return a
+      ? `Tu ${a.service} es el ${formatSlot(new Date(a.startsAt))}${a.location ? ` en ${a.location}` : ''}. ¡Te esperamos! Si necesitas cambiarla o cancelarla, me dices.`
+      : offerFallback();
+  }
   if (intent === 'cancelar') {
     save(c, { step: 'cancelar', offered: [], manage: id });
     return `¿Confirmas que cancelo tu ${slotOf(id)}?`;

@@ -1,3 +1,4 @@
+import { siblingIds } from '../crm/merge.js';
 import { getDb } from '../rag/store.js';
 import { env } from '../config.js';
 import type { ChatMessage } from '../llm/ollama.js';
@@ -64,11 +65,18 @@ export function getMessages(userId: string, limit = 50): StoredMessage[] {
   return rows.reverse();
 }
 
-/** Últimos N turnos (usuario+asistente) en orden cronológico. */
+/**
+ * La conversación reciente. Si la misma persona venía hablando por otro canal (mismo número: escribió por el chat
+ * del sitio y ahora por WhatsApp), esos mensajes entran también, en orden: para el cliente es una sola
+ * conversación y el asistente tiene que llegar sabiendo de qué hablaban. Las fichas siguen separadas hasta que
+ * alguien las una desde el tablero.
+ */
 export function getHistory(userId: string, turns = env.historyTurns): ChatMessage[] {
+  const ids = [userId, ...siblingIds(userId)];
+  const marks = ids.map(() => '?').join(', ');
   const rows = getDb()
-    .prepare('SELECT role, content FROM messages WHERE user_id = ? ORDER BY ts DESC, id DESC LIMIT ?')
-    .all(userId, turns * 2) as { role: 'user' | 'assistant'; content: string }[];
+    .prepare(`SELECT role, content FROM messages WHERE user_id IN (${marks}) ORDER BY ts DESC, id DESC LIMIT ?`)
+    .all(...ids, turns * 2) as { role: 'user' | 'assistant'; content: string }[];
   return rows.reverse().map((r) => ({ role: r.role, content: r.content }));
 }
 

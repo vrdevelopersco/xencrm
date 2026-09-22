@@ -10,6 +10,7 @@ import { claimsBooked, dropRepeatedFacts, isHonest, postProcess, stripRepeatedGr
 import { pendingTopics } from '../profile.js';
 import { openVerification, saysWillVerify } from '../crm/verifications.js';
 import { ERROR_REPLIES, HUMAN_REPLIES, OUT_OF_SCOPE_REPLIES, personaPrompt, pick, type Intent } from './prompts.js';
+import { crossChannelGreeting } from '../crm/cross.js';
 import { getContact, purgeContact, setHumanMode, updateContact } from '../crm/contacts.js';
 import { emitEvent } from '../crm/events.js';
 import { scheduleAnalysis } from '../crm/analyzer.js';
@@ -88,7 +89,12 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const user = touchUser(msg.userId, msg.channel, msg.userName);
   const contact = getContact(msg.userId);
   const base = { sources: [] as AgentReply['sources'], route: '', gateVia: '' };
-  const finish = (reply: string, intent: Intent, engine: AgentReply['engine'], extra: Partial<AgentReply> = {}): AgentReply => {
+  // Si venía hablando por otro canal, se le dice una vez (y el historial de allá ya entró en el contexto). Se
+  // resuelve al responder: si la conversación la tiene una persona, no hay respuesta y no se da por dicho.
+  let crossNote: string | null | undefined;
+  const finish = (answer: string, intent: Intent, engine: AgentReply['engine'], extra: Partial<AgentReply> = {}): AgentReply => {
+    if (crossNote === undefined) crossNote = contact ? crossChannelGreeting(msg.userId) : null;
+    const reply = crossNote ? `${crossNote}\n\n${answer}` : answer;
     recordCustomerMessage(msg.userId, text, intent);
     recordBotReply(msg.userId, reply);
     scheduleAnalysis(msg.userId);

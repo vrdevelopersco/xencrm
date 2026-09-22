@@ -3,13 +3,14 @@ import { business } from '../config.js';
 import { onEvent, emitEvent, type CrmEvent } from './events.js';
 import { getContact, type Contact } from './contacts.js';
 import { formatSlot, nextAppointmentFor } from './appointments.js';
+import { channelName } from './cross.js';
 import { recap } from './recap.js';
 
 export interface Notification {
   id: number;
   ts: number;
   userId: string;
-  kind: 'handoff' | 'hot' | 'appointment' | 'new' | 'fail' | 'engine' | 'verify' | 'public';
+  kind: 'handoff' | 'hot' | 'appointment' | 'new' | 'fail' | 'engine' | 'verify' | 'public' | 'cross';
   title: string;
   body: string;
 }
@@ -53,6 +54,12 @@ export function startNotifications() {
       // Lo que cancela el cliente por el chat se avisa; lo que cancela el equipo desde el tablero, no (ya lo sabe).
       if (a?.status === 'cancelada' && p.by === 'bot' && !/Reprogramada por el cliente/.test(a.notes ?? ''))
         push('appointment', ev.userId, `${nameOf(ev.userId)} canceló su cita`, `Era el ${formatSlot(new Date(a.startsAt))}. El espacio quedó libre.`);
+    }
+    // La misma persona apareció por otro canal: el equipo puede unir las fichas desde la suya.
+    if (ev.type === 'cross_channel') {
+      const desde = channelName(String(p.channel ?? ''));
+      const aqui = channelName(getContact(ev.userId)?.channel ?? '');
+      push('cross', ev.userId, `${nameOf(ev.userId)} escribió por ${aqui}`, `Ya venía hablando por ${desde}. ${business.agent.name} siguió la conversación; en su ficha puedes unirlas.`);
     }
     if (ev.type === 'reminder_reply' && p.reply === 'no_puede') {
       const a = p.appointment as { startsAt: number } | undefined;

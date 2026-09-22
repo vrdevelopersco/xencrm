@@ -21,6 +21,27 @@ export function findDuplicates(id: string): { contact: Contact; reason: string }
   });
 }
 
+// La misma persona escribiendo por otro canal se consulta en cada mensaje: se recuerda un minuto para no recorrer
+// los contactos en cada turno de una conversación.
+const siblingCache = new Map<string, { ids: string[]; at: number }>();
+const SIBLING_TTL = 60_000;
+
+/** Ids de las otras fichas de esta persona, de la más reciente a la más vieja. */
+export function siblingIds(id: string, now = Date.now()): string[] {
+  const hit = siblingCache.get(id);
+  if (hit && now - hit.at < SIBLING_TTL) return hit.ids;
+  const ids = findDuplicates(id)
+    .sort((a, b) => (b.contact.lastMessageAt ?? b.contact.lastSeen) - (a.contact.lastMessageAt ?? a.contact.lastSeen))
+    .map((d) => d.contact.id);
+  siblingCache.set(id, { ids, at: now });
+  return ids;
+}
+
+/** Se llama cuando las fichas cambian (unir, borrar): la próxima consulta vuelve a mirar. */
+export function forgetSiblings() {
+  siblingCache.clear();
+}
+
 /** Cuál ficha conviene conservar: donde el cliente escribió más recientemente (ahí llegan las respuestas). */
 export function keeperOf(a: Contact, b: Contact): { keep: Contact; drop: Contact } {
   return (a.lastMessageAt ?? a.lastSeen) >= (b.lastMessageAt ?? b.lastSeen) ? { keep: a, drop: b } : { keep: b, drop: a };
@@ -72,6 +93,7 @@ export function mergeContacts(keepId: string, dropId: string): Contact {
     db.exec('ROLLBACK');
     throw err;
   }
+  forgetSiblings(); // las fichas cambiaron
   addEvent(keepId, 'contacts_merged', { from: dropId, channel: drop.channel });
   const merged = getContact(keepId)!;
   emitEvent('contact', keepId, { contact: merged, merged: dropId });

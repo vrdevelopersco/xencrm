@@ -111,6 +111,8 @@ const intents: [string, boolean, string | null][] = [
   ['quiero cambiar la talla del traje', true, null],
   ['quiero agendar una cita', true, null],
   ['cambiarla', false, 'cambiar'],
+  ['cámbiala', false, 'cambiar'],
+  ['cámbiamela para el viernes', true, 'cambiar'],
   ['mejor cancélala', true, 'cancelar'],
   ['¿me la puedes correr para el viernes?', true, 'cambiar'],
   ['pásamela para mañana', true, 'cambiar'],
@@ -195,7 +197,7 @@ await flow('"así está bien" la deja como está', ['hola, sobre mi cita', 'así
   const { userId, apptId } = withAppointment();
   const dia = formatDay(new Date(getAppointment(apptId)!.startsAt)).split(',')[0]!; // "jueves"
   const r1 = await startBooking(userId, `hola, ¿me confirmas la cita del ${dia}?`);
-  const ok1 = /Ya tienes tu/.test(r1) && !/busquemos otro espacio/.test(r1);
+  const ok1 = /(?:Ya tienes tu|Tu cita)/.test(r1) && !/busquemos otro espacio/.test(r1) && !/\d\) /.test(r1);
   if (!ok1) fail++;
   console.log(`${ok1 ? '✓' : '✗'} preguntar por la cita nombrando su día no la mueve${ok1 ? '' : `\n   ${r1.replace(/\n/g, ' ⏎ ').slice(0, 130)}`}`);
 
@@ -207,6 +209,13 @@ await flow('"así está bien" la deja como está', ['hola, sobre mi cita', 'así
   console.log(`${ok2 ? '✓' : '✗'} pedir otra hora del mismo día sí la mueve${ok2 ? '' : `\n   ${r2.replace(/\n/g, ' ⏎ ').slice(0, 130)}`}`);
 }
 
+
+await flow('preguntar la hora de su cita no la pone a cambiarla', ['¿a qué hora era mi cita?'], (u, id, r) =>
+  /Te esperamos/.test(r[0]!) && !/cambiarla o cancelarla\?$/.test(r[0]!.trim()) && !/Lo más cercano|\d\) /.test(r[0]!) ? null : r[0]!.slice(0, 90),
+);
+await flow('y si después sí quiere cambiarla, sigue el hilo', ['¿cuándo era mi cita?', 'cámbiala'], (u, id, r) =>
+  /Te esperamos/.test(r[0]!) && /busquemos otro espacio|Lo más cercano|\d\) /.test(r[1]!) ? null : r[1]!.slice(0, 90),
+);
 
 // "El jueves" es el de esta semana: si está lleno, se dice y se ofrece lo más cercano, no el jueves siguiente.
 {
