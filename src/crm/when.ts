@@ -279,6 +279,34 @@ export function parseWhen(text: string, now = new Date()): When | null {
   return finish(out);
 }
 
+// "El evento es este viernes", "la boda es el 15", "es para el sábado": esa fecha es la del evento, no la de la cita.
+const EVENT_RE =
+  /\b(?:el|mi|la|nuestro|nuestra|su)\s+(?:evento|boda|matrimonio|matri|grado|graduacion|fiesta|gala|coctel|celebracion|ceremonia|cumpleanos|quince|aniversario|reunion|cena)\b[^.?!]{0,25}?\b(?:es|sera|va a ser|queda|cae)\b|\bes para (?:el|este|esta|la|manana|pasado manana|hoy)\b/;
+
+/**
+ * Si el mensaje dice cuándo es el evento, los espacios para la cita: desde hoy hasta el día antes del evento (o el
+ * mismo día, si ya no hay antes). null si el mensaje no habla de la fecha de un evento.
+ */
+export function eventDeadline(text: string, now = new Date()): When | null {
+  if (!EVENT_RE.test(fold(text))) return null;
+  const w = parseWhen(text, now);
+  if (!w) return null;
+  const tp = tzParts(now);
+  const today: YMD = { y: tp.y, m: tp.m, d: tp.d };
+  let event: YMD | null = null;
+  if (w.days?.length) event = fromKey(w.days[0]!);
+  else if (w.weekdays?.length === 1) {
+    // "este viernes": el próximo (hoy si hoy es viernes); "el viernes de la próxima semana": el de esa semana.
+    const start = w.from ? fromKey(w.from) : today;
+    const startWd = new Date(Date.UTC(start.y, start.m - 1, start.d)).getUTCDay();
+    event = addDays(start, (w.weekdays[0]! - startWd + 7) % 7);
+  }
+  if (!event) return null;
+  let to = addDays(event, -1);
+  if (keyOf(to) < keyOf(today)) to = today;
+  return finish({ from: keyOf(today), to: keyOf(to), dayLabel: `antes de tu evento (${dayText(event, today)})` });
+}
+
 /**
  * Lo nuevo refina lo que ya se había pedido: "al mediodía" después de "mañana" es mañana al mediodía, y "mejor el
  * jueves" después de "en la tarde" es el jueves en la tarde. Cada parte que el cliente no nombra se conserva.

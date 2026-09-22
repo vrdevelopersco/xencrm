@@ -197,6 +197,16 @@ export function touchesPending(question: string, pending: string[], reference = 
   return null;
 }
 
+// "Te esperamos en la cita", "quedó agendada": el modelo da por hecha una cita. Solo el flujo de citas agenda; si el
+// cliente no tiene ninguna, esa frase es una promesa falsa.
+const BOOKED_RE =
+  /\bte esperamos (?:el|la|en (?:la|tu) cita|manana|pasado|hoy|este|esta|a las)\b|\b(?:tu|la) cita (?:ya )?(?:esta|quedo) (?:agendada|confirmada|lista|reservada)\b|\bquedo (?:agendad|reservad|confirmad)\w*|\bya (?:tienes|estas) agendad\w*|\b(?:agende|reserve|agendamos|reservamos) (?:tu|la) cita\b|\btu cita (?:agendada|confirmada)\b/;
+
+/** ¿La respuesta da por hecha una cita? (Se revisa solo si el cliente no tiene ninguna.) */
+export function claimsBooked(reply: string): boolean {
+  return BOOKED_RE.test(foldText(reply));
+}
+
 /**
  * Quita el saludo y la auto-presentación con que los modelos pequeños abren cada mensaje aunque la
  * conversación ya empezó: "¡Hola, Andrés! 😊", "Hola de nuevo 🌿", "Soy Aiva, del equipo de Casa Verde."

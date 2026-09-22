@@ -24,7 +24,7 @@ import {
 } from './appointments.js';
 import { getContact, updateContact, type Contact } from './contacts.js';
 import { customerLinks } from './calendar.js';
-import { askModelWhen, fold, formatMinutes, mentionsTime, parseWhen, refineWhen, weekdayOfKey } from './when.js';
+import { askModelWhen, eventDeadline, fold, formatMinutes, mentionsTime, parseWhen, refineWhen, weekdayOfKey } from './when.js';
 import { formatPhone, parsePhone, ruleSignals } from './signals.js';
 
 const cfg = business.appointments;
@@ -215,12 +215,17 @@ async function book(c: Contact, userId: string, chosen: string): Promise<string>
   );
 }
 
+/** La fecha del mensaje para la cita. "El evento es el viernes" no es la cita del viernes: es antes del evento. */
+function readWhen(text: string): When | null {
+  return eventDeadline(text) ?? parseWhen(text);
+}
+
 /**
  * Fecha o franja del mensaje: reglas primero; el modelo solo si habla de tiempo y las reglas no entendieron.
  * Lo que entendió el modelo queda en "frases que no entendimos" para enseñárselo a las reglas.
  */
 async function interpret(text: string, opts: { model: boolean; userId?: string }): Promise<When | null> {
-  const byRule = parseWhen(text);
+  const byRule = readWhen(text);
   if (byRule || !opts.model || !mentionsTime(text)) return byRule;
   const byModel = await askModelWhen(text, { userId: opts.userId });
   if (byModel && opts.userId) noteMiss(opts.userId, 'fecha', text, { reading: byModel.label, suggestion: byModel.label });
@@ -276,6 +281,11 @@ async function step(userId: string, text: string): Promise<string | null> {
   const t = fold(expandExpressions(text.trim())); // "la que sea" → lo que el negocio enseñó (p. ej. "la primera")
 
   if (st.step === 'nombre') {
+    const ev = eventDeadline(text);
+    if (ev) {
+      save(c, { ...st, when: ev });
+      return `Anotado: te busco espacio ${ev.label}. ¿A nombre de quién agendo la cita?`;
+    }
     const w = parseWhen(text);
     if (w && (WHEN_START_RE.test(t) || w.timeLabel)) {
       save(c, { ...st, when: w });
@@ -315,7 +325,7 @@ async function step(userId: string, text: string): Promise<string | null> {
     if (FIRST_RE.test(t)) return choose(st.offered[0]);
     if (LAST_RE.test(t)) return choose(st.offered[st.offered.length - 1]);
     if (MIDDLE_RE.test(t) && st.offered.length === 3) return choose(st.offered[1]);
-    const w = parseWhen(text);
+    const w = readWhen(text);
     if (w) {
       // Primero entre lo que ya se ofreció: "al mediodía" con un espacio de 12:00 en la lista es ese espacio.
       const matches = st.offered.filter((iso) => slotMatches(new Date(iso), w));
@@ -343,6 +353,11 @@ async function step(userId: string, text: string): Promise<string | null> {
     // Los siguientes espacios, dentro de lo que ya se había pedido ("mañana", "en la tarde").
     const next = () => offer(c, { when: st.when, after: last ? new Date(new Date(last).getTime() + 60_000) : undefined });
     if (wantsOther && (t.split(/\s+/).length <= 4 || !mentionsTime(text))) return next();
+    // "Sí" sin decir cuál: con un solo horario ofrecido es ese; con varios, se pregunta (nunca se da por agendada).
+    if (YES_RE.test(t) && !CHANGE_RE.test(t) && t.split(/\s+/).length <= 4 && st.offered.length) {
+      if (st.offered.length === 1) return choose(st.offered[0]);
+      return `¿Cuál de estos te sirve? Dime el número:\n${listSlots(st.offered.map((iso) => ({ startsAt: new Date(iso), endsAt: new Date(iso) })))}`;
+    }
     const guessed = await interpret(text, { model: true, userId });
     if (guessed) return offer(c, { when: refineWhen(st.when, guessed) });
     if (wantsOther) return next();
@@ -424,14 +439,19 @@ async function step(userId: string, text: string): Promise<string | null> {
       save(c, null);
       return `Sin un número no podemos confirmarte la cita 😕 Si prefieres, ${business.business.humanContact}`;
     }
-    const w = parseWhen(text);
-    if (w) return offer(c, { when: refineWhen(st.when, w) }); // cambió de idea sobre el horario
+    const w = readWhen(text);
+    if (w) return offer(c, { when: refineWhen(st.when, w) }); // cambió de idea sobre el horario (o dijo cuándo es el evento)
+    // Una respuesta corta que no es un número ("1", "ok"): se vuelve a pedir, sin perder el horario elegido.
+    if (t.split(/\s+/).length <= 3 && !/\?/.test(text)) return `Para confirmarte la cita del ${formatSlot(new Date(chosen))}, ¿a qué número te escribimos? Por ejemplo: 300 123 4567`;
     save(c, null);
     return null;
   }
 
   if (st.step === 'confirmar') {
     const chosen = st.chosen!;
+    // "El evento es el viernes": si el horario elegido ya es antes, se vuelve a pedir el sí; si no, se busca antes.
+    const ev = eventDeadline(text);
+    if (ev) return slotMatches(new Date(chosen), ev) ? confirmPrompt(chosen, 'Perfecto, queda antes de tu evento.') : offer(c, { when: ev });
     const w = parseWhen(text);
     // "sí, pero mejor a las 5": pide otra cosa. "sí, el sábado" con el sábado elegido: confirma.
     if (w) return slotMatches(new Date(chosen), w) ? book(c, userId, chosen) : offer(c, { when: refineWhen(st.when, w) });

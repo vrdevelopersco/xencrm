@@ -7,7 +7,7 @@ const { availableSlots, tzParts, dayKey, listAppointments } = await import('../c
 const { bookingStep } = await import('../crm/booking.js');
 const { parseWhen } = await import('../crm/when.js');
 const { getDb } = await import('../rag/store.js');
-type State = { step: 'nombre' | 'elegir' | 'telefono' | 'confirmar'; offered: string[]; chosen?: string; when?: unknown };
+type State = { step: 'nombre' | 'elegir' | 'telefono' | 'confirmar'; offered: string[]; chosen?: string; when?: { to?: string } };
 
 const usageBefore = (getDb().prepare('SELECT COUNT(*) n FROM llm_usage').get() as { n: number }).n;
 // Primer día con tres espacios seguidos en la mañana (en DUNOR: 10, 11 y 12).
@@ -117,6 +117,36 @@ for (const [text, strict, want] of intents) {
   if (got !== want) fail++;
   console.log(`${got === want ? '✓' : '✗'} intención «${text}» → ${got ?? 'nada'}${got === want ? '' : ` (esperaba ${want ?? 'nada'})`}`);
 }
+// "Sí" sin decir cuál, un número que no llega y la fecha del evento (repetición de la prueba de Arnulfo)
+await run('Si', elegir(), (st, text) => (st?.step === 'elegir' && /Cuál de estos te sirve/.test(text ?? '') ? null : `con 3 horarios debía preguntar cuál; quedó ${st?.step ?? 'sin flujo'}`));
+await run('sí', elegir({ offered: offered.slice(0, 1) }), chose(10));
+await run('1', { step: 'telefono', offered, chosen: offered[2] }, (st, text) =>
+  st?.step === 'telefono' && st.chosen === offered[2] && /a qué número te escribimos/.test(text ?? '') ? null : `debía volver a pedir el número sin perder el horario; quedó ${st?.step ?? 'sin flujo'}`,
+  { phone: false },
+);
+const friday = (() => { for (let d = 1; d <= 7; d++) { const p = tzParts(new Date(Date.now() + d * 86400_000)); if (p.wd === 5) return dayKey(p.y, p.m, p.d); } return ''; })();
+await run('El evento es este viernes😭', { step: 'nombre', offered: [] }, (st, text) =>
+  st?.when?.to && st.when.to < friday && /antes de tu evento/.test(text ?? '') ? null : `la cita debía quedar antes del viernes ${friday}; quedó ${JSON.stringify(st?.when)}`,
+  { name: false },
+);
+await run('el evento es el viernes', { step: 'confirmar', offered, chosen: offered[0] }, (st, text, userId) =>
+  day(offered[0]!) < friday
+    ? st?.step === 'confirmar' && /queda antes de tu evento/.test(text ?? '') && listAppointments({ userId }).length === 0 ? null : 'decir cuándo es el evento no es confirmar: debía volver a pedir el sí'
+    : null,
+);
+{
+  const userId = `test:booking-${++n}`;
+  touchUser(userId, 'cli', 'Prueba');
+  updateContact(userId, { name: 'Arnulfo', phone: '+573000000000' }, { silent: true });
+  const text = await startBooking(userId, 'El evento es este viernes, quiero una cita');
+  const st = getContact(userId)?.data.booking as State | undefined;
+  const days = (st?.offered ?? []).map(day);
+  const ok = days.length > 0 && days.every((d) => d < friday);
+  if (!ok) fail++;
+  console.log(`${ok ? '✓' : '✗'} agendar diciendo cuándo es el evento: espacios antes del viernes${ok ? '' : `
+   ${days.join(', ')} · ${text.replace(/\n/g, ' ⏎ ')}`}`);
+}
+
 /** Contacto con nombre, número y una cita ya agendada en el primer espacio libre. */
 function withAppointment(): { userId: string; apptId: number } {
   const userId = `test:booking-${++n}`;
@@ -155,6 +185,7 @@ await flow('"sobre mi cita" → pregunta → cancelarla', ['hola, sobre mi cita'
 await flow('"así está bien" la deja como está', ['hola, sobre mi cita', 'así está bien, gracias'], (u, id, r) =>
   /te esperamos/.test(r[1]!) && status(id) === 'confirmada' ? null : `quedó ${status(id)}`,
 );
+
 
 const usageAfter = (getDb().prepare('SELECT COUNT(*) n FROM llm_usage').get() as { n: number }).n;
 if (usageAfter !== usageBefore) {

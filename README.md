@@ -169,6 +169,12 @@ número no se agenda y se ofrece el contacto directo. Se configura con `appointm
 Frases como "al medio día", "la de las 12", "la última" o "sisas" escogen de la lista ya ofrecida; las pruebas
 de estas muletillas están en `pnpm test:booking` (sin modelo).
 
+**La fecha del evento no es la de la cita.** "El evento es este viernes", "la boda es el 15" o "es para mañana"
+fijan un plazo: el bot ofrece espacios **antes** del evento, no ese mismo día. Si el cliente dice "sí" sin decir
+cuál horario, se le pregunta cuál (nunca se da por agendada); si en el paso del teléfono responde algo que no es un
+número, se le vuelve a pedir sin perder el horario elegido. Y si una respuesta del modelo da por hecha una cita que
+no existe ("te esperamos en la cita"), se rehace: solo el flujo de citas agenda.
+
 **Cambiar o cancelar por el chat.** Si el cliente tiene una cita próxima y escribe "quiero cancelar mi
 cita", "ya no puedo ir", "¿la puedo pasar para el jueves en la tarde?" o "córremela para mañana", lo
 atiende el flujo de citas (nunca el modelo, que podría decir "listo, cancelada" sin haberlo hecho):

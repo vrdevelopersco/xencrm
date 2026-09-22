@@ -6,7 +6,7 @@ import { openaiModel } from '../llm/openai.js';
 import { appendMessage, clearHistory, getHistory, touchUser } from './memory.js';
 import { classify } from './gate.js';
 import { chooseEngine } from './router.js';
-import { dropRepeatedFacts, isHonest, postProcess, stripRepeatedGreeting, touchesPending, unsupportedAnswer, ungroundedNumbers } from './format.js';
+import { claimsBooked, dropRepeatedFacts, isHonest, postProcess, stripRepeatedGreeting, touchesPending, unsupportedAnswer, ungroundedNumbers } from './format.js';
 import { pendingTopics } from '../profile.js';
 import { openVerification, saysWillVerify } from '../crm/verifications.js';
 import { ERROR_REPLIES, HUMAN_REPLIES, OUT_OF_SCOPE_REPLIES, personaPrompt, pick, type Intent } from './prompts.js';
@@ -215,7 +215,8 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const scope = business.business.description; // "No, somos moda masculina" se apoya en esto
   const hint = related.length ? `Lo más relacionado con este mensaje en la información: ${related.join('; ')}.` : '';
   let raw: string | undefined;
-  let verifyTopic: string | null = null; // lo que no sabía, si la guarda de afirmaciones lo detectó
+  let verifyTopic: string | null = null;
+  let fakeBooking = false; // la respuesta daba por hecha una cita que no existe // lo que no sabía, si la guarda de afirmaciones lo detectó
   let engine: AgentReply['engine'] = 'none';
   let route = `${chosen.reason} → sin motor`;
   for (let i = 0; i < order.length; i++) {
@@ -257,9 +258,17 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
         const retry = await generate(e, { ...input, note: [note, honest].filter(Boolean).join('\n'), fresh: e === 'apple' });
         candidate = unsupportedAnswer(text, retry, grounding, scope) || (pendingHit && !isHonest(retry)) ? business.agent.verifyPhrase : retry;
       }
+      // Una cita que no existe ("te esperamos en la cita"): solo el flujo de citas agenda.
+      if (business.appointments.enabled && claimsBooked(candidate) && !nextAppointmentFor(msg.userId)) {
+        console.warn(`[agent] ${e} dio por hecha una cita que no existe; se rehace: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
+        const noAppt = 'El cliente todavía NO tiene una cita agendada: no digas que la tiene, que quedó agendada ni "te esperamos". Si quiere agendar, ofrécele buscarle un espacio.';
+        const retry = await generate(e, { ...input, note: [input.note, noAppt].filter(Boolean).join('\n') });
+        candidate = claimsBooked(retry) ? 'Todavía no tienes una cita agendada 🙂 ¿Quieres que te busque un espacio?' : retry;
+        fakeBooking = true;
+      }
       raw = candidate;
       engine = e;
-      route = (e === chosen.engine ? chosen.reason : `${chosen.reason} → respaldo ${e}`) + (claim ? ` · sin afirmar «${claim}»` : '');
+      route = (e === chosen.engine ? chosen.reason : `${chosen.reason} → respaldo ${e}`) + (claim ? ` · sin afirmar «${claim}»` : '') + (fakeBooking ? ' · sin dar por hecha una cita' : '');
       break;
     } catch (err) {
       console.warn(`[agent] ${e} falló (${chosen.reason}): ${(err as Error).message}`);

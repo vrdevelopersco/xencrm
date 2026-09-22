@@ -56,6 +56,8 @@ y por qué.
       (`unsupportedAnswer`: `ungroundedClaim` y `ungroundedDenial`). Un "no" pasa si lo negado está en la información
       o si se apoya en el alcance del negocio según su descripción ("somos moda masculina", que también cubre
       "para hombres").
+    - Una respuesta que da por hecha una cita que no existe ("te esperamos en la cita") se rehace: solo el flujo de
+      citas agenda (`claimsBooked` + `nextAppointmentFor`).
     - Lo que el Perfil marca "por confirmar" ("Zapatos") nunca recibe un sí ni un no. Se le avisa al modelo antes de
       generar y se verifica (`touchesPending`, solo con las palabras distintivas del dato).
     - Los enlaces se filtran a los de la información.
@@ -141,6 +143,8 @@ Precedencia:
   noche, última hora), rangos y muletillas colombianas. Lee antes las expresiones del diccionario. Solo si el
   mensaje habla de tiempo y las reglas no lo entienden, el modelo lo traduce a un filtro (`askModelWhen`), y eso
   queda en "frases que no entendimos".
+- **La fecha del evento** (`when.ts › eventDeadline`): "el evento es el viernes" no pide cita el viernes; fija un
+  plazo (desde hoy hasta el día antes). Se usa en todos los pasos del flujo.
 - **Flujo** (`crm/booking.ts`): pasos `nombre`, `elegir`, `telefono`, `confirmar`, `gestionar`, `cancelar` y
   `recordatorio`. El estado vive en `users.data.booking`. Mover una cita agenda primero la nueva y después cancela la
   anterior.

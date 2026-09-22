@@ -1,6 +1,6 @@
 // Pruebas de las guardas contra inventos (sin modelo): pnpm test:guards
 // Cifras que no están en la información y afirmaciones sin respaldo ("¿tienen wifi?" → "Sí, tenemos wifi").
-import { touchesPending, ungroundedClaim, ungroundedDenial, ungroundedNumbers, unsupportedAnswer } from '../agent/format.js';
+import { claimsBooked, touchesPending, ungroundedClaim, ungroundedDenial, ungroundedNumbers, unsupportedAnswer } from '../agent/format.js';
 
 let fail = 0;
 const check = (name: string, got: unknown, want: unknown) => {
@@ -55,6 +55,12 @@ check('lo que no toca nada pendiente', touchesPending('¿cuánto vale el traje a
 check('lo que el negocio hace no activa un pendiente: "diseño a la medida" no es "Tiempos del diseño a la medida"', touchesPending('¿manejan alquiler y diseño a la medida para novios?', ['Tiempos del diseño a la medida', 'Condiciones del alquiler'], 'Alquiler premium de trajes, diseño a la medida y asesoría.'), null);
 check('su palabra distintiva sí: "¿cuánto tiempo toma el diseño a la medida?"', touchesPending('¿cuánto tiempo toma el diseño a la medida?', ['Tiempos del diseño a la medida'], 'Alquiler premium de trajes, diseño a la medida y asesoría.'), 'Tiempos del diseño a la medida');
 check('un "sí" o un "no" sin respaldo: los dos se detectan', [unsupportedAnswer('¿tienen wifi?', 'Sí, tenemos wifi.', info), unsupportedAnswer('¿tienen wifi?', 'No, no tenemos wifi.', info)], ['wifi', 'wifi']);
+
+// Citas que no existen: "te esperamos en la cita" sin cita agendada
+check('"Te esperamos en la cita privada" da por hecha una cita', claimsBooked('Perfecto, Arnulfo. Te esperamos en la cita privada; cualquier ajuste me escribes.'), true);
+check('"tu cita quedó agendada" también', claimsBooked('¡Listo! Tu cita quedó agendada para el miércoles.'), true);
+check('ofrecer agendar no es dar por hecha una cita', claimsBooked('Si quieres, te agendo una cita privada y te esperamos con gusto cuando puedas.'), false);
+check('preguntar cuál horario tampoco', claimsBooked('¿Cuál de estos horarios te sirve para la cita?'), false);
 
 // Cifras (la guarda que ya existía)
 check('cifra inventada', ungroundedNumbers('El alquiler cuesta $350.000', info), ['350000']);
