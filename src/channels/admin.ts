@@ -21,6 +21,7 @@ import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
 import { channelCards, toggleChannel } from './registry.js';
 import { saveMetaCredentials } from './meta-credentials.js';
+import { checkPublicUrl, publicStatus } from './public-check.js';
 import { getProfile, pendingFields, PROFILE_FIELDS, saveProfile } from '../profile.js';
 import { indexProfile } from '../rag/profile-index.js';
 import { exportDictionary, getDictionary, importDictionary } from '../agent/dictionary.js';
@@ -215,6 +216,10 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   // Canales: estado, actividad y qué falta; encender o apagar sin reiniciar.
   app.get('/admin/api/channels', (c) => c.json(channelCards()));
+  // Dirección pública (el túnel): si responde, desde cuándo falla y por qué. "Revisar ahora" desde Canales.
+  app.get('/admin/api/public', (c) => c.json(publicStatus()));
+  app.post('/admin/api/public/check', async (c) => c.json(await checkPublicUrl()));
+
   // Credenciales de WhatsApp oficial: se verifican con Meta, van a .env y se aplican sin reiniciar.
   app.post('/admin/api/channels/meta/credentials', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -298,6 +303,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       upcoming: listAppointments({ from: endOfDay, to: endOfDay + 3 * 86400_000, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)), remindAt: reminderTime(a.startsAt) })),
       // Lo que el bot no supo y prometió verificar: el cliente espera la respuesta del equipo.
       verifications: listVerifications('pendiente').map((v) => ({ ...v, window: replyWindow(v.userId) })),
+      public: publicStatus(),
     });
   });
 

@@ -18,6 +18,7 @@ import { mountAdmin } from './admin.js';
 import { mountCalendar } from './calendar.js';
 import { channelOn } from './switches.js';
 import { metaConfigured, mountMeta } from './meta.js';
+import { INSTANCE, startPublicCheck } from './public-check.js';
 import { createMcpServer } from '../mcp/server.js';
 
 const app = new Hono<{ Bindings: HttpBindings }>();
@@ -49,7 +50,7 @@ function clientIp(c: { req: { header: (h: string) => string | undefined }; env: 
 
 // ---------- Rutas ----------
 app.get('/health', (c) =>
-  c.json({ ok: true, agent: business.agent.name, store: business.business.name, model: env.chatModel, mode: env.llmEngine, engines: engineStatus(), docs: countDocs() }),
+  c.json({ ok: true, instance: INSTANCE, agent: business.agent.name, store: business.business.name, model: env.chatModel, mode: env.llmEngine, engines: engineStatus(), docs: countDocs() }),
 );
 
 app.post('/api/chat', async (c) => {
@@ -163,6 +164,7 @@ export function startWeb() {
       if (channelOn('mcp')) console.log(`[web] MCP remoto: ${base}/mcp`);
       console.log(`[web] tablero: ${base}/admin`);
       if (metaConfigured()) console.log(`[meta] webhook de WhatsApp Cloud API: ${base}/webhooks/meta`);
+      startPublicCheck();
       resolve();
     });
   });

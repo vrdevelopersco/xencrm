@@ -9,7 +9,7 @@ export interface Notification {
   id: number;
   ts: number;
   userId: string;
-  kind: 'handoff' | 'hot' | 'appointment' | 'new' | 'fail' | 'engine' | 'verify';
+  kind: 'handoff' | 'hot' | 'appointment' | 'new' | 'fail' | 'engine' | 'verify' | 'public';
   title: string;
   body: string;
 }
@@ -63,6 +63,9 @@ export function startNotifications() {
       if (v?.status === 'pendiente' && (v.createdAt ?? 0) > Date.now() - 60_000)
         push('verify', ev.userId, `${nameOf(ev.userId)} preguntó algo que ${business.agent.name} no sabe`, `«${String(v.question ?? '').slice(0, 120)}». Respóndele desde Hoy › Por verificar.`);
     }
+    if (ev.type === 'public_down')
+      push('public', 'system', 'La dirección pública no responde', `${String(p.error ?? '')}. Mientras tanto no funcionan el chat del sitio, WhatsApp oficial ni el tablero desde el celular. Revisa el túnel (Canales).`);
+    if (ev.type === 'public_up') push('public', 'system', 'La dirección pública volvió a responder', String(p.url ?? ''));
     if (ev.type === 'bot_failed') push('fail', ev.userId, `Aiva no pudo responder a ${nameOf(ev.userId)}`, `Motivo: ${String(p.reason ?? 'error')}. El cliente recibió una disculpa; conviene responder a mano.`);
     if (ev.type === 'engine_down') push('engine', 'system', `Motor ${String(p.engine)} fuera de servicio`, `${String(p.reason ?? '')}. Las respuestas siguen con el otro motor si está disponible.`);
     if (ev.type === 'message' && p.author === 'customer') {

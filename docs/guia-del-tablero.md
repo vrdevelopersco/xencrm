@@ -120,6 +120,10 @@ abono, precios, políticas y datos propios (tallas, tiempos, lo que venden o no)
 Por dónde llegan los clientes. Cada canal dice si está conectado, cuántos mensajes llegaron en la semana y qué
 falta. Encender o apagar un canal aplica al momento.
 
+Arriba está la **Dirección pública**, la que usan el chat del sitio, WhatsApp oficial y el tablero desde el
+celular. aiva la revisa cada 5 minutos. Si deja de responder, avisa en la campana y en Hoy, y dice qué hacer;
+**Revisar ahora** la prueba en el momento.
+
 - **Chat del sitio web**: el código para pegar en el sitio. Lleva el color y el logo del negocio.
 - **WhatsApp (código QR)**: se vincula escaneando el código desde WhatsApp › Dispositivos vinculados. Sirve para
   empezar; no es la vía oficial de Meta y puede bloquear el número.

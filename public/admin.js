@@ -290,7 +290,10 @@
         { t: 'Sin leer, Aiva ya respondió', n: t.unread.length, html: t.unread.map(function (c) { return contactRow(c); }).join(''), empty: 'Todo leído.' },
         { t: 'Próximas citas (3 días)', n: t.upcoming.length, html: t.upcoming.map(function (a) { return '<div class="appt"><span class="grow stack"><span class="small muted">' + esc(a.label) + '</span><b>' + esc(a.contactName || short(a.userId)) + '</b>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Nada agendado en los próximos días.' },
       ];
-      $('today').innerHTML = helpBanner() + sections.map(function (s) { return '<div class="panel"><h3>' + esc(s.t) + '<span class="chip">' + s.n + '</span></h3>' + (s.html || '<div class="ok">' + esc(s.empty) + '</div>') + '</div>'; }).join('');
+      var down = t.public && (t.public.state === 'caida' || t.public.state === 'otro_servidor')
+        ? '<div class="panel help-first" role="alert"><span class="grow"><b>La dirección pública no responde.</b> <span class="small">' + esc(publicDetail(t.public)) + '</span></span><button class="btn primary" data-go="channels">Ver en Canales</button></div>'
+        : '';
+      $('today').innerHTML = down + helpBanner() + sections.map(function (s) { return '<div class="panel"><h3>' + esc(s.t) + '<span class="chip">' + s.n + '</span></h3>' + (s.html || '<div class="ok">' + esc(s.empty) + '</div>') + '</div>'; }).join('');
       $('today').querySelectorAll('.row').forEach(function (r) { r.onclick = function () { go('inbox'); openContact(r.getAttribute('data-id')); }; });
       $('today').querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-open')); }; });
       $('today').querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
@@ -838,6 +841,28 @@
   function loadChannels() {
     clearTimeout(chTimer);
     api('/channels').then(renderChannels);
+    api('/public').then(renderPublic);
+  }
+  // Dirección pública (el túnel): si se cae, dejan de funcionar el chat del sitio, WhatsApp oficial y el tablero en el celular.
+  var PUB = { ok: ['En línea', 'v-si'], revisando: ['Revisando…', 'v-no'], fallando: ['Revisando', 'v-posible'], caida: ['No responde', 'v-perdido'], otro_servidor: ['Apunta a otro servidor', 'v-perdido'], sin_url: ['Sin dirección pública', 'v-no'] };
+  function publicDetail(p) {
+    if (p.state === 'ok') return 'Responde · revisada hace ' + rel(p.checkedAt) + '.';
+    if (p.state === 'fallando') return 'La última revisión falló: ' + p.error + '. Si sigue fallando, se avisa en unos minutos.';
+    if (p.state === 'caida') return 'No responde desde hace ' + rel(p.failingSince) + ': ' + p.error + '. Mientras tanto no funcionan el chat del sitio, WhatsApp oficial, el calendario en Google u Outlook ni el tablero desde el celular. Reinicia el túnel; si es uno rápido (trycloudflare.com), su dirección cambia: actualiza PUBLIC_URL y el código del chat en el sitio.';
+    if (p.state === 'otro_servidor') return 'La dirección responde, pero no desde este servidor. Revisa a dónde apunta el túnel.';
+    if (p.state === 'sin_url') return 'Sin PUBLIC_URL, el chat del sitio, WhatsApp oficial y el calendario en Google u Outlook solo funcionan en este computador.';
+    return 'Se revisa unos segundos después de arrancar y luego cada 5 minutos.';
+  }
+  function renderPublic(p) {
+    var st = PUB[p.state] || [p.state, 'v-no'];
+    $('public-status').innerHTML = '<div class="ch-head"><h2>Dirección pública</h2><span class="chip ' + st[1] + '">' + esc(st[0]) + '</span></div>' +
+      (p.url ? '<div class="small"><code>' + esc(p.url) + '</code></div>' : '') +
+      '<div class="small">' + esc(publicDetail(p)) + '</div>' +
+      (p.url ? '<div class="feed-row"><button class="btn" id="public-check">Revisar ahora</button></div>' : '');
+    if ($('public-check')) $('public-check').onclick = function () {
+      this.disabled = true; this.textContent = 'Revisando…';
+      api('/public/check', { method: 'POST' }).then(renderPublic);
+    };
   }
   function channelStats(ch) {
     if (ch.state === 'no_disponible') return '';
@@ -976,6 +1001,7 @@
       state.notifs.unshift(n); if (state.notifs.length > 100) state.notifs.pop();
       renderNotifs();
       if (n.kind === 'verify') { beep(); toast(n.title, function () { go('today'); }); }
+      else if (n.kind === 'public') { beep(); toast(n.title, function () { go('channels'); }); }
       else if (n.kind === 'handoff' || n.kind === 'hot' || n.kind === 'fail' || n.kind === 'engine') { beep(); toast(n.title, function () { if (n.userId !== 'system') { go('inbox'); openContact(n.userId); } else { go('agent'); } }); }
       if (state.view === 'today') loadToday();
     });

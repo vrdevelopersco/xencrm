@@ -308,7 +308,10 @@ el adaptador se construye cuando haya credenciales de prueba de Meta.
 - **Widget**: `<script src="https://TU-DOMINIO/widget.js" async></script>`. Carga el historial,
   muestra las respuestas del equipo en vivo y avisa cuando atiende una persona.
 - **Túnel** para el widget, el tablero y el webhook: `cloudflared tunnel --url http://localhost:3000`
-  (pon la URL en `PUBLIC_URL` y restringe `ALLOWED_ORIGINS`).
+  (pon la URL en `PUBLIC_URL` y restringe `ALLOWED_ORIGINS`). aiva se llama a sí misma por esa dirección cada
+  5 minutos, comparando un código único del proceso. Si falla 3 veces seguidas, avisa en la campana, en Hoy y en
+  **Canales › Dirección pública** (con "Revisar ahora"), y avisa otra vez cuando vuelve. Una falla suelta, como
+  justo después de crear el túnel, no da alarma. Pruebas: `pnpm test:public`.
 
 ## Pruebas
 
