@@ -10,9 +10,9 @@ un aviso que lleva al tutorial. Esta guía es la referencia completa, para entre
 ## Cómo entrar
 
 Abre la dirección del tablero (termina en `/admin`) desde el computador o el celular y escribe el token que te
-dieron. En el celular el menú queda abajo; desliza hacia los lados para ver Perfil, Agente, Canales,
-Lo que sabe y Ayuda.
-**Salir** está al pie del menú.
+dieron. En el celular el menú queda abajo, con Hoy, Chats, Calendario, Prospectos y **Más**. En
+Más están Análisis, Perfil, Agente, Canales, Lo que sabe, Ayuda, el tema claro u oscuro, el sonido y **Salir**. En el
+computador todo está en la barra lateral, con Salir al pie.
 
 ## La idea
 

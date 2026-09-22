@@ -260,7 +260,8 @@ Para no gastar tokens de más (`src/crm/signals.ts`):
 ## Tablero
 
 `http://localhost:3000/admin` con el token `ADMIN_TOKEN` (si está vacío, el servidor imprime uno al arrancar).
-Todo se actualiza en vivo y funciona en el celular.
+Todo se actualiza en vivo y funciona en el celular: abajo quedan Hoy, Chats, Calendario, Prospectos y **Más**
+(el resto de secciones, el tema, el sonido y Salir).
 
 - **Hoy**: por verificar, esperan respuesta, pidieron una persona, recordar a mano, citas y calientes sin
   seguimiento.

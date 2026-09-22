@@ -427,6 +427,26 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .ch-cred form{display:flex;flex-direction:column;gap:6px}
 .ch-cred input[type=text],.ch-cred input[type=password]{min-height:44px}
 .cred-row{display:flex;gap:6px;align-items:center}.cred-row input{flex:1;min-width:0}.cred-row .btn{min-height:44px}
+/* Celular: barra de abajo con lo del día y «Más» para el resto (Análisis y Configuración). */
+.nav .nav-more{display:none}
+.more-sheet[hidden]{display:none}
+@media(max-width:900px){
+  .nav .nav-2,.side .foot{display:none}
+  .nav .nav-more{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;min-width:56px;font-size:10px;border:0;background:none;color:var(--text);cursor:pointer;border-radius:999px}
+  .nav .nav-more.active{background:var(--glass-strong);box-shadow:var(--rim),0 4px 14px rgba(17,24,39,.08);color:var(--brand);font-weight:600}
+  .nav .nav-more.active .ic{color:var(--brand)}
+  .more-sheet{position:fixed;left:10px;right:10px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:45;background:var(--glass-overlay);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);border:1px solid var(--glass-border);border-radius:20px;box-shadow:var(--rim),0 16px 48px rgba(0,0,0,.24);padding:12px;display:flex;flex-direction:column;gap:10px}
+  .more-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .more-grid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:72px;border-radius:14px;border:1px solid var(--glass-border);background:var(--glass-strong);color:var(--text);font:inherit;font-size:13px;box-shadow:var(--bevel-hi),var(--raise);cursor:pointer}
+  .more-grid button .ic{width:22px;height:22px;flex-basis:22px}
+  .more-grid button.active{color:var(--brand);font-weight:600;border-color:color-mix(in srgb,var(--brand) 45%,transparent)}
+  .more-grid button.active .ic{color:var(--brand)}
+  .more-grid button:focus-visible,.more-foot .btn:focus-visible{outline:none;box-shadow:var(--ring)}
+  .more-foot{display:flex;flex-wrap:wrap;gap:6px}
+  .more-foot .btn{flex:1 1 auto;min-height:44px}
+}
+@media(max-width:420px){.nav button,.nav .nav-more{padding:6px 4px;min-width:50px}}
+
 /* Ayuda: tutorial rápido (una secuencia real, por eso numerada) y preguntas frecuentes. */
 .help-step{display:grid;grid-template-columns:32px 1fr;gap:4px 12px;padding:12px 0;border-top:1px solid var(--line)}
 .help-step:first-of-type{border-top:0}
@@ -479,13 +499,14 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       <button data-view="calendar"><i class="ic" data-ic="calendar"></i>Calendario <span class="badge" id="badge-cal"></span></button>
       <div class="group">Ventas</div>
       <button data-view="pipeline"><i class="ic" data-ic="columns"></i>Prospectos</button>
-      <button data-view="analysis"><i class="ic" data-ic="chart"></i>Análisis</button>
+      <button data-view="analysis" class="nav-2"><i class="ic" data-ic="chart"></i>Análisis</button>
       <div class="group">Configuración</div>
-      <button data-view="profile"><i class="ic" data-ic="store"></i>Perfil</button>
-      <button data-view="agent"><i class="ic" data-ic="bot"></i>Agente</button>
-      <button data-view="channels"><i class="ic" data-ic="plug"></i>Canales</button>
-      <button data-view="knowledge"><i class="ic" data-ic="book"></i>Lo que sabe</button>
-      <button data-view="help"><i class="ic" data-ic="help"></i>Ayuda</button>
+      <button data-view="profile" class="nav-2"><i class="ic" data-ic="store"></i>Perfil</button>
+      <button data-view="agent" class="nav-2"><i class="ic" data-ic="bot"></i>Agente</button>
+      <button data-view="channels" class="nav-2"><i class="ic" data-ic="plug"></i>Canales</button>
+      <button data-view="knowledge" class="nav-2"><i class="ic" data-ic="book"></i>Lo que sabe</button>
+      <button data-view="help" class="nav-2"><i class="ic" data-ic="help"></i>Ayuda</button>
+      <button class="nav-more" id="nav-more" aria-expanded="false" aria-controls="more-sheet"><i class="ic" data-ic="grid"></i>Más</button>
     </nav>
     <div class="spacer"></div>
     <div class="foot">
@@ -498,6 +519,15 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       <div class="row small"><span id="conn">● conectando…</span></div>
     </div>
   </aside>
+  <!-- Celular: lo que no cabe en la barra de abajo -->
+  <div class="more-sheet" id="more-sheet" hidden>
+    <div class="more-grid" id="more-grid" role="group" aria-label="Más secciones"></div>
+    <div class="more-foot">
+      <button class="btn" data-proxy="theme-btn">Tema claro u oscuro</button>
+      <button class="btn" data-proxy="sound-btn">Sonido de avisos</button>
+      <button class="btn" data-proxy="logout-btn">Salir</button>
+    </div>
+  </div>
   <div class="notif" id="notif"><h4>Notificaciones <button class="btn sm" id="notif-clear">Marcar leídas</button></h4><div id="notif-list"><div class="empty">Nada todavía.</div></div></div>
   <main class="main">
     <!-- Hoy -->
