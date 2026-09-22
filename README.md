@@ -268,8 +268,8 @@ Para no gastar tokens de más (`src/crm/signals.ts`):
 Todo se actualiza en vivo y funciona en el celular: abajo quedan Hoy, Chats, Calendario, Prospectos y **Más**
 (el resto de secciones, el tema, el sonido y Salir).
 
-- **Hoy**: por verificar, esperan respuesta, pidieron una persona, recordar a mano, citas y calientes sin
-  seguimiento.
+- **Hoy**: por verificar, esperan respuesta, pidieron una persona, cómo les fue en las citas que ya pasaron
+  (vino, no vino, compró: el dato para calibrar el puntaje), recordar a mano, citas y calientes sin seguimiento.
 - **Conversaciones**: chat y ficha. "Responde: Aiva | Tú" cambia quién lleva la conversación; escribir a mano toma
   el control.
 - **Calendario**.

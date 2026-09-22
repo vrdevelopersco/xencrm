@@ -304,6 +304,10 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const withUpcoming = new Set(listAppointments({ from: now, status: 'confirmada', limit: 1000 }).map((a) => a.userId));
     return c.json({
       appointments: listAppointments({ from: startOfDay.getTime(), to: endOfDay, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt), { withDay: false }), remindAt: reminderTime(a.startsAt) })),
+      // Citas que ya pasaron y siguen "confirmadas": su resultado (vino, no vino, compró) es lo que calibra el puntaje.
+      past: listAppointments({ from: now - 14 * 86400_000, to: now, status: 'confirmada' })
+        .filter((a) => a.endsAt < now)
+        .map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })),
       // Recordatorios que no se pudieron enviar solos: el texto y el número para hacerlo desde el teléfono.
       remind: remindersBoard(now).filter((a) => a.reminder?.status === 'a_mano'),
       // Esperan respuesta de una persona: la última palabra la tiene el cliente (bot en pausa o bot que no respondió).

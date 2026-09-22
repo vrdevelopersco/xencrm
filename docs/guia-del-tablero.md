@@ -38,6 +38,9 @@ Lo que hay que atender, ordenado por lo que cuesta dejarlo esperando. Cada fila 
   información», el asistente lo aprende y la próxima vez responde solo. Si no aplica, **Descartar**.
 - **Esperan tu respuesta**: el cliente dijo lo último y nadie le ha contestado.
 - **Pidieron una persona**: el asistente se calló y le avisó al cliente que alguien del equipo le escribe.
+- **¿Cómo les fue?**: citas que ya pasaron y siguen sin resultado. Toca **Vino**, **No vino** o **Compró** (esta
+  última además pasa al cliente a Vendido). Con esos resultados, más adelante se ajusta el puntaje de los
+  prospectos a lo que de verdad pasa en el negocio.
 - **Recordar a mano**: citas de mañana cuyo recordatorio no pudo salir solo. Muestra el porqué (llegó por el chat del
   sitio, la conversación la lleva una persona, WhatsApp no está conectado…) y el texto listo. **Abrir WhatsApp** abre
   el chat con el mensaje escrito; después dale **Ya se lo recordé**.
