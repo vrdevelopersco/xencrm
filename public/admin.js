@@ -433,7 +433,9 @@
   }
 
   // ---------- calendario (vista semanal tipo agenda) ----------
-  var cal = { mode: 'week', start: startOfWeek(new Date()), cfg: null, appts: [], busy: [] };
+  // En el celular la semana no cabe (siete columnas): se abre en Agenda, que es una lista. Lo que elijas se recuerda.
+  var onPhone = function () { return window.matchMedia('(max-width: 900px)').matches; };
+  var cal = { mode: helpGet('aiva.cal.mode') || (onPhone() ? 'agenda' : 'week'), start: startOfWeek(new Date()), cfg: null, appts: [], busy: [] };
   var HOUR_PX = 56;
   function startOfWeek(d) { var x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
   function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
@@ -461,6 +463,8 @@
     $('cal-label').textContent = fmt(cal.start) + ' – ' + fmt(end) + ' ' + end.getFullYear();
     $('cal-grid').hidden = cal.mode !== 'week'; $('cal-list').hidden = cal.mode !== 'agenda';
     $('cal-week-btn').classList.toggle('on', cal.mode === 'week'); $('cal-agenda-btn').classList.toggle('on', cal.mode === 'agenda');
+    $('cal-seg').setAttribute('data-on', cal.mode === 'agenda' ? 'right' : 'left'); // la pastilla sigue al modo
+    $('cal-week-btn').setAttribute('aria-pressed', String(cal.mode === 'week')); $('cal-agenda-btn').setAttribute('aria-pressed', String(cal.mode === 'agenda'));
     if (cal.mode === 'week') renderWeek(); else renderAgenda();
   }
   function renderWeek() {
@@ -553,8 +557,8 @@
     $('cal-list').querySelectorAll('[data-act]').forEach(function (b) { b.onclick = function () { api('/appointments/' + b.getAttribute('data-id'), { method: 'PATCH', body: { status: b.getAttribute('data-act') } }).then(loadCalendar); }; });
     $('cal-list').querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-open')); }; });
   }
-  $('cal-week-btn').onclick = function () { cal.mode = 'week'; renderCalendar(); };
-  $('cal-agenda-btn').onclick = function () { cal.mode = 'agenda'; renderCalendar(); };
+  $('cal-week-btn').onclick = function () { cal.mode = 'week'; helpSet('aiva.cal.mode', 'week'); renderCalendar(); };
+  $('cal-agenda-btn').onclick = function () { cal.mode = 'agenda'; helpSet('aiva.cal.mode', 'agenda'); renderCalendar(); };
   $('cal-prev').onclick = function () { cal.start = addDays(cal.start, -7); loadCalendar(); };
   $('cal-next').onclick = function () { cal.start = addDays(cal.start, 7); loadCalendar(); };
   $('cal-today').onclick = function () { cal.start = startOfWeek(new Date()); loadCalendar(); };

@@ -276,7 +276,22 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 .bar.stale i{background:repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)}
 .bar-legend{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px}
 .card .bar{height:5px;margin-top:6px}
-@media(max-width:900px){.cal{grid-template-columns:1fr}.cal-head,.cal-body{grid-template-columns:44px repeat(7,minmax(74px,1fr))}}
+@media(max-width:900px){
+  .cal{grid-template-columns:1fr}.cal-head,.cal-body{grid-template-columns:44px repeat(7,minmax(74px,1fr))}
+  /* Barra del calendario: el rango de fechas en su propia línea y el selector sin recortarse. */
+  .topbar{flex-wrap:wrap;row-gap:8px;padding:10px 12px}
+  .topbar h1{font-size:19px}
+  #view-calendar .seg button{min-width:0;padding:6px 12px}
+  #view-calendar .topbar .grow{display:none}
+  #cal-label{order:9;flex-basis:100%;margin:0}
+  /* Filas de citas: hora y nombre arriba, botones abajo (seis elementos en una línea pedían 455 px). */
+  .appt{flex-wrap:wrap}
+  .appt .t{min-width:auto}
+  .appt .grow{flex:1 1 60%}
+  /* Agendar cita: etiqueta arriba, campo debajo, sin salirse de la pantalla. */
+  .cal .panel label{display:flex;flex-direction:column;gap:4px}
+  .cal .panel input,.cal .panel select{width:100%;min-height:44px}
+}
 
 /* ===== Material, capa 3: profundidad, tacto y grano =====
    Las piezas tienen grosor y se hunden al presionarlas; el grano es el del vidrio y la cartulina.
@@ -335,6 +350,7 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 .seg::before{content:"";position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:999px;
   background:linear-gradient(180deg,var(--brand),var(--brand-deep));box-shadow:var(--bevel-hi),var(--raise);
   transition:transform var(--t-slide),background var(--t-slide)}
+.seg[data-on=right]::before{transform:translateX(100%)}
 .seg[data-on=human]::before{transform:translateX(100%);background:linear-gradient(180deg,var(--human-accent),var(--human-deep));box-shadow:inset 0 0 0 1px var(--human-edge),var(--bevel-hi),var(--raise)}
 .seg button,.seg button.on{position:relative;z-index:1;min-width:64px;min-height:36px;padding:6px 14px;background:transparent;box-shadow:none;border-radius:999px;transition:color var(--t-slide)}
 .seg button{color:var(--text);font-weight:500}
@@ -393,6 +409,8 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 /* Cambiar de etapa sin arrastrar (teclado, lector de pantalla y celular, donde arrastrar no funciona con el dedo). */
 .card .card-move{margin-top:8px;min-height:32px;padding:2px 8px;font-size:12px;border-radius:10px;cursor:pointer}
 @media (pointer:coarse){.card .card-move{min-height:44px;font-size:14px}}
+/* Con el dedo, los botones pequeños (citas, avisos) cumplen el mínimo táctil. */
+@media (pointer:coarse){.btn.sm{min-height:44px;min-width:44px}}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .card:active{cursor:grabbing}
 .card:focus-within{box-shadow:var(--bevel-hi),var(--raise-hover)}
@@ -591,7 +609,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
     <section class="view" id="view-calendar">
       <div class="topbar">
         <h1>Calendario</h1>
-        <div class="seg"><button class="on" id="cal-week-btn">Semana</button><button id="cal-agenda-btn">Agenda</button></div>
+        <div class="seg" id="cal-seg" data-on="left" role="group" aria-label="Vista del calendario"><button class="on" id="cal-week-btn" aria-pressed="true">Semana</button><button id="cal-agenda-btn" aria-pressed="false">Agenda</button></div>
         <span class="grow"></span>
         <button class="btn sm" id="cal-prev" aria-label="Semana anterior">←</button>
         <button class="btn sm" id="cal-today">Hoy</button>

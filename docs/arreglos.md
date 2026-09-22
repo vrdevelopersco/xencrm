@@ -8,6 +8,20 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### Calendario en el celular · `6929172`
+La semana (siete columnas) medía 562 px en una pantalla de 390: tocaba desplazarse en horizontal, el selector
+«Semana | Agenda» salía cortado, el rango de fechas ocupaba cuatro líneas y el formulario "Agendar cita" se salía.
+Además, la fila de cada cita pedía 455 px porque sus seis elementos iban en una sola línea.
+- En el celular el calendario abre en **Agenda** (una lista); lo que elijas se recuerda en ese navegador.
+- La barra deja el rango en su propia línea, sin recortar el selector.
+- Las filas de citas se parten en dos líneas y el formulario queda apilado, sin salirse.
+- La pastilla del selector seguía marcando "Semana" aunque el modo fuera Agenda (solo sabía moverse en el switch de
+  Conversaciones); ahora sigue al modo, con `aria-pressed`.
+- Los botones pequeños (citas, avisos) pasan a 44 px con el dedo.
+
+Comprobado en el servidor aislado a 390 px: nada se sale de la pantalla, y en escritorio la barra sigue en una
+línea.
+
 ### Citas: fecha del evento, "sí" sin decir cuál y citas inventadas · `7e31cfd`
 Repitiendo contra el código de hoy la conversación real del 21 (Arnulfo, por el chat del sitio) aparecieron tres fallas:
 - "El evento es este viernes" arrancaba el agendamiento **el viernes**, el mismo día del evento. Ahora es un plazo:

@@ -80,7 +80,8 @@ Si llegaron mensajes nuevos después del último análisis, la ficha lo dice y s
 ## Calendario
 
 La semana con las citas. Toca una para ver el detalle o cambiar su estado (completada, no asistió, cancelada), o
-agenda una a mano. Si el dueño conectó su calendario personal, sus eventos salen como bloques *Ocupado* y el
+agenda una a mano. En el celular abre en **Agenda**, la lista de la semana; con **Semana** ves la cuadrícula (se
+desliza en horizontal). Lo que elijas se recuerda. Si el dueño conectó su calendario personal, sus eventos salen como bloques *Ocupado* y el
 asistente no ofrece esas horas; desde aquí sí puedes agendar encima si hace falta.
 
 ## Prospectos
