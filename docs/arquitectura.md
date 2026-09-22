@@ -76,7 +76,7 @@ y por qué.
 | `src/agent/` | `agent.ts` (el recorrido), `gate.ts` (clasificador), `router.ts` (motor por turno), `prompts.ts` (persona y reglas), `format.ts` (guardas y post-proceso), `dictionary.ts` (diccionario y expresiones), `teach.ts` (enseñar una frase), `memory.ts` (historial) |
 | `src/llm/` | `engines.ts` (roles, respaldo y operaciones), `openai.ts` (modelo por rol, razonamiento, caché), `ollama.ts`, `apple.ts` + `sidecar/`, `usage.ts` (consumo y costos) |
 | `src/rag/` | `store.ts` (SQLite: tablas, vectores, FTS5, migraciones), `retriever.ts` (búsqueda y ficha completa), `ingest.ts` (catálogo, markdown, sitio, Shopify, perfil), `profile-index.ts` |
-| `src/crm/` | `contacts.ts`, `merge.ts` (fichas de la misma persona en dos canales), `analyzer.ts` (análisis y puntaje), `score.ts` (el puntaje se enfría solo), `followup.ts` (posponer seguimiento), `export.ts` (CSV), `signals.ts` (datos exactos por código), `recap.ts`, `appointments.ts` (agenda y zona horaria), `when.ts` (fechas y franjas), `booking.ts` (flujo de citas), `reminders.ts` (recordatorio del día antes), `calendar.ts` + `busy.ts` (iCalendar), `verifications.ts`, `misses.ts` (frases que no entendimos), `outbox.ts` (enviar al cliente, ventana de 24 h, plantillas), `notifications.ts`, `events.ts` (bus en memoria), `settings.ts` |
+| `src/crm/` | `contacts.ts`, `merge.ts` (fichas de la misma persona en dos canales), `analyzer.ts` (análisis y puntaje), `score.ts` (el puntaje se enfría solo), `cross.ts` (la misma persona por dos canales), `followup.ts` (posponer seguimiento), `export.ts` (CSV), `signals.ts` (datos exactos por código), `recap.ts`, `appointments.ts` (agenda y zona horaria), `when.ts` (fechas y franjas), `booking.ts` (flujo de citas), `reminders.ts` (recordatorio del día antes), `calendar.ts` + `busy.ts` (iCalendar), `verifications.ts`, `misses.ts` (frases que no entendimos), `outbox.ts` (enviar al cliente, ventana de 24 h, plantillas), `notifications.ts`, `events.ts` (bus en memoria), `settings.ts` |
 | `src/channels/` | `web.ts` (servidor, widget, página demo), `admin.ts` (API del tablero y SSE), `whatsapp.ts` (Baileys), `meta.ts` (Cloud API) + `meta-credentials.ts`, `registry.ts` + `switches.ts` (Canales), `calendar.ts` (rutas públicas), `public-check.ts` (¿responde la dirección pública?) |
 | `src/` | `config.ts` (esquemas y variables), `profile.ts` (perfil del negocio), `brand.ts` (color, contraste y logo), `envfile.ts` (escribir `.env`), `index.ts` (arranque), `onboard.ts`, `cli.ts`, `seed.ts` |
 | `src/eval/` | pruebas sin modelo, escenarios, repasos y consumo |
@@ -92,6 +92,14 @@ Una base SQLite por cliente (`DB_PATH`, WAL):
 | `users` | contactos: canal, nombre, teléfono, etapa (y si se fijó a mano), puntaje y factores, ánimo, modo humano y quién lo tiene, datos capturados, etiquetas, notas, resumen, archivada |
 | `messages` | la conversación, con autor (`customer`, `bot`, `human`) y quién del equipo escribió |
 | `analyses` | cada análisis: motor, ánimo, señales, puntaje y factores (el costo está en `llm_usage`) |
+
+**La misma persona por dos canales.** Empieza por el chat del sitio y en la tarde escribe por WhatsApp: para ella
+es la misma gestión. `crm/merge.ts › siblingIds` encuentra las otras fichas suyas por el número (con caché de un
+minuto), `agent/memory.ts › getHistory` mete esa conversación en el contexto —así el asistente llega sabiendo de
+qué hablaban— y `crm/cross.ts` lo dice una sola vez ("Vi que veníamos hablando por el chat del sitio; ya me puse al
+tanto") y avisa al equipo en la campana. Las citas se leen igual entre fichas (`nextAppointmentForPerson`). Lo que
+**no** pasa solo es unir las fichas: esa decisión es de una persona, desde el tablero, porque cada ficha es la
+historia de su canal.
 
 **Fechas sueltas.** Un día de la semana sin más ("el jueves") es el de la semana en curso, el que viene: se
 entiende que se está hablando de esta semana salvo que el cliente diga otra cosa ("el otro jueves", "el jueves de
@@ -212,6 +220,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:followup` | posponer el seguimiento de un caliente y su regreso a la lista | no |
 | `pnpm test:export` | contactos y citas en CSV: columnas, comillas y archivados fuera | no |
 | `pnpm test:score` | pesos del puntaje y el descuento por silencio al leer la ficha | no |
+| `pnpm test:cross` | la misma persona por dos canales: contexto, aviso y fichas separadas | no |
 | `pnpm test:backup` | respaldo: la copia trae los datos, permisos 600, conserva las últimas N | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |

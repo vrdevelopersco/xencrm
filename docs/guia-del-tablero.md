@@ -26,7 +26,8 @@ falta una persona:
 
 Todo se actualiza en vivo: no hace falta recargar. La campana avisa lo importante (conversación nueva, alguien pidió
 una persona, un prospecto se puso caliente, una cita agendada, movida o cancelada, alguien que no puede ir, una
-pregunta que el asistente no supo responder, o un mensaje que el asistente no pudo responder por una falla).
+pregunta que el asistente no supo responder, un cliente que apareció por otro canal, o un mensaje que el asistente
+no pudo responder por una falla).
 
 ## Hoy
 
@@ -100,6 +101,9 @@ cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo nú
   WhatsApp, no le ofrece horarios otra vez ni la deja con dos citas. La cita se queda en la ficha donde se agendó
   (ahí está su historia), y si la cambia o la cancela desde el otro canal queda anotado en las dos líneas de
   tiempo.
+  Y el asistente **llega sabiendo**: cuando alguien que ya venía hablando por un canal escribe por otro, abre con
+  *"Vi que veníamos hablando por el chat del sitio; ya me puse al tanto"* y sigue la conversación donde iba, porque
+  lee las dos. La campana te avisa para que puedas unirlas.
 - **¿Es la misma persona?**: si otra ficha tiene el mismo número (por ejemplo, escribió por el chat del sitio y
   después por WhatsApp), aparece arriba con **Unir fichas**. Se conserva la ficha donde escribió más recientemente,
   que es por donde le llegan las respuestas, y se le suman la conversación, las citas y el análisis de la otra.
