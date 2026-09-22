@@ -9,6 +9,14 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### Calientes sin seguimiento: escribirles y poder posponer · `04f5a1f`
+La lista solo listaba: no había qué hacer con ella, así que los mismos nombres volvían todos los días y dejaba de
+mirarse. Cada fila tiene ahora **Escribirle** —abre la conversación, se la pasa a la persona y deja un borrador
+armado solo con lo que el cliente dijo (prenda, ocasión), sin precios ni fechas, para revisarlo antes de enviar— y
+**Dejarlo por ahora**, que lo pospone una semana sin perder lo capturado y lo anota en la línea de tiempo; si el
+cliente escribe antes, vuelve enseguida. `pnpm test:followup` (11 casos) y probado en el tablero: el borrador salió
+con nombre, prenda y ocasión, y posponer bajó la lista de 3 a 2.
+
 ### Negativas suaves: las que no dicen "no" · `58f4549`
 La guarda contra negativas inventadas solo veía el "no" explícito y junto a lo preguntado. Se le escapaban "Zapatos
 no tenemos" (al revés), "Eso no lo manejamos" (sin nombrarlo), "Lo más parecido que manejamos es…", "Por ahora solo
