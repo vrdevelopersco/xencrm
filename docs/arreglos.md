@@ -9,6 +9,14 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### Negativas suaves: las que no dicen "no" · `58f4549`
+La guarda contra negativas inventadas solo veía el "no" explícito y junto a lo preguntado. Se le escapaban "Zapatos
+no tenemos" (al revés), "Eso no lo manejamos" (sin nombrarlo), "Lo más parecido que manejamos es…", "Por ahora solo
+manejamos trajes" y "En su lugar te ofrecemos…": la misma deducción que puede ser falsa, dicha con más tacto. Ahora
+se busca frase por frase en cualquiera de esas formas, y la cortesía no cuenta ("no hay problema"). Comprobado con
+`pnpm test:guards` (5 casos nuevos, 28 en total), 8 respuestas buenas del histórico que siguen pasando derecho y los
+escenarios con OpenAI real: 40/40.
+
 ### Escribirle al cliente y buscar dentro de los mensajes · `eaa6d57`
 El buscador de Conversaciones solo miraba nombre, teléfono y resumen: lo que el cliente dijo ("esmoquin azul", "para
 el 12") no aparecía. Ahora busca también dentro de la conversación y cada fila trae el pedacito donde aparece, con
