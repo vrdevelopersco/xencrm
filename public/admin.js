@@ -50,6 +50,17 @@
     });
   }
 
+  // Descargar un archivo del tablero sin poner el token en la dirección (una dirección se comparte sin querer).
+  function download(path, name) {
+    return fetch('/admin/api' + path, { headers: { 'x-admin-token': state.token } })
+      .then(function (r) { if (r.status === 401) { showLogin('Token inválido'); throw new Error('401'); } return r.blob(); })
+      .then(function (blob) {
+        var url = URL.createObjectURL(blob), a = document.createElement('a');
+        a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+      });
+  }
+
   // ---------- login / tema / sonido ----------
   function showLogin(err) { $('login').hidden = false; $('login-err').textContent = err || ''; $('login-name').value = state.name; ($('login-name').value ? $('login-token') : $('login-name')).focus(); }
   $('login-btn').onclick = function () {
@@ -673,6 +684,19 @@
   };
 
   // ---------- análisis ----------
+  function bindExport() {
+    [['exp-contactos', 'contactos'], ['exp-citas', 'citas']].forEach(function (p) {
+      $(p[0]).onclick = function () {
+        var day = new Date().toISOString().slice(0, 10);
+        $(p[0]).disabled = true;
+        $('exp-msg').textContent = 'Preparando…';
+        download('/export/' + p[1], p[1] + '-' + day + '.csv')
+          .then(function () { $('exp-msg').textContent = 'Descargado: ' + p[1] + '-' + day + '.csv'; })
+          .catch(function () { $('exp-msg').textContent = 'No se pudo descargar.'; })
+          .then(function () { $(p[0]).disabled = false; });
+      };
+    });
+  }
   function loadAnalysis() {
     api('/stats').then(function (s) {
       var tiles = [
@@ -690,6 +714,7 @@
       var max = Math.max(1, s.total);
       $('funnel').innerHTML = Object.keys(s.stageLabels).map(function (k) { var n = s.byStage[k] || 0; return '<div class="f" data-f="stage:' + k + '"><span>' + esc(s.stageLabels[k]) + '</span><div class="bar"><i style="width:' + Math.round((n / max) * 100) + '%"></i></div><b>' + n + '</b></div>'; }).join('');
       $('funnel').querySelectorAll('.f').forEach(function (f) { f.onclick = function () { go('inbox', { filter: f.getAttribute('data-f') }); }; });
+      bindExport();
       var sent = s.sentiments || {};
       $('sentiments').innerHTML = ['positivo', 'neutral', 'negativo'].map(function (k) { return '<div>' + sentIcon(k) + ': <b>' + (sent[k] || 0) + '</b></div>'; }).join('') + '<div class="muted">Puntaje promedio: ' + s.avgScore + '</div>';
     });

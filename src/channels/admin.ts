@@ -12,6 +12,7 @@ import { contactNumber, deleteContact, getContact, listContacts, messageHit, lis
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
 import { availableSlots, bookAppointment, formatSlot, listAppointments, setReminder, updateAppointment } from '../crm/appointments.js';
 import { replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
+import { appointmentsCsv, contactsCsv } from '../crm/export.js';
 import { isSnoozed, snoozeFollowup } from '../crm/followup.js';
 import { reminderTime, remindersBoard } from '../crm/reminders.js';
 import { onEvent } from '../crm/events.js';
@@ -271,6 +272,17 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   // Canales: estado, actividad y qué falta; encender o apagar sin reiniciar.
   app.get('/admin/api/channels', (c) => c.json(channelCards()));
   // Respaldo de la base: cuándo fue el último y "Respaldar ahora".
+  // Llevarse los datos a una hoja de cálculo: son del negocio.
+  app.get('/admin/api/export/:what', (c) => {
+    const what = c.req.param('what');
+    if (what !== 'contactos' && what !== 'citas') return c.json({ error: 'no existe' }, 404);
+    const day = new Date().toISOString().slice(0, 10);
+    return c.body(what === 'contactos' ? contactsCsv() : appointmentsCsv(), 200, {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="${what}-${day}.csv"`,
+    });
+  });
+
   app.get('/admin/api/backup', (c) => c.json(backupStatus()));
   app.post('/admin/api/backup', (c) => {
     try {

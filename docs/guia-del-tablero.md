@@ -114,6 +114,12 @@ conversación. El asistente mueve las etapas solo según la conversación; lo qu
 Los números del negocio: embudo por etapa, ánimo de los clientes y más. Cada número abre la lista de conversaciones
 que lo explica.
 
+**Llevarse los datos.** Abajo, **Contactos (CSV)** y **Citas (CSV)** bajan una hoja de cálculo con lo que hay hoy,
+lista para abrir en Excel o Google Sheets (con acentos y en columnas). Los contactos traen nombre, teléfono, canal,
+etapa, puntaje, qué busca, ocasión, fecha del evento, etiquetas y notas; las citas, fecha, cliente, teléfono,
+servicio, estado, lugar y cómo fue el recordatorio. Las conversaciones archivadas no salen. El archivo lleva
+teléfonos y notas de clientes: trátalo como la base misma.
+
 ## Perfil
 
 Lo que el asistente dice de tu negocio: nombre, dirección, horarios, zona que atienden, contacto, formas de pago,

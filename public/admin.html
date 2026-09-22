@@ -647,6 +647,15 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
           <div class="panel funnel"><b>Embudo por etapa</b><div id="funnel"></div></div>
           <div class="panel"><b>Ánimo de los clientes</b><div id="sentiments" class="small"></div><div class="small muted" style="margin-top:8px">Los prospectos calientes se atienden desde <b>Hoy</b> (sin seguimiento) o con el filtro «Prospectos» en Conversaciones.</div></div>
         </div>
+        <div class="panel" id="export-panel">
+          <b>Llevarse los datos</b>
+          <div class="small muted">Una hoja de cálculo con lo que hay hoy, para abrir en Excel o Google Sheets.</div>
+          <div class="feed-row" style="margin-top:8px">
+            <button class="btn" id="exp-contactos">Contactos (CSV)</button>
+            <button class="btn" id="exp-citas">Citas (CSV)</button>
+          </div>
+          <div class="small" id="exp-msg" role="status"></div>
+        </div>
       </div>
     </section>
     <!-- Agente -->
