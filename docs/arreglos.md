@@ -9,6 +9,19 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### La cita vale en los dos canales, y preguntar por ella no la mueve · `7c6ca72`
+Ensayando el demo completo (chat del sitio + WhatsApp) salieron dos fallas seguidas, las dos visibles para el
+cliente:
+- Agendó por el chat del sitio y escribió después por WhatsApp: como esa ficha era nueva, el asistente le ofreció
+  horarios como si no tuviera cita y la habría dejado con dos. Ahora busca la cita también en las otras fichas de
+  la misma persona (mismo número, otro canal), aunque todavía no se hayan unido.
+- "¿me confirmas la cita del jueves?" nombra el día de su propia cita y el flujo lo leía como "muévela". Ahora eso
+  es una pregunta por la cita ("Ya tienes tu cita del jueves… ¿quieres cambiarla o cancelarla?"); pedir otra hora
+  del mismo día sigue moviéndola.
+
+`pnpm test:booking` (2 casos nuevos), `pnpm test:merge` (3 nuevos) y el ensayo repetido de punta a punta. De paso,
+la prueba de posponer dejó de depender del milisegundo exacto.
+
 ### El puntaje se enfría solo, y los pesos calibrados con lo que pasó · `29645de`
 El puntaje solo se recalculaba al llegar un mensaje, así que quedaba congelado en su mejor momento: en la base real
 había tres fichas en 100 con once y doce días sin hablar, y una en 87 de hace doce días. Así la lista de calientes
