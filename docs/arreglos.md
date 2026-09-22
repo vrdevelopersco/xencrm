@@ -9,6 +9,15 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### Unir fichas de la misma persona · `9a0d2e5`
+Si alguien escribía por el chat del sitio, dejaba su número y después escribía por WhatsApp, quedaban dos contactos,
+dos historias y dos puntajes. La ficha ahora muestra "¿Es la misma persona?" cuando otra tiene el mismo número
+(aunque uno lo tenga en la dirección de WhatsApp y el otro lo haya escrito). Al unir, mensajes, citas, análisis,
+eventos, verificaciones y consumo pasan a la ficha que se conserva —la del canal donde escribió más recientemente,
+porque por ahí le llegan las respuestas—, con el nombre y el número que haya, la etapa más avanzada, las etiquetas
+de ambas y una nota de la unión. No se puede deshacer, así que se pide confirmación (el respaldo diario es la red).
+`pnpm test:merge` (12 casos) y probado en el tablero: dos fichas de "Marta" quedaron en una con sus 3 mensajes.
+
 ### Calendario en el celular · `04f5c19`
 La semana (siete columnas) medía 562 px en una pantalla de 390: tocaba desplazarse en horizontal, el selector
 «Semana | Agenda» salía cortado, el rango de fechas ocupaba cuatro líneas y el formulario "Agendar cita" se salía.
