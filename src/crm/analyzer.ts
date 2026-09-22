@@ -272,21 +272,40 @@ export async function analyzeContact(userId: string, opts: { full?: boolean } = 
   }
 }
 
-const scheduled = new Map<string, NodeJS.Timeout>();
-/** Analiza unos segundos después del último mensaje: agrupa ráfagas y no compite con la respuesta siguiente. */
-export function scheduleAnalysis(userId: string, delayMs = 2500) {
+const scheduled = new Map<string, { timer: NodeJS.Timeout; since: number }>();
+/**
+ * Analiza cuando la conversación queda en silencio (crm.analysisQuietSeconds) y, si sigue activa, a más tardar
+ * crm.analysisMaxWaitSeconds después del primer mensaje sin analizar. Así una conversación de 10 mensajes paga
+ * uno o dos análisis y no diez, y el análisis no compite con la respuesta siguiente.
+ */
+export function scheduleAnalysis(userId: string) {
+  const quiet = business.crm.analysisQuietSeconds * 1000;
+  const maxWait = business.crm.analysisMaxWaitSeconds * 1000;
   const prev = scheduled.get(userId);
-  if (prev) clearTimeout(prev);
-  const t = setTimeout(() => {
+  if (prev) clearTimeout(prev.timer);
+  const since = prev?.since ?? Date.now();
+  const delay = Math.max(0, Math.min(quiet, since + maxWait - Date.now()));
+  const timer = setTimeout(() => {
     scheduled.delete(userId);
     void analyzeContact(userId);
-  }, delayMs);
-  t.unref();
-  scheduled.set(userId, t);
+  }, delay);
+  timer.unref();
+  scheduled.set(userId, { timer, since });
 }
 
-/** Espera a que no quede ningún análisis programado ni en curso (batería de escenarios). */
+/** Corre ya lo que estaba esperando silencio (de un contacto o de todos). */
+export function flushAnalyses(userId?: string): void {
+  for (const [id, s] of [...scheduled]) {
+    if (userId && id !== userId) continue;
+    clearTimeout(s.timer);
+    scheduled.delete(id);
+    void analyzeContact(id);
+  }
+}
+
+/** Corre lo pendiente y espera a que no quede ningún análisis en curso (escenarios y repasos). */
 export async function analysesSettled(timeoutMs = 120_000): Promise<boolean> {
+  flushAnalyses();
   const until = Date.now() + timeoutMs;
   while (scheduled.size || running.size) {
     if (Date.now() > until) return false;

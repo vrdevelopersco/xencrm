@@ -226,7 +226,8 @@ Cada llamada a un modelo queda registrada (tokens de entrada, caché, salida y r
 tablero (Agente → Consumo) y `pnpm usage [--days=7]` muestran el costo por tarea, por conversación y
 por mensaje, con la tarifa estándar de OpenAI. `pnpm replay` repasa las conversaciones sintéticas del
 cliente (`seedFile` y `evalFile`) con los motores configurados y proyecta el costo por 1.000
-conversaciones.
+conversaciones. Simula un mensaje del cliente cada 30 s (`--gap=`) y corre el análisis con la misma regla que
+en producción; `--fast` manda los mensajes seguidos.
 
 **Caché de OpenAI.** OpenAI cobra 90 % menos por el inicio del prompt que ya vio. En la práctica,
 con `gpt-5.4-mini` solo pega cuando el inicio común pasa de unos 1.450 tokens (medido, no
@@ -251,6 +252,10 @@ Para no gastar tokens de más (`src/crm/signals.ts`):
   si preguntó precio y si pidió o tiene cita. Pisan lo que diga el modelo.
 - **Sin modelo cuando no hace falta**: si lo nuevo son pasos cortos de la cita o cortesías ("ok",
   "gracias"), el código actualiza la ficha y recalcula el puntaje (motor "reglas" en el historial).
+- **Cuando la conversación hace una pausa**: el análisis corre tras 60 s de silencio
+  (`crm.analysisQuietSeconds`) y, si la conversación sigue activa, a más tardar a los 5 minutos del primer mensaje
+  sin analizar (`crm.analysisMaxWaitSeconds`). Medido con las conversaciones de DUNOR a un mensaje cada 30 s:
+  8 análisis en vez de 17 (−53 % en análisis, −19 % en el total por conversación). "Re-analizar" corre ya.
 - **Solo lo nuevo**: el modelo recibe la ficha anterior y los mensajes nuevos, no toda la conversación.
   Lo ya dicho (nombre, ciudad, presupuesto, campos del cliente) no se borra si el modelo no lo repite.
   "Reanalizar" en el tablero manda la conversación completa.

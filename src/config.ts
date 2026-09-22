@@ -175,6 +175,13 @@ const BusinessConfig = z.object({
       fields: z
         .array(z.object({ name: z.string().regex(/^[a-z_][a-z0-9_]*$/), description: z.string() }))
         .default([{ name: 'producto_interes', description: 'Producto o servicio que le interesa al cliente, si lo dijo' }]),
+      /**
+       * El análisis corre cuando la conversación lleva este silencio (segundos): un cliente que escribe cada 30 s no
+       * paga un análisis por mensaje. Con la conversación activa, a más tardar `analysisMaxWaitSeconds` después del
+       * primer mensaje sin analizar, para que el puntaje y el aviso de "caliente" no se atrasen.
+       */
+      analysisQuietSeconds: z.number().min(0).default(60),
+      analysisMaxWaitSeconds: z.number().min(0).default(300),
     })
     .prefault({}),
   /**

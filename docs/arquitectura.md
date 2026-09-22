@@ -119,8 +119,12 @@ Precedencia:
   `rag/retriever.ts`.
 - **Consumo**: cada llamada se registra con su costo según la tarifa de `usage.ts`. `pnpm usage` y el tablero lo
   muestran; `pnpm replay` proyecta el costo por 1.000 conversaciones.
-- **Análisis barato**: los datos exactos salen del código (`signals.ts`), los pasos triviales no llaman al modelo y
-  el modelo recibe solo lo nuevo junto con la ficha anterior.
+- **Análisis barato**:
+  - Corre cuando la conversación hace una pausa (`crm.analysisQuietSeconds`, 60 s) o a más tardar
+    `crm.analysisMaxWaitSeconds` (300 s) después del primer mensaje sin analizar (`scheduleAnalysis`).
+  - Los datos exactos salen del código (`signals.ts`) y los pasos triviales no llaman al modelo.
+  - El modelo recibe solo lo nuevo junto con la ficha anterior.
+  - `flushAnalyses` corre lo pendiente de una vez (Re-analizar, escenarios y repasos).
 
 ## Citas
 
@@ -171,6 +175,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:brand` | contraste de la marca con 500 colores | no |
 | `pnpm test:meta` | credenciales de Meta: validar, verificar, guardar | no (Meta simulado) |
 | `pnpm test:profile` | perfil: guardar, aplicar, lo que llega al bot | no |
+| `pnpm test:schedule` | cuándo corre el análisis: ráfaga, conversación activa, flush | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |
 | `pnpm replay` | las conversaciones sintéticas con los motores configurados; proyecta el costo | sí |

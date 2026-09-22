@@ -2,6 +2,7 @@
 // configurados y mide tokens y costo: pnpm replay [--fast] [--only=texto] [--keep]
 // Por defecto espera el análisis después de cada mensaje, como en un chat real (la persona tarda en responder);
 // --fast manda los mensajes seguidos (el análisis se agrupa y el costo sale menor que en la realidad).
+// --gap=30 (por defecto): un mensaje del cliente cada 30 s simulados; el análisis sigue la regla de producción.
 // --out=archivo.json guarda la ficha final de cada conversación, para comparar configuraciones.
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -33,7 +34,12 @@ for (const s of scenarios) convs.push({ name: `escenario: ${s.name}`, turns: s.t
 
 await probeEngines();
 console.log(`motores: liviano ${roleLabel('light')} · pesado ${roleLabel('heavy')} · gate ${roleLabel('gate')} · análisis ${roleLabel('analysis')}`);
-console.log(`${convs.length} conversaciones · ritmo ${fast ? 'rápido (mensajes seguidos)' : 'real (análisis tras cada mensaje)'}\n`);
+// Ritmo real: un mensaje del cliente cada `--gap` segundos (30 por defecto). El análisis corre como en producción:
+// cuando hay silencio (crm.analysisQuietSeconds) o al llegar a crm.analysisMaxWaitSeconds; al final, siempre.
+const gap = Number(process.argv.find((a) => a.startsWith('--gap='))?.split('=')[1] ?? 30) * 1000;
+const quiet = business.crm.analysisQuietSeconds * 1000;
+const maxWait = business.crm.analysisMaxWaitSeconds * 1000;
+console.log(`${convs.length} conversaciones · ritmo ${fast ? 'rápido (mensajes seguidos)' : `real (un mensaje cada ${gap / 1000} s; análisis tras ${quiet / 1000} s de silencio o a los ${maxWait / 1000} s)`}\n`);
 
 const started = Date.now();
 const per: { name: string; userId: string; messages: number; usd: number; calls: number; analysis: Record<string, number>; ficha: unknown }[] = [];
@@ -43,9 +49,17 @@ for (const [i, c] of convs.entries()) {
   purgeContact(userId);
   await apple.reset(userId).catch(() => undefined);
   const t0 = Date.now();
+  let clock = 0; // tiempo simulado de la conversación
+  let pendingSince: number | null = null;
   for (const text of c.turns) {
     await handleMessage({ userId, channel: 'cli', text });
-    if (!fast) await analysesSettled();
+    pendingSince ??= clock;
+    clock += gap;
+    // Antes del siguiente mensaje: ¿hubo silencio suficiente o se cumplió la espera máxima?
+    if (!fast && (gap >= quiet || clock - pendingSince >= maxWait)) {
+      await analysesSettled();
+      pendingSince = null;
+    }
   }
   await analysesSettled();
   const s = usageSummary(t0, { userPrefix: userId });
