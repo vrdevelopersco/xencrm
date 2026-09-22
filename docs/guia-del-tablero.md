@@ -72,6 +72,10 @@ cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo nú
 - **Datos capturados**: lo que el asistente entendió de la conversación (prenda, ocasión, fecha del evento,
   presupuesto, teléfono…).
 - **Ficha**: nombre, teléfono, etapa, etiquetas y notas, que puedes corregir y **Guardar**.
+- **¿Es la misma persona?**: si otra ficha tiene el mismo número (por ejemplo, escribió por el chat del sitio y
+  después por WhatsApp), aparece arriba con **Unir fichas**. Se conserva la ficha donde escribió más recientemente,
+  que es por donde le llegan las respuestas, y se le suman la conversación, las citas y el análisis de la otra.
+  No se puede deshacer, así que pide confirmación.
 - **Re-analizar**: vuelve a leer toda la conversación.
 - **Citas** y **Línea de tiempo**: su historial.
 

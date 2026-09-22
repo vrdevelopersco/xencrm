@@ -1,0 +1,92 @@
+// Un mismo cliente por dos canales queda como dos fichas: escribe por el chat del sitio, deja su número y después
+// escribe por WhatsApp. Aquí se detectan (mismo número) y se unen en una sola: la conversación, las citas, el
+// análisis y el consumo quedan en la ficha que se conserva, y la otra desaparece. No se puede deshacer, así que el
+// tablero lo pregunta antes (el respaldo diario es la red de seguridad).
+import { business } from '../config.js';
+import { getDb } from '../rag/store.js';
+import { addEvent, getContact, STAGES, type Contact, type Stage } from './contacts.js';
+import { emitEvent } from './events.js';
+
+const TABLES = ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses', 'llm_usage'];
+
+/** El número de un contacto: el que dio o el de su WhatsApp (la dirección trae el número). Solo dígitos. */
+export function contactNumber(c: Contact): string | null {
+  const m = /^(?:wa:(\d{8,15})@s\.whatsapp\.net|meta:(\d{8,15}))$/.exec(c.id);
+  const raw = c.phone ?? (m ? (m[1] ?? m[2]!) : null);
+  if (!raw) return null;
+  let digits = raw.replace(/\D/g, '');
+  // "300 123 4567" y "+57 300 123 4567" son el mismo número.
+  const cc = business.business.phoneCountryCode;
+  if (digits.length === business.business.phoneLocalDigits) digits = cc + digits;
+  return digits.length >= 8 ? digits : null;
+}
+
+/** Otras fichas que parecen la misma persona (mismo número, otro canal). */
+export function findDuplicates(id: string): { contact: Contact; reason: string }[] {
+  const c = getContact(id);
+  const number = c && contactNumber(c);
+  if (!c || !number) return [];
+  const rows = getDb().prepare('SELECT id FROM users WHERE id <> ?').all(id) as { id: string }[];
+  return rows.flatMap((r) => {
+    const other = getContact(r.id);
+    if (!other || contactNumber(other) !== number) return [];
+    return [{ contact: other, reason: `mismo número (${number})` }];
+  });
+}
+
+/** Cuál ficha conviene conservar: donde el cliente escribió más recientemente (ahí llegan las respuestas). */
+export function keeperOf(a: Contact, b: Contact): { keep: Contact; drop: Contact } {
+  return (a.lastMessageAt ?? a.lastSeen) >= (b.lastMessageAt ?? b.lastSeen) ? { keep: a, drop: b } : { keep: b, drop: a };
+}
+
+const better = (a: Stage, b: Stage) => (STAGES.indexOf(a) >= STAGES.indexOf(b) ? a : b);
+
+/** Une `dropId` dentro de `keepId` y devuelve la ficha resultante. */
+export function mergeContacts(keepId: string, dropId: string): Contact {
+  const keep = getContact(keepId);
+  const drop = getContact(dropId);
+  if (!keep || !drop) throw new Error('alguna de las dos fichas ya no existe');
+  if (keepId === dropId) throw new Error('son la misma ficha');
+  const db = getDb();
+  db.exec('BEGIN');
+  try {
+    for (const t of TABLES) db.prepare(`UPDATE ${t} SET user_id = ? WHERE user_id = ?`).run(keepId, dropId);
+    const data = { ...drop.data, ...keep.data }; // lo de la ficha que se conserva manda
+    const tags = [...new Set([...keep.tags, ...drop.tags])];
+    const notes = [keep.notes, drop.notes].map((n) => n.trim()).filter(Boolean).join('\n');
+    const note = `Se unió la ficha de ${drop.channel} (${drop.id})${drop.name && drop.name !== keep.name ? `, a nombre de ${drop.name}` : ''}.`;
+    db.prepare(
+      `UPDATE users SET name = ?, phone = ?, stage = ?, stage_locked = ?, score = ?, score_factors = ?, sentiment = ?, human_mode = ?, human_by = ?, human_since = ?,
+       data = ?, tags = ?, notes = ?, summary = ?, unread = ?, first_seen = ?, last_seen = ?, last_message_at = ? WHERE id = ?`,
+    ).run(
+      keep.name ?? drop.name,
+      keep.phone ?? drop.phone,
+      keep.stageLocked ? keep.stage : better(keep.stage, drop.stage),
+      keep.stageLocked || drop.stageLocked ? 1 : 0,
+      keep.scoreAt && (!drop.scoreAt || keep.scoreAt >= drop.scoreAt) ? keep.score : drop.score,
+      JSON.stringify(keep.scoreAt && (!drop.scoreAt || keep.scoreAt >= drop.scoreAt) ? keep.scoreFactors : drop.scoreFactors),
+      keep.sentiment ?? drop.sentiment,
+      keep.humanMode || drop.humanMode ? 1 : 0,
+      keep.humanBy ?? drop.humanBy,
+      keep.humanSince ?? drop.humanSince,
+      JSON.stringify(data),
+      JSON.stringify(tags),
+      [notes, note].filter(Boolean).join('\n'),
+      keep.summary ?? drop.summary,
+      keep.unread + drop.unread,
+      Math.min(keep.firstSeen, drop.firstSeen),
+      Math.max(keep.lastSeen, drop.lastSeen),
+      Math.max(keep.lastMessageAt ?? 0, drop.lastMessageAt ?? 0) || null,
+      keepId,
+    );
+    db.prepare('DELETE FROM users WHERE id = ?').run(dropId);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  addEvent(keepId, 'contacts_merged', { from: dropId, channel: drop.channel });
+  const merged = getContact(keepId)!;
+  emitEvent('contact', keepId, { contact: merged, merged: dropId });
+  return merged;
+}

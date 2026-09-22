@@ -23,6 +23,7 @@ import { channelCards, toggleChannel } from './registry.js';
 import { saveMetaCredentials } from './meta-credentials.js';
 import { checkPublicUrl, publicStatus } from './public-check.js';
 import { backupNow, backupStatus } from '../rag/backup.js';
+import { findDuplicates, keeperOf, mergeContacts } from '../crm/merge.js';
 import { getProfile, pendingFields, PROFILE_FIELDS, saveProfile } from '../profile.js';
 import { indexProfile } from '../rag/profile-index.js';
 import { exportDictionary, getDictionary, importDictionary } from '../agent/dictionary.js';
@@ -77,6 +78,34 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       appointments: listAppointments({ userId: id, limit: 20 }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })),
       replyWindow: replyWindow(id),
     });
+  });
+
+  // Un mismo cliente por dos canales: fichas que parecen la misma persona, y unirlas en una sola.
+  app.get('/admin/api/contacts/:id/duplicates', (c) => {
+    const id = c.req.param('id');
+    const me = getContact(id);
+    if (!me) return c.json({ error: 'no existe' }, 404);
+    return c.json(
+      findDuplicates(id).map((d) => ({
+        contact: { id: d.contact.id, channel: d.contact.channel, name: d.contact.name, lastMessageAt: d.contact.lastMessageAt, messageCount: d.contact.messageCount },
+        reason: d.reason,
+        keepId: keeperOf(me, d.contact).keep.id,
+      })),
+    );
+  });
+  app.post('/admin/api/contacts/:id/merge', async (c) => {
+    const id = c.req.param('id');
+    const body = (await c.req.json().catch(() => ({}))) as { with?: string };
+    const me = getContact(id);
+    const other = body.with ? getContact(body.with.toString()) : null;
+    if (!me || !other) return c.json({ error: 'alguna de las dos fichas no existe' }, 404);
+    try {
+      const { keep, drop } = keeperOf(me, other);
+      const contact = mergeContacts(keep.id, drop.id);
+      return c.json({ contact, keptId: keep.id, droppedId: drop.id });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
   });
 
   app.patch('/admin/api/contacts/:id', async (c) => {

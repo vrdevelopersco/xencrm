@@ -156,6 +156,7 @@
     $('inbox').setAttribute('data-pane', 'chat');
     return api('/contacts/' + encodeURIComponent(id)).then(function (d) {
       state.detail = d; renderChat(); renderDetails();
+      api('/contacts/' + encodeURIComponent(id) + '/duplicates').then(renderDuplicates); // ¿otra ficha de la misma persona?
       var row = state.contacts.find(function (c) { return c.id === id; }); if (row) { row.unread = 0; renderRows(); updateBadges(); }
     });
   }
@@ -220,6 +221,33 @@
   $('details-btn').onclick = function () { $('inbox').setAttribute('data-pane', 'details'); };
   if (window.innerWidth <= 900) { $('back-list').style.display = ''; $('details-btn').style.display = ''; }
 
+  // Dos fichas de la misma persona (mismo número, otro canal): se pueden unir en una sola.
+  function renderDuplicates(list) {
+    var box = $('dup-panel'); if (!box) return;
+    if (!list || !list.length) { box.innerHTML = ''; return; }
+    var d = list[0], c = d.contact, mine = state.detail && state.detail.contact;
+    if (!mine) return;
+    var keepMine = d.keepId === mine.id;
+    var keepName = keepMine ? nameOf(mine) + ' (' + channelIcon(mine.channel) + ')' : (c.name || short(c.id)) + ' (' + channelIcon(c.channel) + ')';
+    box.innerHTML = '<div class="panel"><b>¿Es la misma persona?</b>' +
+      '<div class="small">' + esc(c.name || short(c.id)) + ' · ' + esc(channelIcon(c.channel)) + ' · ' + c.messageCount + (c.messageCount === 1 ? ' mensaje' : ' mensajes') +
+      (c.lastMessageAt ? ' · escribió hace ' + rel(c.lastMessageAt) : '') + ' · ' + esc(d.reason) + '</div>' +
+      '<div class="feed-row"><button class="btn" id="dup-merge">Unir fichas</button></div><div class="small" id="dup-msg" role="status"></div></div>';
+    $('dup-merge').onclick = function () {
+      $('dup-msg').innerHTML = 'Se conserva <b>' + esc(keepName) + '</b> (donde escribió más recientemente) y se le suman la conversación, las citas y el análisis de la otra. No se puede deshacer.' +
+        '<div class="feed-row"><button class="btn primary" id="dup-yes">Unir</button><button class="btn" id="dup-no">Cancelar</button></div>';
+      $('dup-no').onclick = function () { $('dup-msg').textContent = ''; };
+      $('dup-yes').onclick = function () {
+        $('dup-yes').disabled = true;
+        api('/contacts/' + encodeURIComponent(mine.id) + '/merge', { method: 'POST', body: { with: c.id } }).then(function (r) {
+          if (r.error) { $('dup-msg').innerHTML = '<span class="ch-err">No se pudo unir:</span> ' + esc(r.error); return; }
+          toast('Fichas unidas');
+          loadContacts();
+          openContact(r.keptId);
+        });
+      };
+    };
+  }
   function renderDetails() {
     var d = state.detail; if (!d) return;
     var c = d.contact, data = c.data || {};
@@ -232,7 +260,7 @@
     var v = verdict(c);
     var quick = esc(c.recap || '');
     $('details').innerHTML =
-      '<div class="verdict' + (isStale(c) ? ' stale' : '') + '"><h3>¿Es un prospecto?</h3><div class="big">' + esc(v.label) + '</div><div class="why">' + esc(v.why || '') + (c.summary ? ' ' + esc(c.summary) : '') + '</div>' +
+      '<div id="dup-panel"></div><div class="verdict' + (isStale(c) ? ' stale' : '') + '"><h3>¿Es un prospecto?</h3><div class="big">' + esc(v.label) + '</div><div class="why">' + esc(v.why || '') + (c.summary ? ' ' + esc(c.summary) : '') + '</div>' +
         (quick ? '<div class="small">' + quick + '</div>' : '') +
         '<div class="bar' + (isStale(c) ? ' stale' : '') + '" title="Probabilidad ' + c.score + '"><i class="z-' + c.temperature + '" style="width:' + c.score + '%"></i></div><div class="bar-legend"><span>sin señales</span><span>posible</span><span>prospecto</span></div>' +
         '<div class="small muted">Probabilidad ' + c.score + ' (en tarjetas y avisos: ' + esc(tempLabel(c.temperature)) + ')' + (c.scoreAt ? ' · hace ' + rel(c.scoreAt) : '') + (isStale(c) ? ' · <b style="color:var(--warn)">hay mensajes nuevos, se recalcula solo</b>' : '') + ' · <button class="linkbtn" id="toggle-detail">' + (state.detailOpen ? 'Ocultar detalle' : 'Ver detalle') + '</button></div>' +

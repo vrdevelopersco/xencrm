@@ -39,6 +39,7 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
 | **Análisis comercial por turno** | Sentimiento, interés, urgencia, objeciones, presupuesto y los campos que definas (prenda, ocasión, fecha del evento…). |
 | **Puntaje explicable** | 0 a 100 con factores visibles ("Pidió cita +30", "Objeción −10"). Etapas: nuevo, conversando, interesado, cita agendada, vendido, perdido. |
 | **Citas** | Flujo determinista: ofrece espacios reales según tu agenda, entiende muletillas ("al medio día", "la que sea", "en ocho días"), confirma, cambia o cancela por el chat y **recuerda la cita el día antes**. El modelo nunca inventa fechas. |
+| **Una ficha por persona** | Si el mismo cliente escribe por el chat del sitio y por WhatsApp, el tablero lo detecta por el número y ofrece unir las dos fichas en una: conversación, citas, análisis y consumo quedan juntos. |
 | **Traspaso humano** | El cliente pide una persona o el equipo toma el control desde el tablero; el bot se calla y las respuestas humanas llegan al mismo chat (WhatsApp o widget). |
 | **Tablero** | Hoy (lo que hay que atender), conversaciones con ficha, calendario, prospectos, análisis, perfil, agente y canales. En vivo, en el computador o el celular. |
 | **Canales** | WhatsApp por QR (Baileys) o por Meta Cloud API (oficial, con credenciales desde el tablero), chat del sitio con la marca del cliente, MCP para otros agentes. |
