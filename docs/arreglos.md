@@ -9,6 +9,20 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### "El jueves" es el de esta semana · `1ca28cb`
+Un día de la semana suelto era un filtro abierto —cualquier jueves—, así que si ese jueves estaba lleno el
+asistente ofrecía el de la semana siguiente sin avisar, cuando el cliente estaba hablando de esta. Ahora "el
+jueves" es el jueves que viene de esta semana, salvo que diga otra cosa ("el otro jueves", "el jueves de la
+próxima"), y dicho el mismo día de la semana es el de la otra, porque para hoy se dice "hoy". Con ese día lleno
+responde "El jueves ya no me quedan espacios 😕 Lo más cercano que tengo:" y ofrece alternativas. "Entre semana"
+no se ancla, que es una disponibilidad y no un día.
+
+También quedó la trazabilidad entre canales: la cita se queda en la ficha donde se agendó —ahí está su historia— y
+lo que se haga desde el otro canal se anota en las dos líneas de tiempo ("Cancelada por el cliente desde
+WhatsApp"). Y la prueba de citas dejó de escribir en la base del negocio: corre con su propia agenda temporal.
+`pnpm test:when` (6 actualizados), `pnpm test:booking` (el día lleno), `pnpm test:merge` (5 nuevos) y escenarios con
+OpenAI real: 40/40.
+
 ### La cita vale en los dos canales, y preguntar por ella no la mueve · `7c6ca72`
 Ensayando el demo completo (chat del sitio + WhatsApp) salieron dos fallas seguidas, las dos visibles para el
 cliente:
