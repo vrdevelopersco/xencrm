@@ -1,6 +1,7 @@
 // Agenda de citas con disponibilidad configurable (aiva.config.json > appointments), sin dependencias externas.
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
+import { findDuplicates } from './merge.js';
 import { addEvent, getContact, setStage, updateContact } from './contacts.js';
 import { emitEvent } from './events.js';
 import { busyOverlaps } from './busy.js';
@@ -296,4 +297,19 @@ export function deleteAppointmentsByPrefix(prefix: string): number {
 
 export function nextAppointmentFor(userId: string): Appointment | null {
   return listAppointments({ userId, from: Date.now(), status: 'confirmada', limit: 1 })[0] ?? null;
+}
+
+/**
+ * La próxima cita de esta persona, aunque esté en otra ficha suya: escribió por el chat del sitio, dejó su número y
+ * agendó, y ahora escribe por WhatsApp. Sin esto el bot le ofrece horarios como si no tuviera nada y puede quedar
+ * con dos citas. Las fichas se unen a mano desde el tablero; mientras tanto, para el cliente es la misma cita.
+ */
+export function nextAppointmentForPerson(userId: string): Appointment | null {
+  const mine = nextAppointmentFor(userId);
+  if (mine) return mine;
+  for (const { contact } of findDuplicates(userId)) {
+    const other = nextAppointmentFor(contact.id);
+    if (other) return other;
+  }
+  return null;
 }

@@ -15,7 +15,7 @@ import {
   updateAppointment,
   formatSlot,
   isSlotFree,
-  nextAppointmentFor,
+  nextAppointmentForPerson,
   slotMatches,
   tzParts,
   zoned,
@@ -236,7 +236,7 @@ async function start(userId: string, text = ''): Promise<string> {
   const c = getContact(userId);
   if (!c) return offerFallback();
   if (!cfg.enabled) return offerFallback();
-  const existing = nextAppointmentFor(userId);
+  const existing = nextAppointmentForPerson(userId); // aunque la haya agendado por el otro canal
   if (existing) return manageExisting(c, existing.id, text, userId);
   const when = text ? await interpret(text, { model: true, userId }) : null;
   const name = c.name || (c.data.nombre as string | undefined);
@@ -261,7 +261,10 @@ async function manageExisting(c: Contact, id: number, text: string, userId: stri
     save(c, { step: 'cancelar', offered: [], manage: id });
     return `¿Confirmas que cancelo tu ${slotOf(id)}?`;
   }
-  const when = text ? parseWhen(text) : null;
+  // "¿me confirmas la cita del jueves?" nombra el día de su propia cita: pregunta por ella, no la está moviendo.
+  const appt = getAppointment(id);
+  const said = text ? parseWhen(text) : null;
+  const when = said && appt && slotMatches(new Date(appt.startsAt), said) ? null : said;
   if (intent === 'cambiar' || when) {
     save(c, { step: 'elegir', offered: [], moving: id });
     return `Claro, busquemos otro espacio para tu ${slotOf(id)}. ` + offer(getContact(userId)!, when ? { when } : {});

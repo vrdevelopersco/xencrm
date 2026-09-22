@@ -3,7 +3,7 @@
 // "sisas" hagan lo que una persona entendería. Falla si alguna respuesta tuvo que llamar al modelo.
 const { touchUser } = await import('../agent/memory.js');
 const { getContact, updateContact, deleteContactsByPrefix } = await import('../crm/contacts.js');
-const { availableSlots, tzParts, dayKey, listAppointments } = await import('../crm/appointments.js');
+const { availableSlots, tzParts, dayKey, listAppointments, formatDay } = await import('../crm/appointments.js');
 const { bookingStep } = await import('../crm/booking.js');
 const { parseWhen } = await import('../crm/when.js');
 const { getDb } = await import('../rag/store.js');
@@ -185,6 +185,23 @@ await flow('"sobre mi cita" → pregunta → cancelarla', ['hola, sobre mi cita'
 await flow('"así está bien" la deja como está', ['hola, sobre mi cita', 'así está bien, gracias'], (u, id, r) =>
   /te esperamos/.test(r[1]!) && status(id) === 'confirmada' ? null : `quedó ${status(id)}`,
 );
+
+// Nombrar el día de su propia cita es preguntar por ella, no pedir otra hora: "¿me confirmas la cita del jueves?"
+{
+  const { userId, apptId } = withAppointment();
+  const dia = formatDay(new Date(getAppointment(apptId)!.startsAt)).split(',')[0]!; // "jueves"
+  const r1 = await startBooking(userId, `hola, ¿me confirmas la cita del ${dia}?`);
+  const ok1 = /Ya tienes tu/.test(r1) && !/busquemos otro espacio/.test(r1);
+  if (!ok1) fail++;
+  console.log(`${ok1 ? '✓' : '✗'} preguntar por la cita nombrando su día no la mueve${ok1 ? '' : `\n   ${r1.replace(/\n/g, ' ⏎ ').slice(0, 130)}`}`);
+
+  const { userId: u2, apptId: a2 } = withAppointment();
+  const dia2 = formatDay(new Date(getAppointment(a2)!.startsAt)).split(',')[0]!;
+  const r2 = await startBooking(u2, `¿la puedo pasar para el ${dia2} en la tarde?`);
+  const ok2 = /busquemos otro espacio/.test(r2);
+  if (!ok2) fail++;
+  console.log(`${ok2 ? '✓' : '✗'} pedir otra hora del mismo día sí la mueve${ok2 ? '' : `\n   ${r2.replace(/\n/g, ' ⏎ ').slice(0, 130)}`}`);
+}
 
 
 const usageAfter = (getDb().prepare('SELECT COUNT(*) n FROM llm_usage').get() as { n: number }).n;

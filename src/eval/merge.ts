@@ -57,5 +57,23 @@ try {
 check('no se une una ficha consigo misma', /misma ficha/.test(msg), msg);
 check('sin duplicados no propone nada', findDuplicates(WA).length === 0);
 
+// La misma persona por dos canales: la cita que agendó por el chat del sitio también vale cuando escribe por
+// WhatsApp, aunque las fichas todavía no se hayan unido (si no, el bot le ofrece horarios y queda con dos citas).
+const { nextAppointmentForPerson } = await import('../crm/appointments.js');
+touchUser('web:lucia', 'web', 'Lucía');
+appendMessage('web:lucia', 'user', 'quiero una cita', 'cita');
+updateContact('web:lucia', { phone: '+573007778899' });
+touchUser('wa:573007778899@s.whatsapp.net', 'whatsapp', 'Lucía');
+appendMessage('wa:573007778899@s.whatsapp.net', 'user', 'hola', 'saludo');
+const manana = Date.now() + 86400_000;
+getDb()
+  .prepare("INSERT INTO appointments (user_id, starts_at, ends_at, service, location, status, notes, created_at) VALUES (?, ?, ?, 'cita', null, 'confirmada', '', ?)")
+  .run('web:lucia', manana, manana + 3600_000, Date.now());
+const suya = nextAppointmentForPerson('wa:573007778899@s.whatsapp.net');
+check('la cita del otro canal cuenta como suya', suya?.userId === 'web:lucia', String(suya?.userId));
+check('la ficha con la cita la ve igual', nextAppointmentForPerson('web:lucia')?.userId === 'web:lucia');
+touchUser('web:ajeno', 'web', 'Otro');
+check('quien no es la misma persona no hereda citas', nextAppointmentForPerson('web:ajeno') === null);
+
 console.log(`\n${fail ? `${fail} fallos` : 'todo ok'}`);
 process.exit(fail ? 1 : 0);

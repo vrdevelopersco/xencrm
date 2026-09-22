@@ -8,6 +8,7 @@ process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-follow-')), 'aiva.db
 const { touchUser, appendMessage } = await import('../agent/memory.js');
 const { getContact, updateContact, listEvents } = await import('../crm/contacts.js');
 const { isSnoozed, snoozeFollowup } = await import('../crm/followup.js');
+const { getDb } = await import('../rag/store.js');
 
 let fail = 0;
 const check = (name: string, ok: boolean, detail = '') => {
@@ -34,6 +35,8 @@ check('sigue fuera al otro día', isSnoozed(c, Date.now() + DAY));
 
 // Si el cliente escribe durante la semana, hay algo nuevo: vuelve a la lista.
 appendMessage('web:andres', 'user', '¿sigue disponible el azul?', 'consulta');
+// El mensaje llega un rato después de posponer (si no, la prueba depende del milisegundo exacto).
+getDb().prepare('UPDATE users SET last_message_at = ? WHERE id = ?').run(Date.now() + 60_000, 'web:andres');
 check('si el cliente vuelve a escribir, vuelve a la lista', !isSnoozed(getContact('web:andres')!, Date.now() + DAY));
 
 // Días fuera de rango

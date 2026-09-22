@@ -96,6 +96,8 @@ cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo nú
   y las devuelves.
 - **Borrar**: elimina la ficha con su conversación, sus citas y su análisis. No se puede deshacer, así que pide
   confirmación (si algo se va por error, está el respaldo del día anterior).
+  Mientras las unes, el asistente ya trata la cita como suya: si agendó por el chat del sitio y después escribe por
+  WhatsApp, no le ofrece horarios otra vez ni la deja con dos citas.
 - **¿Es la misma persona?**: si otra ficha tiene el mismo número (por ejemplo, escribió por el chat del sitio y
   después por WhatsApp), aparece arriba con **Unir fichas**. Se conserva la ficha donde escribió más recientemente,
   que es por donde le llegan las respuestas, y se le suman la conversación, las citas y el análisis de la otra.
