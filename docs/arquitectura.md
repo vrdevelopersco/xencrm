@@ -96,6 +96,7 @@ Una base SQLite por cliente (`DB_PATH`, WAL):
 | `settings` | decisiones del tablero (qué canales están encendidos) |
 
 Las columnas nuevas se agregan en `store.ts › migrate()`, porque SQLite no tiene `ADD COLUMN IF NOT EXISTS`.
+Respaldo diario con `VACUUM INTO` a `data/backups/` (`rag/backup.ts`), con las últimas 14 copias y permisos 600.
 
 ## Configuración por capas
 
@@ -185,6 +186,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:profile` | perfil: guardar, aplicar, lo que llega al bot | no |
 | `pnpm test:router` | qué modelo responde: el pesado solo para lo específico | no |
 | `pnpm test:schedule` | cuándo corre el análisis: ráfaga, conversación activa, flush | no |
+| `pnpm test:backup` | respaldo: la copia trae los datos, permisos 600, conserva las últimas N | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |
 | `pnpm replay` | las conversaciones sintéticas con los motores configurados; proyecta el costo | sí |

@@ -22,6 +22,7 @@ import { recap } from '../crm/recap.js';
 import { channelCards, toggleChannel } from './registry.js';
 import { saveMetaCredentials } from './meta-credentials.js';
 import { checkPublicUrl, publicStatus } from './public-check.js';
+import { backupNow, backupStatus } from '../rag/backup.js';
 import { getProfile, pendingFields, PROFILE_FIELDS, saveProfile } from '../profile.js';
 import { indexProfile } from '../rag/profile-index.js';
 import { exportDictionary, getDictionary, importDictionary } from '../agent/dictionary.js';
@@ -216,6 +217,17 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   // Canales: estado, actividad y qué falta; encender o apagar sin reiniciar.
   app.get('/admin/api/channels', (c) => c.json(channelCards()));
+  // Respaldo de la base: cuándo fue el último y "Respaldar ahora".
+  app.get('/admin/api/backup', (c) => c.json(backupStatus()));
+  app.post('/admin/api/backup', (c) => {
+    try {
+      backupNow();
+      return c.json(backupStatus());
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 500);
+    }
+  });
+
   // Dirección pública (el túnel): si responde, desde cuándo falla y por qué. "Revisar ahora" desde Canales.
   app.get('/admin/api/public', (c) => c.json(publicStatus()));
   app.post('/admin/api/public/check', async (c) => c.json(await checkPublicUrl()));

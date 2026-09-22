@@ -707,6 +707,26 @@
     }).finally(function () { if ($('pf-save')) $('pf-save').disabled = false; });
   }
 
+  // ---------- respaldo de la base ----------
+  function backupLine(bk) {
+    if (!bk.last) return 'Todavía no hay respaldos: el primero se hace un minuto después de arrancar.';
+    return 'Último: hace ' + rel(bk.last.at) + ' (' + Math.max(1, Math.round(bk.last.bytes / 1024)) + ' KB) · ' + bk.count + (bk.count === 1 ? ' copia' : ' copias') + ' en ' + bk.dir;
+  }
+  function backupPanel(bk) {
+    return '<div class="panel" id="backup-panel"><b>Respaldo de la base</b><div class="small" id="backup-line">' + esc(backupLine(bk)) + '</div>' +
+      '<div class="small muted">Una copia al día de contactos, conversaciones y citas; se guardan las últimas 14. Tienen datos de clientes: guárdalas también fuera de este computador (por ejemplo, con Time Machine).</div>' +
+      '<div class="feed-row"><button class="btn" id="backup-now">Respaldar ahora</button></div></div>';
+  }
+  function bindBackup() {
+    $('backup-now').onclick = function () {
+      var b = this; b.disabled = true; b.textContent = 'Respaldando…';
+      api('/backup', { method: 'POST' }).then(function (r) {
+        $('backup-line').textContent = r.error ? 'No se pudo: ' + r.error : backupLine(r);
+        b.disabled = false; b.textContent = 'Respaldar ahora';
+      });
+    };
+  }
+
   // ---------- frases que no entendimos ----------
   // Lo que las reglas no entendieron: se enseña como expresión del diccionario y la próxima vez se entiende sin IA.
   var MISS_KIND = { fecha: 'Fecha u hora', frase: 'Frase', cita: 'En la cita' };
@@ -804,8 +824,8 @@
   }
 
   function loadAgent() {
-    Promise.all([api('/agent'), api('/usage?days=7'), api('/calendar')]).then(function (r) {
-      var a = r[0], usage = r[1], calCfg = r[2];
+    Promise.all([api('/agent'), api('/usage?days=7'), api('/calendar'), api('/backup')]).then(function (r) {
+      var a = r[0], usage = r[1], calCfg = r[2], bk = r[3];
       var eng = Object.keys(a.engines).map(function (k) { var e = a.engines[k]; return '<li><b>' + k + '</b>: ' + (e.available ? '✓ disponible' : '✗ ' + esc(e.reason || 'no disponible')) + '</li>'; }).join('');
       var ap = a.appointments;
       $('agent').innerHTML =
@@ -814,7 +834,8 @@
         '<div class="panel"><b>Citas</b>' + (ap.enabled ? '<div class="small">' + esc(ap.service) + (ap.location ? ' en ' + esc(ap.location) : '') + ' · ' + ap.durationMin + ' min · días ' + ap.days.join(',') + ' · ' + ap.hours.map(function (h) { return h[0] + '–' + h[1]; }).join(', ') + ' · zona ' + esc(a.timezone) + '</div>' : '<div class="muted small">Desactivadas (appointments.enabled en aiva.config.json)</div>') + '</div>' +
         '<div class="panel"><b>Análisis comercial</b><div class="small">Campos capturados además de los básicos: ' + a.crmFields.map(function (f) { return '<code>' + esc(f.name) + '</code>'; }).join(' ') + '</div></div>' +
         '<div class="panel"><b>Conocimiento indexado</b><div class="small">' + (a.docs.product || 0) + ' productos · ' + (a.docs.knowledge || 0) + ' fragmentos de información. Se actualiza con <code>pnpm ingest</code>.</div></div>' +
-        usagePanel(usage) + calendarPanel(calCfg) + '<div class="panel" id="miss-panel"></div><div class="panel" id="dict-panel"></div>';
+        backupPanel(bk) + usagePanel(usage) + calendarPanel(calCfg) + '<div class="panel" id="miss-panel"></div><div class="panel" id="dict-panel"></div>';
+      bindBackup();
       loadMissesPanel(a);
       loadDictionaryPanel(a);
       $('feed-copy').onclick = function () {

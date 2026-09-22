@@ -4,6 +4,8 @@ node_modules/
 auth/
 data/*.db
 data/*.db-*
+# respaldos diarios de la base (tienen datos de clientes)
+data/backups/
 data/knowledge/crawled/
 *.log
 .DS_Store

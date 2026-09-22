@@ -2,6 +2,7 @@ import { business, env } from './config.js';
 import { probeEngines, roleLabel } from './llm/engines.js';
 import { startBusySync } from './crm/busy.js';
 import { startReminders } from './crm/reminders.js';
+import { startBackups } from './rag/backup.js';
 import { apple } from './llm/apple.js';
 import { countDocs, getDb } from './rag/store.js';
 
@@ -17,6 +18,7 @@ console.log(`   roles:  liviano ${roleLabel('light')} · pesado ${roleLabel('hea
 if (!engines.ollama.available && !engines.apple.available && !engines.openai.available) console.error('⚠️  Ningún motor disponible. Arranca Ollama, compila el sidecar (pnpm build:sidecar) o configura OPENAI_API_KEY.');
 startBusySync();
 startReminders();
+startBackups();
 if (business.appointments.enabled && business.appointments.reminder.enabled) console.log(`   recordatorios: el día antes a las ${business.appointments.reminder.at}`);
 if (env.calendarBusyIcs.length) console.log(`   calendario: ${env.calendarBusyIcs.length} calendario(s) del dueño bloquean la agenda (se leen cada 5 min)`);
 
@@ -28,7 +30,9 @@ if (env.webEnabled) {
   const { startWeb } = await import('./channels/web.js');
   const { ADMIN_TOKEN } = await import('./channels/admin.js');
   await startWeb();
-  console.log(`[admin] token del tablero: ${ADMIN_TOKEN}${env.adminToken ? '' : '  (aleatorio; fija ADMIN_TOKEN en .env para que no cambie)'}`);
+  // El token solo se muestra si se generó ahora (sin él no se podría entrar); el fijo de .env no va a los registros.
+  if (env.adminToken) console.log(`[admin] token del tablero: el de ADMIN_TOKEN en .env (termina en …${ADMIN_TOKEN.slice(-4)})`);
+  else console.log(`[admin] token del tablero: ${ADMIN_TOKEN}  (aleatorio; fija ADMIN_TOKEN en .env para que no cambie)`);
 }
 // WhatsApp por QR: lo decide el tablero (Canales) y, mientras nadie lo cambie, WHATSAPP_ENABLED.
 const { channelOn } = await import('./channels/switches.js');

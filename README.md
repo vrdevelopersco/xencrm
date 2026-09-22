@@ -369,6 +369,13 @@ pm2 start "pnpm start" --name aiva --cwd /ruta/a/aiva
 pm2 save && pm2 startup
 ```
 
+**Respaldos.** Una vez al día (y al arrancar, si el último tiene más de un día) aiva copia la base con
+`VACUUM INTO` a `data/backups/` (`BACKUP_DIR`) y conserva las últimas 14 (`BACKUP_KEEP`). Las copias solo las lee
+el dueño del equipo (600) y no van al repositorio: tienen datos de clientes. El tablero (Agente › Respaldo de la
+base) muestra el último y tiene "Respaldar ahora". Conviene que también queden fuera del equipo (Time Machine o
+similar). Para restaurar: detener aiva, copiar el respaldo elegido sobre `data/aiva.db` y arrancar.
+Pruebas: `pnpm test:backup`.
+
 ## Advertencias
 
 - Un cliente por proceso: para varios clientes, una carpeta, un `.env` y un puerto por cada uno.
