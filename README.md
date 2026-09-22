@@ -337,9 +337,11 @@ ejemplo un mini para responder y uno mayor para el análisis, que corre en segun
 razonamiento (gpt-5, gpt-5.5…) se detectan solos: no reciben `temperature` y tienen margen para pensar. Con `HEAVY_ENGINE=openai` el cliente que ya
 paga OpenAI recibe la nube donde más aporta y lo local donde basta. Guardas independientes del
 motor: filtro de enlaces (solo los del contexto), verificación de cifras (un precio que no está en
-el contexto se descarta y se regenera con el otro motor), afirmaciones sin respaldo ("¿tienen
-wifi?" → "sí, tenemos wifi" sin que la información lo diga: se rehace pidiendo no suponer y, si
-insiste, se responde que se confirma con el equipo), limpieza de saludos repetidos. Pruebas:
+el contexto se descarta y se regenera con el otro motor), afirmaciones y negativas sin respaldo ("¿tienen
+wifi?" → "sí, tenemos wifi", o "¿venden zapatos?" → "no vendemos zapatos", sin que la información lo diga: se
+rehace pidiendo no suponer y, si insiste, se responde que se confirma con el equipo). Un "no" pasa si se apoya en
+el alcance del negocio ("somos moda masculina"), y lo que el Perfil marca "por confirmar" siempre se verifica.
+También limpia los saludos repetidos. Pruebas:
 `pnpm test:guards`.
 
 ## Capacidad y memoria

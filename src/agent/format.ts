@@ -88,7 +88,7 @@ const NEGATION_RE =
   /\b(?:no|tampoco|aun no|todavia no)\s+(?:\w+\s+)?(?:tenemos|contamos|manejamos|aceptamos|ofrecemos|vendemos|hacemos|hay|incluye|permitimos|recibimos|se puede)\b|\bno (?:te lo |lo )?(?:puedo|podemos) confirmar\b|\bno (?:te lo )?tengo (?:confirmado|a la mano)\b|\bno lo tengo\b/;
 // Palabras que no dicen de qué se habla (artículos, relleno) o que son demasiado generales para decidirlo.
 const NOT_SUBJECT = new Set(
-  'a al el la los las un una unos unas de del y o e en para por con sin su sus mi mis lo le les que algo alguna alguno algun mas muy tambien ustedes usted aqui alla ahi clientes cliente gente personas persona servicio servicios tienda boutique local negocio gratis gratuito disponible opcion opciones cosa cosas tipo pagar comprar llevar traer usar hacer tener venir ir mismo misma ese esa este esta eso esto'.split(' '),
+  'a al el la los las un una unos unas de del y o e en para por con sin su sus mi mis lo le les que algo alguna alguno algun mas muy tambien ustedes usted aqui alla ahi clientes cliente gente personas persona servicio servicios tienda boutique local negocio gratis gratuito disponible disponibles opcion opciones cosa cosas tipo pagar comprar llevar traer usar hacer tener venir ir mismo misma ese esa este esta eso esto'.split(' '),
 );
 const foldText = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const stem = (w: string) => (w.length > 4 ? w.replace(/(?:es|s)$/, '') : w); // "azules" → "azul", "trajes" → "traj"
@@ -114,6 +114,87 @@ export function ungroundedClaim(question: string, reply: string, reference: stri
   const ref = foldText(reference);
   const missing = words.filter((w) => !ref.includes(stem(w)));
   return missing.length ? missing.join(' ') : null;
+}
+
+// Negativas sin respaldo: "¿venden zapatos?" → "No, no vendemos zapatos" cuando la información no los menciona. El
+// modelo lo dedujo; puede ser falso (el negocio sí los tiene y no está escrito). Lo honesto es verificarlo.
+const DENY_START_RE = /^[\s¡!"'«]*(?:no|nop|lamentablemente|desafortunadamente|por (?:ahora|el momento) no|de momento no|actualmente no)\b/;
+const DENY_VERB = String.raw`\bno\s+(?:\w+\s+)?(?:tenemos|contamos con|manejamos|aceptamos|ofrecemos|vendemos|alquilamos|hacemos|incluimos|incluye|permitimos|recibimos|trabajamos con|hay|se puede)\b`;
+// "No lo tengo confirmado, lo verifico": eso no es negar, es lo que se le pide al modelo.
+const HONEST_RE = /\b(?:verific\w*|averigu\w*|consult\w* con el equipo|te confirmo|te confirmamos|no (?:te lo |lo )?(?:puedo|podemos) confirmar|no (?:te lo )?tengo (?:confirmado|a la mano|claro))\b/;
+
+// "No, somos una boutique de moda masculina": negar por el alcance del negocio, si ese alcance está en su descripción.
+const SCOPE_RE =
+  /\b(?:somos|solo|solamente|unicamente|exclusivamente|nos especializamos en|nos enfocamos en|nos dedicamos a|trabajamos|atendemos|es (?:una|un) (?:boutique|tienda|negocio|marca|empresa|sastreria|almacen|local))\b([^.!?\n]{0,90})/g;
+
+// El público se dice de varias formas: "moda masculina" y "para hombres" son el mismo alcance.
+const AUDIENCE: [RegExp, string][] = [
+  [/\b(?:masculin\w*|hombres?|caballeros?)\b/g, 'hombre'],
+  [/\b(?:femenin\w*|mujer(?:es)?|damas?)\b/g, 'mujer'],
+  [/\b(?:infantil\w*|ninos?|ninas?)\b/g, 'nino'],
+];
+const audience = (s: string) => AUDIENCE.reduce((t, [re, to]) => t.replace(re, to), s);
+
+/** ¿La respuesta dice que lo verifica o que no lo tiene confirmado? */
+export function isHonest(reply: string): boolean {
+  return HONEST_RE.test(foldText(reply));
+}
+
+/**
+ * Lo que el cliente preguntó ("¿venden zapatos?") y la respuesta niega sin respaldo. Devuelve esas palabras
+ * ("zapatos"), o null si lo negado está en la información, si la negación se apoya en el alcance del negocio
+ * (`scope`, su descripción: "No, somos moda masculina"), si la respuesta no niega o si es honesta.
+ */
+export function ungroundedDenial(question: string, reply: string, reference: string, scope = ''): string | null {
+  const ask = ASKS_RE.exec(question);
+  if (!ask) return null;
+  const words = foldText(ask[1]!)
+    .replace(/[^a-zñ0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !NOT_SUBJECT.has(w));
+  if (!words.length) return null;
+  const r = foldText(reply);
+  if (HONEST_RE.test(r)) return null;
+  // Cada frase cuenta: "Hola, soy Aiva. No, eso no lo vendemos" también niega.
+  const denied = r.split(/(?<=[.!?:\n])\s+/).some((s) => DENY_START_RE.test(s)) || words.some((w) => new RegExp(`${DENY_VERB}[^.!?\\n]{0,40}\\b${stem(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(r));
+  if (!denied) return null;
+  const ref = foldText(reference);
+  const missing = words.filter((w) => !ref.includes(stem(w)));
+  if (!missing.length) return null;
+  const scoped = audience(foldText(scope));
+  if (scoped) {
+    for (const m of r.matchAll(SCOPE_RE)) {
+      const reason = audience(m[1]!).replace(/[^a-zñ0-9\s]/g, ' ').split(/\s+/).filter((w) => w.length > 3 && !NOT_SUBJECT.has(w));
+      if (reason.some((w) => scoped.includes(stem(w)))) return null;
+    }
+  }
+  return missing.join(' ');
+}
+
+/** Un "sí" o un "no" sobre algo que la información no menciona. */
+export function unsupportedAnswer(question: string, reply: string, reference: string, scope = ''): string | null {
+  return ungroundedClaim(question, reply, reference) ?? ungroundedDenial(question, reply, reference, scope);
+}
+
+/**
+ * Si la pregunta toca algo que el negocio marcó "por confirmar" en su perfil ("Zapatos"), ese dato. Solo cuentan las
+ * palabras distintivas del dato, las que la información del negocio (`reference`) no menciona: "Tiempos del diseño a
+ * la medida" se activa con "tiempos", no con "diseño", que es lo que el negocio hace.
+ */
+export function touchesPending(question: string, pending: string[], reference = ''): string | null {
+  const words = foldText(question)
+    .replace(/[^a-zñ0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 3 && !NOT_SUBJECT.has(w));
+  const ref = foldText(reference);
+  for (const title of pending) {
+    const t = foldText(title)
+      .replace(/[^a-zñ0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 3 && !NOT_SUBJECT.has(w) && !ref.includes(stem(w)));
+    if (t.some((a) => words.some((b) => stem(a) === stem(b)))) return title;
+  }
+  return null;
 }
 
 /**

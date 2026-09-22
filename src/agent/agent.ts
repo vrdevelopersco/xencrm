@@ -6,7 +6,8 @@ import { openaiModel } from '../llm/openai.js';
 import { appendMessage, clearHistory, getHistory, touchUser } from './memory.js';
 import { classify } from './gate.js';
 import { chooseEngine } from './router.js';
-import { dropRepeatedFacts, postProcess, stripRepeatedGreeting, ungroundedClaim, ungroundedNumbers } from './format.js';
+import { dropRepeatedFacts, isHonest, postProcess, stripRepeatedGreeting, touchesPending, unsupportedAnswer, ungroundedNumbers } from './format.js';
+import { pendingTopics } from '../profile.js';
 import { openVerification, saysWillVerify } from '../crm/verifications.js';
 import { ERROR_REPLIES, HUMAN_REPLIES, OUT_OF_SCOPE_REPLIES, personaPrompt, pick, type Intent } from './prompts.js';
 import { getContact, purgeContact, setHumanMode, updateContact } from '../crm/contacts.js';
@@ -216,6 +217,11 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const sheet = maxSheet > 0 && order.includes('openai') ? businessSheet() : null;
   const useSheet = Boolean(sheet && sheet.tokens <= maxSheet);
   const related = [...new Set(sources.map((d) => d.title))].slice(0, 4);
+  // Lo que el negocio marcó "por confirmar" en su perfil ("Zapatos"): ni sí ni no, se verifica. Se avisa antes de
+  // generar para no gastar una respuesta que después hay que rehacer.
+  const pendingHit = touchesPending(text, pendingTopics(), `${persona}\n${useSheet ? sheet!.text : fullContext}`);
+  if (pendingHit) note = [note, `El negocio todavía no confirma «${pendingHit}»: no digas que sí ni que no; di que lo verificas con el equipo, con una frase como «${business.agent.verifyPhrase}».`].filter(Boolean).join('\n');
+  const scope = business.business.description; // "No, somos moda masculina" se apoya en esto
   const hint = related.length ? `Lo más relacionado con este mensaje en la información: ${related.join('; ')}.` : '';
   let raw: string | undefined;
   let verifyTopic: string | null = null; // lo que no sabía, si la guarda de afirmaciones lo detectó
@@ -250,14 +256,15 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       // Afirmaciones sin respaldo: "¿tienen wifi?" → "Sí, tenemos wifi" sin que la información lo diga. Se rehace
       // pidiendo no suponer; si insiste, una respuesta fija y honesta.
       const grounding = `${input.persona}\n${input.context}`;
-      const claim = ungroundedClaim(text, candidate, grounding);
+      // Un "sí" o un "no" sin respaldo, o cualquier respuesta firme sobre algo por confirmar.
+      const claim = unsupportedAnswer(text, candidate, grounding, scope) ?? (pendingHit && !isHonest(candidate) ? pendingHit : null);
       if (claim) {
         verifyTopic = claim;
-        console.warn(`[agent] ${e} afirmó «${claim}», que no está en la información; se rehace sin afirmarlo`);
+        console.warn(`[agent] ${e} respondió sobre «${claim}» sin respaldo en la información; se rehace para que lo verifique: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
         lastEngine.delete(msg.userId);
         const honest = `La información disponible no menciona «${claim}». No digas que sí ni que no, ni lo supongas: di con naturalidad que lo verificas con el equipo, con una frase como «${business.agent.verifyPhrase}». El equipo le responde por este mismo chat.`;
         const retry = await generate(e, { ...input, note: [note, honest].filter(Boolean).join('\n'), fresh: e === 'apple' });
-        candidate = ungroundedClaim(text, retry, grounding) ? business.agent.verifyPhrase : retry;
+        candidate = unsupportedAnswer(text, retry, grounding, scope) || (pendingHit && !isHonest(retry)) ? business.agent.verifyPhrase : retry;
       }
       raw = candidate;
       engine = e;

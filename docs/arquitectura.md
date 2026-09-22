@@ -43,8 +43,13 @@ y por qué.
    catálogo e información). Así el modelo la ve completa y OpenAI la cobra desde su caché.
 10. **Guardas** (`agent/format.ts`):
     - Una cifra que no está en la información se rehace con el otro motor (`ungroundedNumbers`).
-    - Una afirmación sin respaldo ("sí, tenemos wifi") se rehace pidiendo no suponer; si insiste, sale la frase de
-      verificación (`ungroundedClaim`).
+    - Una afirmación sin respaldo ("sí, tenemos wifi") o una negativa deducida ("no vendemos zapatos", cuando la
+      información no los menciona) se rehace pidiendo no suponer; si insiste, sale la frase de verificación
+      (`unsupportedAnswer`: `ungroundedClaim` y `ungroundedDenial`). Un "no" pasa si lo negado está en la información
+      o si se apoya en el alcance del negocio según su descripción ("somos moda masculina", que también cubre
+      "para hombres").
+    - Lo que el Perfil marca "por confirmar" ("Zapatos") nunca recibe un sí ni un no. Se le avisa al modelo antes de
+      generar y se verifica (`touchesPending`, solo con las palabras distintivas del dato).
     - Los enlaces se filtran a los de la información.
     - Se limpian los saludos repetidos.
 11. **Verificación**: si la respuesta dice que lo verifica, se abre una pregunta en Hoy › Por verificar

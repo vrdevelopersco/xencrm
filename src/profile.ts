@@ -62,6 +62,11 @@ export function pendingFields(p: Profile = getProfile()): string[] {
   ];
 }
 
+/** Los datos propios que el negocio dejó sin texto ("Zapatos"): si el cliente pregunta por ellos, se verifica. */
+export function pendingTopics(p: Profile = getProfile()): string[] {
+  return p.extras.filter((x) => !x.text.trim()).map((x) => x.title);
+}
+
 /** El nombre, la descripción, el sitio y el contacto humano del perfil pasan a la configuración en uso. */
 export function applyProfile(p: Profile = getProfile()): void {
   Object.assign(business.business, {
