@@ -25,7 +25,7 @@ updateContact('wa:573001234567@s.whatsapp.net', {
   notes: 'Dijo: "me gusta el azul"; pidió precio\ny quedó de pensarlo',
   summary: 'Busca traje para su boda',
 });
-setStage('wa:573001234567@s.whatsapp.net', 'interesado', 'bot');
+setStage('wa:573001234567@s.whatsapp.net', 'interesado', { by: 'bot' });
 
 touchUser('web:spam', 'web', 'Spam');
 setArchived('web:spam', true);

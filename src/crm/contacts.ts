@@ -1,6 +1,7 @@
 // Ficha de prospecto (contacto) sobre la tabla users, con etapa, puntaje explicable y modo humano.
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
+import { decayed } from './score.js';
 import { emitEvent } from './events.js';
 
 export const STAGES = ['nuevo', 'conversando', 'interesado', 'cita_agendada', 'vendido', 'perdido'] as const;
@@ -27,6 +28,7 @@ export interface Contact {
   stage: Stage;
   stageLocked: boolean;
   score: number;
+  scoreBase: number;
   scoreFactors: ScoreFactor[];
   sentiment: string | null;
   humanMode: boolean;
@@ -57,15 +59,21 @@ function rowToContact(r: Record<string, unknown>): Contact {
       return def;
     }
   };
+  const base = Number(r.score ?? 0);
+  const stage = ((r.stage as string) || 'nuevo') as Stage;
+  const lastMessageAt = r.last_message_at == null ? null : Number(r.last_message_at);
+  const hoy = decayed(base, json<ScoreFactor[]>(r.score_factors, []), lastMessageAt, stage);
   return {
     id: r.id as string,
     channel: r.channel as string,
     name: (r.name as string | null) ?? null,
     phone: (r.phone as string | null) ?? null,
-    stage: ((r.stage as string) || 'nuevo') as Stage,
+    stage,
     stageLocked: Boolean(r.stage_locked),
-    score: Number(r.score ?? 0),
-    scoreFactors: json<ScoreFactor[]>(r.score_factors, []),
+    score: hoy.score,
+    /** El de la conversación, sin descontar el silencio: lo que llegó a ser este prospecto. */
+    scoreBase: base,
+    scoreFactors: hoy.factors,
     sentiment: (r.sentiment as string | null) ?? null,
     humanMode: Boolean(r.human_mode),
     humanBy: (r.human_by as string | null) ?? null,
@@ -78,7 +86,7 @@ function rowToContact(r: Record<string, unknown>): Contact {
     unread: Number(r.unread ?? 0),
     firstSeen: Number(r.first_seen),
     lastSeen: Number(r.last_seen),
-    lastMessageAt: r.last_message_at == null ? null : Number(r.last_message_at),
+    lastMessageAt,
     messageCount: Number(r.message_count ?? 0),
     archived: Boolean(r.archived),
   };
@@ -218,7 +226,8 @@ export function stats() {
   for (const r of db.prepare('SELECT stage, COUNT(*) n FROM users WHERE archived = 0 GROUP BY stage').all() as { stage: Stage; n: number }[]) byStage[r.stage] = r.n;
   const total = (db.prepare('SELECT COUNT(*) n FROM users WHERE archived = 0').get() as { n: number }).n;
   const avgScore = (db.prepare('SELECT AVG(score) a FROM users WHERE archived = 0').get() as { a: number | null }).a ?? 0;
-  const hot = (db.prepare('SELECT COUNT(*) n FROM users WHERE score >= 60 AND archived = 0').get() as { n: number }).n;
+  // Calientes de hoy: el puntaje ya con el descuento por silencio, igual que lo que se ve en las listas.
+  const hot = listContacts({ limit: 100000 }).filter((c) => c.score >= 60).length;
   const human = (db.prepare('SELECT COUNT(*) n FROM users WHERE human_mode = 1 AND archived = 0').get() as { n: number }).n;
   const unread = (db.prepare('SELECT COALESCE(SUM(unread), 0) n FROM users WHERE archived = 0').get() as { n: number }).n;
   const sentiments = Object.fromEntries(

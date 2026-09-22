@@ -103,7 +103,13 @@ function incrementalPrompt(prev: Signals, messages: StoredMessage[], since: numb
 const STICKY_TEXT = ['nombre', 'ciudad', 'telefono', 'presupuesto'];
 const STICKY_FLAGS = ['pidio_precio', 'menciono_presupuesto', 'quiere_cita'] as const;
 
-/** Puntaje 0-100 con factores explicables. */
+/**
+ * Puntaje 0-100 con factores explicables. Los pesos son un estimado calibrado con lo que hay (10 conversaciones
+ * reales de DUNOR, 3 con cita, 1 venta): pedir cita, el interés declarado, la urgencia y tener claro qué quiere
+ * son lo que de verdad aparece antes de una cita; dar el nombre o preguntar el precio aparecían igual o más en
+ * los que no agendaron. El descuento por silencio no va aquí: se aplica al leer la ficha (`crm/score.ts`), porque
+ * el puntaje solo se recalcula cuando llega un mensaje y si no se quedaría congelado en su mejor momento.
+ */
 export function computeScore(c: Contact, s: Signals, opts: { hasAppointment: boolean }): { score: number; factors: ScoreFactor[] } {
   const f: ScoreFactor[] = [];
   const add = (label: string, points: number, when = true) => {
@@ -114,19 +120,23 @@ export function computeScore(c: Contact, s: Signals, opts: { hasAppointment: boo
   add('Quiere comprar o agendar ya', 20, s.interes >= 3);
   add('Interés claro', 10, s.interes === 2);
   add('Curiosidad', 3, s.interes === 1);
-  add('Preguntó precio', 10, s.pidio_precio);
-  add('Mencionó presupuesto', 10, s.menciono_presupuesto || Boolean(s.presupuesto));
+  add('Preguntó precio', 6, s.pidio_precio);
+  add('Mencionó presupuesto', 8, s.menciono_presupuesto || Boolean(s.presupuesto));
   add('Urgencia alta', 10, s.urgencia === 'alta');
   add('Urgencia media', 4, s.urgencia === 'media');
-  add('Dio su nombre', 5, Boolean(s.nombre || c.name));
-  add('Dio ciudad o teléfono', 3, Boolean(s.ciudad || s.telefono || c.phone));
-  for (const field of business.crm.fields) add(`Dijo ${field.name.replace(/_/g, ' ')}`, 6, Boolean(s[field.name]));
+  add('Dio su nombre', 2, Boolean(s.nombre || c.name));
+  add('Dio ciudad o teléfono', 2, Boolean(s.ciudad || s.telefono || c.phone));
+  // Saber qué quiere pesa, pero el cuarto dato no vale lo mismo que el primero: 4, 3, 2, 1…
+  let captured = 0;
+  for (const field of business.crm.fields) {
+    if (!s[field.name]) continue;
+    add(`Dijo ${field.name.replace(/_/g, ' ')}`, Math.max(1, 4 - captured));
+    captured++;
+  }
   add('Conversación sostenida', 5, c.messageCount >= 4);
   add('Ánimo positivo', 5, s.sentimiento === 'positivo');
   add('Ánimo negativo', -15, s.sentimiento === 'negativo');
   add('Tiene una objeción', -10, s.tiene_objecion);
-  const inactiveDays = c.lastMessageAt ? (Date.now() - c.lastMessageAt) / 86400_000 : 0;
-  add('Sin actividad hace más de 3 días', -10, inactiveDays > 3);
   const score = Math.max(0, Math.min(100, f.reduce((a, b) => a + b.points, 0)));
   return { score, factors: f };
 }

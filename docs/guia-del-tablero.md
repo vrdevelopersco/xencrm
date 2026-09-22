@@ -47,7 +47,9 @@ Lo que hay que atender, ordenado por lo que cuesta dejarlo esperando. Cada fila 
 - **Citas de hoy** y **Próximas citas**: cada una dice cómo va su recordatorio: *Se recuerda hoy a las 5:00 p. m.*,
   *Recordada*, *Confirmó* (dijo que viene) o *No puede* (dijo que no puede; el asistente ya le ofreció moverla o
   cancelarla).
-- **Calientes sin seguimiento**: buenos prospectos que llevan más de un día sin hablar y no tienen cita. Cada uno
+- **Calientes sin seguimiento**: buenos prospectos que llevan más de un día sin hablar, no tienen cita y no están
+  esperando el resultado de una que ya pasó (esos están arriba, en *¿Cómo les fue?*). Aquí entran por lo que
+  llegaron a ser en la conversación, aunque ya se hayan enfriado: son justo los que hay que retomar. Cada uno
   trae dos botones: **Escribirle** abre su conversación, te la pasa a ti y deja un borrador listo con lo que él
   mismo dijo ("lo de tu traje para tu boda"), para que lo ajustes y lo envíes; **Dejarlo por ahora** lo saca de la
   lista una semana (si escribe antes, vuelve enseguida). Así la lista se puede vaciar y se puede confiar en ella.
@@ -75,6 +77,13 @@ cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo nú
 - **¿Es un prospecto?**: el veredicto (*Sin señales aún*, *Posible prospecto*, *Prospecto claro*, *Prospecto con
   cita*, *Cliente*, *Perdido*) con la barra de probabilidad. Debajo dice el número y cómo se ve en tarjetas y avisos
   (*frío*, *tibio*, *caliente*): es el mismo puntaje.
+
+  El puntaje **se enfría solo**: a los 3 días sin hablar baja 10, a la semana 25 y a las dos semanas 40, y la ficha
+  dice hasta dónde llegó cuando hablaron ("llegó a 65 cuando hablaron"). Quien tiene cita o ya compró no se enfría:
+  el siguiente paso ya está puesto. Lo que más pesa es pedir cita o tenerla, el interés que muestre, el afán y
+  tener claro qué quiere; dar el nombre o preguntar el precio pesan poco. Son pesos **estimados** con las primeras
+  conversaciones del negocio: se afinan cuando haya unas 20 citas con su resultado marcado en Hoy › *¿Cómo les
+  fue?*.
 - **Por qué**: los puntos que suman o restan ("Pidió cita +30", "Objeción −10").
 - **Datos capturados**: lo que el asistente entendió de la conversación (prenda, ocasión, fecha del evento,
   presupuesto, teléfono…).

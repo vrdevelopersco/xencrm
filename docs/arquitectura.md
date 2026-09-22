@@ -76,7 +76,7 @@ y por qué.
 | `src/agent/` | `agent.ts` (el recorrido), `gate.ts` (clasificador), `router.ts` (motor por turno), `prompts.ts` (persona y reglas), `format.ts` (guardas y post-proceso), `dictionary.ts` (diccionario y expresiones), `teach.ts` (enseñar una frase), `memory.ts` (historial) |
 | `src/llm/` | `engines.ts` (roles, respaldo y operaciones), `openai.ts` (modelo por rol, razonamiento, caché), `ollama.ts`, `apple.ts` + `sidecar/`, `usage.ts` (consumo y costos) |
 | `src/rag/` | `store.ts` (SQLite: tablas, vectores, FTS5, migraciones), `retriever.ts` (búsqueda y ficha completa), `ingest.ts` (catálogo, markdown, sitio, Shopify, perfil), `profile-index.ts` |
-| `src/crm/` | `contacts.ts`, `merge.ts` (fichas de la misma persona en dos canales), `analyzer.ts` (análisis y puntaje), `signals.ts` (datos exactos por código), `recap.ts`, `appointments.ts` (agenda y zona horaria), `when.ts` (fechas y franjas), `booking.ts` (flujo de citas), `reminders.ts` (recordatorio del día antes), `calendar.ts` + `busy.ts` (iCalendar), `verifications.ts`, `misses.ts` (frases que no entendimos), `outbox.ts` (enviar al cliente, ventana de 24 h, plantillas), `notifications.ts`, `events.ts` (bus en memoria), `settings.ts` |
+| `src/crm/` | `contacts.ts`, `merge.ts` (fichas de la misma persona en dos canales), `analyzer.ts` (análisis y puntaje), `score.ts` (el puntaje se enfría solo), `followup.ts` (posponer seguimiento), `export.ts` (CSV), `signals.ts` (datos exactos por código), `recap.ts`, `appointments.ts` (agenda y zona horaria), `when.ts` (fechas y franjas), `booking.ts` (flujo de citas), `reminders.ts` (recordatorio del día antes), `calendar.ts` + `busy.ts` (iCalendar), `verifications.ts`, `misses.ts` (frases que no entendimos), `outbox.ts` (enviar al cliente, ventana de 24 h, plantillas), `notifications.ts`, `events.ts` (bus en memoria), `settings.ts` |
 | `src/channels/` | `web.ts` (servidor, widget, página demo), `admin.ts` (API del tablero y SSE), `whatsapp.ts` (Baileys), `meta.ts` (Cloud API) + `meta-credentials.ts`, `registry.ts` + `switches.ts` (Canales), `calendar.ts` (rutas públicas), `public-check.ts` (¿responde la dirección pública?) |
 | `src/` | `config.ts` (esquemas y variables), `profile.ts` (perfil del negocio), `brand.ts` (color, contraste y logo), `envfile.ts` (escribir `.env`), `index.ts` (arranque), `onboard.ts`, `cli.ts`, `seed.ts` |
 | `src/eval/` | pruebas sin modelo, escenarios, repasos y consumo |
@@ -92,6 +92,14 @@ Una base SQLite por cliente (`DB_PATH`, WAL):
 | `users` | contactos: canal, nombre, teléfono, etapa (y si se fijó a mano), puntaje y factores, ánimo, modo humano y quién lo tiene, datos capturados, etiquetas, notas, resumen, archivada |
 | `messages` | la conversación, con autor (`customer`, `bot`, `human`) y quién del equipo escribió |
 | `analyses` | cada análisis: motor, ánimo, señales, puntaje y factores (el costo está en `llm_usage`) |
+
+**El puntaje.** `computeScore` (en `analyzer.ts`) suma factores explicables con las señales del análisis; se guarda
+en `users.score` y solo se recalcula cuando llega un mensaje. Al leer la ficha, `crm/score.ts` le descuenta el
+silencio (3 días −10, una semana −25, dos semanas −40; nada si tiene cita o ya compró) y agrega ese descuento como
+un factor más: `contact.score` es el de hoy y `contact.scoreBase` el que llegó a tener en la conversación —"Calientes
+sin seguimiento" usa el segundo, porque son justo los que se enfriaron. Los pesos son un estimado hecho con las
+primeras conversaciones reales; `pnpm rescore` recalcula las fichas viejas con los pesos de hoy usando los análisis
+ya guardados (no llama al modelo; `--write` para guardar).
 | `appointments` | citas con estado, recordatorio (estado, cuándo, por qué) y respuesta del cliente |
 | `events` | línea de tiempo de cada contacto |
 | `llm_usage` | cada llamada a un modelo: tarea, modelo, tokens (entrada, caché, salida, razonamiento), milisegundos |
@@ -197,6 +205,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:buscar` | buscar dentro de la conversación y el número para escribir o llamar | no |
 | `pnpm test:followup` | posponer el seguimiento de un caliente y su regreso a la lista | no |
 | `pnpm test:export` | contactos y citas en CSV: columnas, comillas y archivados fuera | no |
+| `pnpm test:score` | pesos del puntaje y el descuento por silencio al leer la ficha | no |
 | `pnpm test:backup` | respaldo: la copia trae los datos, permisos 600, conserva las últimas N | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |
@@ -235,4 +244,5 @@ Reglas para probar sin romper nada:
 - WhatsApp oficial está escrito contra la documentación de Meta, pero no se ha probado con credenciales reales.
 - Instagram y Messenger: el adaptador se construye cuando haya credenciales de prueba.
 - Túnel fijo con dominio propio y despliegue en el Mac Mini (con pm2).
-- Calibrar los pesos del puntaje cuando haya resultados reales (vendido o perdido).
+- Afinar los pesos del puntaje con resultados reales: hoy son un estimado con 10 conversaciones (3 con cita, 1
+  venta). Con ~20 citas con resultado marcado en Hoy › ¿Cómo les fue? se pueden medir de verdad.

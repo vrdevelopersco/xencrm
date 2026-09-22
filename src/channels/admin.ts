@@ -367,6 +367,12 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     );
     const open = all.filter((x) => !['vendido', 'perdido'].includes(x.stage)); // las cerradas no piden acción
     const withUpcoming = new Set(listAppointments({ from: now, status: 'confirmada', limit: 1000 }).map((a) => a.userId));
+    // Cita que ya pasó y sigue sin resultado: esos están en "¿Cómo les fue?", no en "sin seguimiento".
+    const waitingOutcome = new Set(
+      listAppointments({ from: now - 14 * 86400_000, to: now, status: 'confirmada', limit: 1000 })
+        .filter((a) => a.endsAt < now)
+        .map((a) => a.userId),
+    );
     return c.json({
       appointments: listAppointments({ from: startOfDay.getTime(), to: endOfDay, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt), { withDay: false }), remindAt: reminderTime(a.startsAt) })),
       // Citas que ya pasaron y siguen "confirmadas": su resultado (vino, no vino, compró) es lo que calibra el puntaje.
@@ -382,7 +388,9 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       // Calientes abandonados: sin mensajes en 24 h, sin una cita ya agendada (esa ya es seguimiento) y sin
       // posponer (si el equipo dijo "por ahora no", la lista no lo repite).
       hot: open
-        .filter((x) => x.score >= 60 && !withUpcoming.has(x.id) && (x.lastMessageAt ?? 0) < now - 24 * 3600_000 && !isSnoozed(x, now))
+        // scoreBase: el puntaje de la conversación, sin el descuento por silencio. Justamente los que fueron buenos
+        // prospectos y se enfriaron por falta de seguimiento son los que hay que retomar.
+        .filter((x) => x.scoreBase >= 60 && !withUpcoming.has(x.id) && !waitingOutcome.has(x.id) && (x.lastMessageAt ?? 0) < now - 24 * 3600_000 && !isSnoozed(x, now))
         .slice(0, 20),
       upcoming: listAppointments({ from: endOfDay, to: endOfDay + 3 * 86400_000, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)), remindAt: reminderTime(a.startsAt) })),
       // Lo que el bot no supo y prometió verificar: el cliente espera la respuesta del equipo.
