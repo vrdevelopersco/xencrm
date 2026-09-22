@@ -9,6 +9,14 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### Llevarse los contactos y las citas en CSV · `e5f1ac3`
+Los datos son del negocio y no había forma de sacarlos sin abrir la base a mano. Análisis tiene ahora **Contactos
+(CSV)** y **Citas (CSV)**, con separador ";" y BOM (lo que Excel en español abre bien de una vez), la etapa con su
+nombre, puntaje y temperatura, qué busca, ocasión, fecha del evento, etiquetas y notas; las citas van con cliente,
+teléfono, estado, lugar y cómo fue el recordatorio. Los archivados no salen y la descarga manda el token en la
+cabecera, no en la dirección, para que una URL copiada no se lleve el acceso. `pnpm test:export` (14 casos, con
+notas que traen comillas, ";" y saltos de línea) y probado en el tablero y por HTTP: 51 filas, 401 sin token.
+
 ### Calientes sin seguimiento: escribirles y poder posponer · `04f5a1f`
 La lista solo listaba: no había qué hacer con ella, así que los mismos nombres volvían todos los días y dejaba de
 mirarse. Cada fila tiene ahora **Escribirle** —abre la conversación, se la pasa a la persona y deja un borrador
