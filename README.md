@@ -23,6 +23,8 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
   los módulos, los datos, la configuración por capas, las pruebas y cómo extender aiva.
 - [`docs/diseno-tablero.md`](docs/diseno-tablero.md): las reglas de diseño del tablero (contraste, material,
   colores de dato), con sus mediciones.
+- [`docs/arreglos.md`](docs/arreglos.md): la bitácora de arreglos: qué fallaba, qué cambió y cómo se comprobó, con
+  su commit.
 - `examples/dunor/POR-CONFIRMAR.md`: lo que falta confirmar con DUNOR (se llena en el Perfil).
 
 ## Qué hace
