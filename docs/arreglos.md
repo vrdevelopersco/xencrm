@@ -9,6 +9,18 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### El asistente sabe que ya venías hablando por el otro canal · `114f571`
+Empezaba la gestión por el chat del sitio y en la tarde escribía por WhatsApp: para el cliente es la misma
+conversación, pero aiva lo saludaba como a un desconocido y le preguntaba todo otra vez. Ahora, cuando el número
+coincide con otra ficha suya, la conversación de allá entra en el contexto y lo dice una sola vez: *"Hola, Marta 🙂
+Vi que veníamos hablando por el chat del sitio; ya me puse al tanto"*, y sigue respondiendo con lo que ya sabía (el
+traje, la ocasión, la cita). El equipo lo ve en la campana y une las fichas con un botón. **No se unen solas**: cada
+ficha es la historia de su canal y esa decisión es de una persona.
+
+De paso, dos muletillas que las reglas no entendían: preguntar por la cita ("¿a qué hora era?", "¿sigue en pie?")
+lo ponía a ofrecer cambiarla en vez de responder, y "cámbiala" con tilde no la reconocía ninguna regla.
+`pnpm test:cross` (12 casos), `pnpm test:booking` (4 nuevos), 24 suites y escenarios con OpenAI real: 40/40.
+
 ### "El jueves" es el de esta semana · `1ca28cb`
 Un día de la semana suelto era un filtro abierto —cualquier jueves—, así que si ese jueves estaba lleno el
 asistente ofrecía el de la semana siguiente sin avisar, cuando el cliente estaba hablando de esta. Ahora "el
