@@ -134,6 +134,25 @@ export function getDb(): DatabaseSync {
       ts INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS misses_status ON misses(status, kind, key);
+    -- Historial que trae un cliente cuando conecta su WhatsApp: vive aparte y NUNCA entra al índice de
+    -- conocimiento. De aquí salen las preguntas que le hacen y cómo atiende, no los precios ni las políticas.
+    CREATE TABLE IF NOT EXISTS import_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chat TEXT NOT NULL,
+      autor TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      origen TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS import_chat ON import_messages(chat, ts);
+    -- Lo que ya se decidió sobre un tema del historial: aceptado (pasó al Perfil) o descartado.
+    CREATE TABLE IF NOT EXISTS import_temas (
+      clave TEXT PRIMARY KEY,
+      estado TEXT NOT NULL,
+      titulo TEXT NOT NULL,
+      ts INTEGER NOT NULL
+    );
     -- Decisiones tomadas desde el tablero (p. ej. qué canales están encendidos); los secretos siguen en .env.
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,

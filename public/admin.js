@@ -823,7 +823,8 @@
 
   // ---------- perfil del negocio ----------
   // Lo confirmado es lo que el bot dice; lo vacío queda "por confirmar" (si preguntan, el bot dice que lo verifica).
-  function loadProfile() { api('/profile').then(function (d) { state.profile = d; renderProfile(); }); }
+  function loadProfile() {
+    loadHistorial(); api('/profile').then(function (d) { state.profile = d; renderProfile(); }); }
   function profGet(p, k) { return k.split('.').reduce(function (o, x) { return o ? o[x] : undefined; }, p); }
   function profSet(p, k, v) { var ks = k.split('.'), o = p; for (var i = 0; i < ks.length - 1; i++) { o[ks[i]] = o[ks[i]] || {}; o = o[ks[i]]; } o[ks[ks.length - 1]] = v; }
   function profField(d, f, i) {
@@ -839,13 +840,83 @@
     return '<div class="prof-extra" data-extra="' + i + '"><input type="text" aria-label="Dato" value="' + esc(x.title) + '" placeholder="Qué dato (por ejemplo: Tallas)"><button class="btn sm" type="button" data-rm="' + i + '">Quitar</button>' +
       '<textarea rows="2" aria-label="' + esc(x.title || 'Detalle') + '" placeholder="Vacío: queda por confirmar">' + esc(x.text) + '</textarea>' + (note ? '<div class="prof-note" style="grid-column:1/-1">Nota: ' + esc(note) + '</div>' : '') + '</div>';
   }
+  // Lo que aprendimos de sus chats: las preguntas que más le hacen al negocio, para llenar el Perfil con lo que
+  // sus clientes de verdad preguntan. Del historial salen las preguntas; las respuestas las pone el equipo.
+  function loadHistorial() {
+    return api('/historial').then(function (h) {
+      state.historial = h;
+      renderHistorial();
+    });
+  }
+  function renderHistorial() {
+    var h = state.historial;
+    if (!h || !$('hist')) return;
+    var r = h.resumen || {};
+    var nuevos = (h.temas || []).filter(function (t) { return t.estado === 'nuevo'; });
+    if (!r.mensajes) {
+      $('hist').innerHTML = '<div class="panel"><b>¿Ya tienen conversaciones por WhatsApp?</b>' +
+        '<div class="small muted">De ahí salen las preguntas que más les hacen, para no llenar este perfil adivinando. ' +
+        'En WhatsApp: abre el chat › ⋮ › Más › <b>Exportar chat</b> › Sin archivos multimedia, y sube el .txt.</div>' +
+        '<div class="feed-row" style="margin-top:8px"><input type="file" id="hist-file" accept=".txt" style="max-width:260px">' +
+        '<button class="btn sm" id="hist-subir">Leer el chat</button></div>' +
+        '<div class="small muted">No se guarda como información del negocio: de ahí solo salen preguntas y el tono. ' +
+        'Los precios y las políticas se escriben aquí abajo, que son los de hoy.</div>' +
+        '<div class="small" id="hist-msg" role="status"></div></div>';
+    } else {
+      $('hist').innerHTML = '<div class="panel"><b>Lo que aprendimos de sus chats</b>' +
+        '<div class="small muted">' + r.mensajes + ' mensajes de ' + r.chats + ' conversaciones' +
+          (r.desde ? ', desde ' + new Date(r.desde).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }) : '') +
+          '. Nada de esto es información del negocio: son las preguntas que le hacen.</div>' +
+        (nuevos.length
+          ? '<div class="small" style="margin-top:8px">Lo que más preguntan. <b>Agregar al perfil</b> lo deja como dato por confirmar, para que escribas la respuesta de hoy.</div>' +
+            nuevos.map(function (t, i) {
+              return '<div class="feed-row" style="margin-top:8px;align-items:flex-start" data-tema="' + i + '">' +
+                '<span class="chip">' + t.veces + '×</span>' +
+                '<span class="grow"><b>' + esc(t.titulo) + '</b><div class="small muted">' + esc(t.ejemplos.slice(1).join(' · ').slice(0, 120)) + '</div></span>' +
+                '<button class="btn sm primary" data-ok="' + i + '">Agregar al perfil</button>' +
+                '<button class="btn sm" data-no="' + i + '">No aplica</button></div>';
+            }).join('')
+          : '<div class="ok" style="margin-top:8px">Ya revisaste todos los temas.</div>') +
+        (h.estilo && h.estilo.length
+          ? '<div style="margin-top:12px"><b>Así contestan ustedes</b><div class="small muted">Ejemplos sin cifras, para afinar el tono del asistente. Los precios y plazos nunca salen de aquí.</div>' +
+            '<ul class="timeline">' + h.estilo.slice(0, 4).map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul></div>'
+          : '') +
+        '<div class="feed-row" style="margin-top:10px"><button class="btn sm" id="hist-borrar">Borrar el historial importado</button></div>' +
+        '<div class="small" id="hist-msg" role="status"></div></div>';
+    }
+    if ($('hist-subir')) $('hist-subir').onclick = subirChat;
+    if ($('hist-borrar')) $('hist-borrar').onclick = function () {
+      api('/historial', { method: 'DELETE' }).then(function () { loadHistorial(); });
+    };
+    $('hist').querySelectorAll('[data-ok],[data-no]').forEach(function (b) {
+      b.onclick = function () {
+        var ok = b.hasAttribute('data-ok');
+        var t = nuevos[Number(b.getAttribute(ok ? 'data-ok' : 'data-no'))];
+        b.disabled = true;
+        api('/historial/tema', { method: 'POST', body: { clave: t.clave, titulo: t.titulo, estado: ok ? 'aceptado' : 'descartado' } })
+          .then(function () { return loadProfile(); });
+      };
+    });
+  }
+  function subirChat() {
+    var f = $('hist-file').files[0];
+    if (!f) { $('hist-msg').textContent = 'Elige el archivo .txt que exportaste de WhatsApp.'; return; }
+    $('hist-msg').textContent = 'Leyendo…';
+    f.text().then(function (texto) {
+      return api('/historial/importar', { method: 'POST', body: { texto: texto, delNegocio: [state.bizName], chat: f.name.replace(/\.txt$/i, '') } });
+    }).then(function (r) {
+      if (r.error) { $('hist-msg').textContent = r.error; return; }
+      $('hist-msg').textContent = r.nuevos + ' mensajes leídos.';
+      loadHistorial();
+    });
+  }
   function renderProfile(msg) {
     var d = state.profile, sections = [];
     d.fields.forEach(function (f, i) { var s = sections.filter(function (x) { return x.name === f.section; })[0]; if (!s) sections.push(s = { name: f.section, html: '' }); s.html += profField(d, f, i); });
     var pending = d.pending.length
       ? '<b>' + d.pending.length + (d.pending.length === 1 ? ' dato por confirmar' : ' datos por confirmar') + '</b><div class="small">Si un cliente pregunta por esto, ' + esc(d.agentName) + ' no lo supone: responde «' + esc(d.verifyPhrase) + '» y te llega a Hoy › Por verificar.</div><div class="dict-chips">' + d.pending.map(function (x) { return '<span class="chip v-posible">' + esc(x) + '</span>'; }).join('') + '</div>'
       : '<b>Todo confirmado</b><div class="small">' + esc(d.agentName) + ' responde con estos datos.</div>';
-    $('profile').innerHTML = '<div class="panel">' + pending + '</div>' +
+    $('profile').innerHTML = '<div class="panel">' + pending + '</div>' + '<div id="hist"></div>' +
       sections.map(function (s) { return '<div class="panel prof"><b>' + esc(s.name) + '</b>' + s.html + '</div>'; }).join('') +
       '<div class="panel prof"><b>Otros datos</b><div class="small muted">Lo propio de este negocio: tallas, tiempos de entrega, lo que venden o no.</div><div id="pf-extras">' +
       d.profile.extras.map(function (x, i) { return profExtra(x, i, d.profile.notes); }).join('') + '</div><div class="feed-row"><button class="btn" type="button" id="pf-add">Agregar dato</button></div></div>' +
@@ -857,6 +928,7 @@
     };
     bindExtraRemove();
     $('pf-save').onclick = saveProfileForm;
+    renderHistorial(); // el panel vive dentro del Perfil: se pinta cuando el Perfil ya está en pantalla
   }
   function bindExtraRemove() { $('profile').querySelectorAll('[data-rm]').forEach(function (b) { b.onclick = function () { b.closest('.prof-extra').remove(); }; }); }
   function saveProfileForm() {

@@ -150,6 +150,11 @@ abono, precios, políticas y datos propios (tallas, tiempos, lo que venden o no)
   responde «Deja te verifico eso…» y la pregunta te llega a Hoy › Por verificar.
 - Las **notas** en gris son para el equipo (por ejemplo, qué falta averiguar); el asistente no las ve.
 - **Agregar dato** suma algo propio del negocio. Si lo dejas sin texto, queda por confirmar.
+- **Lo que aprendimos de sus chats**: si ya tienen conversaciones por WhatsApp, se pueden traer (en WhatsApp: el
+  chat › ⋮ › Más › *Exportar chat* › sin archivos, y subes el .txt). De ahí salen **las preguntas que más les
+  hacen**, para llenar este perfil con lo que sus clientes preguntan de verdad y no adivinando. **Agregar al
+  perfil** deja la pregunta como dato por confirmar, para que escribas la respuesta. De los chats **no** salen
+  precios ni políticas: esos cambian y se escriben aquí, que son los de hoy.
 - **Guardar perfil** guarda y deja una copia de la versión anterior.
 
 ## Agente

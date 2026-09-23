@@ -27,6 +27,7 @@ import { checkPublicUrl, publicStatus } from './public-check.js';
 import { backupNow, backupStatus } from '../rag/backup.js';
 import { findDuplicates, keeperOf, mergeContacts } from '../crm/merge.js';
 import { getProfile, pendingFields, PROFILE_FIELDS, saveProfile } from '../profile.js';
+import { borrarImportado, decidirTema, guardarImportados, leerChatExportado, muestraDeEstilo, resumenImportado, temasFrecuentes } from '../crm/historial.js';
 import { indexProfile } from '../rag/profile-index.js';
 import { exportDictionary, getDictionary, importDictionary } from '../agent/dictionary.js';
 import { teachExpression } from '../agent/teach.js';
@@ -248,6 +249,45 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       return c.json({ errors: (err as Error).message.split('\n') }, 400);
     }
   });
+
+  /**
+   * Lo que aprendimos de sus chats: el historial que trajo el cliente da **las preguntas** que le hacen y **cómo
+   * atiende**, nunca los precios ni las políticas (docs/aprender-del-historial.md). Aceptar un tema lo manda al
+   * Perfil como un dato *por confirmar*, para que el equipo escriba la respuesta de hoy.
+   */
+  app.get('/admin/api/historial', (c) =>
+    c.json({ resumen: resumenImportado(), temas: temasFrecuentes(), estilo: muestraDeEstilo(8), estiloActual: business.agent.style }),
+  );
+
+  app.post('/admin/api/historial/tema', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { clave?: string; titulo?: string; estado?: 'aceptado' | 'descartado' };
+    const titulo = body.titulo?.toString().trim().slice(0, 80);
+    if (!body.clave || !titulo || !body.estado) return c.json({ error: 'falta el tema' }, 400);
+    if (body.estado === 'aceptado') {
+      const p = getProfile();
+      if (!p.extras.some((x) => x.title.toLowerCase() === titulo.toLowerCase())) {
+        // Entra sin texto: queda "por confirmar" y el asistente no lo supone hasta que el equipo lo llene.
+        saveProfile({ ...p, extras: [...p.extras, { title: titulo, text: '' }] });
+      }
+    }
+    decidirTema(body.clave, body.estado, titulo);
+    return c.json({ temas: temasFrecuentes(), pending: pendingFields() });
+  });
+
+  // Importar un chat exportado de WhatsApp ("Exportar chat" da un .txt). Se lee y se guarda aparte; nada entra a
+  // lo que el asistente sabe.
+  app.post('/admin/api/historial/importar', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { texto?: string; delNegocio?: string[]; chat?: string };
+    const texto = body.texto?.toString() ?? '';
+    if (texto.trim().length < 20) return c.json({ error: 'Ese archivo viene vacío.' }, 400);
+    const nombres = (body.delNegocio ?? []).map((s) => String(s).trim()).filter(Boolean);
+    const mensajes = leerChatExportado(texto, { delNegocio: nombres.length ? nombres : [business.business.name], chat: body.chat });
+    if (!mensajes.length) return c.json({ error: 'No reconocí el formato: debe ser el .txt de "Exportar chat" de WhatsApp.' }, 400);
+    const nuevos = guardarImportados(mensajes, 'exportado');
+    return c.json({ leidos: mensajes.length, nuevos, resumen: resumenImportado(), temas: temasFrecuentes() });
+  });
+
+  app.delete('/admin/api/historial', (c) => c.json({ borrados: borrarImportado() }));
 
   // Frases que no entendimos: se enseñan como expresiones del diccionario o se marcan como revisadas.
   app.get('/admin/api/misses', (c) => c.json({ groups: listMisses() }));

@@ -55,6 +55,8 @@ export const env = {
   whatsappAuthDir: process.env.WHATSAPP_AUTH_DIR || './auth',
   whatsappIgnoreGroups: bool(process.env.WHATSAPP_IGNORE_GROUPS, true),
   whatsappAllowedNumbers: list(process.env.WHATSAPP_ALLOWED_NUMBERS),
+  // Traer lo ya conversado al vincular el número: solo para aprender qué preguntan y cómo atiende el negocio.
+  whatsappImportHistory: bool(process.env.WHATSAPP_IMPORT_HISTORY, false),
   debounceMs: num(process.env.DEBOUNCE_MS, 1500),
 
   dbPath: process.env.DB_PATH || './data/aiva.db',

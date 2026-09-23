@@ -93,6 +93,15 @@ Una base SQLite por cliente (`DB_PATH`, WAL):
 | `messages` | la conversación, con autor (`customer`, `bot`, `human`) y quién del equipo escribió |
 | `analyses` | cada análisis: motor, ánimo, señales, puntaje y factores (el costo está en `llm_usage`) |
 
+**Aprender del historial** (`crm/historial.ts`, pantalla en Perfil › *Lo que aprendimos de sus chats*): lo que el
+cliente ya tiene conversado entra a la tabla `import_messages` —aparte, **nunca al índice de conocimiento**— por
+dos caminos: el `.txt` de "Exportar chat" de WhatsApp (`leerChatExportado`) o la sincronización al vincular el
+número (`WHATSAPP_IMPORT_HISTORY=true`, que enciende `syncFullHistory` y escucha `messaging-history.set`). De ahí
+salen **las preguntas** (`temasFrecuentes` agrupa por las palabras que las preguntas comparten) y **el tono**
+(`muestraDeEstilo`, que descarta entera cualquier respuesta con cifras). Aceptar un tema lo escribe en el Perfil
+como dato *por confirmar*: el historial pone la pregunta, el negocio pone la respuesta de hoy. La regla y el
+porqué, en [`aprender-del-historial.md`](aprender-del-historial.md).
+
 **El embudo es del negocio.** `crm.stages` en `aiva.config.json` define las etapas: id, nombre y **papel**
 (`inicio`, `activo`, `interes`, `cita`, `ganado`, `perdido`). El código nunca usa los nombres —pregunta por el
 papel (`etapaCon('ganado')`, `rolDe(stage)`, `estaCerrada`)—, así que una financiera puede ir "Nuevo → En revisión
@@ -268,6 +277,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:consola` | tickets, orden de atención y el alta desde la consola | no |
 | `pnpm test:etapas` | un negocio con otro embudo (soporte, sin citas) funciona igual | no |
 | `pnpm test:usuarios` | quién entra a la consola y qué clientes alcanza a ver y atender | no |
+| `pnpm test:historial` | aprender del historial: agrupar preguntas, estilo sin cifras, leer el .txt | no |
 | `pnpm test:backup` | respaldo: la copia trae los datos, permisos 600, conserva las últimas N | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |

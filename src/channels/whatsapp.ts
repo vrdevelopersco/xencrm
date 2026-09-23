@@ -16,6 +16,7 @@ import pino from 'pino';
 import qrcode from 'qrcode-terminal';
 import { createRequire } from 'node:module';
 import { env } from '../config.js';
+import { guardarImportados } from '../crm/historial.js';
 import { handleMessage } from '../agent/agent.js';
 import { registerSender } from '../crm/outbox.js';
 
@@ -82,7 +83,9 @@ export async function startWhatsApp(): Promise<WASocket> {
     logger,
     browser: Browsers.macOS('Desktop'),
     markOnlineOnConnect: false, // así el teléfono sigue recibiendo notificaciones
-    syncFullHistory: false,
+    // Traer lo ya conversado se pide a propósito (WHATSAPP_IMPORT_HISTORY): de ahí salen las preguntas que le
+    // hacen al negocio y cómo atiende, nunca precios ni políticas (docs/aprender-del-historial.md).
+    syncFullHistory: env.whatsappImportHistory,
     generateHighQualityLinkPreview: false,
   });
   current = sock;
@@ -124,6 +127,31 @@ export async function startWhatsApp(): Promise<WASocket> {
     if (type !== 'notify') return;
     for (const m of messages) onMessage(sock, m);
   });
+
+  // Lo que ya estaba conversado cuando vincularon el número. Solo se lee y se guarda aparte: no se responde nada,
+  // no entra a las conversaciones del CRM ni a lo que el asistente sabe.
+  if (env.whatsappImportHistory) {
+    sock.ev.on('messaging-history.set', ({ messages, isLatest }) => {
+      const leidos = (messages ?? []).flatMap((m) => {
+        const jid = m.key?.remoteJid;
+        if (!jid || !m.message || isJidStatusBroadcast(jid) || isJidNewsletter(jid) || isJidGroup(jid)) return [];
+        const texto = extractText(m.message);
+        if (!texto) return [];
+        const ts = Number(m.messageTimestamp ?? 0) * 1000;
+        if (!ts) return [];
+        return [{
+          chat: jidNormalizedUser(jid),
+          autor: m.key.fromMe ? 'negocio' : (m.pushName ?? jidNormalizedUser(jid).split('@')[0] ?? ''),
+          role: (m.key.fromMe ? 'assistant' : 'user') as 'assistant' | 'user',
+          content: texto,
+          ts,
+        }];
+      });
+      const nuevos = leidos.length ? guardarImportados(leidos, 'whatsapp') : 0;
+      if (nuevos) console.log(`[whatsapp] historial: ${nuevos} mensajes guardados para aprender (Perfil › Lo que aprendimos de sus chats)`);
+      if (isLatest) console.log('[whatsapp] historial: terminó de sincronizar');
+    });
+  }
 
   return sock;
 }
