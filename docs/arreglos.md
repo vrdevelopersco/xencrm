@@ -19,6 +19,16 @@ negocio** con tres plantillas —citas, soporte y cotización—, cada una con s
 captura. `pnpm test:etapas` (14 casos con un negocio de soporte), `test:clientes` (8 nuevos) y las 27 suites; el
 tablero de DUNOR quedó idéntico.
 
+### La consola también atiende, y cada quien ve solo sus clientes · `a907db9`
+La consola servía para mirar, no para trabajar. Ahora **Atender** junta en una sola bandeja lo que espera a una
+persona en todos los clientes y se responde ahí mismo: la consola habla por el cliente con su token, así que no hay
+que abrir cinco tableros ni repartirlos. Y entra cada quien con su usuario y su clave: el super-admin ve y atiende
+todo y maneja el equipo; quien atiende un cliente solo ve —y solo le suena— lo de ese cliente (bandeja, estado y
+proxy filtrados; 403 si intenta otro). Cuando entra algo nuevo de los tuyos suena un pito, el número queda en el
+título y en segundo plano sale notificación del navegador. `pnpm test:usuarios` (25 casos), `test:consola` (26) y
+28 suites. Probado de verdad: una pregunta de un cliente de CONFIA FINTECH respondida desde la consola le llegó a
+su chat, y el usuario de soporte de HRC recibe 403 al intentar ver CONFIA.
+
 ### Consola del super-admin · `7272210`
 Con varios clientes hacía falta verlos a todos y poder dar de alta uno nuevo. `pnpm consola` muestra una tarjeta
 por cliente con su prioridad, sus números y **tickets que salen solos del estado** (instancia caída, dirección
