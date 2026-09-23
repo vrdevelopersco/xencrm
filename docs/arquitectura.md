@@ -115,8 +115,21 @@ raíz sin pisar lo ya definido. `pnpm cliente` da de alta, lista, y genera el `e
 app por cliente, con reinicio) y el ingress de cloudflared (un túnel, un subdominio por cliente). El aislamiento se
 comprobó levantando dos instancias a la vez: bases distintas y el token de una devuelve 401 en la otra.
 
-**La consola del super-admin** (`pnpm consola`, `src/consola.ts` + `public/consola.html`) muestra todos los
-clientes en una pantalla y es donde se da de alta uno nuevo. No guarda nada propio: le pregunta a cada instancia
+**La consola** (`pnpm consola`, `src/consola.ts` + `public/consola.html`) es de vigilancia **y de atención**: en
+*Atender* junta en una sola bandeja lo que espera a una persona en todos los clientes (preguntas por verificar,
+quien pidió una persona, quien espera respuesta) y se responde ahí mismo —la consola habla por el cliente con su
+token, por `/api/c/<slug>/…`—, así que no hay que abrir cinco tableros ni repartir tokens. En *Clientes* está el
+estado de cada uno y es donde se da de alta uno nuevo.
+
+**Quién entra y qué ve** (`src/consola-usuarios.ts`): cada persona tiene usuario y clave (hash scrypt, archivo
+`clientes/usuarios.json` con permisos 600) y un rol. El **super-admin** ve y atiende todos los clientes y maneja el
+equipo; quien **atiende** un cliente solo ve —y solo le suena— lo de los clientes que tiene asignados: la bandeja,
+el estado y hasta el proxy se filtran por ahí (403 si intenta otro). Las sesiones viven en memoria (12 h) y releen
+el usuario en cada petición, así que quitarle un cliente o desactivarlo tiene efecto al instante. El
+`CONSOLA_TOKEN` queda como llave maestra del super-admin: para entrar la primera vez y para emergencias.
+
+La consola avisa: cuando aparece algo nuevo de tus clientes suena un pito corto, el número queda en el título de la
+pestaña y, si la ventana está en segundo plano, sale una notificación del navegador. No guarda nada propio: le pregunta a cada instancia
 por su API con el token de ese cliente (`clientes/<slug>/.env`) y arma **tickets** que salen solos del estado —
 instancia caída, dirección pública caída, WhatsApp pidiendo código, preguntas sin responder, gente esperando,
 citas sin resultado—, ordenados por urgencia × prioridad del cliente. Escucha solo en `127.0.0.1` porque tiene la
@@ -254,6 +267,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:clientes` | alta de un cliente: carpeta, puerto, token, pm2 y túnel | no |
 | `pnpm test:consola` | tickets, orden de atención y el alta desde la consola | no |
 | `pnpm test:etapas` | un negocio con otro embudo (soporte, sin citas) funciona igual | no |
+| `pnpm test:usuarios` | quién entra a la consola y qué clientes alcanza a ver y atender | no |
 | `pnpm test:backup` | respaldo: la copia trae los datos, permisos 600, conserva las últimas N | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |

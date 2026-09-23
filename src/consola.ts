@@ -11,6 +11,7 @@ import { Hono } from 'hono';
 import { readFileSync, existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { actualizarCliente, crearCliente, leerIndice, PLANTILLAS, puertoLibre, tokenDe, type ClienteRef } from './clientes.js';
+import { abrirSesion, actualizarUsuario, alcanza, borrarUsuario, cerrarSesion, crearUsuario, leerUsuarios, sesionDe, sinClave, verificar, type UsuarioPublico } from './consola-usuarios.js';
 
 // El .env de la raíz, sin pasar por la configuración de un cliente (la consola no es de ningún cliente).
 function envRaiz(clave: string): string {
@@ -128,9 +129,9 @@ export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
   };
 }
 
-/** Todos los clientes, con su estado y sus tickets, en orden de atención. */
-export async function tablero() {
-  const clientes = leerIndice();
+/** Los clientes que puede ver quien mira, con su estado y sus tickets, en orden de atención. */
+export async function tablero(usuario: UsuarioPublico | null = null) {
+  const clientes = leerIndice().filter((c) => alcanza(usuario, c.slug));
   const filas = await Promise.all(
     clientes.map(async (cliente) => {
       const estado = await estadoDe(cliente);
@@ -140,28 +141,134 @@ export async function tablero() {
   return ordenar(filas) as { cliente: ClienteRef; estado: EstadoCliente; tickets: Ticket[] }[];
 }
 
+/** Una cosa por atender, de cualquier cliente: la consola es una sola bandeja. */
+export interface Pendiente {
+  slug: string;
+  cliente: string;
+  prioridad: ClienteRef['prioridad'];
+  tipo: 'persona' | 'verificar' | 'espera';
+  userId: string;
+  nombre: string;
+  texto: string;
+  ts: number;
+  /** Solo en las de verificar: el id de la pregunta para responderla. */
+  verificacionId?: number;
+  /** WhatsApp oficial pasadas 24 h no deja escribir: la consola lo advierte igual que el tablero. */
+  ventana?: string;
+}
+
+const PESO_TIPO = { persona: 3, verificar: 3, espera: 2 } as const;
+
+/** Lo que espera a una persona en los clientes que atiende quien mira, junto y en orden de atención. */
+export async function pendientes(usuario: UsuarioPublico | null = null): Promise<Pendiente[]> {
+  const clientes = leerIndice().filter((c) => alcanza(usuario, c.slug));
+  const listas = await Promise.all(
+    clientes.map(async (cliente): Promise<Pendiente[]> => {
+      const token = tokenDe(cliente.slug);
+      if (!token) return [];
+      const hoy = await pedir(cliente.puerto, '/admin/api/today', token);
+      if (!hoy) return [];
+      const base = { slug: cliente.slug, cliente: cliente.nombre, prioridad: cliente.prioridad };
+      const nombre = (c: Record<string, unknown>) => String(c.name ?? '') || String(c.id ?? '').replace(/^(wa|meta|web|cli|mcp):/, '').slice(0, 14);
+      const verificaciones = (hoy.verifications as Record<string, unknown>[] | undefined) ?? [];
+      const humanos = (hoy.handoffs as Record<string, unknown>[] | undefined) ?? [];
+      const esperan = (hoy.unanswered as Record<string, unknown>[] | undefined) ?? [];
+      return [
+        ...verificaciones.map((v) => ({
+          ...base,
+          tipo: 'verificar' as const,
+          userId: String(v.userId ?? ''),
+          nombre: String(v.contactName ?? '') || String(v.userId ?? '').slice(0, 18),
+          texto: String(v.question ?? ''),
+          ts: Number(v.createdAt ?? v.ts ?? 0),
+          verificacionId: Number(v.id ?? 0),
+          ventana: (v.window as { note?: string } | undefined)?.note,
+        })),
+        ...humanos.map((c) => ({ ...base, tipo: 'persona' as const, userId: String(c.id ?? ''), nombre: nombre(c), texto: String(c.recap ?? c.summary ?? 'Pidió hablar con una persona.'), ts: Number(c.lastMessageAt ?? 0) })),
+        ...esperan.map((c) => ({ ...base, tipo: 'espera' as const, userId: String(c.id ?? ''), nombre: nombre(c), texto: String(c.recap ?? c.summary ?? ''), ts: Number(c.lastMessageAt ?? 0) })),
+      ];
+    }),
+  );
+  const peso = (p: Pendiente) => PESO_TIPO[p.tipo] * pesoPrioridad[p.prioridad];
+  return listas.flat().sort((a, b) => peso(b) - peso(a) || a.ts - b.ts); // a igual peso, lo que lleva más esperando
+}
+
 export function mountConsola(app: Hono) {
   app.get('/', (c) => c.html(readFileSync(new URL('../public/consola.html', import.meta.url), 'utf8')));
 
+  // Entrar con usuario y clave; la llave maestra (CONSOLA_TOKEN) sigue valiendo como super-admin.
+  app.post('/api/entrar', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { usuario?: string; clave?: string };
+    const u = body.usuario && body.clave ? verificar(body.usuario, body.clave) : null;
+    if (!u) return c.json({ error: 'Usuario o clave incorrectos' }, 401);
+    return c.json({ sesion: abrirSesion(u), usuario: u });
+  });
+  app.post('/api/salir', (c) => {
+    cerrarSesion(c.req.header('x-consola-sesion'));
+    return c.json({ ok: true });
+  });
+
   app.use('/api/*', async (c, next) => {
-    if ((c.req.header('x-consola-token') ?? c.req.query('token')) !== CONSOLA_TOKEN) return c.json({ error: 'no autorizado' }, 401);
+    if (c.req.path === '/api/entrar' || c.req.path === '/api/salir') return next();
+    const maestra = (c.req.header('x-consola-token') ?? c.req.query('token')) === CONSOLA_TOKEN;
+    const usuario = sesionDe(c.req.header('x-consola-sesion'));
+    if (!maestra && !usuario) return c.json({ error: 'no autorizado' }, 401);
+    // Con la llave maestra se entra como super-admin: ve y atiende todos los clientes.
+    c.set('usuario' as never, (usuario ?? null) as never);
+    c.set('esSuper' as never, (maestra || usuario?.rol === 'super') as never);
     await next();
   });
 
-  app.get('/api/clientes', async (c) => c.json({ clientes: await tablero(), puertoSugerido: puertoLibre() }));
+  app.get('/api/yo', (c) => {
+    const u = c.get('usuario' as never) as UsuarioPublico | null;
+    return c.json({ usuario: u, super: Boolean(c.get('esSuper' as never)) });
+  });
+
+  // El equipo: quién entra a la consola y qué clientes atiende. Solo el super-admin.
+  app.get('/api/usuarios', (c) => {
+    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
+    return c.json({ usuarios: leerUsuarios().map(sinClave) });
+  });
+  app.post('/api/usuarios', async (c) => {
+    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
+    const body = (await c.req.json().catch(() => ({}))) as { usuario?: string; nombre?: string; clave?: string; rol?: 'super' | 'agente'; clientes?: string[] };
+    if (!body.usuario || !body.clave) return c.json({ error: 'falta el usuario o la clave' }, 400);
+    try {
+      return c.json({ usuario: crearUsuario({ usuario: body.usuario, nombre: body.nombre, clave: body.clave, rol: body.rol, clientes: body.clientes }) });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 409);
+    }
+  });
+  app.patch('/api/usuarios/:usuario', async (c) => {
+    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    try {
+      return c.json({ usuario: actualizarUsuario(c.req.param('usuario'), body) });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 404);
+    }
+  });
+  app.delete('/api/usuarios/:usuario', (c) => {
+    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
+    return borrarUsuario(c.req.param('usuario')) ? c.json({ ok: true }) : c.json({ error: 'no existe' }, 404);
+  });
+
+  app.get('/api/clientes', async (c) => c.json({ clientes: await tablero(c.get('usuario' as never) as UsuarioPublico | null), puertoSugerido: puertoLibre() }));
 
   // Cómo atiende el negocio: de aquí salen su embudo y si agenda citas.
   app.get('/api/plantillas', (c) => c.json({ plantillas: PLANTILLAS }));
 
   // El alta la hace el super-admin desde aquí: crea la carpeta, el token y el puerto. No arranca nada.
   app.post('/api/clientes', async (c) => {
-    const body = (await c.req.json().catch(() => ({}))) as { nombre?: string; slug?: string; host?: string; prioridad?: ClienteRef['prioridad']; plantilla?: string };
+    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin da de alta clientes' }, 403);
+    const body = (await c.req.json().catch(() => ({}))) as { nombre?: string; slug?: string; host?: string; puerto?: number; prioridad?: ClienteRef['prioridad']; plantilla?: string };
     if (!body.nombre?.trim()) return c.json({ error: 'falta el nombre del negocio' }, 400);
     try {
       const { cliente, token } = crearCliente({
         nombre: body.nombre.trim(),
         slug: body.slug,
         host: body.host?.trim(),
+        puerto: body.puerto ? Number(body.puerto) : undefined,
         prioridad: body.prioridad,
         plantilla: body.plantilla,
       });
@@ -172,6 +279,7 @@ export function mountConsola(app: Hono) {
   });
 
   app.patch('/api/clientes/:slug', async (c) => {
+    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
     const body = (await c.req.json().catch(() => ({}))) as Partial<ClienteRef>;
     try {
       return c.json({ cliente: actualizarCliente(c.req.param('slug'), body) });
@@ -180,7 +288,38 @@ export function mountConsola(app: Hono) {
     }
   });
 
+  // Todo lo que espera a una persona, de todos los clientes, en una sola bandeja.
+  app.get('/api/pendientes', async (c) => c.json({ pendientes: await pendientes(c.get('usuario' as never) as UsuarioPublico | null) }));
+
+  /**
+   * La consola habla por el cliente: cualquier ruta del tablero de un cliente, con su token puesto aquí. Así se
+   * atiende desde una sola pantalla sin repartir los tokens ni abrir cinco tableros.
+   */
+  app.all('/api/c/:slug/:ruta{.+}', async (c) => {
+    const slug = c.req.param('slug');
+    if (!alcanza(c.get('usuario' as never) as UsuarioPublico | null, slug)) return c.json({ error: 'ese cliente no es tuyo' }, 403);
+    const cliente = leerIndice().find((x) => x.slug === slug);
+    const token = cliente ? tokenDe(slug) : '';
+    if (!cliente || !token) return c.json({ error: 'ese cliente no existe' }, 404);
+    const url = new URL(`http://localhost:${cliente.puerto}/admin/api/${c.req.param('ruta')}`);
+    for (const [k, v] of Object.entries(c.req.query())) url.searchParams.set(k, v);
+    const method = c.req.method;
+    const body = method === 'GET' || method === 'HEAD' ? undefined : await c.req.text();
+    try {
+      const r = await fetch(url, {
+        method,
+        headers: { 'x-admin-token': token, ...(body ? { 'content-type': 'application/json' } : {}) },
+        body,
+        signal: AbortSignal.timeout(8000),
+      });
+      return new Response(r.body, { status: r.status, headers: { 'content-type': r.headers.get('content-type') ?? 'application/json' } });
+    } catch {
+      return c.json({ error: 'la instancia de ese cliente no responde' }, 502);
+    }
+  });
+
   app.get('/api/clientes/:slug/token', (c) => {
+    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
     const token = tokenDe(c.req.param('slug'));
     return token ? c.json({ token }) : c.json({ error: 'no existe' }, 404);
   });

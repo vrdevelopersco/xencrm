@@ -53,13 +53,15 @@ const pedir = (ruta: string, init: RequestInit = {}) =>
 
 check('sin token no se ve nada', (await app.request('http://local/api/clientes')).status === 401);
 
-const alta = await pedir('/api/clientes', { method: 'POST', body: JSON.stringify({ nombre: 'Financiera del Caribe', prioridad: 'alta' }) });
+// Puertos altos a propósito: la prueba no debe chocar con instancias de verdad corriendo en esta máquina.
+const alta = await pedir('/api/clientes', { method: 'POST', body: JSON.stringify({ nombre: 'Financiera del Caribe', prioridad: 'alta', puerto: 39001 }) });
 const creado = (await alta.json()) as { cliente?: { slug: string; prioridad: string }; token?: string };
 check('el super-admin da de alta un cliente', alta.status === 200 && creado.cliente?.slug === 'financiera-del-caribe' && Boolean(creado.token), JSON.stringify(creado).slice(0, 120));
+check('y puede elegirle el puerto', (creado.cliente as unknown as { puerto: number } | undefined)?.puerto === 39001);
 check('queda en el índice, con su prioridad', leerIndice().some((c) => c.slug === 'financiera-del-caribe' && c.prioridad === 'alta'));
 check('el token que devuelve es el que quedó en su .env', creado.token === tokenDe('financiera-del-caribe'));
 
-const repetido = await pedir('/api/clientes', { method: 'POST', body: JSON.stringify({ nombre: 'Financiera del Caribe' }) });
+const repetido = await pedir('/api/clientes', { method: 'POST', body: JSON.stringify({ nombre: 'Financiera del Caribe', puerto: 39003 }) });
 check('no deja crear dos veces el mismo', repetido.status === 409, String(repetido.status));
 
 const sinNombre = await pedir('/api/clientes', { method: 'POST', body: JSON.stringify({}) });
@@ -70,10 +72,19 @@ check('puede cambiarle la prioridad y dejarle una nota', cambio.status === 200 &
 check('a un cliente que no existe, no', (await pedir('/api/clientes/nadie', { method: 'PATCH', body: '{}' })).status === 404);
 
 // La consola no crea clientes por su cuenta: solo cuando se lo piden.
-crearCliente({ nombre: 'Litografía Industrial' });
+crearCliente({ nombre: 'Litografía Industrial', puerto: 39002 });
 const lista = (await (await pedir('/api/clientes')).json()) as { clientes: { cliente: { slug: string } }[] };
 check('lista los que hay, sin agregar ninguno', lista.clientes.length === 2, String(lista.clientes.length));
 check('los apagados se ven como apagados', lista.clientes.every((f) => (f as unknown as { estado: { arriba: boolean } }).estado.arriba === false));
+
+// --- una sola bandeja: lo de todos los clientes, y poder atenderlo desde aquí ---
+const { pendientes } = await import('../consola.js');
+check('sin instancias arriba, la bandeja queda vacía y no revienta', (await pendientes()).length === 0);
+
+check('la consola habla por el cliente, poniendo su token', (await pedir('/api/c/financiera-del-caribe/stats')).status === 502, 'la instancia está apagada: 502, no 401');
+check('por un cliente que no existe, no habla', (await pedir('/api/c/nadie/stats')).status === 404);
+check('y sin el token de la consola, nada', (await app.request('http://local/api/c/financiera-del-caribe/stats')).status === 401);
+check('la bandeja tampoco se ve sin token', (await app.request('http://local/api/pendientes')).status === 401);
 
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

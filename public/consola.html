@@ -15,6 +15,21 @@ h1{font-size:18px;margin:0}
 .small{font-size:12px}
 .grow{flex:1}
 main{padding:16px 20px 60px;max-width:1100px;margin:0 auto}
+main.dos{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:12px;max-width:1240px;align-items:start}
+@media (max-width:900px){main.dos{grid-template-columns:1fr}}
+.pend{background:var(--panel);border:1px solid var(--glass-border);border-radius:14px;box-shadow:var(--rim),var(--shadow);padding:10px 12px;margin-bottom:8px;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.pend:hover{box-shadow:var(--rim),var(--lift)}
+.pend.sel{border-color:var(--brand);box-shadow:var(--rim),var(--lift)}
+.pend .qq{font-weight:600}
+.burbuja{border-radius:14px;padding:8px 11px;margin:6px 0;max-width:80%;box-shadow:var(--rim),var(--shadow);font-size:13px}
+.burbuja.cliente{background:var(--baja-soft)}
+.burbuja.negocio{background:var(--brand-soft);margin-left:auto}
+.burbuja .who{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+textarea{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--glass-border);border-radius:10px;padding:8px 10px;width:100%;min-height:80px;box-shadow:inset 0 1px 2px rgba(17,24,39,.06)}
+.tab{border-radius:999px}
+.tab.on{background:var(--brand);color:#fff;border-color:transparent}
+.seg{display:flex;gap:6px}
+.chats{max-height:46vh;overflow:auto;padding-right:4px}
 .card{background:var(--panel);border:1px solid var(--glass-border);border-radius:16px;box-shadow:var(--rim),var(--shadow);padding:14px 16px;margin-bottom:12px}
 .card:hover{box-shadow:var(--rim),var(--lift)}
 .fila{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -48,20 +63,40 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
 <body>
 <div id="login" class="login card" hidden>
   <h1>Consola de aiva</h1>
-  <p class="muted small">Aquí se ven todos los clientes. Entra con el token de la consola (CONSOLA_TOKEN).</p>
-  <div class="fila"><input id="t" type="password" placeholder="Token" class="grow" autocomplete="current-password"><button class="btn primary" id="entrar">Entrar</button></div>
+  <p class="muted small">Entra con tu usuario. Verás los clientes que atiendes.</p>
+  <div class="fila"><input id="u" placeholder="Usuario" class="grow" autocomplete="username"></div>
+  <div class="fila"><input id="p" type="password" placeholder="Clave" class="grow" autocomplete="current-password"><button class="btn primary" id="entrar">Entrar</button></div>
   <div id="login-msg" class="small" role="status"></div>
+  <div class="small muted" style="margin-top:10px"><button class="btn" id="ver-maestra">Entrar con la llave maestra</button></div>
+  <div id="maestra" hidden style="margin-top:8px">
+    <div class="fila"><input id="t" type="password" placeholder="CONSOLA_TOKEN" class="grow"><button class="btn" id="entrar-maestra">Entrar</button></div>
+    <div class="small muted">La del .env. Entra como super-admin: úsala la primera vez y para emergencias.</div>
+  </div>
 </div>
 
 <div id="app" hidden>
   <header>
     <h1>Consola</h1>
+    <div class="seg" role="tablist">
+      <button class="btn tab on" id="tab-atender" role="tab">Atender <span class="chip" id="n-pend">0</span></button>
+      <button class="btn tab" id="tab-clientes" role="tab">Clientes</button>
+      <button class="btn tab" id="tab-equipo" role="tab" hidden>Equipo</button>
+    </div>
     <span class="muted small" id="resumen">…</span>
     <span class="grow"></span>
+    <span class="muted small">Respondes como</span><input id="quien" placeholder="tu nombre" style="width:130px">
+    <button class="btn" id="sonido" title="Avisarme cuando llegue algo">🔔</button>
     <button class="btn" id="refrescar">Actualizar</button>
     <button class="btn primary" id="nuevo">Nuevo cliente</button>
+    <span class="chip" id="yo"></span>
+    <button class="btn" id="salir">Salir</button>
   </header>
-  <main id="lista"></main>
+  <main id="atender" class="dos">
+    <div id="pend"></div>
+    <div id="detalle" class="card"><div class="vacio">Elige algo de la izquierda para atenderlo.</div></div>
+  </main>
+  <main id="lista" hidden></main>
+  <main id="equipo" hidden></main>
 </div>
 
 <dialog id="dlg">
@@ -89,24 +124,61 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var token = localStorage.getItem('aiva.consola.token') || '';
+  var sesion = localStorage.getItem('aiva.consola.sesion') || '';
+  var yo = null, esSuper = false;
 
   function api(path, opts) {
     opts = opts || {};
-    var headers = { 'x-consola-token': token };
+    var headers = {};
+    if (sesion) headers['x-consola-sesion'] = sesion;
+    if (token) headers['x-consola-token'] = token;
     if (opts.body) headers['content-type'] = 'application/json';
     return fetch('/api' + path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined })
-      .then(function (r) { if (r.status === 401) { entrar(false, 'Ese token no es'); throw new Error('401'); } return r.json(); });
+      .then(function (r) { if (r.status === 401) { entrar(false, 'Vuelve a entrar'); throw new Error('401'); } return r.json(); });
   }
   function entrar(ok, msg) {
     $('login').hidden = ok; $('app').hidden = !ok;
     if (msg) $('login-msg').textContent = msg;
   }
+  function sesionLista() {
+    return api('/yo').then(function (d) {
+      yo = d.usuario; esSuper = d.super;
+      $('yo').textContent = yo ? yo.nombre + (esSuper ? ' · super-admin' : ' · ' + (yo.clientes.length === 1 ? '1 cliente' : yo.clientes.length + ' clientes')) : 'llave maestra';
+      $('nuevo').hidden = !esSuper;
+      $('tab-equipo').hidden = !esSuper;
+      if (!$('quien').value) $('quien').value = yo ? yo.nombre : '';
+      cargar(); cargarPendientes();
+      ver(localStorage.getItem('aiva.consola.vista') || 'atender');
+    });
+  }
   $('entrar').onclick = function () {
-    token = $('t').value.trim();
-    localStorage.setItem('aiva.consola.token', token);
-    cargar();
+    $('login-msg').textContent = 'Entrando…';
+    fetch('/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ usuario: $('u').value.trim(), clave: $('p').value }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error) { $('login-msg').textContent = d.error; return; }
+        sesion = d.sesion; token = '';
+        localStorage.setItem('aiva.consola.sesion', sesion);
+        localStorage.removeItem('aiva.consola.token');
+        $('p').value = '';
+        entrar(true); sesionLista();
+      });
   };
-  $('t').onkeydown = function (e) { if (e.key === 'Enter') $('entrar').click(); };
+  $('p').onkeydown = function (e) { if (e.key === 'Enter') $('entrar').click(); };
+  $('u').onkeydown = function (e) { if (e.key === 'Enter') $('p').focus(); };
+  $('ver-maestra').onclick = function () { $('maestra').hidden = !$('maestra').hidden; };
+  $('entrar-maestra').onclick = function () {
+    token = $('t').value.trim(); sesion = '';
+    localStorage.setItem('aiva.consola.token', token);
+    localStorage.removeItem('aiva.consola.sesion');
+    entrar(true); sesionLista();
+  };
+  $('salir').onclick = function () {
+    api('/salir', { method: 'POST' }).catch(function () {});
+    sesion = ''; token = ''; yo = null;
+    localStorage.removeItem('aiva.consola.sesion'); localStorage.removeItem('aiva.consola.token');
+    entrar(false, 'Hasta luego');
+  };
 
   var PRIORIDADES = { alta: 'Alta', media: 'Media', baja: 'Baja' };
   function tarjeta(f) {
@@ -145,6 +217,7 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
       var filas = d.clientes || [];
       var pendientes = filas.reduce(function (a, f) { return a + f.tickets.length; }, 0);
       $('resumen').textContent = filas.length + (filas.length === 1 ? ' cliente' : ' clientes') + ' · ' + pendientes + (pendientes === 1 ? ' cosa por atender' : ' cosas por atender');
+      window.__clientes = filas;
       $('lista').innerHTML = filas.length ? filas.map(tarjeta).join('') : '<div class="vacio">Todavía no hay clientes. <b>Nuevo cliente</b> crea el primero.</div>';
       $('lista').querySelectorAll('.prio').forEach(function (s) {
         s.onchange = function () {
@@ -180,7 +253,207 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
   }
   $('f-plantilla').onchange = ayudaPlantilla;
 
-  $('refrescar').onclick = cargar;
+  // ---------- atender: una sola bandeja con lo de todos los clientes ----------
+  var TIPOS = { persona: 'Pidió una persona', verificar: 'Por verificar', espera: 'Espera respuesta' };
+  var pendientes = [], elegido = null;
+  function cli(path, opts) { return api('/c/' + path, opts); }
+
+  function rel(ts) {
+    if (!ts) return '';
+    var m = Math.round((Date.now() - ts) / 60000);
+    if (m < 60) return 'hace ' + Math.max(1, m) + ' min';
+    var h = Math.round(m / 60);
+    return h < 24 ? 'hace ' + h + ' h' : 'hace ' + Math.round(h / 24) + ' d';
+  }
+  function pintarPendientes() {
+    $('n-pend').textContent = pendientes.length;
+    $('pend').innerHTML = pendientes.length
+      ? pendientes.map(function (p, i) {
+          return '<div class="pend' + (elegido === i ? ' sel' : '') + '" data-i="' + i + '">' +
+            '<div class="fila"><span class="chip ' + (p.tipo === 'espera' ? 'media' : 'alta') + '">' + esc(TIPOS[p.tipo]) + '</span>' +
+              '<span class="chip">' + esc(p.cliente) + '</span><span class="grow"></span><span class="muted small">' + esc(rel(p.ts)) + '</span></div>' +
+            '<div class="qq">' + esc(p.nombre) + '</div>' +
+            '<div class="muted small">' + esc((p.texto || '').slice(0, 120)) + '</div></div>';
+        }).join('')
+      : '<div class="vacio">Nada pendiente en ningún cliente 🎉</div>';
+    $('pend').querySelectorAll('.pend').forEach(function (el) {
+      el.onclick = function () { abrir(Number(el.getAttribute('data-i'))); };
+    });
+  }
+  function abrir(i) {
+    elegido = i;
+    pintarPendientes();
+    var p = pendientes[i];
+    $('detalle').innerHTML = '<div class="muted small">Cargando la conversación…</div>';
+    cli(p.slug + '/contacts/' + encodeURIComponent(p.userId)).then(function (d) {
+      var msgs = (d.messages || []).slice(-12).map(function (m) {
+        var mio = m.role !== 'user';
+        return '<div class="burbuja ' + (mio ? 'negocio' : 'cliente') + '"><span class="who">' + esc(mio ? (m.author === 'human' ? (m.by || 'equipo') : 'Aiva') : p.nombre) + '</span>' + esc(m.content) + '</div>';
+      }).join('');
+      var c = d.contact || {};
+      var aviso = d.replyWindow && d.replyWindow.open === false ? '<span class="chip alta">WhatsApp: pasaron 24 h, no deja escribirle</span>' : '';
+      var accion = p.tipo === 'verificar'
+        ? '<b>' + esc(p.texto) + '</b><div class="muted small">El cliente ya sabe que se lo iban a verificar.</div>' +
+          '<textarea id="resp" placeholder="La respuesta para el cliente"></textarea>' +
+          '<label class="small"><input type="checkbox" id="aprender" checked> Agregar a la información de ' + esc(p.cliente) + '</label>' +
+          '<div class="fila"><button class="btn primary" id="enviar">Enviar respuesta</button><button class="btn" id="descartar">Descartar</button></div>'
+        : '<textarea id="resp" placeholder="Tu respuesta para ' + esc(p.nombre) + '"></textarea>' +
+          '<div class="muted small">Al enviar, esa conversación queda contigo y el asistente se calla ahí.</div>' +
+          '<div class="fila"><button class="btn primary" id="enviar">Enviar</button><button class="btn" id="devolver">Devolvérsela a Aiva</button></div>';
+      $('detalle').innerHTML =
+        '<div class="fila"><span class="nombre">' + esc(p.nombre) + '</span><span class="chip">' + esc(p.cliente) + '</span>' +
+          (c.score != null ? '<span class="chip">' + esc(c.score) + ' · ' + esc(c.temperature || '') + '</span>' : '') + aviso +
+          '<span class="grow"></span><a class="btn" target="_blank" rel="noopener" href="' + esc(urlTablero(p.slug)) + '#c=' + encodeURIComponent(p.userId) + '">Abrir en su tablero</a></div>' +
+        '<div class="chats">' + (msgs || '<div class="muted small">Sin mensajes.</div>') + '</div>' +
+        '<div id="msg2" class="small" role="status"></div>' + accion;
+      if ($('enviar')) $('enviar').onclick = function () { responder(p); };
+      if ($('descartar')) $('descartar').onclick = function () {
+        cli(p.slug + '/verifications/' + p.verificacionId + '/dismiss', { method: 'POST' }).then(cargarPendientes);
+      };
+      if ($('devolver')) $('devolver').onclick = function () {
+        cli(p.slug + '/contacts/' + encodeURIComponent(p.userId) + '/human', { method: 'POST', body: { on: false } }).then(cargarPendientes);
+      };
+    });
+  }
+  function urlTablero(slug) {
+    var f = (window.__clientes || []).find(function (x) { return x.cliente.slug === slug; });
+    return f && f.cliente.host ? 'https://' + f.cliente.host + '/admin' : 'http://localhost:' + (f ? f.cliente.puerto : '') + '/admin';
+  }
+  function responder(p) {
+    var texto = $('resp').value.trim();
+    if (!texto) { $('msg2').textContent = 'Escribe la respuesta.'; return; }
+    var quien = $('quien').value.trim() || 'equipo';
+    localStorage.setItem('aiva.consola.quien', quien);
+    $('enviar').disabled = true;
+    $('msg2').textContent = 'Enviando…';
+    var envio = p.tipo === 'verificar'
+      ? cli(p.slug + '/verifications/' + p.verificacionId + '/answer', { method: 'POST', body: { answer: texto, by: quien, learn: $('aprender').checked } })
+      : cli(p.slug + '/contacts/' + encodeURIComponent(p.userId) + '/reply', { method: 'POST', body: { text: texto, by: quien } });
+    envio.then(function (r) {
+      $('enviar').disabled = false;
+      if (r && r.error) { $('msg2').textContent = r.error; return; }
+      $('msg2').textContent = 'Enviado ✓';
+      cargarPendientes();
+    }).catch(function () { $('enviar').disabled = false; $('msg2').textContent = 'No se pudo enviar.'; });
+  }
+  // Avisar cuando entra algo nuevo de los clientes que atiendes: sonido corto y el número en el título.
+  var vistos = null, sonar = localStorage.getItem('aiva.consola.sonido') !== 'no';
+  $('sonido').onclick = function () {
+    sonar = !sonar;
+    localStorage.setItem('aiva.consola.sonido', sonar ? 'si' : 'no');
+    $('sonido').textContent = sonar ? '🔔' : '🔕';
+  };
+  $('sonido').textContent = sonar ? '🔔' : '🔕';
+  function pito() {
+    if (!sonar) return;
+    try {
+      var a = new (window.AudioContext || window.webkitAudioContext)();
+      var o = a.createOscillator(), g = a.createGain();
+      o.connect(g); g.connect(a.destination);
+      o.frequency.value = 880; g.gain.value = 0.05;
+      o.start(); o.stop(a.currentTime + 0.18);
+    } catch (e) { /* sin sonido, el título igual avisa */ }
+  }
+  var llave = function (p) { return p.slug + '|' + p.tipo + '|' + p.userId + '|' + (p.verificacionId || ''); };
+  function avisar(lista) {
+    var ahora = lista.map(llave);
+    if (vistos) {
+      var nuevos = ahora.filter(function (k) { return vistos.indexOf(k) === -1; });
+      if (nuevos.length) {
+        pito();
+        var cual = lista.find(function (p) { return llave(p) === nuevos[0]; });
+        if (cual) $('msg-nuevo') && ($('msg-nuevo').textContent = '');
+        if (cual && document.hidden && window.Notification && Notification.permission === 'granted') {
+          new Notification(cual.cliente, { body: TIPOS[cual.tipo] + ' · ' + cual.nombre });
+        }
+      }
+    }
+    vistos = ahora;
+    document.title = (lista.length ? '(' + lista.length + ') ' : '') + 'Consola · aiva';
+  }
+  function cargarPendientes() {
+    return api('/pendientes').then(function (d) {
+      pendientes = d.pendientes || [];
+      avisar(pendientes);
+      if (elegido != null && elegido >= pendientes.length) { elegido = null; $('detalle').innerHTML = '<div class="vacio">Listo. Elige otra cosa de la izquierda.</div>'; }
+      pintarPendientes();
+    });
+  }
+  function ver(cual) {
+    if (cual === 'equipo' && !esSuper) cual = 'atender';
+    $('atender').hidden = cual !== 'atender';
+    $('lista').hidden = cual !== 'clientes';
+    $('equipo').hidden = cual !== 'equipo';
+    $('tab-atender').classList.toggle('on', cual === 'atender');
+    $('tab-clientes').classList.toggle('on', cual === 'clientes');
+    $('tab-equipo').classList.toggle('on', cual === 'equipo');
+    localStorage.setItem('aiva.consola.vista', cual);
+  }
+  $('tab-atender').onclick = function () { ver('atender'); cargarPendientes(); };
+  $('tab-clientes').onclick = function () { ver('clientes'); cargar(); };
+  $('tab-equipo').onclick = function () { ver('equipo'); cargarEquipo(); };
+
+  // Quién entra a la consola y qué clientes atiende. Solo lo ve el super-admin.
+  function cargarEquipo() {
+    return Promise.all([api('/usuarios'), api('/clientes')]).then(function (r) {
+      var usuarios = r[0].usuarios || [], clientes = (r[1].clientes || []).map(function (f) { return f.cliente; });
+      var opciones = function (marcados) {
+        return clientes.map(function (c) {
+          return '<label class="chip"><input type="checkbox" value="' + esc(c.slug) + '"' + (marcados.indexOf(c.slug) >= 0 ? ' checked' : '') + '> ' + esc(c.nombre) + '</label>';
+        }).join(' ');
+      };
+      $('equipo').innerHTML =
+        usuarios.map(function (u) {
+          return '<div class="card" data-u="' + esc(u.usuario) + '">' +
+            '<div class="fila"><span class="nombre">' + esc(u.nombre) + '</span><span class="chip">' + esc(u.usuario) + '</span>' +
+              '<span class="chip ' + (u.rol === 'super' ? 'alta' : '') + '">' + (u.rol === 'super' ? 'Super-admin' : 'Atiende') + '</span>' +
+              (u.activo ? '' : '<span class="chip media">Inactivo</span>') +
+              '<span class="grow"></span>' +
+              '<button class="btn sm act">' + (u.activo ? 'Desactivar' : 'Activar') + '</button>' +
+              '<button class="btn sm clave">Cambiar clave</button>' +
+              '<button class="btn sm quitar">Quitar</button></div>' +
+            (u.rol === 'super' ? '<div class="small muted">Ve y atiende todos los clientes.</div>' : '<div class="fila" style="margin-top:6px">' + opciones(u.clientes || []) + '</div>') +
+            '</div>';
+        }).join('') +
+        '<div class="card"><b>Agregar a alguien</b>' +
+          '<div class="fila" style="margin-top:8px"><input id="n-usuario" placeholder="usuario" style="width:140px"><input id="n-nombre" placeholder="Nombre" style="width:170px">' +
+          '<input id="n-clave" type="password" placeholder="clave (8+)" style="width:150px">' +
+          '<select id="n-rol"><option value="agente">Atiende clientes</option><option value="super">Super-admin</option></select>' +
+          '<button class="btn primary" id="n-crear">Agregar</button></div>' +
+          '<div class="fila" id="n-clientes" style="margin-top:8px">' + opciones([]) + '</div>' +
+          '<div id="n-msg" class="small" role="status"></div></div>';
+
+      $('equipo').querySelectorAll('.card[data-u]').forEach(function (card) {
+        var u = card.getAttribute('data-u');
+        var quien = usuarios.find(function (x) { return x.usuario === u; });
+        card.querySelectorAll('input[type=checkbox]').forEach(function (chk) {
+          chk.onchange = function () {
+            var marcados = [...card.querySelectorAll('input[type=checkbox]')].filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
+            api('/usuarios/' + encodeURIComponent(u), { method: 'PATCH', body: { clientes: marcados } });
+          };
+        });
+        card.querySelector('.act').onclick = function () { api('/usuarios/' + encodeURIComponent(u), { method: 'PATCH', body: { activo: !quien.activo } }).then(cargarEquipo); };
+        card.querySelector('.clave').onclick = function () {
+          var nueva = prompt('Nueva clave para ' + u + ' (8 o más caracteres)');
+          if (nueva) api('/usuarios/' + encodeURIComponent(u), { method: 'PATCH', body: { clave: nueva } }).then(cargarEquipo);
+        };
+        card.querySelector('.quitar').onclick = function () {
+          if (confirm('¿Quitar a ' + u + ' de la consola?')) api('/usuarios/' + encodeURIComponent(u), { method: 'DELETE' }).then(cargarEquipo);
+        };
+      });
+      $('n-crear').onclick = function () {
+        var marcados = [...$('n-clientes').querySelectorAll('input[type=checkbox]')].filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
+        api('/usuarios', { method: 'POST', body: { usuario: $('n-usuario').value.trim(), nombre: $('n-nombre').value.trim(), clave: $('n-clave').value, rol: $('n-rol').value, clientes: marcados } })
+          .then(function (d) {
+            if (d.error) { $('n-msg').textContent = d.error; return; }
+            cargarEquipo();
+          });
+      };
+    });
+  }
+  $('quien').value = localStorage.getItem('aiva.consola.quien') || '';
+
+  $('refrescar').onclick = function () { cargar(); cargarPendientes(); };
   $('nuevo').onclick = function () { $('msg').textContent = ''; pintarPlantillas(); $('dlg').showModal(); $('f-nombre').focus(); };
   $('cerrar').onclick = function () { $('dlg').close(); };
   $('crear').onclick = function () {
@@ -202,8 +475,14 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
       .catch(function () { $('crear').disabled = false; $('msg').textContent = 'No se pudo crear.'; });
   };
 
-  if (token) cargar(); else entrar(false);
-  setInterval(function () { if (!$('app').hidden && !$('dlg').open) cargar(); }, 30000);
+  if (sesion || token) { entrar(true); sesionLista(); } else entrar(false);
+  if (window.Notification && Notification.permission === 'default') Notification.requestPermission();
+  // La bandeja se mira seguido (es lo que hay que atender); el estado de los clientes, más espaciado.
+  setInterval(function () {
+    if ($('app').hidden || $('dlg').open) return;
+    if (!($('resp') && $('resp').value.trim())) cargarPendientes(); // sin pisar lo que estés escribiendo
+  }, 10000);
+  setInterval(function () { if (!$('app').hidden && !$('dlg').open) cargar(); }, 60000);
 })();
 </script>
 </body>
