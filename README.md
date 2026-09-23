@@ -6,8 +6,12 @@ Ollama y Apple Foundation Models). Convierte cada conversación en un prospecto 
 **análisis de sentimiento**, **datos capturados**, **citas agendadas con recordatorio** y **traspaso a una persona
 del equipo**, desde un tablero en vivo. Lo que no sabe no lo inventa: lo verifica con el equipo y lo aprende.
 
-Nació como asistente de compras y hoy es un CRM conversacional configurable por cliente. El primer
-cliente es **DUNOR Boutique** (dunor.co): alquiler premium y diseño a la medida de moda masculina en
+Nació como asistente de compras y hoy es un CRM conversacional **multicliente**: cada negocio corre en su propia
+instancia —su base, su WhatsApp, su token, su dominio— y se operan todos desde una consola (`pnpm consola`), donde
+se dan de alta, se vigilan y se atienden. El embudo, los datos que captura y si agenda citas los pone cada negocio
+en su configuración: una boutique agenda, una financiera resuelve solicitudes, una litografía cotiza y produce.
+
+El primer cliente es **DUNOR Boutique** (dunor.co): alquiler premium y diseño a la medida de moda masculina en
 Barranquilla, solo con cita previa. Su configuración está en `examples/dunor` (con `POR-CONFIRMAR.md`:
 lo que el sitio no publica y hay que preguntarle al cliente). Otros ejemplos: `examples/boutique`
 (sastrería con precios) y `examples/casa-verde` (tienda de plantas). DUNOR corre con OpenAI: `gpt-5.4-mini`
@@ -26,8 +30,10 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
 - [`docs/demo.md`](docs/demo.md): el guion del demo en vivo, con la lista de lo que hay que dejar listo antes.
 - [`docs/aprender-del-historial.md`](docs/aprender-del-historial.md): cómo aprovechar las conversaciones que ya
   tiene un cliente (el estilo sí, los precios no) y qué hace falta antes de tocarlas.
-- Varios clientes en una máquina: `pnpm cliente` (alta, pm2, túnel) y `pnpm consola` (todos los clientes en una
-  pantalla, con lo que hay que atender de cada uno). El detalle, en `docs/arquitectura.md`.
+- [`docs/consola.md`](docs/consola.md): operar varios clientes: montar uno nuevo, atenderlos a todos desde una
+  pantalla, roles y qué pasa al dar de baja a un cliente.
+- [`docs/aiva-producto.pdf`](docs/aiva-producto.pdf): lo que hace aiva, en una hoja, para mostrarle a un cliente
+  (se regenera con `pnpm producto`).
 - [`docs/arreglos.md`](docs/arreglos.md): la bitácora de arreglos: qué fallaba, qué cambió y cómo se comprobó, con
   su commit.
 - `examples/dunor/POR-CONFIRMAR.md`: lo que falta confirmar con DUNOR (se llena en el Perfil).

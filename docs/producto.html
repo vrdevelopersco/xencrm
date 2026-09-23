@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>aiva · CRM conversacional con IA</title>
+<style>
+/* Hoja de producto: se imprime a PDF con `pnpm producto`. Pensada para papel: sin degradados ni fondos oscuros. */
+@page { size: A4; margin: 14mm 14mm 12mm; }
+:root{
+  --tinta:#111827; --suave:#5f6875; --marca:#276f45; --marca-clara:#e6f4ec;
+  --linea:#e2e5ea; --acento:#a3480a; --acento-claro:#fef3c7;
+}
+*{ box-sizing:border-box; }
+body{
+  margin:0; color:var(--tinta); background:#fff;
+  font:10.5pt/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+h1{ font-size:24pt; margin:0 0 2mm; letter-spacing:-.02em; }
+h2{ font-size:12pt; margin:0 0 2mm; color:var(--marca); }
+h3{ font-size:10.5pt; margin:0 0 1mm; }
+p{ margin:0 0 2mm; }
+.lead{ font-size:11.5pt; color:var(--suave); margin-bottom:3mm; }
+header{ border-bottom:2px solid var(--marca); padding-bottom:3mm; margin-bottom:5mm; }
+.marca{ display:flex; align-items:baseline; gap:3mm; }
+.marca b{ font-size:24pt; color:var(--marca); letter-spacing:-.03em; }
+.marca span{ color:var(--suave); font-size:10pt; }
+section{ margin-bottom:5mm; break-inside:avoid; }
+.dos{ display:grid; grid-template-columns:1fr 1fr; gap:4mm 6mm; }
+.tres{ display:grid; grid-template-columns:repeat(3,1fr); gap:4mm; }
+.caja{ border:1px solid var(--linea); border-radius:3mm; padding:3mm 3.5mm; break-inside:avoid; }
+.caja.marca{ background:var(--marca-clara); border-color:transparent; display:block; }
+ul{ margin:0; padding-left:4.5mm; }
+li{ margin-bottom:1.2mm; }
+li b{ font-weight:600; }
+.paso{ display:flex; gap:2.5mm; align-items:flex-start; margin-bottom:2mm; }
+.paso .n{ flex:0 0 5mm; height:5mm; border-radius:50%; background:var(--marca); color:#fff; font-size:8pt;
+  display:flex; align-items:center; justify-content:center; font-weight:700; margin-top:.5mm; }
+.dato{ text-align:center; }
+.dato b{ display:block; font-size:16pt; color:var(--marca); line-height:1.2; }
+.dato span{ font-size:8.5pt; color:var(--suave); }
+.nota{ background:var(--acento-claro); border-left:3px solid var(--acento); padding:2.5mm 3mm; border-radius:0 2mm 2mm 0; }
+table{ width:100%; border-collapse:collapse; font-size:9.5pt; }
+th,td{ text-align:left; padding:1.5mm 2mm; border-bottom:1px solid var(--linea); vertical-align:top; }
+th{ color:var(--suave); font-weight:600; font-size:8.5pt; text-transform:uppercase; letter-spacing:.04em; }
+footer{ margin-top:5mm; padding-top:3mm; border-top:1px solid var(--linea); color:var(--suave); font-size:8.5pt;
+  display:flex; justify-content:space-between; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="marca"><b>aiva</b><span>CRM conversacional con IA</span></div>
+  <p class="lead" style="margin-top:3mm">Atiende a tus clientes por WhatsApp y por el chat de tu sitio, agenda citas
+  de verdad, te dice quién va en serio y te pasa a ti solo lo que necesita una persona.</p>
+</header>
+
+<section>
+  <h2>Cómo funciona</h2>
+  <div class="dos">
+    <div>
+      <div class="paso"><span class="n">1</span><div><b>Atiende sin horario.</b> Contesta en segundos por WhatsApp o
+        por el chat del sitio, con la información de tu negocio.</div></div>
+      <div class="paso"><span class="n">2</span><div><b>Entiende y anota.</b> Saca solo lo que importa —qué busca,
+        para cuándo, presupuesto, teléfono— sin interrogar al cliente.</div></div>
+      <div class="paso"><span class="n">3</span><div><b>Agenda.</b> Ofrece horarios de tu agenda real, confirma,
+        mueve o cancela, y recuerda la cita el día antes.</div></div>
+    </div>
+    <div>
+      <div class="paso"><span class="n">4</span><div><b>Califica.</b> Cada conversación queda con un puntaje
+        explicable: por qué sube, por qué baja, y se enfría solo si el cliente deja de hablar.</div></div>
+      <div class="paso"><span class="n">5</span><div><b>Te avisa.</b> Cuando alguien pide una persona, cuando no
+        supo algo o cuando un prospecto se pone caliente.</div></div>
+      <div class="paso"><span class="n">6</span><div><b>Aprende.</b> Lo que el equipo le responde una vez, la
+        próxima lo sabe.</div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Lo que lo hace distinto</h2>
+  <div class="dos">
+    <div class="caja">
+      <h3>No inventa</h3>
+      <p>Si no está en la información del negocio, no lo supone: dice que lo verifica y te llega la pregunta. Un
+      precio, una fecha o un "sí, tenemos" sin respaldo lo bloquea una guarda antes de que salga.</p>
+    </div>
+    <div class="caja">
+      <h3>No es un chatbot de menús</h3>
+      <p>Entiende cómo habla la gente aquí: «de hoy en quince», «a la hora del almuerzo», «la que sea». Lo que no
+      entienda, se le enseña desde el tablero y queda aprendido.</p>
+    </div>
+    <div class="caja">
+      <h3>Un cliente, una ficha</h3>
+      <p>Si escribe por el sitio y después por WhatsApp, aiva lo reconoce, llega sabiendo de qué hablaban y no lo
+      deja con dos citas. El equipo une las dos fichas con un clic.</p>
+    </div>
+    <div class="caja">
+      <h3>A la medida del negocio</h3>
+      <p>El embudo es tuyo: una boutique agenda citas, una financiera resuelve solicitudes, una litografía cotiza y
+      produce. Cambian las etapas, los datos que captura y si agenda o no.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>El tablero, para tu equipo</h2>
+  <table>
+    <tr><th style="width:28%">Pantalla</th><th>Para qué</th></tr>
+    <tr><td><b>Hoy</b></td><td>Lo que hay que atender, ordenado por lo que cuesta dejarlo esperando: preguntas sin responder, quien pidió una persona, citas por confirmar, calientes sin seguimiento.</td></tr>
+    <tr><td><b>Conversaciones</b></td><td>El chat en vivo, con la ficha del cliente al lado. Tomas la conversación cuando quieras y el asistente se calla; se la devuelves con un clic.</td></tr>
+    <tr><td><b>Calendario</b></td><td>Las citas de la semana. Se suscribe a Google, Outlook o Apple, y respeta el calendario privado del dueño.</td></tr>
+    <tr><td><b>Prospectos</b></td><td>El embudo completo, para mover a alguien de etapa cuando haga falta.</td></tr>
+    <tr><td><b>Análisis</b></td><td>Los números del negocio y la exportación a Excel: los datos son tuyos.</td></tr>
+    <tr><td><b>Perfil</b></td><td>Lo que el asistente dice de tu negocio. Lo que llenes lo usa al instante; lo que dejes vacío, lo verifica contigo.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Medido, no prometido</h2>
+  <div class="tres">
+    <div class="caja dato"><b>&lt; 1 ¢</b><span>de dólar por conversación atendida</span></div>
+    <div class="caja dato"><b>24/7</b><span>responde en segundos, también de madrugada</span></div>
+    <div class="caja dato"><b>40/40</b><span>conversaciones de prueba aprobadas antes de cada cambio</span></div>
+  </div>
+  <p style="margin-top:3mm; font-size:9pt; color:var(--suave)">Cada respuesta se resuelve primero con reglas y solo
+  llama al modelo cuando hace falta; el consumo queda medido por conversación y por mensaje, a la vista en el
+  tablero.</p>
+</section>
+
+<section>
+  <h2>Varios negocios, una operación</h2>
+  <p>Cada cliente corre aparte —su base, su WhatsApp, su dominio, su equipo— y todos se operan desde una consola:</p>
+  <div class="dos">
+    <div class="caja">
+      <h3>Vigilar</h3>
+      <ul>
+        <li>Una tarjeta por cliente con su estado y sus números.</li>
+        <li>Avisos que salen solos: instancia caída, WhatsApp desconectado, preguntas sin responder.</li>
+        <li>Ordenado por urgencia y por la prioridad de cada cliente.</li>
+      </ul>
+    </div>
+    <div class="caja">
+      <h3>Atender</h3>
+      <ul>
+        <li>Una sola bandeja con lo pendiente de todos los clientes.</li>
+        <li>Se responde ahí mismo, sin abrir un tablero por cliente.</li>
+        <li>Cada quien ve solo los clientes que atiende, y le suena solo lo suyo.</li>
+      </ul>
+    </div>
+  </div>
+  <p style="margin-top:3mm">Montar un cliente nuevo son minutos: se elige cómo atiende (citas, soporte, cotización)
+  y queda con su embudo, sus datos y su tablero. Lo que ya tiene conversado por WhatsApp se puede aprovechar: de ahí
+  salen las preguntas que más le hacen y cómo atiende su equipo.</p>
+</section>
+
+<section>
+  <h2>Canales</h2>
+  <table>
+    <tr><th style="width:28%">Canal</th><th>Estado</th></tr>
+    <tr><td><b>Chat del sitio web</b></td><td>Listo. Una línea de código en el sitio, con el color y el logo del negocio.</td></tr>
+    <tr><td><b>WhatsApp (código QR)</b></td><td>Listo. Se vincula escaneando, como WhatsApp Web. Sirve para empezar; no es la vía oficial de Meta.</td></tr>
+    <tr><td><b>WhatsApp oficial (Meta)</b></td><td>Listo. Respeta la ventana de 24 horas y las plantillas aprobadas.</td></tr>
+    <tr><td><b>Otros asistentes (MCP)</b></td><td>Listo. Claude o ChatGPT pueden consultar el catálogo y la información del negocio.</td></tr>
+    <tr><td><b>Instagram y Messenger</b></td><td>En camino.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Lo que el asistente nunca hace</h2>
+  <div class="nota">
+    <ul>
+      <li>Inventar precios, fechas, políticas o productos: lo que no sabe, lo verifica con el equipo.</li>
+      <li>Elegir una fecha por su cuenta: las citas salen siempre de la agenda real.</li>
+      <li>Cancelar o mover una cita sin que el cliente lo confirme.</li>
+      <li>Seguir respondiendo cuando una persona del equipo tomó la conversación.</li>
+      <li>Escribir por WhatsApp oficial fuera de las 24 horas sin una plantilla aprobada.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>Qué hace falta para arrancar</h2>
+  <div class="tres">
+    <div class="caja"><h3>Una máquina</h3><p style="margin:0">Un Mac Mini en el negocio o un servidor. Los datos de
+      cada cliente quedan en su propia base, separados.</p></div>
+    <div class="caja"><h3>Un número</h3><p style="margin:0">El WhatsApp del negocio (o las credenciales de Meta
+      para la vía oficial) y un dominio para el chat del sitio.</p></div>
+    <div class="caja"><h3>Tu información</h3><p style="margin:0">Dirección, horarios, formas de pago y lo que
+      manejan. Se escribe en el Perfil y el asistente la usa al instante.</p></div>
+  </div>
+</section>
+
+<footer>
+  <span>aiva · CRM conversacional con IA</span>
+  <span id="fecha"></span>
+</footer>
+
+<script>
+  var f = new Date();
+  document.getElementById('fecha').textContent = f.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+</script>
+</body>
+</html>
