@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consola · aiva</title>
+<style>
+:root{--bg:#eef0f4;--panel:#fff;--glass:rgba(255,255,255,.72);--glass-border:rgba(17,24,39,.08);--line:#e2e5ea;--text:#111827;--muted:#5f6875;--brand:#276f45;--brand-soft:#e6f4ec;--alta:#b91c1c;--alta-soft:#fee2e2;--media:#a3480a;--media-soft:#fef3c7;--baja:#374151;--baja-soft:#eef0f4;--ok:#166534;--ok-soft:#dcfce7;--rim:inset 1px 1px 0 rgba(255,255,255,.55),inset -1px -1px 0 rgba(17,24,39,.05);--lift:0 8px 24px rgba(17,24,39,.10);--shadow:0 1px 2px rgba(0,0,0,.06)}
+@media (prefers-color-scheme: dark){:root{--bg:#0b0d12;--panel:#171a21;--glass:rgba(24,28,36,.72);--glass-border:rgba(255,255,255,.09);--line:#262a33;--text:#e5e7eb;--muted:#9aa3b2;--brand:#5fbf86;--brand-soft:#173424;--alta:#f87171;--alta-soft:#3b1212;--media:#f59e0b;--media-soft:#3a2a08;--baja:#cbd5e1;--baja-soft:#20242d;--ok:#4ade80;--ok-soft:#0f2e1b;--rim:inset 1px 1px 0 rgba(255,255,255,.10),inset -1px -1px 0 rgba(0,0,0,.35);--lift:0 10px 28px rgba(0,0,0,.45);--shadow:none}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:baseline;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+h1{font-size:18px;margin:0}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.grow{flex:1}
+main{padding:16px 20px 60px;max-width:1100px;margin:0 auto}
+.card{background:var(--panel);border:1px solid var(--glass-border);border-radius:16px;box-shadow:var(--rim),var(--shadow);padding:14px 16px;margin-bottom:12px}
+.card:hover{box-shadow:var(--rim),var(--lift)}
+.fila{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.nombre{font-weight:700;font-size:15px}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 9px;font-size:12px;border:1px solid var(--glass-border);background:var(--baja-soft);color:var(--baja)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.alta{background:var(--alta-soft);color:var(--alta)}
+.chip.media{background:var(--media-soft);color:var(--media)}
+.nums{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px}
+.num b{display:block;font-size:17px}
+.num span{font-size:11px;color:var(--muted)}
+ul.tickets{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+ul.tickets li{display:flex;gap:8px;align-items:flex-start;border-left:3px solid var(--line);padding:4px 0 4px 10px}
+ul.tickets li.alta{border-color:var(--alta)}
+ul.tickets li.media{border-color:var(--media)}
+.btn{min-height:36px;padding:7px 12px;border-radius:10px;border:1px solid var(--glass-border);background:var(--panel);color:var(--text);box-shadow:var(--rim),var(--shadow);cursor:pointer;font:inherit}
+.btn:hover{box-shadow:var(--rim),var(--lift)}
+.btn.primary{background:var(--brand);color:#fff;border-color:transparent}
+@media (pointer:coarse){.btn{min-height:44px}}
+select,input{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--glass-border);border-radius:10px;padding:8px 10px;box-shadow:inset 0 1px 2px rgba(17,24,39,.06)}
+a{color:var(--brand)}
+dialog{border:none;border-radius:18px;padding:0;background:var(--panel);color:var(--text);box-shadow:var(--lift);max-width:520px;width:calc(100% - 32px)}
+dialog::backdrop{background:rgba(17,24,39,.45)}
+form.alta{padding:18px;display:flex;flex-direction:column;gap:10px}
+form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
+.login{max-width:380px;margin:12vh auto;text-align:center}
+#msg{min-height:20px}
+.vacio{text-align:center;color:var(--muted);padding:40px 10px}
+</style>
+</head>
+<body>
+<div id="login" class="login card" hidden>
+  <h1>Consola de aiva</h1>
+  <p class="muted small">Aquí se ven todos los clientes. Entra con el token de la consola (CONSOLA_TOKEN).</p>
+  <div class="fila"><input id="t" type="password" placeholder="Token" class="grow" autocomplete="current-password"><button class="btn primary" id="entrar">Entrar</button></div>
+  <div id="login-msg" class="small" role="status"></div>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <h1>Consola</h1>
+    <span class="muted small" id="resumen">…</span>
+    <span class="grow"></span>
+    <button class="btn" id="refrescar">Actualizar</button>
+    <button class="btn primary" id="nuevo">Nuevo cliente</button>
+  </header>
+  <main id="lista"></main>
+</div>
+
+<dialog id="dlg">
+  <form class="alta" method="dialog" id="form-alta">
+    <h2 style="margin:0">Nuevo cliente</h2>
+    <p class="muted small" style="margin:0">Crea su carpeta, su base, su token y su puerto. No arranca nada: eso queda en tus manos con pm2.</p>
+    <label>Nombre del negocio <input id="f-nombre" required placeholder="Financiera del Caribe"></label>
+    <label>Identificador <input id="f-slug" placeholder="se arma solo con el nombre"><span class="muted small">Para la carpeta y el subdominio.</span></label>
+    <label>Dominio <input id="f-host" placeholder="financiera.tudominio.co (opcional)"></label>
+    <label>Prioridad
+      <select id="f-prioridad"><option value="alta">Alta</option><option value="media" selected>Media</option><option value="baja">Baja</option></select>
+      <span class="muted small">Qué tan pendiente hay que estar de este cliente.</span>
+    </label>
+    <label>Configuración de la que parte <input id="f-plantilla" value="aiva.config.json"><span class="muted small">Se copia y se le cambia el nombre del negocio.</span></label>
+    <div id="msg" class="small" role="status"></div>
+    <div class="fila"><button class="btn primary" id="crear" type="button">Crear cliente</button><button class="btn" type="button" id="cerrar">Cancelar</button></div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var token = localStorage.getItem('aiva.consola.token') || '';
+
+  function api(path, opts) {
+    opts = opts || {};
+    var headers = { 'x-consola-token': token };
+    if (opts.body) headers['content-type'] = 'application/json';
+    return fetch('/api' + path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined })
+      .then(function (r) { if (r.status === 401) { entrar(false, 'Ese token no es'); throw new Error('401'); } return r.json(); });
+  }
+  function entrar(ok, msg) {
+    $('login').hidden = ok; $('app').hidden = !ok;
+    if (msg) $('login-msg').textContent = msg;
+  }
+  $('entrar').onclick = function () {
+    token = $('t').value.trim();
+    localStorage.setItem('aiva.consola.token', token);
+    cargar();
+  };
+  $('t').onkeydown = function (e) { if (e.key === 'Enter') $('entrar').click(); };
+
+  var PRIORIDADES = { alta: 'Alta', media: 'Media', baja: 'Baja' };
+  function tarjeta(f) {
+    var c = f.cliente, e = f.estado;
+    var estado = e.arriba ? '<span class="chip ok">Arriba</span>' : '<span class="chip alta">Apagado</span>';
+    var url = c.host ? 'https://' + c.host + '/admin' : 'http://localhost:' + c.puerto + '/admin';
+    var nums = e.arriba
+      ? '<div class="nums">' +
+        [[e.contactos, 'contactos'], [e.calientes, 'calientes'], [e.sinLeer, 'sin leer'], [e.citas, 'citas próximas'],
+         [e.gastoMes == null ? '—' : '$' + Number(e.gastoMes).toFixed(2), 'IA · 30 días']]
+          .map(function (n) { return '<div class="num"><b>' + esc(n[0]) + '</b><span>' + n[1] + '</span></div>'; }).join('') +
+        '</div>'
+      : '';
+    var tickets = f.tickets.length
+      ? '<ul class="tickets">' + f.tickets.map(function (t) {
+          return '<li class="' + t.urgencia + '"><b>' + esc(t.titulo) + '</b> <span class="muted small">' + esc(t.detalle) + '</span></li>';
+        }).join('') + '</ul>'
+      : '<div class="small muted" style="margin-top:8px">Sin pendientes.</div>';
+    return '<div class="card" data-slug="' + esc(c.slug) + '">' +
+      '<div class="fila"><span class="nombre">' + esc(c.nombre) + '</span>' + estado +
+        '<span class="chip ' + (c.prioridad === 'alta' ? 'alta' : c.prioridad === 'media' ? 'media' : '') + '">Prioridad ' + esc(PRIORIDADES[c.prioridad] || c.prioridad) + '</span>' +
+        '<span class="grow"></span>' +
+        '<select class="prio" aria-label="Prioridad de ' + esc(c.nombre) + '">' +
+          Object.keys(PRIORIDADES).map(function (k) { return '<option value="' + k + '"' + (k === c.prioridad ? ' selected' : '') + '>' + PRIORIDADES[k] + '</option>'; }).join('') +
+        '</select>' +
+        '<a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener">Abrir tablero</a>' +
+        '<button class="btn copiar">Copiar token</button>' +
+      '</div>' +
+      '<div class="small muted">' + esc(c.slug) + ' · puerto ' + c.puerto + (c.host ? ' · ' + esc(c.host) : ' · sin dominio') + ' · desde ' + esc(c.desde) + '</div>' +
+      nums + tickets + '</div>';
+  }
+
+  function cargar() {
+    return api('/clientes').then(function (d) {
+      entrar(true);
+      var filas = d.clientes || [];
+      var pendientes = filas.reduce(function (a, f) { return a + f.tickets.length; }, 0);
+      $('resumen').textContent = filas.length + (filas.length === 1 ? ' cliente' : ' clientes') + ' · ' + pendientes + (pendientes === 1 ? ' cosa por atender' : ' cosas por atender');
+      $('lista').innerHTML = filas.length ? filas.map(tarjeta).join('') : '<div class="vacio">Todavía no hay clientes. <b>Nuevo cliente</b> crea el primero.</div>';
+      $('lista').querySelectorAll('.prio').forEach(function (s) {
+        s.onchange = function () {
+          var slug = s.closest('.card').getAttribute('data-slug');
+          api('/clientes/' + encodeURIComponent(slug), { method: 'PATCH', body: { prioridad: s.value } }).then(cargar);
+        };
+      });
+      $('lista').querySelectorAll('.copiar').forEach(function (b) {
+        b.onclick = function () {
+          var slug = b.closest('.card').getAttribute('data-slug');
+          api('/clientes/' + encodeURIComponent(slug) + '/token').then(function (r) {
+            navigator.clipboard.writeText(r.token || '');
+            b.textContent = 'Copiado';
+            setTimeout(function () { b.textContent = 'Copiar token'; }, 1500);
+          });
+        };
+      });
+      $('f-plantilla').dataset.puerto = d.puertoSugerido;
+    }).catch(function () { entrar(false); });
+  }
+
+  $('refrescar').onclick = cargar;
+  $('nuevo').onclick = function () { $('msg').textContent = ''; $('dlg').showModal(); $('f-nombre').focus(); };
+  $('cerrar').onclick = function () { $('dlg').close(); };
+  $('crear').onclick = function () {
+    var nombre = $('f-nombre').value.trim();
+    if (!nombre) { $('msg').textContent = 'Falta el nombre del negocio.'; return; }
+    $('crear').disabled = true;
+    $('msg').textContent = 'Creando…';
+    api('/clientes', { method: 'POST', body: { nombre: nombre, slug: $('f-slug').value.trim() || undefined, host: $('f-host').value.trim(), prioridad: $('f-prioridad').value, plantilla: $('f-plantilla').value.trim() || undefined } })
+      .then(function (r) {
+        $('crear').disabled = false;
+        if (r.error) { $('msg').textContent = r.error; return; }
+        $('msg').innerHTML = '<b>Listo: ' + esc(r.cliente.nombre) + '</b><br>Token del tablero (se muestra una vez, también queda en su .env):<br><code>' + esc(r.token) + '</code>' +
+          '<br><br>Falta: ajustar su información en el tablero, <code>pnpm cliente pm2</code> y arrancarlo con pm2.';
+        $('f-nombre').value = ''; $('f-slug').value = ''; $('f-host').value = '';
+        cargar();
+      })
+      .catch(function () { $('crear').disabled = false; $('msg').textContent = 'No se pudo crear.'; });
+  };
+
+  if (token) cargar(); else entrar(false);
+  setInterval(function () { if (!$('app').hidden && !$('dlg').open) cargar(); }, 30000);
+})();
+</script>
+</body>
+</html>

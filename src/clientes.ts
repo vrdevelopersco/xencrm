@@ -72,6 +72,28 @@ export function rutas(slug: string) {
   };
 }
 
+/** El token del tablero de un cliente, leído de su .env (lo necesita la consola para preguntarle cómo va). */
+export function tokenDe(slug: string): string {
+  const env = rutas(slug).env;
+  if (!existsSync(env)) return '';
+  for (const line of readFileSync(env, 'utf8').split('\n')) {
+    const m = /^ADMIN_TOKEN\s*=\s*(.*)$/.exec(line.trim());
+    if (m) return m[1]!.replace(/^["']|["']$/g, '').trim();
+  }
+  return '';
+}
+
+/** Cambia lo que el super-admin puede ajustar de un cliente: prioridad, dominio y notas. */
+export function actualizarCliente(slug: string, cambios: Partial<Pick<ClienteRef, 'prioridad' | 'host' | 'notas' | 'nombre'>>): ClienteRef {
+  const clientes = leerIndice();
+  const i = clientes.findIndex((c) => c.slug === slug);
+  if (i === -1) throw new Error('ese cliente no existe');
+  const actualizado = { ...clientes[i]!, ...cambios };
+  clientes[i] = actualizado;
+  guardarIndice(clientes);
+  return actualizado;
+}
+
 /**
  * Da de alta un cliente: carpeta, configuración (copiada de una plantilla), token propio y su línea en el índice.
  * No arranca nada: eso lo hace pm2 con `pnpm cliente pm2`.
