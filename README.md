@@ -24,6 +24,8 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
 - [`docs/diseno-tablero.md`](docs/diseno-tablero.md): las reglas de diseño del tablero (contraste, material,
   colores de dato), con sus mediciones.
 - [`docs/demo.md`](docs/demo.md): el guion del demo en vivo, con la lista de lo que hay que dejar listo antes.
+- [`docs/aprender-del-historial.md`](docs/aprender-del-historial.md): cómo aprovechar las conversaciones que ya
+  tiene un cliente (el estilo sí, los precios no) y qué hace falta antes de tocarlas.
 - Varios clientes en una máquina: `pnpm cliente` (alta, pm2, túnel) y `pnpm consola` (todos los clientes en una
   pantalla, con lo que hay que atender de cada uno). El detalle, en `docs/arquitectura.md`.
 - [`docs/arreglos.md`](docs/arreglos.md): la bitácora de arreglos: qué fallaba, qué cambió y cómo se comprobó, con

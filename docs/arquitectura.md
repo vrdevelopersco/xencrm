@@ -305,6 +305,8 @@ Reglas para probar sin romper nada:
 
 - WhatsApp oficial está escrito contra la documentación de Meta, pero no se ha probado con credenciales reales.
 - Instagram y Messenger: el adaptador se construye cuando haya credenciales de prueba.
+- Aprender del historial de cada cliente (estilo y preguntas frecuentes, nunca precios ni políticas):
+  [`aprender-del-historial.md`](aprender-del-historial.md). Baileys ya puede traerlo (`syncFullHistory`).
 - Túnel fijo con dominio propio y despliegue en el Mac Mini (con pm2).
 - Afinar los pesos del puntaje con resultados reales: hoy son un estimado con 10 conversaciones (3 con cita, 1
   venta). Con ~20 citas con resultado marcado en Hoy › ¿Cómo les fue? se pueden medir de verdad.
