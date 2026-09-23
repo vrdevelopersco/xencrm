@@ -93,6 +93,15 @@ Una base SQLite por cliente (`DB_PATH`, WAL):
 | `messages` | la conversación, con autor (`customer`, `bot`, `human`) y quién del equipo escribió |
 | `analyses` | cada análisis: motor, ánimo, señales, puntaje y factores (el costo está en `llm_usage`) |
 
+**Varios clientes en una máquina.** Un proceso por cliente, no una base compartida: son negocios distintos (una
+boutique, una financiera, una litografía) y lo que no se mezcla no se puede filtrar. Cada uno vive en
+`clientes/<slug>/` con su `aiva.config.json`, su `.env` (puerto, base, carpeta de WhatsApp, token, dominio), su
+base, su diccionario y su perfil; lo compartido de la máquina (claves de OpenAI, URL de Ollama) queda una sola vez
+en el `.env` de la raíz y lo heredan todos, porque `config.ts` carga primero el del cliente y después el de la
+raíz sin pisar lo ya definido. `pnpm cliente` da de alta, lista, y genera el `ecosystem.config.cjs` de pm2 (una
+app por cliente, con reinicio) y el ingress de cloudflared (un túnel, un subdominio por cliente). El aislamiento se
+comprobó levantando dos instancias a la vez: bases distintas y el token de una devuelve 401 en la otra.
+
 **La misma persona por dos canales.** Empieza por el chat del sitio y en la tarde escribe por WhatsApp: para ella
 es la misma gestión. `crm/merge.ts › siblingIds` encuentra las otras fichas suyas por el número (con caché de un
 minuto), `agent/memory.ts › getHistory` mete esa conversación en el contexto —así el asistente llega sabiendo de
@@ -221,6 +230,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:export` | contactos y citas en CSV: columnas, comillas y archivados fuera | no |
 | `pnpm test:score` | pesos del puntaje y el descuento por silencio al leer la ficha | no |
 | `pnpm test:cross` | la misma persona por dos canales: contexto, aviso y fichas separadas | no |
+| `pnpm test:clientes` | alta de un cliente: carpeta, puerto, token, pm2 y túnel | no |
 | `pnpm test:backup` | respaldo: la copia trae los datos, permisos 600, conserva las últimas N | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |

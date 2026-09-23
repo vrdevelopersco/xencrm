@@ -14,3 +14,7 @@ sidecar/bin/
 *.jaja
 # copias de seguridad del diccionario al importar desde el tablero
 *.anterior.json
+
+# clientes: cada uno con su configuración, su base, su WhatsApp y su token
+clientes/
+ecosystem.config.cjs

@@ -23,6 +23,9 @@ function loadDotEnv(path = ENV_FILE) {
   }
 }
 loadDotEnv();
+// Con varios clientes, cada uno tiene su .env (token, puerto, base, dominio) y lo compartido de la máquina
+// (claves de OpenAI, URL de Ollama) sigue en el .env de la raíz: lo que el cliente no define, lo hereda.
+if (ENV_FILE !== '.env') loadDotEnv('.env');
 
 const bool = (v: string | undefined, def: boolean) =>
   v === undefined || v === '' ? def : ['1', 'true', 'yes', 'on'].includes(v.toLowerCase());

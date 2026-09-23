@@ -1,0 +1,238 @@
+// Varios clientes en una misma máquina, cada uno con lo suyo aparte: su configuración, su base, su WhatsApp, su
+// token y su dominio. Un proceso por cliente, no una base compartida: son negocios distintos (una boutique, una
+// financiera, una litografía) y lo que no se mezcla no se puede filtrar.
+//
+//   pnpm cliente lista            qué clientes hay y si están respondiendo
+//   pnpm cliente nuevo            da de alta uno (carpeta, token, puerto, dominio)
+//   pnpm cliente pm2              escribe el ecosystem de pm2 con todos
+//   pnpm cliente tunel            escribe el ingress de cloudflared (un dominio, un cliente por subdominio)
+import { createInterface } from 'node:readline/promises';
+import { stdin, stdout } from 'node:process';
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { randomBytes } from 'node:crypto';
+
+export interface ClienteRef {
+  slug: string;
+  nombre: string;
+  puerto: number;
+  /** Subdominio por el que entran sus clientes y su equipo. Vacío mientras no haya dominio. */
+  host: string;
+  /** Para la consola: qué tan pendiente hay que estar de este cliente. */
+  prioridad: 'alta' | 'media' | 'baja';
+  desde: string;
+  notas?: string;
+}
+
+export const CLIENTES_DIR = process.env.AIVA_CLIENTES_DIR || 'clientes';
+const INDEX = () => join(CLIENTES_DIR, 'index.json');
+const PUERTO_BASE = 3001;
+
+export function leerIndice(): ClienteRef[] {
+  if (!existsSync(INDEX())) return [];
+  const raw = JSON.parse(readFileSync(INDEX(), 'utf8')) as { clientes?: ClienteRef[] };
+  return raw.clientes ?? [];
+}
+
+export function guardarIndice(clientes: ClienteRef[]) {
+  mkdirSync(CLIENTES_DIR, { recursive: true });
+  const ordenados = [...clientes].sort((a, b) => a.slug.localeCompare(b.slug));
+  writeFileSync(INDEX(), `${JSON.stringify({ clientes: ordenados }, null, 2)}\n`);
+}
+
+export const slugificar = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 40);
+
+/** El siguiente puerto libre, contando los que ya están dados de alta. */
+export function puertoLibre(clientes = leerIndice(), base = PUERTO_BASE): number {
+  const usados = new Set(clientes.map((c) => c.puerto));
+  let p = base;
+  while (usados.has(p)) p++;
+  return p;
+}
+
+/** La carpeta de un cliente y los archivos que le pertenecen. */
+export function rutas(slug: string) {
+  const dir = join(CLIENTES_DIR, slug);
+  return {
+    dir,
+    config: join(dir, 'aiva.config.json'),
+    env: join(dir, '.env'),
+    data: join(dir, 'data'),
+    db: join(dir, 'data', 'aiva.db'),
+    auth: join(dir, 'auth'),
+    diccionario: join(dir, 'dictionary.json'),
+    perfil: join(dir, 'profile.json'),
+  };
+}
+
+/**
+ * Da de alta un cliente: carpeta, configuración (copiada de una plantilla), token propio y su línea en el índice.
+ * No arranca nada: eso lo hace pm2 con `pnpm cliente pm2`.
+ */
+export function crearCliente(opts: {
+  nombre: string;
+  slug?: string;
+  plantilla?: string;
+  puerto?: number;
+  host?: string;
+  prioridad?: ClienteRef['prioridad'];
+  hoy?: string;
+}): { cliente: ClienteRef; token: string } {
+  const clientes = leerIndice();
+  const slug = slugificar(opts.slug || opts.nombre);
+  if (!slug) throw new Error('el nombre no da para un identificador');
+  if (clientes.some((c) => c.slug === slug)) throw new Error(`ya existe un cliente con el identificador "${slug}"`);
+  const puerto = opts.puerto ?? puertoLibre(clientes);
+  if (clientes.some((c) => c.puerto === puerto)) throw new Error(`el puerto ${puerto} ya lo usa otro cliente`);
+
+  const r = rutas(slug);
+  mkdirSync(r.data, { recursive: true });
+  mkdirSync(r.auth, { recursive: true });
+
+  const plantilla = opts.plantilla ?? 'aiva.config.json';
+  if (!existsSync(plantilla)) throw new Error(`no encuentro la plantilla ${plantilla}`);
+  const config = JSON.parse(readFileSync(plantilla, 'utf8')) as Record<string, unknown>;
+  const negocio = (config.business ?? {}) as Record<string, unknown>;
+  config.business = { ...negocio, name: opts.nombre };
+  // Diccionario y perfil viven con el cliente, no en la raíz del proyecto.
+  config.dictionaryFile = resolve(r.diccionario);
+  config.profileFile = resolve(r.perfil);
+  writeFileSync(r.config, `${JSON.stringify(config, null, 2)}\n`);
+
+  const token = randomBytes(24).toString('hex');
+  const host = opts.host ?? '';
+  const env = [
+    `# ${opts.nombre} · lo que es de este cliente. Lo compartido (claves de OpenAI, Ollama) está en el .env de la raíz.`,
+    `PORT=${puerto}`,
+    `DB_PATH=${resolve(r.db)}`,
+    `WHATSAPP_AUTH_DIR=${resolve(r.auth)}`,
+    `ADMIN_TOKEN=${token}`,
+    `PUBLIC_URL=${host ? `https://${host}` : ''}`,
+    `ALLOWED_ORIGINS=*`,
+    '',
+  ].join('\n');
+  writeFileSync(r.env, env, { mode: 0o600 });
+
+  const cliente: ClienteRef = {
+    slug,
+    nombre: opts.nombre,
+    puerto,
+    host,
+    prioridad: opts.prioridad ?? 'media',
+    desde: (opts.hoy ?? new Date().toISOString()).slice(0, 10),
+  };
+  guardarIndice([...clientes, cliente]);
+  return { cliente, token };
+}
+
+/** El ecosystem de pm2: una app por cliente, con su configuración y su base. */
+export function pm2Config(clientes = leerIndice()): string {
+  const apps = clientes.map((c) => ({
+    name: `aiva-${c.slug}`,
+    script: 'node_modules/.bin/tsx',
+    args: 'src/index.ts',
+    cwd: resolve('.'),
+    env: {
+      AIVA_CONFIG: resolve(rutas(c.slug).config),
+      AIVA_ENV_FILE: resolve(rutas(c.slug).env),
+      NODE_ENV: 'production',
+    },
+    max_restarts: 10,
+    restart_delay: 4000,
+    out_file: resolve(join(rutas(c.slug).dir, 'aiva.log')),
+    error_file: resolve(join(rutas(c.slug).dir, 'aiva.error.log')),
+  }));
+  return `// Generado por: pnpm cliente pm2 — no editar a mano.\nmodule.exports = { apps: ${JSON.stringify(apps, null, 2)} };\n`;
+}
+
+/** El ingress de cloudflared: un solo túnel, un subdominio por cliente. */
+export function tunelConfig(clientes = leerIndice(), opts: { tunnel?: string } = {}): string {
+  const conHost = clientes.filter((c) => c.host);
+  const reglas = conHost.map((c) => `  - hostname: ${c.host}\n    service: http://localhost:${c.puerto}`).join('\n');
+  return [
+    '# Generado por: pnpm cliente tunel',
+    `tunnel: ${opts.tunnel ?? 'aiva'}`,
+    `credentials-file: ~/.cloudflared/${opts.tunnel ?? 'aiva'}.json`,
+    '',
+    'ingress:',
+    reglas || '  # (ningún cliente tiene dominio todavía)',
+    '  - service: http_status:404',
+    '',
+  ].join('\n');
+}
+
+// ---------- Línea de comandos ----------
+async function main() {
+  const [accion = 'lista'] = process.argv.slice(2);
+  const clientes = leerIndice();
+
+  if (accion === 'lista') {
+    if (!clientes.length) return console.log('Todavía no hay clientes. Se da de alta uno con: pnpm cliente nuevo');
+    console.log('\ncliente               puerto  prioridad  dominio                        estado');
+    for (const c of clientes) {
+      const estado = await fetch(`http://localhost:${c.puerto}/admin`, { signal: AbortSignal.timeout(1500) })
+        .then((r) => (r.ok ? 'arriba' : `responde ${r.status}`))
+        .catch(() => 'apagado');
+      console.log(`${c.slug.padEnd(20)} ${String(c.puerto).padStart(6)}  ${c.prioridad.padEnd(9)}  ${(c.host || '—').padEnd(29)}  ${estado}`);
+    }
+    console.log(`\n${clientes.length} cliente${clientes.length === 1 ? '' : 's'}. El detalle de cada uno, en su tablero.`);
+    return;
+  }
+
+  if (accion === 'pm2') {
+    writeFileSync('ecosystem.config.cjs', pm2Config(clientes));
+    console.log(`ecosystem.config.cjs con ${clientes.length} cliente${clientes.length === 1 ? '' : 's'}.`);
+    console.log('Arrancar todo:  pm2 start ecosystem.config.cjs && pm2 save');
+    console.log('Al prender el Mac:  pm2 startup   (una sola vez, dice qué pegar)');
+    return;
+  }
+
+  if (accion === 'tunel') {
+    const destino = join(CLIENTES_DIR, 'cloudflared.yml');
+    mkdirSync(CLIENTES_DIR, { recursive: true });
+    writeFileSync(destino, tunelConfig(clientes));
+    console.log(`${destino} con ${clientes.filter((c) => c.host).length} dominio(s).`);
+    console.log('Correr el túnel:  cloudflared tunnel --config ' + destino + ' run');
+    return;
+  }
+
+  if (accion === 'nuevo') {
+    const rl = createInterface({ input: stdin, output: stdout });
+    const ask = async (q: string, def = '') => (await rl.question(`${q}${def ? ` [${def}]` : ''}: `)).trim() || def;
+    console.log('\n🌱 Alta de un cliente\n');
+    const nombre = await ask('Nombre del negocio');
+    if (!nombre) {
+      console.log('Sin nombre no puedo seguir.');
+      rl.close();
+      return;
+    }
+    const slug = slugificar(await ask('Identificador (para carpetas y subdominio)', slugificar(nombre)));
+    const puerto = Number(await ask('Puerto', String(puertoLibre(clientes))));
+    const host = await ask('Dominio (vacío si todavía no hay)', '');
+    const prioridad = (await ask('Prioridad (alta/media/baja)', 'media')) as ClienteRef['prioridad'];
+    const plantilla = await ask('Configuración de la que parte', 'aiva.config.json');
+    rl.close();
+
+    const { cliente, token } = crearCliente({ nombre, slug, puerto, host, prioridad, plantilla });
+    const r = rutas(cliente.slug);
+    console.log(`\n✓ ${cliente.nombre} quedó en ${r.dir}`);
+    console.log(`  tablero: http://localhost:${cliente.puerto}/admin`);
+    console.log(`  token:   ${token}  (también en ${r.env}, con permisos 600)`);
+    console.log('\nFalta:');
+    console.log(`  1. Ajustar ${r.config} con lo del negocio (o desde el tablero, en Perfil).`);
+    console.log('  2. pnpm cliente pm2   y   pm2 start ecosystem.config.cjs');
+    if (host) console.log('  3. pnpm cliente tunel   para que entre por ' + host);
+    return;
+  }
+
+  console.log('Acciones: lista · nuevo · pm2 · tunel');
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) await main();
