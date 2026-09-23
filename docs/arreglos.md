@@ -9,6 +9,14 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### Varios clientes en la misma máquina · `a4754dc`
+Para atender negocios distintos (boutique, financiera, litografía) hacía falta poder montar varios sin que se
+puedan mezclar. Quedó **un proceso por cliente**, no una base compartida: cada uno en `clientes/<slug>/` con su
+configuración, su base, su WhatsApp, su token y su dominio, y lo compartido de la máquina (claves de OpenAI,
+Ollama) una sola vez en el `.env` de la raíz. `pnpm cliente` da de alta, lista con estado, y genera el pm2 y el
+túnel. Comprobado con dos instancias a la vez: DUNOR con sus 10 contactos y una financiera nueva en 0, y el token
+de una devuelve 401 en la otra. `pnpm test:clientes` (21 casos).
+
 ### El asistente sabe que ya venías hablando por el otro canal · `114f571`
 Empezaba la gestión por el chat del sitio y en la tarde escribía por WhatsApp: para el cliente es la misma
 conversación, pero aiva lo saludaba como a un desconocido y le preguntaba todo otra vez. Ahora, cuando el número
