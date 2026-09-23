@@ -7,7 +7,7 @@ import { join } from 'node:path';
 process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-booking-')), 'aiva.db'); // agenda propia: no toca la del negocio
 const { touchUser } = await import('../agent/memory.js');
 const { getContact, updateContact, deleteContactsByPrefix } = await import('../crm/contacts.js');
-const { availableSlots, tzParts, dayKey, listAppointments, formatDay } = await import('../crm/appointments.js');
+const { availableSlots, tzParts, dayKey, listAppointments, formatDay, zoned } = await import('../crm/appointments.js');
 const { bookingStep } = await import('../crm/booking.js');
 const { parseWhen } = await import('../crm/when.js');
 const { getDb } = await import('../rag/store.js');
@@ -217,33 +217,30 @@ await flow('y si después sí quiere cambiarla, sigue el hilo', ['¿cuándo era 
   /Te esperamos/.test(r[0]!) && /busquemos otro espacio|Lo más cercano|\d\) /.test(r[1]!) ? null : r[1]!.slice(0, 90),
 );
 
-// "El jueves" es el de esta semana: si está lleno, se dice y se ofrece lo más cercano, no el jueves siguiente.
+// El día que pida, si está lleno, se dice y se ofrece lo más cercano: no se salta a la semana siguiente.
 {
-  const proximoJueves = (() => {
-    for (let d = 1; d <= 7; d++) {
-      const p = tzParts(new Date(Date.now() + d * 86400_000));
-      if (p.wd === 4) return dayKey(p.y, p.m, p.d);
-    }
-    return '';
-  })();
-  let llenos = 0;
+  const primero = availableSlots({ count: 1 })[0]!; // el próximo espacio libre, sea cual sea
+  const p = tzParts(primero.startsAt);
+  const diaKey = dayKey(p.y, p.m, p.d);
+  const nombreDia = formatDay(zoned(p.y, p.m, p.d, 12, 0)).split(',')[0]!; // "jueves"
   for (let i = 0; i < 30; i++) {
-    const slot = availableSlots({ count: 1, when: { days: [proximoJueves], label: 'el jueves' } })[0];
+    const slot = availableSlots({ count: 1, when: { days: [diaKey], label: nombreDia } })[0];
     if (!slot) break;
     const u = `test:booking-lleno-${i}`;
     touchUser(u, 'cli', 'Relleno');
     updateContact(u, { name: 'Relleno', phone: '+573000000000' }, { silent: true });
     bookAppointment(u, slot.startsAt, { by: 'admin' });
-    llenos++;
   }
+  const lleno = availableSlots({ count: 1, when: { days: [diaKey], label: nombreDia } }).length === 0;
+  const entiende = parseWhen(`el ${nombreDia}`)?.days?.[0] === diaKey; // "el jueves" es ese jueves, el de esta semana
   const u = `test:booking-${++n}`;
   touchUser(u, 'cli', 'Marta');
   updateContact(u, { name: 'Marta', phone: '+573001112233' }, { silent: true });
-  const r = await startBooking(u, '¿puedo ir el jueves?');
+  const r = await startBooking(u, `¿puedo ir el ${nombreDia}?`);
   const ofrecidos = [...r.matchAll(/\d\) (.+)/g)].map((m) => m[1]!);
-  const ok = llenos > 0 && /ya no me quedan espacios/.test(r) && /Lo más cercano/.test(r) && !ofrecidos.some((o) => /jueves/.test(o));
+  const ok = lleno && entiende && /ya no me quedan espacios/.test(r) && /Lo más cercano/.test(r) && !ofrecidos.some((o) => o.includes(nombreDia));
   if (!ok) fail++;
-  console.log(`${ok ? '✓' : '✗'} el día pedido lleno se dice, no se salta a la otra semana${ok ? '' : `\n   (${llenos} ocupados) ${r.replace(/\n/g, ' ⏎ ').slice(0, 150)}`}`);
+  console.log(`${ok ? '✓' : '✗'} el día pedido lleno se dice, no se salta a la otra semana${ok ? '' : `\n   (lleno=${lleno} entiende=${entiende} ${nombreDia} ${diaKey}) ${r.replace(/\n/g, ' ⏎ ').slice(0, 160)}`}`);
 }
 
 const usageAfter = (getDb().prepare('SELECT COUNT(*) n FROM llm_usage').get() as { n: number }).n;
