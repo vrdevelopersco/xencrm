@@ -26,6 +26,7 @@ check('quedan los dos en el índice, ordenados', leerIndice().map((c) => c.slug)
 
 const r = rutas('dunor-boutique');
 check('tiene su configuración, su base, su WhatsApp', existsSync(r.config) && existsSync(r.data) && existsSync(r.auth));
+check('y su propio catálogo y lo que sabe, sin compartir con otro cliente', existsSync(join(r.dir, 'catalogo')) && existsSync(join(r.dir, 'conocimiento')));
 check('el .env del cliente no se lee desde afuera', (statSync(r.env).mode & 0o077) === 0, (statSync(r.env).mode & 0o777).toString(8));
 
 const env = readFileSync(r.env, 'utf8');
@@ -35,6 +36,9 @@ check('y NO repite las claves de la máquina', !/OPENAI_API_KEY/.test(env), env)
 const config = JSON.parse(readFileSync(r.config, 'utf8')) as { business: { name: string }; dictionaryFile: string; profileFile: string };
 check('la configuración queda a nombre del negocio', config.business.name === 'DUNOR Boutique', config.business.name);
 check('el diccionario y el perfil viven con el cliente', config.dictionaryFile.includes('dunor-boutique') && config.profileFile.includes('dunor-boutique'), config.dictionaryFile);
+const fuentes = (JSON.parse(readFileSync(r.config, 'utf8')) as { sources: { productsFile: string; knowledgeDir: string } }).sources;
+check('el catálogo y el conocimiento también', fuentes.productsFile.includes('dunor-boutique') && fuentes.knowledgeDir.includes('dunor-boutique'), JSON.stringify(fuentes));
+check('WhatsApp arranca apagado: el código se escanea cuando el equipo quiera', /WHATSAPP_ENABLED=false/.test(readFileSync(r.env, 'utf8')));
 
 const pm2 = pm2Config();
 check('pm2 lleva una app por cliente', /aiva-dunor-boutique/.test(pm2) && /aiva-financiera-del-caribe/.test(pm2));

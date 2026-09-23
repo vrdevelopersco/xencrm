@@ -177,9 +177,15 @@ export function crearCliente(opts: {
   const config = configDePlantilla(opts.plantilla);
   const negocio = (config.business ?? {}) as Record<string, unknown>;
   config.business = { ...negocio, name: opts.nombre };
-  // Diccionario y perfil viven con el cliente, no en la raíz del proyecto.
+  // Todo lo del cliente vive con el cliente: diccionario, perfil, catálogo y lo que sepa. Nada compartido con otro.
   config.dictionaryFile = resolve(r.diccionario);
   config.profileFile = resolve(r.perfil);
+  const sources = { ...((config.sources ?? {}) as Record<string, unknown>) };
+  sources.productsFile = resolve(join(r.dir, 'catalogo', 'productos.json'));
+  sources.knowledgeDir = resolve(join(r.dir, 'conocimiento'));
+  config.sources = sources;
+  mkdirSync(join(r.dir, 'catalogo'), { recursive: true });
+  mkdirSync(join(r.dir, 'conocimiento'), { recursive: true });
   writeFileSync(r.config, `${JSON.stringify(config, null, 2)}\n`);
 
   const token = randomBytes(24).toString('hex');
@@ -190,6 +196,8 @@ export function crearCliente(opts: {
     `DB_PATH=${resolve(r.db)}`,
     `WHATSAPP_AUTH_DIR=${resolve(r.auth)}`,
     `ADMIN_TOKEN=${token}`,
+    '# WhatsApp se enciende desde el tablero (Canales) cuando vayan a escanear el código.',
+    'WHATSAPP_ENABLED=false',
     `PUBLIC_URL=${host ? `https://${host}` : ''}`,
     `ALLOWED_ORIGINS=*`,
     '',
