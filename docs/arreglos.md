@@ -9,6 +9,15 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### Consola del super-admin · `7272210`
+Con varios clientes hacía falta verlos a todos y poder dar de alta uno nuevo. `pnpm consola` muestra una tarjeta
+por cliente con su prioridad, sus números y **tickets que salen solos del estado** (instancia caída, dirección
+pública caída, WhatsApp pidiendo código, preguntas sin responder, gente esperando, citas sin resultado), ordenados
+por urgencia × prioridad. El alta es del super-admin, desde ahí: crea carpeta, token y puerto, y dice qué falta;
+arrancar la instancia sigue siendo pm2, a propósito. Escucha solo en 127.0.0.1 porque tiene la llave de todos los
+tableros. `pnpm test:consola` (21 casos) y probada contra la instancia real de DUNOR: destapó de una que el túnel
+se había vuelto a caer.
+
 ### Varios clientes en la misma máquina · `a4754dc`
 Para atender negocios distintos (boutique, financiera, litografía) hacía falta poder montar varios sin que se
 puedan mezclar. Quedó **un proceso por cliente**, no una base compartida: cada uno en `clientes/<slug>/` con su
