@@ -9,6 +9,16 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-22
 
+### El embudo lo pone cada negocio · `0a03709`
+Las etapas estaban fijas en el código ("cita_agendada", "vendido"): con eso, una financiera o una litografía
+entraban con el embudo de una boutique. Ahora salen de `crm.stages`, con un **papel** por etapa (inicio, activo,
+interés, cita, ganado, perdido) que es lo único que el código conoce; los nombres los pone el negocio. Sin etapa
+de "cita", simplemente no agenda. El tablero pinta por papel y esconde los filtros que no apliquen, y una ficha
+con una etapa que ya no existe cae a la primera sin romperse. El alta arranca preguntando **cómo atiende el
+negocio** con tres plantillas —citas, soporte y cotización—, cada una con su embudo, si agenda y qué datos
+captura. `pnpm test:etapas` (14 casos con un negocio de soporte), `test:clientes` (8 nuevos) y las 27 suites; el
+tablero de DUNOR quedó idéntico.
+
 ### Consola del super-admin · `7272210`
 Con varios clientes hacía falta verlos a todos y poder dar de alta uno nuevo. `pnpm consola` muestra una tarjeta
 por cliente con su prioridad, sus números y **tickets que salen solos del estado** (instancia caída, dirección
