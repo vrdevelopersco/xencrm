@@ -65,5 +65,25 @@ check('ni robarle el puerto a otro', /puerto 3001/.test(err), err);
 check('un nombre que no da identificador se rechaza', (() => { try { crearCliente({ nombre: '¿¡!' }); return false; } catch { return true; } })());
 check('los identificadores se limpian', slugificar('Litografía Industrial S.A.S.') === 'litografia-industrial-s-a-s', slugificar('Litografía Industrial S.A.S.'));
 
+// La plantilla es lo primero que se pregunta al dar de alta: de ahí salen el embudo y si agenda citas.
+const { cliente: fin2 } = crearCliente({ nombre: 'Soporte SAS', plantilla: 'soporte' });
+const cfgSoporte = JSON.parse(readFileSync(rutas(fin2.slug).config, 'utf8')) as { crm: { stages: { id: string }[]; fields: { name: string }[] }; appointments: { enabled: boolean }; sources: unknown };
+check('la plantilla de soporte trae su embudo', cfgSoporte.crm.stages.map((s) => s.id).join() === 'nuevo,en_revision,con_asesor,resuelto,sin_solucion', JSON.stringify(cfgSoporte.crm.stages.map((s) => s.id)));
+check('y no agenda citas', cfgSoporte.appointments.enabled === false);
+check('captura lo suyo, no prendas', cfgSoporte.crm.fields.map((f) => f.name).join() === 'solicitud,producto,radicado');
+check('la plantilla se completa con lo que toda instancia necesita', Boolean(cfgSoporte.sources));
+
+const { cliente: lito } = crearCliente({ nombre: 'Litografía Industrial', plantilla: 'cotizacion' });
+const cfgLito = JSON.parse(readFileSync(rutas(lito.slug).config, 'utf8')) as { crm: { stages: { id: string; rol?: string }[] } };
+check('cotización va hasta entregado', cfgLito.crm.stages.map((s) => s.id).join() === 'nuevo,tomando_datos,cotizado,en_produccion,entregado,perdido');
+check('y marca cuál es la ganada', cfgLito.crm.stages.find((s) => s.rol === 'ganado')?.id === 'entregado');
+
+const cfgCitas = JSON.parse(readFileSync(rutas('dunor-boutique').config, 'utf8')) as { crm?: { stages?: { id: string }[] }; appointments?: { enabled?: boolean } };
+check('por defecto, el negocio agenda citas', cfgCitas.appointments?.enabled === true && cfgCitas.crm?.stages?.some((s) => s.id === 'cita_agendada') === true, JSON.stringify(cfgCitas.crm?.stages?.map((s) => s.id)));
+
+let errPlantilla = '';
+try { crearCliente({ nombre: 'Otra Cosa', plantilla: 'no-existe.json' }); } catch (e) { errPlantilla = (e as Error).message; }
+check('una plantilla que no existe se avisa', /no encuentro la plantilla/.test(errPlantilla), errPlantilla);
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

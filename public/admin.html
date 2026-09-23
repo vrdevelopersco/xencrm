@@ -66,7 +66,8 @@ input[type=text],input[type=search],input[type=password],input[type=email],input
 textarea{resize:vertical;min-height:70px}
 .muted{color:var(--muted)}.small{font-size:12px}
 .chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 9px;font-size:12px;border:1px solid var(--glass-border);background:var(--glass-strong)}
-.chip.stage-nuevo{background:var(--bg)}.chip.stage-conversando{background:var(--me)}.chip.stage-interesado{background:var(--warn-soft);color:var(--warn)}.chip.stage-cita_agendada{background:var(--cita-soft);color:var(--cita)}.chip.stage-vendido{background:var(--ok-soft);color:var(--ok)}.chip.stage-perdido{background:var(--bad-soft);color:var(--bad)}
+/* El color va por el papel de la etapa (inicio, activo, interés, cita, ganado, perdido): el embudo lo pone cada negocio. */
+.chip.stage-inicio{background:var(--bg)}.chip.stage-activo{background:var(--me)}.chip.stage-interes{background:var(--warn-soft);color:var(--warn)}.chip.stage-cita{background:var(--cita-soft);color:var(--cita)}.chip.stage-ganado{background:var(--ok-soft);color:var(--ok)}.chip.stage-perdido{background:var(--bad-soft);color:var(--bad)}
 .chip.t-caliente{background:var(--si-soft);color:var(--si);border-color:transparent}.chip.t-tibio{background:var(--warn-soft);color:var(--warn);border-color:transparent}.chip.t-frio{background:var(--bg);color:var(--muted)}
 .chip.human{background:var(--human);border-color:transparent}
 /* Bandeja */
@@ -377,20 +378,20 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
    grosor ni estado presionado. El texto de cada chip es su tinta propia (medida contra el peor píxel del grano); el
    filo en su tono es decorativo, el estado lo dice el texto. Los desactualizados quedan planos, punteados e itálicos. */
 .chip{--tone:var(--muted)}
-.chip.stage-interesado,.chip.t-tibio,.chip.v-posible{--tone:var(--warn)}
-.chip.stage-cita_agendada,.chip.v-cita{--tone:var(--cita)}
+.chip.stage-interes,.chip.t-tibio,.chip.v-posible{--tone:var(--warn)}
+.chip.stage-cita,.chip.v-cita{--tone:var(--cita)}
 .chip.v-si{--tone:var(--si)}
 /* Temperatura y veredicto son el mismo puntaje con los mismos cortes (60 y 30): mismos colores. "Caliente" es el
    mejor prospecto, así que va con el verde de "sí", no con el rojo, que es de "perdido". */
 .chip.t-caliente{--tone:var(--si)}
 .chip.v-perdido{--tone:var(--bad)}
-.chip.stage-vendido,.chip.v-cliente{--tone:var(--ok)}
+.chip.stage-ganado,.chip.v-cliente{--tone:var(--ok)}
 .chip.who,.chip.human{--tone:var(--human-edge)}
 .chip:not(.stale){background-image:var(--grain);border-color:color-mix(in srgb,var(--tone) 32%,transparent);
   box-shadow:var(--bevel-hi),inset 0 -1px 0 color-mix(in srgb,var(--tone) 20%,transparent)}
 .chip.stage-perdido{--tone:var(--bad)}
 /* Tinta sobre grano (medida contra el peor píxel): el tono mezclado con --text, que en claro oscurece y en oscuro aclara. */
-.chip.stage-interesado,.chip.t-tibio,.chip.v-posible,.chip.stage-cita_agendada,.chip.v-si,.chip.v-cita,.chip.t-caliente,.chip.v-perdido,.chip.stage-perdido,.chip.stage-vendido,.chip.v-cliente{color:color-mix(in srgb,var(--tone) 78%,var(--text))}
+.chip.stage-interes,.chip.t-tibio,.chip.v-posible,.chip.stage-cita,.chip.v-si,.chip.v-cita,.chip.t-caliente,.chip.v-perdido,.chip.stage-perdido,.chip.stage-ganado,.chip.v-cliente{color:color-mix(in srgb,var(--tone) 78%,var(--text))}
 .chip.t-frio,.chip.v-no{color:var(--muted-strong)}
 
 /* Tarjetas del pipeline: se toman y se sueltan, así que son una pieza con marco de cartulina (grano, bisel, filo en
@@ -568,8 +569,8 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
               <button data-f="unread">Sin leer</button>
               <button data-f="human">Con una persona</button>
               <button data-f="hot">Prospectos</button>
-              <button data-f="stage:interesado">Interesados</button>
-              <button data-f="stage:cita_agendada">Con cita</button>
+              <button data-rol="interes" data-f="stage:interesado" hidden>Interesados</button>
+              <button data-rol="cita" data-f="stage:cita_agendada" hidden>Con cita</button>
               <button data-f="archived">Archivados</button>
             </div>
           </div>

@@ -1,0 +1,29 @@
+{
+  "business": {
+    "name": "Nombre del negocio",
+    "description": "A qué se dedica, en una línea.",
+    "currency": "COP",
+    "country": "Colombia",
+    "humanContact": "escríbenos por aquí y un asesor te responde"
+  },
+  "agent": {
+    "name": "Aiva",
+    "style": "claro, respetuoso, de usted, frases cortas y sin tecnicismos",
+    "language": "es"
+  },
+  "appointments": { "enabled": false },
+  "crm": {
+    "stages": [
+      { "id": "nuevo", "label": "Nuevo", "rol": "inicio" },
+      { "id": "en_revision", "label": "En revisión", "rol": "activo" },
+      { "id": "con_asesor", "label": "Con un asesor", "rol": "interes" },
+      { "id": "resuelto", "label": "Resuelto", "rol": "ganado" },
+      { "id": "sin_solucion", "label": "Sin solución", "rol": "perdido" }
+    ],
+    "fields": [
+      { "name": "solicitud", "description": "Qué necesita el cliente (consulta, reclamo, trámite)" },
+      { "name": "producto", "description": "Producto o servicio del que habla" },
+      { "name": "radicado", "description": "Número de caso, radicado o referencia que mencione" }
+    ]
+  }
+}

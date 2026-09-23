@@ -4,16 +4,25 @@ import { getDb } from '../rag/store.js';
 import { decayed } from './score.js';
 import { emitEvent } from './events.js';
 
-export const STAGES = ['nuevo', 'conversando', 'interesado', 'cita_agendada', 'vendido', 'perdido'] as const;
-export type Stage = (typeof STAGES)[number];
-export const STAGE_LABELS: Record<Stage, string> = {
-  nuevo: 'Nuevo',
-  conversando: 'Conversando',
-  interesado: 'Interesado',
-  cita_agendada: 'Cita agendada',
-  vendido: 'Vendido',
-  perdido: 'Perdido',
-};
+// El embudo sale de la configuración del negocio (crm.stages): una boutique agenda citas, una financiera estudia
+// solicitudes y una litografía cotiza y produce. El código no usa los nombres, usa los roles.
+export type StageRole = 'inicio' | 'activo' | 'interes' | 'cita' | 'ganado' | 'perdido';
+export type Stage = string;
+export const STAGE_DEFS = business.crm.stages;
+export const STAGES: Stage[] = STAGE_DEFS.map((s) => s.id);
+export const STAGE_LABELS: Record<Stage, string> = Object.fromEntries(STAGE_DEFS.map((s) => [s.id, s.label]));
+
+/** La primera etapa: donde entra quien acaba de escribir. */
+export const primeraEtapa = (): Stage => (STAGE_DEFS.find((s) => s.rol === 'inicio') ?? STAGE_DEFS[0]!).id;
+
+/** La etapa que cumple ese papel en este negocio, si la tiene ("cita" no existe donde no se agenda). */
+export const etapaCon = (rol: StageRole): Stage | null => STAGE_DEFS.find((s) => s.rol === rol)?.id ?? null;
+
+/** El papel de una etapa, para preguntar por lo que significa y no por cómo se llama. */
+export const rolDe = (stage: Stage): StageRole | null => STAGE_DEFS.find((s) => s.id === stage)?.rol ?? null;
+
+/** ¿Esta ficha está cerrada (ganada o perdida)? Esas no piden acción. */
+export const estaCerrada = (stage: Stage): boolean => ['ganado', 'perdido'].includes(rolDe(stage) ?? '');
 
 export interface ScoreFactor {
   label: string;
@@ -60,7 +69,8 @@ function rowToContact(r: Record<string, unknown>): Contact {
     }
   };
   const base = Number(r.score ?? 0);
-  const stage = ((r.stage as string) || 'nuevo') as Stage;
+  const guardada = (r.stage as string) || '';
+  const stage: Stage = STAGES.includes(guardada) ? guardada : primeraEtapa(); // si cambió el embudo, no se rompe
   const lastMessageAt = r.last_message_at == null ? null : Number(r.last_message_at);
   const hoy = decayed(base, json<ScoreFactor[]>(r.score_factors, []), lastMessageAt, stage);
   return {

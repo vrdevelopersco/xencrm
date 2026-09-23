@@ -1,3 +1,4 @@
+import { primeraEtapa } from '../crm/contacts.js';
 import { siblingIds } from '../crm/merge.js';
 import { getDb } from '../rag/store.js';
 import { env } from '../config.js';
@@ -16,11 +17,11 @@ export function touchUser(id: string, channel: string, name?: string | null): Us
   const db = getDb();
   const now = Date.now();
   db.prepare(
-    `INSERT INTO users (id, channel, name, first_seen, last_seen) VALUES (?, ?, ?, ?, ?)
+    `INSERT INTO users (id, channel, name, stage, first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET last_seen = excluded.last_seen,
        name = COALESCE(excluded.name, users.name),
        archived = 0`, // si estaba archivada y el cliente vuelve a escribir, reaparece
-  ).run(id, channel, name ?? null, now, now);
+  ).run(id, channel, name ?? null, primeraEtapa(), now, now);
   const row = db.prepare('SELECT id, channel, name, first_seen, last_seen FROM users WHERE id = ?').get(id) as Record<
     string,
     unknown

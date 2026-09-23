@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
-  var state = { token: '', name: '', view: 'today', filter: 'all', q: '', contacts: [], current: null, detail: null, kind: 'knowledge', theme: 'light', sound: true, stageLabels: {}, es: null, notifs: [], notifSeen: 0, detailOpen: false };
+  var state = { token: '', name: '', view: 'today', filter: 'all', q: '', contacts: [], current: null, detail: null, kind: 'knowledge', theme: 'light', sound: true, stageLabels: {}, stages: [], es: null, notifs: [], notifSeen: 0, detailOpen: false };
   try { state.token = localStorage.getItem('aiva.admin.token') || ''; state.name = localStorage.getItem('aiva.admin.name') || ''; state.theme = localStorage.getItem('aiva.admin.theme') || 'light'; state.sound = localStorage.getItem('aiva.admin.sound') !== '0'; state.notifSeen = Number(localStorage.getItem('aiva.admin.notifSeen') || 0); } catch (e) {}
 
   // ---------- íconos (monocromos, el color de estado queda para los chips) ----------
@@ -23,6 +23,21 @@
   document.querySelectorAll('.ic').forEach(function (el) { el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[el.getAttribute('data-ic')] || '') + '</svg>'; });
 
   // ---------- utilidades ----------
+  // El embudo lo pone cada negocio (una boutique agenda citas; una financiera estudia solicitudes). El tablero
+  // pregunta por el papel de la etapa —dónde empieza, cuál es interés, cuál tener cita, ganada, perdida— y por eso
+  // funciona igual con cualquier embudo.
+  function rol(stage) { var e = (state.stages || []).find(function (x) { return x.id === stage; }); return (e && e.rol) || ''; }
+  function etapaCon(r) { var e = (state.stages || []).find(function (x) { return x.rol === r; }); return e ? e.id : ''; }
+  // Los filtros de etapa salen del embudo: si el negocio no agenda, no hay filtro "Con cita".
+  function etapasDelNegocio() {
+    document.querySelectorAll('#filters [data-rol]').forEach(function (b) {
+      var id = etapaCon(b.getAttribute('data-rol'));
+      if (!id) { b.hidden = true; return; }
+      b.hidden = false;
+      b.setAttribute('data-f', 'stage:' + id);
+      b.textContent = state.stageLabels[id] || b.textContent;
+    });
+  }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   // Lo buscado, dentro de la frase donde apareció: un pedacito alrededor y resaltado (el texto va escapado).
   function mark(text, q) {
@@ -130,7 +145,7 @@
     if (state.filter === 'archived') params.push('archived=1');
     return api('/contacts' + (params.length ? '?' + params.join('&') : '')).then(function (list) {
       if (state.filter === 'unread') list = list.filter(function (c) { return c.unread > 0; });
-      if (state.filter === 'hot') list = list.filter(function (c) { return c.score >= 60 || c.stage === 'cita_agendada'; });
+      if (state.filter === 'hot') list = list.filter(function (c) { return c.score >= 60 || rol(c.stage) === 'cita'; });
       state.contacts = list; renderRows(); updateBadges();
     });
   }
@@ -151,9 +166,9 @@
   }
   // Veredicto práctico: ¿es un prospecto o no? El detalle (factores, ánimo, urgencia) queda detrás de "Ver detalle".
   function verdict(c) {
-    if (c.stage === 'vendido') return { label: 'Cliente', cls: 'v-cliente', why: 'Compró.' };
-    if (c.stage === 'perdido') return { label: 'Perdido', cls: 'v-perdido', why: 'Se descartó.' };
-    if (c.stage === 'cita_agendada') return { label: 'Prospecto con cita', cls: 'v-cita', why: 'Ya tiene cita agendada.' };
+    if (rol(c.stage) === 'ganado') return { label: 'Cliente', cls: 'v-cliente', why: 'Compró.' };
+    if (rol(c.stage) === 'perdido') return { label: 'Perdido', cls: 'v-perdido', why: 'Se descartó.' };
+    if (rol(c.stage) === 'cita') return { label: 'Prospecto con cita', cls: 'v-cita', why: 'Ya tiene cita agendada.' };
     if (c.score >= 60) return { label: 'Prospecto claro', cls: 'v-si', why: topFactor(c) };
     if (c.score >= 30) return { label: 'Posible prospecto', cls: 'v-posible', why: topFactor(c) };
     return { label: 'Sin señales aún', cls: 'v-no', why: c.messageCount ? 'Todavía no muestra intención de compra.' : 'Acaba de escribir.' };
@@ -204,7 +219,7 @@
     $('chat-empty').hidden = true; $('chat-head').hidden = false; $('msgs').hidden = false; $('composer').hidden = false;
     $('chat-name').textContent = nameOf(c);
     $('chat-channel').textContent = channelIcon(c.channel);
-    $('chat-stage').textContent = state.stageLabels[c.stage] || c.stage; $('chat-stage').className = 'chip stage-' + c.stage;
+    $('chat-stage').textContent = state.stageLabels[c.stage] || c.stage; $('chat-stage').className = 'chip stage-' + (rol(c.stage) || c.stage);
     // Una línea de texto, no una tarjeta: temperatura primero (¿urge?), número de respaldo y el porqué de más peso.
     var top = (c.scoreFactors || []).slice().sort(function (a, b) { return Math.abs(b.points) - Math.abs(a.points); })[0];
     var v = verdict(c);
@@ -373,7 +388,7 @@
       '. Si quieres, te aparto una cita y lo vemos con calma; dime qué día te sirve.';
   }
   function contactRow(c, extra, actions) {
-    return '<div class="row" data-id="' + esc(c.id) + '"><div class="name"><span class="n">' + esc(nameOf(c)) + '</span>' + (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div><div class="time">' + rel(c.lastMessageAt) + '</div><div class="snip">' + esc(extra || c.recap || c.summary || '') + '</div><div class="meta"><span class="chip stage-' + c.stage + '">' + esc(state.stageLabels[c.stage] || c.stage) + '</span>' + scoreChip(c) + (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '') + '</div>' + (actions ? '<div class="acts">' + actions + '</div>' : '') + '</div>';
+    return '<div class="row" data-id="' + esc(c.id) + '"><div class="name"><span class="n">' + esc(nameOf(c)) + '</span>' + (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div><div class="time">' + rel(c.lastMessageAt) + '</div><div class="snip">' + esc(extra || c.recap || c.summary || '') + '</div><div class="meta"><span class="chip stage-' + (rol(c.stage) || c.stage) + '">' + esc(state.stageLabels[c.stage] || c.stage) + '</span>' + scoreChip(c) + (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '') + '</div>' + (actions ? '<div class="acts">' + actions + '</div>' : '') + '</div>';
   }
   function loadToday() {
     api('/today').then(function (t) {
@@ -422,7 +437,7 @@
           var row = b.closest('.appt'), id = row.getAttribute('data-appt'), user = row.getAttribute('data-user'), o = b.getAttribute('data-outcome');
           row.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
           var done = api('/appointments/' + id, { method: 'PATCH', body: { status: o === 'no_asistio' ? 'no_asistio' : 'completada' } });
-          if (o === 'vendido') done = done.then(function () { return api('/contacts/' + encodeURIComponent(user), { method: 'PATCH', body: { stage: 'vendido' } }); });
+          if (o === 'vendido' && etapaCon('ganado')) done = done.then(function () { return api('/contacts/' + encodeURIComponent(user), { method: 'PATCH', body: { stage: etapaCon('ganado') } }); });
           done.then(loadToday);
         };
       });
@@ -1190,7 +1205,7 @@
       document.title = me.agent + ' · Tablero';
       return api('/stats');
     }).then(function (s) {
-      state.stageLabels = s.stageLabels; $('foot-user').textContent = state.name || 'asesor'; connect(); loadNotifs(); loadCalendar();
+      state.stageLabels = s.stageLabels; state.stages = s.stages || []; etapasDelNegocio(); $('foot-user').textContent = state.name || 'asesor'; connect(); loadNotifs(); loadCalendar();
       // Enlace directo a una conversación (p. ej. desde la cita en Google Calendar): /admin#c=<id>
       var m = /^#c=(.+)$/.exec(location.hash);
       if (m) { go('inbox'); openContact(decodeURIComponent(m[1])); history.replaceState(null, '', location.pathname); } else go('today');

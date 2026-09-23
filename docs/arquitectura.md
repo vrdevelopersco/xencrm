@@ -93,6 +93,19 @@ Una base SQLite por cliente (`DB_PATH`, WAL):
 | `messages` | la conversación, con autor (`customer`, `bot`, `human`) y quién del equipo escribió |
 | `analyses` | cada análisis: motor, ánimo, señales, puntaje y factores (el costo está en `llm_usage`) |
 
+**El embudo es del negocio.** `crm.stages` en `aiva.config.json` define las etapas: id, nombre y **papel**
+(`inicio`, `activo`, `interes`, `cita`, `ganado`, `perdido`). El código nunca usa los nombres —pregunta por el
+papel (`etapaCon('ganado')`, `rolDe(stage)`, `estaCerrada`)—, así que una financiera puede ir "Nuevo → En revisión
+→ Con un asesor → Resuelto" sin tocar una línea. Un negocio sin `cita` simplemente no agenda: el flujo de citas se
+apaga con `appointments.enabled` y nada queda colgando. El tablero recibe las etapas con su papel y pinta por
+papel (`stage-<rol>`); los filtros de etapa aparecen solo si ese papel existe. Una ficha con una etapa que ya no
+está en la configuración cae a la primera, sin romperse.
+
+**Plantillas de alta** (`plantillas/`): `citas` (boutique, consultorio: termina en cita agendada), `soporte`
+(financiera, posventa: consultas y reclamos) y `cotizacion` (impresión industrial: cotizar, producir, entregar).
+Cada una trae su embudo, si agenda citas y qué datos capturar; se mezclan sobre `aiva.config.example.json` al dar
+de alta un cliente. Es la primera pregunta del alta, porque de ahí sale cómo trabaja ese CRM.
+
 **Varios clientes en una máquina.** Un proceso por cliente, no una base compartida: son negocios distintos (una
 boutique, una financiera, una litografía) y lo que no se mezcla no se puede filtrar. Cada uno vive en
 `clientes/<slug>/` con su `aiva.config.json`, su `.env` (puerto, base, carpeta de WhatsApp, token, dominio), su
@@ -240,6 +253,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:cross` | la misma persona por dos canales: contexto, aviso y fichas separadas | no |
 | `pnpm test:clientes` | alta de un cliente: carpeta, puerto, token, pm2 y túnel | no |
 | `pnpm test:consola` | tickets, orden de atención y el alta desde la consola | no |
+| `pnpm test:etapas` | un negocio con otro embudo (soporte, sin citas) funciona igual | no |
 | `pnpm test:backup` | respaldo: la copia trae los datos, permisos 600, conserva las últimas N | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |

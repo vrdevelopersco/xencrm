@@ -122,7 +122,10 @@ asistente no ofrece esas horas; desde aquí sí puedes agendar encima si hace fa
 
 ## Prospectos
 
-Una columna por etapa: *Nuevo*, *Conversando*, *Interesado*, *Cita agendada*, *Vendido*, *Perdido*. Para cambiar a
+Una columna por etapa. Las etapas son **las de tu negocio**: una boutique va *Nuevo → Conversando → Interesado →
+Cita agendada → Vendido*; una financiera, *Nuevo → En revisión → Con un asesor → Resuelto*; una litografía,
+*Nuevo → Tomando datos → Cotizado → En producción → Entregado*. Se eligen al montar el negocio y se ajustan en su
+configuración. Para cambiar a
 alguien de etapa, arrastra la tarjeta o usa **Mover a…**, que también funciona en el celular. Tocar el nombre abre la
 conversación. El asistente mueve las etapas solo según la conversación; lo que muevas tú, él no lo deshace.
 

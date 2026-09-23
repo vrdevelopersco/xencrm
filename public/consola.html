@@ -75,7 +75,10 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
       <select id="f-prioridad"><option value="alta">Alta</option><option value="media" selected>Media</option><option value="baja">Baja</option></select>
       <span class="muted small">Qué tan pendiente hay que estar de este cliente.</span>
     </label>
-    <label>Configuración de la que parte <input id="f-plantilla" value="aiva.config.json"><span class="muted small">Se copia y se le cambia el nombre del negocio.</span></label>
+    <label>¿Cómo atiende este negocio?
+      <select id="f-plantilla"></select>
+      <span class="muted small" id="f-plantilla-ayuda"></span>
+    </label>
     <div id="msg" class="small" role="status"></div>
     <div class="fila"><button class="btn primary" id="crear" type="button">Crear cliente</button><button class="btn" type="button" id="cerrar">Cancelar</button></div>
   </form>
@@ -163,8 +166,22 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
     }).catch(function () { entrar(false); });
   }
 
+  var PLANTILLAS = [];
+  function pintarPlantillas() {
+    return api('/plantillas').then(function (d) {
+      PLANTILLAS = d.plantillas || [];
+      $('f-plantilla').innerHTML = PLANTILLAS.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.nombre) + '</option>'; }).join('');
+      ayudaPlantilla();
+    });
+  }
+  function ayudaPlantilla() {
+    var p = PLANTILLAS.find(function (x) { return x.id === $('f-plantilla').value; });
+    $('f-plantilla-ayuda').innerHTML = p ? esc(p.ejemplo) + '<br><b>' + esc(p.embudo) + '</b>' : '';
+  }
+  $('f-plantilla').onchange = ayudaPlantilla;
+
   $('refrescar').onclick = cargar;
-  $('nuevo').onclick = function () { $('msg').textContent = ''; $('dlg').showModal(); $('f-nombre').focus(); };
+  $('nuevo').onclick = function () { $('msg').textContent = ''; pintarPlantillas(); $('dlg').showModal(); $('f-nombre').focus(); };
   $('cerrar').onclick = function () { $('dlg').close(); };
   $('crear').onclick = function () {
     var nombre = $('f-nombre').value.trim();
@@ -175,7 +192,9 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
       .then(function (r) {
         $('crear').disabled = false;
         if (r.error) { $('msg').textContent = r.error; return; }
-        $('msg').innerHTML = '<b>Listo: ' + esc(r.cliente.nombre) + '</b><br>Token del tablero (se muestra una vez, también queda en su .env):<br><code>' + esc(r.token) + '</code>' +
+        var p = PLANTILLAS.find(function (x) { return x.id === $('f-plantilla').value; });
+        $('msg').innerHTML = '<b>Listo: ' + esc(r.cliente.nombre) + '</b>' + (p ? ' · ' + esc(p.nombre) + ': ' + esc(p.embudo) : '') +
+          '<br>Token del tablero (se muestra una vez, también queda en su .env):<br><code>' + esc(r.token) + '</code>' +
           '<br><br>Falta: ajustar su información en el tablero, <code>pnpm cliente pm2</code> y arrancarlo con pm2.';
         $('f-nombre').value = ''; $('f-slug').value = ''; $('f-host').value = '';
         cargar();

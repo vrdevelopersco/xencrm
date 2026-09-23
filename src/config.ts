@@ -175,6 +175,30 @@ const BusinessConfig = z.object({
   /** CRM: campos que el análisis debe capturar además de los básicos. */
   crm: z
     .object({
+      /**
+       * El embudo de este negocio. Una boutique va "nuevo → conversando → interesado → cita agendada → vendido";
+       * una financiera "nuevo → en estudio → documentos → aprobado", y una litografía "cotización → producción →
+       * entregado". El código no conoce los nombres: conoce los roles (dónde empieza, cuál es interés, cuál es
+       * tener cita, cuál es ganado y cuál perdido), así que cada negocio los llama como los llama.
+       */
+      stages: z
+        .array(
+          z.object({
+            id: z.string().regex(/^[a-z_][a-z0-9_]*$/),
+            label: z.string().min(1),
+            rol: z.enum(['inicio', 'activo', 'interes', 'cita', 'ganado', 'perdido']).optional(),
+          }),
+        )
+        .min(2)
+        .default([
+          { id: 'nuevo', label: 'Nuevo', rol: 'inicio' },
+          { id: 'conversando', label: 'Conversando', rol: 'activo' },
+          { id: 'interesado', label: 'Interesado', rol: 'interes' },
+          { id: 'cita_agendada', label: 'Cita agendada', rol: 'cita' },
+          { id: 'vendido', label: 'Vendido', rol: 'ganado' },
+          { id: 'perdido', label: 'Perdido', rol: 'perdido' },
+        ])
+        .refine((s) => new Set(s.map((x) => x.id)).size === s.length, 'hay dos etapas con el mismo identificador'),
       fields: z
         .array(z.object({ name: z.string().regex(/^[a-z_][a-z0-9_]*$/), description: z.string() }))
         .default([{ name: 'producto_interes', description: 'Producto o servicio que le interesa al cliente, si lo dijo' }]),

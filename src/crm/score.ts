@@ -4,14 +4,16 @@
 //
 // Los tramos son un estimado hecho con lo que hay (10 conversaciones reales, 3 con cita, 1 venta): el orden importa
 // más que el número exacto. Se revisa cuando haya ~20 citas con resultado marcado en Hoy › ¿Cómo les fue?
+import { rolDe } from './contacts.js';
 import type { ScoreFactor, Stage } from './contacts.js';
 
 const DAY = 86400_000;
 
 /** Cuántos puntos se le quitan a un prospecto por llevar días sin hablar. */
 export function silencePenalty(lastMessageAt: number | null, stage: Stage, now = Date.now()): number {
-  // Con cita agendada o ya vendido, el silencio es normal: el siguiente paso está puesto.
-  if (stage === 'cita_agendada' || stage === 'vendido' || !lastMessageAt) return 0;
+  // Con cita agendada o ya ganado, el silencio es normal: el siguiente paso está puesto.
+  const rol = rolDe(stage);
+  if (rol === 'cita' || rol === 'ganado' || !lastMessageAt) return 0;
   const days = (now - lastMessageAt) / DAY;
   if (days < 3) return 0;
   if (days < 7) return 10;

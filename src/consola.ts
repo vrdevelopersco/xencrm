@@ -10,7 +10,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { readFileSync, existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
-import { actualizarCliente, crearCliente, leerIndice, puertoLibre, tokenDe, type ClienteRef } from './clientes.js';
+import { actualizarCliente, crearCliente, leerIndice, PLANTILLAS, puertoLibre, tokenDe, type ClienteRef } from './clientes.js';
 
 // El .env de la raíz, sin pasar por la configuración de un cliente (la consola no es de ningún cliente).
 function envRaiz(clave: string): string {
@@ -149,6 +149,9 @@ export function mountConsola(app: Hono) {
   });
 
   app.get('/api/clientes', async (c) => c.json({ clientes: await tablero(), puertoSugerido: puertoLibre() }));
+
+  // Cómo atiende el negocio: de aquí salen su embudo y si agenda citas.
+  app.get('/api/plantillas', (c) => c.json({ plantillas: PLANTILLAS }));
 
   // El alta la hace el super-admin desde aquí: crea la carpeta, el token y el puerto. No arranca nada.
   app.post('/api/clientes', async (c) => {

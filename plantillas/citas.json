@@ -1,0 +1,30 @@
+{
+  "business": {
+    "name": "Nombre del negocio",
+    "description": "A qué se dedica, en una línea.",
+    "currency": "COP",
+    "country": "Colombia",
+    "humanContact": "escríbenos por aquí y alguien del equipo te responde"
+  },
+  "agent": {
+    "name": "Aiva",
+    "style": "cálido, cercano, tutea, mensajes cortos tipo WhatsApp, colombiano neutro",
+    "language": "es"
+  },
+  "appointments": { "enabled": true },
+  "crm": {
+    "stages": [
+      { "id": "nuevo", "label": "Nuevo", "rol": "inicio" },
+      { "id": "conversando", "label": "Conversando", "rol": "activo" },
+      { "id": "interesado", "label": "Interesado", "rol": "interes" },
+      { "id": "cita_agendada", "label": "Cita agendada", "rol": "cita" },
+      { "id": "vendido", "label": "Vendido", "rol": "ganado" },
+      { "id": "perdido", "label": "Perdido", "rol": "perdido" }
+    ],
+    "fields": [
+      { "name": "servicio", "description": "Servicio que le interesa, si lo dijo" },
+      { "name": "ocasion", "description": "Para qué lo necesita (boda, grado, evento)" },
+      { "name": "fecha_evento", "description": "Fecha del evento o de cuándo lo necesita" }
+    ]
+  }
+}

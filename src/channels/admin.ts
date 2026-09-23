@@ -8,7 +8,7 @@ import { business, env } from '../config.js';
 import { engineStatus, roleLabel } from '../llm/engines.js';
 import { countDocs, getDb } from '../rag/store.js';
 import { getMessages } from '../agent/memory.js';
-import { contactNumber, deleteContact, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_LABELS, type Stage } from '../crm/contacts.js';
+import { contactNumber, deleteContact, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
 import { availableSlots, bookAppointment, formatSlot, listAppointments, setReminder, updateAppointment } from '../crm/appointments.js';
 import { replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
@@ -353,7 +353,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     return appt ? c.json({ appointment: appt }) : c.json({ error: 'no existe' }, 404);
   });
 
-  app.get('/admin/api/stats', (c) => c.json({ ...stats(), stageLabels: STAGE_LABELS }));
+  app.get('/admin/api/stats', (c) => c.json({ ...stats(), stageLabels: STAGE_LABELS, stages: STAGE_DEFS }));
 
   // Vista "Hoy": lo que un asesor debe atender primero, cada fila abre la conversación.
   app.get('/admin/api/today', (c) => {
@@ -365,7 +365,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const lastFromCustomer = new Set(
       (getDb().prepare("SELECT user_id FROM messages m WHERE role = 'user' AND ts = (SELECT MAX(ts) FROM messages WHERE user_id = m.user_id)").all() as { user_id: string }[]).map((r) => r.user_id),
     );
-    const open = all.filter((x) => !['vendido', 'perdido'].includes(x.stage)); // las cerradas no piden acción
+    const open = all.filter((x) => !estaCerrada(x.stage)); // ganadas o perdidas no piden acción
     const withUpcoming = new Set(listAppointments({ from: now, status: 'confirmada', limit: 1000 }).map((a) => a.userId));
     // Cita que ya pasó y sigue sin resultado: esos están en "¿Cómo les fue?", no en "sin seguimiento".
     const waitingOutcome = new Set(

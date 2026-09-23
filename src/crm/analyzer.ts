@@ -6,7 +6,7 @@ import { openaiModel } from '../llm/openai.js';
 import type { SchemaSpec } from '../llm/apple.js';
 import { getHistory, getMessages, type StoredMessage } from '../agent/memory.js';
 import { getDb } from '../rag/store.js';
-import { getContact, setStage, updateContact, type Contact, type ScoreFactor, type Stage } from './contacts.js';
+import { etapaCon, rolDe, getContact, setStage, updateContact, type Contact, type ScoreFactor, type Stage } from './contacts.js';
 import { emitEvent } from './events.js';
 import { nextAppointmentFor } from './appointments.js';
 import { isTrivial, ruleSignals } from './signals.js';
@@ -145,12 +145,17 @@ export function temperature(score: number): 'caliente' | 'tibio' | 'frio' {
   return score >= 60 ? 'caliente' : score >= 30 ? 'tibio' : 'frio';
 }
 
+// El embudo es el del negocio (crm.stages): aquí se decide por el papel de cada etapa, no por su nombre.
 function nextStage(c: Contact, s: Signals, score: number, hasAppointment: boolean): Stage {
-  if (c.stageLocked || c.stage === 'vendido' || c.stage === 'perdido') return c.stage;
-  if (hasAppointment) return 'cita_agendada';
-  if (c.stage === 'cita_agendada') return c.stage;
-  if (score >= 40 || s.interes >= 2) return 'interesado';
-  if (c.stage === 'nuevo' && c.messageCount >= 1) return 'conversando';
+  const rol = rolDe(c.stage);
+  if (c.stageLocked || rol === 'ganado' || rol === 'perdido') return c.stage;
+  const conCita = etapaCon('cita');
+  if (hasAppointment && conCita) return conCita;
+  if (rol === 'cita') return c.stage;
+  const interes = etapaCon('interes');
+  if (interes && (score >= 40 || s.interes >= 2)) return interes;
+  const activo = etapaCon('activo');
+  if (activo && rol === 'inicio' && c.messageCount >= 1) return activo;
   return c.stage;
 }
 
@@ -177,7 +182,7 @@ export async function analyzeContact(userId: string, opts: { full?: boolean } = 
     const newCustomer = messages.filter((m) => m.role === 'user' && (!prev || m.ts > prev.ts));
     if (prev && !newCustomer.length && !opts.full) return;
     const rules = ruleSignals(newCustomer.map((m) => m.content));
-    const hasAppointment = Boolean(nextAppointmentFor(userId)) || c.stage === 'cita_agendada';
+    const hasAppointment = Boolean(nextAppointmentFor(userId)) || rolDe(c.stage) === 'cita';
     const inBooking = Boolean(c.data.booking);
 
     let s: Signals;

@@ -1,0 +1,31 @@
+{
+  "business": {
+    "name": "Nombre del negocio",
+    "description": "A qué se dedica, en una línea.",
+    "currency": "COP",
+    "country": "Colombia",
+    "humanContact": "escríbenos por aquí y el equipo comercial te responde"
+  },
+  "agent": {
+    "name": "Aiva",
+    "style": "directo y práctico, de usted, frases cortas, sin adornos",
+    "language": "es"
+  },
+  "appointments": { "enabled": false },
+  "crm": {
+    "stages": [
+      { "id": "nuevo", "label": "Nuevo", "rol": "inicio" },
+      { "id": "tomando_datos", "label": "Tomando datos", "rol": "activo" },
+      { "id": "cotizado", "label": "Cotizado", "rol": "interes" },
+      { "id": "en_produccion", "label": "En producción", "rol": "cita" },
+      { "id": "entregado", "label": "Entregado", "rol": "ganado" },
+      { "id": "perdido", "label": "No se cerró", "rol": "perdido" }
+    ],
+    "fields": [
+      { "name": "producto", "description": "Qué necesita imprimir o producir" },
+      { "name": "cantidad", "description": "Cuántas unidades" },
+      { "name": "medidas", "description": "Medidas, material o acabados que mencione" },
+      { "name": "fecha_entrega", "description": "Para cuándo lo necesita" }
+    ]
+  }
+}

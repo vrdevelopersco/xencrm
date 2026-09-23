@@ -2,7 +2,7 @@
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { findDuplicates } from './merge.js';
-import { addEvent, getContact, setStage, updateContact } from './contacts.js';
+import { addEvent, etapaCon, getContact, rolDe, setStage, updateContact } from './contacts.js';
 import { emitEvent } from './events.js';
 import { busyOverlaps } from './busy.js';
 
@@ -222,7 +222,8 @@ export function bookAppointment(userId: string, startsAt: Date, opts: { service?
   const appt = getAppointment(Number(r.lastInsertRowid))!;
   addEvent(userId, 'appointment_booked', { id: appt.id, startsAt: appt.startsAt, by: opts.by ?? 'bot' });
   const c = getContact(userId);
-  if (c && !['vendido'].includes(c.stage)) setStage(userId, 'cita_agendada', { by: opts.by ?? 'bot' });
+  const conCita = etapaCon('cita');
+  if (c && conCita && rolDe(c.stage) !== 'ganado') setStage(userId, conCita, { by: opts.by ?? 'bot' });
   emitEvent('appointment', userId, { appointment: appt });
   return appt;
 }
@@ -284,7 +285,9 @@ export function updateAppointment(id: number, patch: { status?: Appointment['sta
     if (patch.status === 'cancelada') {
       const c = getContact(appt.userId);
       // Solo baja de etapa si no le queda otra cita (al mover una cita, la nueva ya existe cuando se cancela la vieja).
-      if (c?.stage === 'cita_agendada' && !c.stageLocked && !nextAppointmentFor(appt.userId)) updateContact(appt.userId, { stage: 'interesado' });
+      // Sin cita vuelve a donde estaba antes de agendar: interés, o lo más parecido que tenga este negocio.
+      const vuelveA = etapaCon('interes') ?? etapaCon('activo');
+      if (rolDe(c?.stage ?? '') === 'cita' && c && !c.stageLocked && vuelveA && !nextAppointmentFor(appt.userId)) updateContact(appt.userId, { stage: vuelveA });
     }
   }
   return appt;

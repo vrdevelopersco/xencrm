@@ -24,6 +24,61 @@ export interface ClienteRef {
   notas?: string;
 }
 
+/**
+ * Cómo atiende el negocio: de aquí sale su embudo, si agenda citas y qué datos le interesa capturar. Es lo primero
+ * que se pregunta al dar de alta un cliente, porque una boutique no trabaja como una financiera.
+ */
+export const PLANTILLAS = [
+  {
+    id: 'citas',
+    nombre: 'Citas',
+    ejemplo: 'Boutique, consultorio, taller: la conversación termina en una cita agendada.',
+    embudo: 'Nuevo → Conversando → Interesado → Cita agendada → Vendido',
+    archivo: 'plantillas/citas.json',
+  },
+  {
+    id: 'soporte',
+    nombre: 'Soporte',
+    ejemplo: 'Financiera, servicios, posventa: llegan consultas y reclamos que hay que resolver.',
+    embudo: 'Nuevo → En revisión → Con un asesor → Resuelto',
+    archivo: 'plantillas/soporte.json',
+  },
+  {
+    id: 'cotizacion',
+    nombre: 'Cotización y producción',
+    ejemplo: 'Impresión industrial, fabricación: se cotiza, se produce y se entrega.',
+    embudo: 'Nuevo → Tomando datos → Cotizado → En producción → Entregado',
+    archivo: 'plantillas/cotizacion.json',
+  },
+] as const;
+
+export const archivoDePlantilla = (plantilla?: string): string => {
+  if (!plantilla) return PLANTILLAS[0].archivo;
+  const p = PLANTILLAS.find((x) => x.id === plantilla);
+  return p ? p.archivo : plantilla; // también admite la ruta de una configuración que ya exista
+};
+
+const BASE = 'aiva.config.example.json';
+const esObjeto = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+function mezclar(base: Record<string, unknown>, encima: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...base };
+  for (const [k, v] of Object.entries(encima)) out[k] = esObjeto(v) && esObjeto(out[k]) ? mezclar(out[k], v) : v;
+  return out;
+}
+
+/**
+ * La configuración con la que arranca un cliente: la plantilla de cómo atiende (embudo, citas, datos que captura)
+ * sobre la configuración de ejemplo, que trae lo que toda instancia necesita.
+ */
+export function configDePlantilla(plantilla?: string): Record<string, unknown> {
+  const archivo = archivoDePlantilla(plantilla);
+  if (!existsSync(archivo)) throw new Error(`no encuentro la plantilla ${archivo}`);
+  const encima = JSON.parse(readFileSync(archivo, 'utf8')) as Record<string, unknown>;
+  const base = existsSync(BASE) ? (JSON.parse(readFileSync(BASE, 'utf8')) as Record<string, unknown>) : {};
+  // Una configuración completa (la de un cliente que ya existe) se usa tal cual.
+  return PLANTILLAS.some((p) => p.archivo === archivo) ? mezclar(base, encima) : encima;
+}
+
 export const CLIENTES_DIR = process.env.AIVA_CLIENTES_DIR || 'clientes';
 const INDEX = () => join(CLIENTES_DIR, 'index.json');
 const PUERTO_BASE = 3001;
@@ -101,6 +156,7 @@ export function actualizarCliente(slug: string, cambios: Partial<Pick<ClienteRef
 export function crearCliente(opts: {
   nombre: string;
   slug?: string;
+  /** "citas", "soporte", "cotizacion" o la ruta de una configuración que ya exista. */
   plantilla?: string;
   puerto?: number;
   host?: string;
@@ -118,9 +174,7 @@ export function crearCliente(opts: {
   mkdirSync(r.data, { recursive: true });
   mkdirSync(r.auth, { recursive: true });
 
-  const plantilla = opts.plantilla ?? 'aiva.config.json';
-  if (!existsSync(plantilla)) throw new Error(`no encuentro la plantilla ${plantilla}`);
-  const config = JSON.parse(readFileSync(plantilla, 'utf8')) as Record<string, unknown>;
+  const config = configDePlantilla(opts.plantilla);
   const negocio = (config.business ?? {}) as Record<string, unknown>;
   config.business = { ...negocio, name: opts.nombre };
   // Diccionario y perfil viven con el cliente, no en la raíz del proyecto.
@@ -239,12 +293,15 @@ async function main() {
     const puerto = Number(await ask('Puerto', String(puertoLibre(clientes))));
     const host = await ask('Dominio (vacío si todavía no hay)', '');
     const prioridad = (await ask('Prioridad (alta/media/baja)', 'media')) as ClienteRef['prioridad'];
-    const plantilla = await ask('Configuración de la que parte', 'aiva.config.json');
+    console.log('\n¿Cómo atiende este negocio? De aquí sale su embudo y si agenda citas.');
+    for (const p of PLANTILLAS) console.log(`  ${p.id.padEnd(11)} ${p.nombre} · ${p.ejemplo}\n${' '.repeat(14)}${p.embudo}`);
+    const plantilla = await ask('\nPlantilla', PLANTILLAS[0].id);
     rl.close();
 
     const { cliente, token } = crearCliente({ nombre, slug, puerto, host, prioridad, plantilla });
     const r = rutas(cliente.slug);
-    console.log(`\n✓ ${cliente.nombre} quedó en ${r.dir}`);
+    const elegida = PLANTILLAS.find((p) => p.id === plantilla);
+    console.log(`\n✓ ${cliente.nombre} quedó en ${r.dir}${elegida ? ` · ${elegida.nombre}: ${elegida.embudo}` : ''}`);
     console.log(`  tablero: http://localhost:${cliente.puerto}/admin`);
     console.log(`  token:   ${token}  (también en ${r.env}, con permisos 600)`);
     console.log('\nFalta:');
