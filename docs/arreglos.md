@@ -19,6 +19,17 @@ negocio** con tres plantillas —citas, soporte y cotización—, cada una con s
 captura. `pnpm test:etapas` (14 casos con un negocio de soporte), `test:clientes` (8 nuevos) y las 27 suites; el
 tablero de DUNOR quedó idéntico.
 
+### Aprender del historial: las preguntas, no los precios · `46807cf`
+Un cliente nuevo llegaba con el Perfil en blanco aunque tuviera meses de WhatsApp conversado. Ahora ese historial
+se puede traer —el `.txt` de "Exportar chat" o la sincronización al vincular el número— y de ahí salen **las
+preguntas que más le hacen** (agrupadas por las palabras que comparten: "¿hay parqueadero en la tienda?" y
+"¿tienen parqueadero por ahí?" son un solo tema) y **una muestra del tono**, que descarta entera cualquier
+respuesta con cifras. Aceptar un tema lo escribe en el Perfil como dato *por confirmar*: el historial pone la
+pregunta, el negocio pone la respuesta de hoy. El historial vive en su propia tabla y **nunca** entra al índice de
+conocimiento, que es lo que evita repetir un precio vencido con autoridad. `pnpm test:historial` (23 casos) y
+probado con un chat exportado: agrupó los 3 "trajes para matrimonio" y los 2 "parqueadero", dejó el precio fuera
+del tono y el Perfil pasó de 12 a 13 pendientes.
+
 ### La consola también atiende, y cada quien ve solo sus clientes · `a907db9`
 La consola servía para mirar, no para trabajar. Ahora **Atender** junta en una sola bandeja lo que espera a una
 persona en todos los clientes y se responde ahí mismo: la consola habla por el cliente con su token, así que no hay
