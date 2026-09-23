@@ -19,6 +19,16 @@ negocio** con tres plantillas —citas, soporte y cotización—, cada una con s
 captura. `pnpm test:etapas` (14 casos con un negocio de soporte), `test:clientes` (8 nuevos) y las 27 suites; el
 tablero de DUNOR quedó idéntico.
 
+### Del historial también sale cómo hablan sus clientes · `ee73db8`
+Segundo paso: además de las preguntas, del historial salen las frases que sus clientes usan y el asistente no
+entiende. Las fechas a la colombiana se agrupan por **la frase de tiempo**, no por el mensaje, así que "¿me pueden
+atender de hoy en quince?" y "paso de hoy en quince entonces" son una sola cosa que enseñar; y las palabras que
+repiten y no están en el catálogo, el perfil ni el diccionario se proponen aparte ("terno"), con las de tiempo
+filtradas para que "quince" no parezca un producto. Nada se aprende solo: pasan a *Frases que no entendimos*, donde
+alguien les pone el significado y solo se guardan si con eso las reglas ya entienden. Probado de punta a punta:
+propuso "terno", al enseñarlo las reglas pasaron a leer "¿tienen terno para grado?" como una pregunta por el
+catálogo. `pnpm test:historial` (29 casos) y 29 suites.
+
 ### Aprender del historial: las preguntas, no los precios · `46807cf`
 Un cliente nuevo llegaba con el Perfil en blanco aunque tuviera meses de WhatsApp conversado. Ahora ese historial
 se puede traer —el `.txt` de "Exportar chat" o la sincronización al vincular el número— y de ahí salen **las
