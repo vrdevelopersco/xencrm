@@ -2,7 +2,10 @@
 // preguntan** y **cómo atiende**, nunca los precios ni las políticas, que cambian y quedarían vencidos (ver
 // docs/aprender-del-historial.md). Por eso el historial vive en su propia tabla y **no entra al índice de
 // conocimiento**: nada de aquí se convierte en respuesta automática, solo en propuestas que una persona confirma.
-import { getDb } from '../rag/store.js';
+import { business } from '../config.js';
+import { getDictionary } from '../agent/dictionary.js';
+import { profileText } from '../profile.js';
+import { allDocs, getDb } from '../rag/store.js';
 
 export interface MensajeImportado {
   chat: string;
@@ -185,6 +188,127 @@ export function muestraDeEstilo(limite = 20): string[] {
     if (muestra.length >= limite) break;
   }
   return muestra;
+}
+
+
+
+/**
+ * Lo que el negocio ya conoce: su descripción, su perfil, su diccionario y lo que tiene en el índice. Sirve para
+ * no proponer como "palabra nueva" algo que el asistente ya maneja.
+ */
+export function vocabularioDelNegocio(): Set<string> {
+  const textos: string[] = [business.business.name, business.business.description, profileText()];
+  const d = getDictionary();
+  for (const t of d.topics) textos.push(...t.keywords, t.query);
+  for (const e of d.expressions) textos.push(e.says, e.means);
+  textos.push(...d.offerVerbs);
+  for (const doc of allDocs(['product', 'knowledge'])) textos.push(doc.title, doc.content.slice(0, 2000));
+  const palabras = new Set<string>();
+  for (const w of fold(textos.join(' '))
+    .replace(/[^a-zñ0-9\s]/g, ' ')
+    .split(/\s+/)) {
+    if (w.length > 3) palabras.add(w);
+  }
+  return palabras;
+}
+
+// ---------- Cómo hablan sus clientes ----------
+// Del historial también sale el vocabulario: las fechas dichas a la colombiana que las reglas no entienden y las
+// palabras del negocio que el asistente no conoce. No se aprenden solas: entran a "Frases que no entendimos", el
+// mismo camino de siempre, donde alguien les pone el significado y solo se guardan si con eso ya se entienden.
+const PISTA_FECHA_RE =
+  /\b(?:hoy|manana|pasado manana|tarde|noche|madrugada|mediodia|medio dia|almuerzo|desayuno|onces|cafecito|lunes|martes|miercoles|jueves|viernes|sabado|domingo|finde|fin de semana|semana|quincena|puente|festivo|feriado|temprano|tardecito|tipo|a eso de|sobre las|mas tardar|proxim[oa]|entrante|otro dia)\b/;
+
+// Palabras de tiempo: son parte de las fechas, no vocabulario del negocio. "De hoy en quince" se enseña como
+// fecha (si hiciera falta), no como si "quince" fuera un producto.
+const TEMPORALES = new Set(
+  ('hoy manana tarde tardes noche noches madrugada mediodia dias diaz semana semanas mes meses ano anos lunes martes miercoles jueves viernes sabado domingo ' +
+    'finde quince ocho quincena puente festivo feriado temprano tardecito proxima proximo entrante ahora luego rato momento hora horas minutos fecha fechas almuerzo desayuno onces cafecito')
+    .split(' ')
+    .filter(Boolean),
+);
+
+// Palabras que amarran una frase de tiempo: "de hoy en quince", "el otro fin de semana".
+const CONECTORES = new Set('de del en el la los las a al para por y este esta ese esa otro otra proximo proxima entrante que viene'.split(' '));
+
+/**
+ * La parte de la frase que habla de cuándo: de "¿me pueden atender de hoy en quince?" y "paso de hoy en quince
+ * entonces" saca "de hoy en quince" en las dos, que es lo que hay que enseñar (y lo que las agrupa).
+ */
+export function fraseDeTiempo(plano: string): string | null {
+  const palabras = plano.replace(/[^a-zñ0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+  const esTiempo = (w: string) => TEMPORALES.has(w) || PISTA_FECHA_RE.test(w);
+  const i = palabras.findIndex(esTiempo);
+  if (i === -1) return null;
+  let desde = i;
+  let hasta = i;
+  while (desde > 0 && (CONECTORES.has(palabras[desde - 1]!) || esTiempo(palabras[desde - 1]!))) desde--;
+  while (hasta < palabras.length - 1 && (CONECTORES.has(palabras[hasta + 1]!) || esTiempo(palabras[hasta + 1]!))) hasta++;
+  // Los conectores de los bordes no dicen nada por sí solos.
+  while (desde < hasta && CONECTORES.has(palabras[hasta]!)) hasta--;
+  const frase = palabras.slice(desde, hasta + 1).join(' ').trim();
+  return frase.length >= 3 && frase.length <= 40 ? frase : null;
+}
+
+/** Una frase que sus clientes usan y las reglas no entienden, con cuántas veces apareció. */
+export interface Expresion {
+  kind: 'fecha' | 'frase';
+  texto: string;
+  veces: number;
+  /** La palabra que probablemente no se entiende (en las del vocabulario). */
+  pista?: string;
+}
+
+/**
+ * Busca en el historial lo que sus clientes dicen y el asistente no entiende: fechas coloquiales ("de hoy en
+ * quince") y palabras del negocio que no están ni en el catálogo ni en el diccionario ("terno", "paño").
+ */
+export function expresionesCandidatas(opts: { conocidas?: (texto: string) => boolean; vocabulario?: Set<string>; limite?: number } = {}): Expresion[] {
+  const entiende = opts.conocidas ?? (() => false);
+  const vocabulario = opts.vocabulario ?? new Set<string>();
+  const filas = getDb().prepare("SELECT content FROM import_messages WHERE role = 'user' ORDER BY ts").all() as { content: string }[];
+
+  const fechas = new Map<string, { texto: string; veces: number; frase: string }>();
+  const palabras = new Map<string, { texto: string; veces: number }>();
+  const frecuencia = new Map<string, number>();
+  const textosPorPalabra = new Map<string, string>();
+
+  for (const { content } of filas) {
+    const texto = content.trim().replace(/\s+/g, ' ');
+    if (texto.length < 4 || texto.length > 200) continue;
+    const plano = fold(texto);
+    // Fechas: dice algo de cuándo, pero las reglas no lo entienden.
+    if (PISTA_FECHA_RE.test(plano) && !entiende(texto)) {
+      // Se agrupan por la frase de tiempo, no por el mensaje: dos personas que dicen "de hoy en quince" son lo mismo.
+      const frase = fraseDeTiempo(plano);
+      if (frase) {
+        const f = fechas.get(frase) ?? { texto, veces: 0, frase };
+        f.veces++;
+        if (texto.length < f.texto.length) f.texto = texto; // el ejemplo más corto se lee mejor
+        fechas.set(frase, f);
+      }
+    }
+    // Vocabulario: palabras que repiten y que el negocio no tiene en ninguna parte.
+    for (const w of new Set(
+      plano
+        .replace(/[^a-zñ0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter((x) => x.length > 3 && !VACIAS.has(x) && !TEMPORALES.has(x) && !/^\d+$/.test(x)),
+    )) {
+      frecuencia.set(w, (frecuencia.get(w) ?? 0) + 1);
+      if (!textosPorPalabra.has(w)) textosPorPalabra.set(w, texto);
+    }
+  }
+  for (const [w, veces] of frecuencia) {
+    if (veces < 2 || vocabulario.has(w)) continue;
+    palabras.set(w, { texto: textosPorPalabra.get(w)!, veces });
+  }
+
+  const salida: Expresion[] = [
+    ...[...fechas.values()].map((f) => ({ kind: 'fecha' as const, texto: f.texto, veces: f.veces, pista: f.frase })),
+    ...[...palabras.entries()].map(([pista, p]) => ({ kind: 'frase' as const, texto: p.texto, veces: p.veces, pista })),
+  ];
+  return salida.sort((a, b) => b.veces - a.veces).slice(0, opts.limite ?? 20);
 }
 
 // ---------- Leer un chat exportado de WhatsApp ----------

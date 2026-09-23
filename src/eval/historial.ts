@@ -61,6 +61,27 @@ check('ninguna muestra trae cifras', estilo.every((e) => !/\$\s?\d|\b\d[\d.,]{2,
 // --- lo más importante: nada de esto entra a lo que el asistente sabe ---
 check('el historial NO entra al índice de conocimiento', allDocs(['knowledge', 'product']).length === 0, String(allDocs(['knowledge', 'product']).length));
 
+// --- cómo hablan sus clientes: lo que las reglas no entienden ---
+const { expresionesCandidatas } = await import('../crm/historial.js');
+guardarImportados([
+  { chat: 'Rosa', autor: 'Rosa', role: 'user', content: '¿me pueden atender de hoy en quince?', ts: dia(7) },
+  { chat: 'Tito', autor: 'Tito', role: 'user', content: 'paso de hoy en quince entonces', ts: dia(8) },
+  { chat: 'Rosa', autor: 'Rosa', role: 'user', content: 'necesito un terno para el grado', ts: dia(9) },
+  { chat: 'Tito', autor: 'Tito', role: 'user', content: '¿manejan terno azul?', ts: dia(10) },
+  { chat: 'Rosa', autor: 'Rosa', role: 'user', content: '¿puedo ir mañana en la tarde?', ts: dia(11) },
+]);
+// "mañana en la tarde" sí lo entienden las reglas; "de hoy en quince", en esta prueba, no.
+const entiende = (t: string) => /ma(ñ|n)ana en la tarde/i.test(t);
+const candidatas = expresionesCandidatas({ conocidas: entiende, vocabulario: new Set(['grado', 'azul', 'traje']) });
+check('propone la fecha que no entiende', candidatas.some((e) => e.kind === 'fecha' && /hoy en quince/i.test(e.texto)), JSON.stringify(candidatas));
+check('con cuántas veces la dijeron', candidatas.find((e) => /hoy en quince/i.test(e.texto))?.veces === 2, JSON.stringify(candidatas.map((e) => [e.texto, e.veces])));
+check('no propone la fecha que sí entiende', !candidatas.some((e) => /ma(ñ|n)ana en la tarde/i.test(e.texto) && e.kind === 'fecha'), JSON.stringify(candidatas));
+check('propone la palabra del negocio que no conoce', candidatas.some((e) => e.kind === 'frase' && e.pista === 'terno'), JSON.stringify(candidatas));
+check('no propone lo que el negocio ya conoce', !candidatas.some((e) => e.pista === 'grado' || e.pista === 'azul'), JSON.stringify(candidatas.map((e) => e.pista)));
+// Una palabra suelta puede ser un error de dedo; una fecha que no se entiende vale aunque se diga una vez.
+check('la fecha propuesta trae la frase exacta que hay que enseñar', candidatas.find((e) => e.kind === 'fecha')?.pista === 'de hoy en quince', JSON.stringify(candidatas.filter((e) => e.kind === 'fecha')));
+check('ninguna palabra propuesta se dijo una sola vez', !candidatas.some((e) => e.kind === 'frase' && e.veces < 2), JSON.stringify(candidatas.map((e) => [e.kind, e.pista, e.veces])));
+
 // --- leer un chat exportado de WhatsApp ---
 const exportado = [
   '[12/03/24, 9:41:02 a. m.] Marta: buenos días, ¿tienen traje azul?',
@@ -77,7 +98,8 @@ check('junta el mensaje partido en dos líneas', /me lo ajustan[\s\S]*s[ií], pa
 check('descarta los avisos de WhatsApp', !leidos.some((m) => /multimedia/i.test(m.content)));
 check('entiende la fecha y la hora', new Date(leidos[0]!.ts).getHours() === 9 && new Date(leidos[0]!.ts).getMonth() === 2);
 
-check('se puede borrar todo lo importado', borrarImportado() === 12 && resumenImportado().mensajes === 0);
+const cuantos = resumenImportado().mensajes;
+check('se puede borrar todo lo importado', borrarImportado() === cuantos && resumenImportado().mensajes === 0, String(cuantos));
 check('y con eso se van las decisiones', temasFrecuentes().length === 0);
 
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');

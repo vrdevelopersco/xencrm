@@ -155,6 +155,9 @@ abono, precios, políticas y datos propios (tallas, tiempos, lo que venden o no)
   hacen**, para llenar este perfil con lo que sus clientes preguntan de verdad y no adivinando. **Agregar al
   perfil** deja la pregunta como dato por confirmar, para que escribas la respuesta. De los chats **no** salen
   precios ni políticas: esos cambian y se escriben aquí, que son los de hoy.
+- **Cómo hablan sus clientes**: del mismo historial salen las frases que usan y el asistente todavía no entiende
+  ("de hoy en quince", "terno"). Con **Llevarlas a «Frases que no entendimos»** quedan en Agente, donde les pones
+  el significado como siempre: solo se guardan si con eso ya se entienden.
 - **Guardar perfil** guarda y deja una copia de la versión anterior.
 
 ## Agente

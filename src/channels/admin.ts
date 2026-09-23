@@ -27,11 +27,12 @@ import { checkPublicUrl, publicStatus } from './public-check.js';
 import { backupNow, backupStatus } from '../rag/backup.js';
 import { findDuplicates, keeperOf, mergeContacts } from '../crm/merge.js';
 import { getProfile, pendingFields, PROFILE_FIELDS, saveProfile } from '../profile.js';
-import { borrarImportado, decidirTema, guardarImportados, leerChatExportado, muestraDeEstilo, resumenImportado, temasFrecuentes } from '../crm/historial.js';
+import { borrarImportado, decidirTema, expresionesCandidatas, guardarImportados, leerChatExportado, muestraDeEstilo, resumenImportado, temasFrecuentes, vocabularioDelNegocio } from '../crm/historial.js';
+import { ruleReading } from '../agent/teach.js';
 import { indexProfile } from '../rag/profile-index.js';
 import { exportDictionary, getDictionary, importDictionary } from '../agent/dictionary.js';
 import { teachExpression } from '../agent/teach.js';
-import { closeMisses, listMisses, MISS_KINDS, type MissKind } from '../crm/misses.js';
+import { closeMisses, listMisses, noteMiss, MISS_KINDS, type MissKind } from '../crm/misses.js';
 import { answerVerification, dismissVerification, listVerifications } from '../crm/verifications.js';
 import type { ChannelId } from './switches.js';
 import type { Contact } from '../crm/contacts.js';
@@ -256,8 +257,24 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * Perfil como un dato *por confirmar*, para que el equipo escriba la respuesta de hoy.
    */
   app.get('/admin/api/historial', (c) =>
-    c.json({ resumen: resumenImportado(), temas: temasFrecuentes(), estilo: muestraDeEstilo(8), estiloActual: business.agent.style }),
+    c.json({
+      resumen: resumenImportado(),
+      temas: temasFrecuentes(),
+      estilo: muestraDeEstilo(8),
+      estiloActual: business.agent.style,
+      expresiones: expresionesCandidatas({ conocidas: (t) => ruleReading('fecha', t) !== null, vocabulario: vocabularioDelNegocio() }),
+    }),
   );
+
+  /**
+   * Las frases del historial que las reglas no entienden pasan a "Frases que no entendimos", donde ya existe el
+   * camino para enseñarlas: alguien les pone el significado y solo se guardan si con eso el asistente ya entiende.
+   */
+  app.post('/admin/api/historial/expresiones', (c) => {
+    const candidatas = expresionesCandidatas({ conocidas: (t) => ruleReading('fecha', t) !== null, vocabulario: vocabularioDelNegocio() });
+    for (const e of candidatas) noteMiss('historial', e.kind, e.texto, { suggestion: e.pista ?? null });
+    return c.json({ llevadas: candidatas.length, groups: listMisses() });
+  });
 
   app.post('/admin/api/historial/tema', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { clave?: string; titulo?: string; estado?: 'aceptado' | 'descartado' };

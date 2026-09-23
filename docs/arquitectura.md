@@ -97,8 +97,12 @@ Una base SQLite por cliente (`DB_PATH`, WAL):
 cliente ya tiene conversado entra a la tabla `import_messages` —aparte, **nunca al índice de conocimiento**— por
 dos caminos: el `.txt` de "Exportar chat" de WhatsApp (`leerChatExportado`) o la sincronización al vincular el
 número (`WHATSAPP_IMPORT_HISTORY=true`, que enciende `syncFullHistory` y escucha `messaging-history.set`). De ahí
-salen **las preguntas** (`temasFrecuentes` agrupa por las palabras que las preguntas comparten) y **el tono**
-(`muestraDeEstilo`, que descarta entera cualquier respuesta con cifras). Aceptar un tema lo escribe en el Perfil
+salen **las preguntas** (`temasFrecuentes` agrupa por las palabras que las preguntas comparten), **el tono**
+(`muestraDeEstilo`, que descarta entera cualquier respuesta con cifras) y **cómo hablan sus clientes**
+(`expresionesCandidatas`: fechas a la colombiana que las reglas no entienden —agrupadas por la frase de tiempo,
+`fraseDeTiempo`— y palabras que repiten y no están en el catálogo, el perfil ni el diccionario). Esas frases pasan
+a *Frases que no entendimos* con `noteMiss`, donde ya existe el camino para enseñarlas: alguien les pone el
+significado y solo se guardan si con eso las reglas ya entienden. Aceptar un tema lo escribe en el Perfil
 como dato *por confirmar*: el historial pone la pregunta, el negocio pone la respuesta de hoy. La regla y el
 porqué, en [`aprender-del-historial.md`](aprender-del-historial.md).
 

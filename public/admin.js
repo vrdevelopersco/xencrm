@@ -877,6 +877,16 @@
                 '<button class="btn sm" data-no="' + i + '">No aplica</button></div>';
             }).join('')
           : '<div class="ok" style="margin-top:8px">Ya revisaste todos los temas.</div>') +
+        ((h.expresiones || []).length
+          ? '<div style="margin-top:12px"><b>Cómo hablan sus clientes</b>' +
+            '<div class="small muted">Frases que usan y el asistente todavía no entiende. Pasan a <b>Agente › Frases que no entendimos</b>, ' +
+            'donde les pones el significado y se guardan solo si con eso ya se entienden.</div>' +
+            '<ul class="timeline">' + h.expresiones.slice(0, 6).map(function (e) {
+              return '<li>' + (e.veces > 1 ? '<b>' + e.veces + '×</b> ' : '') + esc(e.texto) +
+                (e.pista ? ' <span class="chip v-posible">' + esc(e.pista) + '</span>' : '<span class="chip">fecha</span>') + '</li>';
+            }).join('') + '</ul>' +
+            '<div class="feed-row"><button class="btn sm" id="hist-expr">Llevarlas a «Frases que no entendimos»</button></div></div>'
+          : '') +
         (h.estilo && h.estilo.length
           ? '<div style="margin-top:12px"><b>Así contestan ustedes</b><div class="small muted">Ejemplos sin cifras, para afinar el tono del asistente. Los precios y plazos nunca salen de aquí.</div>' +
             '<ul class="timeline">' + h.estilo.slice(0, 4).map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul></div>'
@@ -885,6 +895,12 @@
         '<div class="small" id="hist-msg" role="status"></div></div>';
     }
     if ($('hist-subir')) $('hist-subir').onclick = subirChat;
+    if ($('hist-expr')) $('hist-expr').onclick = function () {
+      $('hist-expr').disabled = true;
+      api('/historial/expresiones', { method: 'POST' }).then(function (r) {
+        $('hist-msg').textContent = r.llevadas + ' frases quedaron en Agente › Frases que no entendimos, para enseñarlas.';
+      });
+    };
     if ($('hist-borrar')) $('hist-borrar').onclick = function () {
       api('/historial', { method: 'DELETE' }).then(function () { loadHistorial(); });
     };

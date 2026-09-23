@@ -33,9 +33,11 @@ Por eso: **el historial llena las preguntas, el negocio llena las respuestas.**
    preguntan de verdad.
 2. **El estilo.** De una muestra de respuestas del negocio (no de las del bot) sale una descripción del tono que
    va a `agent.style`, revisable en el tablero. Sin cifras: solo la manera.
-3. **El diccionario.** Las expresiones locales de sus clientes ("me regala", "a la hora del almuerzo", "el otro
-   finde") pasan por el mismo camino que "Frases que no entendimos": se proponen con su significado y alguien las
-   aprueba.
+3. **El diccionario.** Las expresiones locales de sus clientes ("de hoy en quince", "terno") salen de dos lugares:
+   las fechas que las reglas no entienden (agrupadas por la frase de tiempo, así "¿me atienden de hoy en quince?" y
+   "paso de hoy en quince" son una sola) y las palabras que repiten y no están en el catálogo, el perfil ni el
+   diccionario. Pasan por el mismo camino que "Frases que no entendimos": se proponen y alguien las enseña, y solo
+   se guardan si con eso las reglas ya entienden. *(Hecho.)*
 4. **El CRM sembrado.** Contactos con su conversación y su fecha, para que el tablero no nazca vacío y el puntaje
    tenga con qué calibrarse. Esto es historia, no conocimiento: no alimenta las respuestas.
 
