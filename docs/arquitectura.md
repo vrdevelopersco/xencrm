@@ -134,6 +134,14 @@ quien pidió una persona, quien espera respuesta) y se responde ahí mismo —la
 token, por `/api/c/<slug>/…`—, así que no hay que abrir cinco tableros ni repartir tokens. En *Clientes* está el
 estado de cada uno y es donde se da de alta uno nuevo.
 
+**Dar de baja un cliente** (`darDeBajaCliente`): sale del índice y su carpeta —base, conversaciones, WhatsApp,
+configuración— se guarda en `clientes/_dados-de-baja/<slug>-<fecha>/`. **No se borra nada**: si hay que volver, o
+si el cliente pide sus datos, ahí están. Y lo que evita el problema silencioso: sus usuarios se limpian en el mismo
+acto (`quitarClienteDeUsuarios`), y quien atendía *solo* a ese cliente queda **desactivado** y a la vista en Equipo
+para reasignarlo o quitarlo; a un super-admin no se le toca, que su lista vacía significa "todos". Por el otro
+lado, asignar un cliente que no existe se rechaza al crear o al editar un usuario: no nacen usuarios apuntando al
+aire. Apagar la instancia en pm2 sigue siendo manual, a propósito.
+
 **Quién entra y qué ve** (`src/consola-usuarios.ts`): cada persona tiene usuario y clave (hash scrypt, archivo
 `clientes/usuarios.json` con permisos 600) y un rol. El **super-admin** ve y atiende todos los clientes y maneja el
 equipo; quien **atiende** un cliente solo ve —y solo le suena— lo de los clientes que tiene asignados: la bandeja,

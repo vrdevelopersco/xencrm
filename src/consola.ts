@@ -10,8 +10,8 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { readFileSync, existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
-import { actualizarCliente, crearCliente, leerIndice, PLANTILLAS, puertoLibre, tokenDe, type ClienteRef } from './clientes.js';
-import { abrirSesion, actualizarUsuario, alcanza, borrarUsuario, cerrarSesion, crearUsuario, leerUsuarios, sesionDe, sinClave, verificar, type UsuarioPublico } from './consola-usuarios.js';
+import { actualizarCliente, crearCliente, darDeBajaCliente, leerIndice, PLANTILLAS, puertoLibre, tokenDe, type ClienteRef } from './clientes.js';
+import { abrirSesion, actualizarUsuario, alcanza, borrarUsuario, cerrarSesion, crearUsuario, leerUsuarios, quitarClienteDeUsuarios, sesionDe, sinClave, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
 
 // El .env de la raíz, sin pasar por la configuración de un cliente (la consola no es de ningún cliente).
 function envRaiz(clave: string): string {
@@ -227,7 +227,8 @@ export function mountConsola(app: Hono) {
   // El equipo: quién entra a la consola y qué clientes atiende. Solo el super-admin.
   app.get('/api/usuarios', (c) => {
     if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
-    return c.json({ usuarios: leerUsuarios().map(sinClave) });
+    // `sinClientes` son los que atienden y se quedaron sin ninguno: no pueden hacer nada hasta que les asignen.
+    return c.json({ usuarios: leerUsuarios().map(sinClave), sinClientes: usuariosSinClientes().map((u) => u.usuario) });
   });
   app.post('/api/usuarios', async (c) => {
     if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
@@ -315,6 +316,22 @@ export function mountConsola(app: Hono) {
       return new Response(r.body, { status: r.status, headers: { 'content-type': r.headers.get('content-type') ?? 'application/json' } });
     } catch {
       return c.json({ error: 'la instancia de ese cliente no responde' }, 502);
+    }
+  });
+
+  /**
+   * Dar de baja un cliente. Su carpeta (base, configuración, WhatsApp) se guarda en `clientes/_dados-de-baja/`:
+   * no se borra nada. Y sus usuarios se limpian, que si no quedan atendiendo a un cliente que ya no existe.
+   */
+  app.delete('/api/clientes/:slug', (c) => {
+    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
+    const slug = c.req.param('slug');
+    try {
+      const { cliente, guardadoEn } = darDeBajaCliente(slug);
+      const usuarios = quitarClienteDeUsuarios(slug);
+      return c.json({ cliente, guardadoEn, usuarios });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 404);
     }
   });
 

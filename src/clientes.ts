@@ -8,7 +8,7 @@
 //   pnpm cliente tunel            escribe el ingress de cloudflared (un dominio, un cliente por subdominio)
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
@@ -214,6 +214,28 @@ export function crearCliente(opts: {
   };
   guardarIndice([...clientes, cliente]);
   return { cliente, token };
+}
+
+/**
+ * Da de baja un cliente: sale del índice y su carpeta se guarda en `clientes/_dados-de-baja/` con la fecha. **No
+ * se borra nada**: ahí quedan su base, su configuración y su sesión de WhatsApp, por si hay que volver o por si
+ * el cliente pide sus datos. Quien la borre de verdad, que lo haga a mano y sabiendo.
+ *
+ * Los usuarios que lo atendían se limpian aparte (`consola-usuarios.ts › quitarClienteDeUsuarios`): si no, quedan
+ * apuntando a un cliente que ya no existe.
+ */
+export function darDeBajaCliente(slug: string, hoy = new Date()): { cliente: ClienteRef; guardadoEn: string } {
+  const clientes = leerIndice();
+  const cliente = clientes.find((c) => c.slug === slug);
+  if (!cliente) throw new Error('ese cliente no existe');
+  const r = rutas(slug);
+  const destino = join(CLIENTES_DIR, '_dados-de-baja', `${slug}-${hoy.toISOString().slice(0, 10)}`);
+  if (existsSync(r.dir)) {
+    mkdirSync(join(CLIENTES_DIR, '_dados-de-baja'), { recursive: true });
+    renameSync(r.dir, destino);
+  }
+  guardarIndice(clientes.filter((c) => c.slug !== slug));
+  return { cliente, guardadoEn: destino };
 }
 
 /** El ecosystem de pm2: una app por cliente, con su configuración y su base. */

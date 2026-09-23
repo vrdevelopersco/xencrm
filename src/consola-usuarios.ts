@@ -7,7 +7,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { CLIENTES_DIR } from './clientes.js';
+import { CLIENTES_DIR, leerIndice } from './clientes.js';
 
 export type Rol = 'super' | 'agente';
 
@@ -50,6 +50,14 @@ function coincide(clave: string, guardada: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** Que no se asigne un cliente que no existe: así no nacen usuarios apuntando al aire. */
+function comprobarClientes(slugs: string[]): string[] {
+  const existen = new Set(leerIndice().map((c) => c.slug));
+  const malos = slugs.filter((s) => !existen.has(s));
+  if (malos.length) throw new Error(`no existe${malos.length === 1 ? ' el cliente' : 'n los clientes'}: ${malos.join(', ')}`);
+  return slugs;
+}
+
 /** Crea a alguien del equipo. `clientes` vacío en un super-admin (los ve todos). */
 export function crearUsuario(datos: { usuario: string; nombre?: string; clave: string; rol?: Rol; clientes?: string[]; hoy?: string }): UsuarioPublico {
   const usuario = datos.usuario.trim().toLowerCase();
@@ -61,7 +69,7 @@ export function crearUsuario(datos: { usuario: string; nombre?: string; clave: s
     usuario,
     nombre: datos.nombre?.trim() || usuario,
     rol: datos.rol ?? 'agente',
-    clientes: datos.rol === 'super' ? [] : (datos.clientes ?? []),
+    clientes: datos.rol === 'super' ? [] : comprobarClientes(datos.clientes ?? []),
     activo: true,
     clave: hashear(datos.clave),
     desde: (datos.hoy ?? new Date().toISOString()).slice(0, 10),
@@ -82,7 +90,7 @@ export function actualizarUsuario(usuario: string, cambios: Partial<Pick<Usuario
     ...actual,
     ...cambios,
     rol,
-    clientes: rol === 'super' ? [] : (cambios.clientes ?? actual.clientes),
+    clientes: rol === 'super' ? [] : comprobarClientes(cambios.clientes ?? actual.clientes),
     clave: cambios.clave ? hashear(cambios.clave) : actual.clave,
   };
   guardar(usuarios);
@@ -133,6 +141,34 @@ export function sesionDe(token: string | undefined, now = Date.now()): UsuarioPu
 
 export function cerrarSesion(token: string | undefined) {
   if (token) sesiones.delete(token);
+}
+
+/**
+ * Un cliente que se da de baja no puede dejar usuarios apuntándolo. Se les quita de su lista y, si alguien que
+ * atiende se queda **sin ningún cliente**, se desactiva: no tendría nada que ver al entrar, y así el super-admin
+ * lo ve en Equipo y decide si lo reasigna o lo quita. A un super-admin no se le toca: su lista vacía significa
+ * "todos", no "ninguno".
+ */
+export function quitarClienteDeUsuarios(slug: string): { tocados: string[]; desactivados: string[] } {
+  const usuarios = leerUsuarios();
+  const tocados: string[] = [];
+  const desactivados: string[] = [];
+  const nuevos = usuarios.map((u) => {
+    if (u.rol === 'super' || !u.clientes.includes(slug)) return u;
+    const clientes = u.clientes.filter((c) => c !== slug);
+    tocados.push(u.usuario);
+    if (!clientes.length && u.activo) desactivados.push(u.usuario);
+    return { ...u, clientes, activo: clientes.length ? u.activo : false };
+  });
+  if (tocados.length) guardar(nuevos);
+  return { tocados, desactivados };
+}
+
+/** Quien atiende y se quedó sin clientes: no puede hacer nada hasta que le asignen uno. */
+export function usuariosSinClientes(): UsuarioPublico[] {
+  return leerUsuarios()
+    .filter((u) => u.rol !== 'super' && !u.clientes.length)
+    .map(sinClave);
 }
 
 /** ¿Este usuario puede ver este cliente? El super-admin, todos. */

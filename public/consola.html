@@ -205,7 +205,7 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
           Object.keys(PRIORIDADES).map(function (k) { return '<option value="' + k + '"' + (k === c.prioridad ? ' selected' : '') + '>' + PRIORIDADES[k] + '</option>'; }).join('') +
         '</select>' +
         '<a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener">Abrir tablero</a>' +
-        '<button class="btn copiar">Copiar token</button>' +
+        (esSuper ? '<button class="btn copiar">Copiar token</button><button class="btn baja">Dar de baja</button>' : '') +
       '</div>' +
       '<div class="small muted">' + esc(c.slug) + ' · puerto ' + c.puerto + (c.host ? ' · ' + esc(c.host) : ' · sin dominio') + ' · desde ' + esc(c.desde) + '</div>' +
       nums + tickets + '</div>';
@@ -223,6 +223,30 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
         s.onchange = function () {
           var slug = s.closest('.card').getAttribute('data-slug');
           api('/clientes/' + encodeURIComponent(slug), { method: 'PATCH', body: { prioridad: s.value } }).then(cargar);
+        };
+      });
+      $('lista').querySelectorAll('.baja').forEach(function (b) {
+        b.onclick = function () {
+          var card = b.closest('.card'), slug = card.getAttribute('data-slug');
+          var f = filas.find(function (x) { return x.cliente.slug === slug; });
+          var nombre = f ? f.cliente.nombre : slug;
+          var quienes = (window.__usuarios || []).filter(function (u) { return (u.clientes || []).indexOf(slug) >= 0; });
+          card.querySelector('.aviso') && card.querySelector('.aviso').remove();
+          card.insertAdjacentHTML('beforeend',
+            '<div class="aviso" style="margin-top:10px"><b>¿Dar de baja a ' + esc(nombre) + '?</b>' +
+            '<div class="small muted">Sale de la consola y deja de atenderse. Su carpeta (base, conversaciones, WhatsApp) ' +
+            'se guarda en <code>clientes/_dados-de-baja/</code>: no se borra nada.' +
+            (quienes.length ? ' <b>' + quienes.length + (quienes.length === 1 ? ' persona lo atiende' : ' personas lo atienden') + '</b> y se les quita de su lista; ' +
+              'a quien quede sin clientes se le desactiva el acceso.' : '') +
+            ' Acuérdate de apagar su instancia en pm2.</div>' +
+            '<div class="fila" style="margin-top:8px"><button class="btn primary si">Sí, darlo de baja</button><button class="btn no">Cancelar</button></div></div>');
+          card.querySelector('.aviso .no').onclick = function () { card.querySelector('.aviso').remove(); };
+          card.querySelector('.aviso .si').onclick = function () {
+            api('/clientes/' + encodeURIComponent(slug), { method: 'DELETE' }).then(function (r) {
+              if (r.error) { card.querySelector('.aviso').innerHTML = '<div class="small">' + esc(r.error) + '</div>'; return; }
+              cargar(); cargarPendientes();
+            });
+          };
         };
       });
       $('lista').querySelectorAll('.copiar').forEach(function (b) {
@@ -397,12 +421,18 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
   function cargarEquipo() {
     return Promise.all([api('/usuarios'), api('/clientes')]).then(function (r) {
       var usuarios = r[0].usuarios || [], clientes = (r[1].clientes || []).map(function (f) { return f.cliente; });
+      window.__usuarios = usuarios;
+      var sueltos = r[0].sinClientes || [];
       var opciones = function (marcados) {
         return clientes.map(function (c) {
           return '<label class="chip"><input type="checkbox" value="' + esc(c.slug) + '"' + (marcados.indexOf(c.slug) >= 0 ? ' checked' : '') + '> ' + esc(c.nombre) + '</label>';
         }).join(' ');
       };
       $('equipo').innerHTML =
+        (sueltos.length
+          ? '<div class="card"><b>' + sueltos.length + (sueltos.length === 1 ? ' persona quedó sin clientes' : ' personas quedaron sin clientes') + '</b>' +
+            '<div class="small muted">Les quitamos el acceso porque no tendrían nada que ver. Asígnales un cliente y actívalas de nuevo, o quítalas.</div></div>'
+          : '') +
         usuarios.map(function (u) {
           return '<div class="card" data-u="' + esc(u.usuario) + '">' +
             '<div class="fila"><span class="nombre">' + esc(u.nombre) + '</span><span class="chip">' + esc(u.usuario) + '</span>' +

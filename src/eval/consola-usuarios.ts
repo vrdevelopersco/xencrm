@@ -1,7 +1,7 @@
 // Pruebas de quién entra a la consola y qué ve (sin modelo): pnpm test:usuarios
 // El super-admin ve y atiende todos los clientes; quien atiende soporte de uno solo ve lo de ese. La clave se
 // guarda como hash, nunca en claro. Carpeta temporal: no toca los clientes de verdad.
-import { mkdtempSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -76,6 +76,28 @@ check('no da de alta clientes', (await comoAna('/api/clientes', { method: 'POST'
 check('no ve el equipo', (await comoAna('/api/usuarios')).status === 403);
 check('ni se copia los tokens de los tableros', (await comoAna('/api/clientes/confia/token')).status === 403);
 check('el super-admin sí ve el equipo', (await (await maestra('/api/usuarios')).json() as { usuarios: unknown[] }).usuarios.length === leerUsuarios().length);
+
+// --- dar de baja un cliente no puede dejar usuarios a la deriva ---
+const { darDeBajaCliente, leerIndice: indice } = await import('../clientes.js');
+const { quitarClienteDeUsuarios, usuariosSinClientes } = await import('../consola-usuarios.js');
+crearUsuario({ usuario: 'dos.clientes', clave: 'clave-larga-4', rol: 'agente', clientes: ['confia', 'hrc'] });
+crearUsuario({ usuario: 'solo.hrc', clave: 'clave-larga-5', rol: 'agente', clientes: ['hrc'] });
+
+check('no se puede asignar un cliente que no existe', (() => { try { crearUsuario({ usuario: 'malo', clave: 'clave-larga-6', clientes: ['no-existe'] }); return false; } catch (e) { return /no existe el cliente/.test((e as Error).message); } })());
+check('ni al cambiarle los clientes a alguien', (() => { try { actualizarUsuario('solo.hrc', { clientes: ['fantasma'] }); return false; } catch { return true; } })());
+
+const baja = darDeBajaCliente('hrc', new Date('2026-09-23T12:00:00Z'));
+check('el cliente sale del índice', !indice().some((c) => c.slug === 'hrc'));
+check('pero su carpeta se guarda, no se borra', /_dados-de-baja\/hrc-2026-09-23/.test(baja.guardadoEn) && existsSync(baja.guardadoEn), baja.guardadoEn);
+const limpieza = quitarClienteDeUsuarios('hrc');
+check('a los que lo atendían se les quita de su lista', limpieza.tocados.sort().join() === 'dos.clientes,solo.hrc', limpieza.tocados.join());
+check('a quien no lo atendía no se le toca nada', leerUsuarios().find((u) => u.usuario === 'ana')?.clientes.join() === 'confia');
+check('quien tenía otro cliente lo conserva', leerUsuarios().find((u) => u.usuario === 'dos.clientes')?.clientes.join() === 'confia');
+check('a quien se quedó sin ninguno se le desactiva el acceso', limpieza.desactivados.join() === 'solo.hrc' && leerUsuarios().find((u) => u.usuario === 'solo.hrc')?.activo === false, JSON.stringify(limpieza));
+check('y queda a la vista para reasignarlo', usuariosSinClientes().some((u) => u.usuario === 'solo.hrc'));
+check('el desactivado ya no entra', verificar('solo.hrc', 'clave-larga-5') === null);
+check('al super-admin no se le toca la lista vacía', leerUsuarios().find((u) => u.usuario === 'jefe')?.activo !== false);
+check('dar de baja algo que no existe avisa', (() => { try { darDeBajaCliente('nadie'); return false; } catch { return true; } })());
 
 check('quitar a alguien lo saca', borrarUsuario('jefe') && !leerUsuarios().some((u) => u.usuario === 'jefe'));
 
