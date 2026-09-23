@@ -40,6 +40,14 @@ conocimiento, que es lo que evita repetir un precio vencido con autoridad. `pnpm
 probado con un chat exportado: agrupó los 3 "trajes para matrimonio" y los 2 "parqueadero", dejó el precio fuera
 del tono y el Perfil pasó de 12 a 13 pendientes.
 
+### Dar de baja un cliente sin dejar usuarios a la deriva · `191c3c4`
+No había cómo dar de baja un tenant y, peor, si lo hubiera habido sus usuarios quedaban atendiendo a un cliente que
+ya no existe. Ahora dar de baja lo saca del índice y **guarda** su carpeta en `clientes/_dados-de-baja/` (base,
+conversaciones, WhatsApp: no se borra nada), y en el mismo acto limpia a sus usuarios: a quien atendía solo a ese
+cliente se le desactiva el acceso —no tendría nada que ver— y queda listado en Equipo para reasignarlo. Al
+super-admin no se le toca, que su lista vacía significa "todos". Y asignar un cliente que no existe se rechaza al
+crear y al editar un usuario. `pnpm test:usuarios` (37 casos) y probado de punta a punta.
+
 ### La consola también atiende, y cada quien ve solo sus clientes · `a907db9`
 La consola servía para mirar, no para trabajar. Ahora **Atender** junta en una sola bandeja lo que espera a una
 persona en todos los clientes y se responde ahí mismo: la consola habla por el cliente con su token, así que no hay
