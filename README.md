@@ -34,6 +34,8 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
   cuáles no, con el porqué de cada una.
 - [`docs/consola.md`](docs/consola.md): operar varios clientes: montar uno nuevo, atenderlos a todos desde una
   pantalla, roles y qué pasa al dar de baja a un cliente.
+- [`docs/desplegar.md`](docs/desplegar.md): subir todos los clientes en un solo despliegue, separados por ruta:
+  qué queda publicado, qué variables van en el panel y dónde quedan los datos.
 - [`docs/aiva-producto.pdf`](docs/aiva-producto.pdf): lo que hace aiva, en una hoja, para mostrarle a un cliente
   (se regenera con `pnpm producto`).
 - [`docs/arreglos.md`](docs/arreglos.md): la bitácora de arreglos: qué fallaba, qué cambió y cómo se comprobó, con

@@ -24,3 +24,6 @@ herramientas/sonda-hosting/sonda-estado.json
 
 # paquetes para desplegar en una plataforma de apps: se arman, no se guardan
 paquetes/
+
+# el ZIP de la sonda se arma con `zip -r Archive.zip .`: tampoco se guarda
+herramientas/sonda-hosting/Archive.zip

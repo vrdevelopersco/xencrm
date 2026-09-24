@@ -69,6 +69,13 @@ check('ni robarle el puerto a otro', /puerto 3001/.test(err), err);
 check('un nombre que no da identificador se rechaza', (() => { try { crearCliente({ nombre: '¿¡!' }); return false; } catch { return true; } })());
 check('los identificadores se limpian', slugificar('Litografía Industrial S.A.S.') === 'litografia-industrial-s-a-s', slugificar('Litografía Industrial S.A.S.'));
 
+// En el despliegue todos los clientes cuelgan del mismo dominio por ruta: un cliente llamado "consola" o "api"
+// quedaría tapado por el enrutador y nadie entendería por qué no responde. Mejor no dejarlo nacer.
+let errReservado = '';
+try { crearCliente({ nombre: 'Consola' }); } catch (e) { errReservado = (e as Error).message; }
+check('un identificador que usa el enrutador se rechaza', /ruta del sistema/.test(errReservado), errReservado || '(lo dejó crear)');
+check('y el aviso dice cuáles son', /consola/.test(errReservado) && /api/.test(errReservado), errReservado);
+
 // La plantilla es lo primero que se pregunta al dar de alta: de ahí salen el embudo y si agenda citas.
 const { cliente: fin2 } = crearCliente({ nombre: 'Soporte SAS', plantilla: 'soporte' });
 const cfgSoporte = JSON.parse(readFileSync(rutas(fin2.slug).config, 'utf8')) as { crm: { stages: { id: string }[]; fields: { name: string }[] }; appointments: { enabled: boolean }; sources: unknown };

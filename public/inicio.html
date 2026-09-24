@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aiva · Artificial Intelligence Virtual Assistant</title>
+<meta name="description" content="aiva atiende a tus clientes por WhatsApp y por el chat de tu sitio: responde, agenda citas, califica prospectos y le pasa a tu equipo solo lo que necesita una persona.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
+<style>
+:root{
+  --bg:#eef0f4; --panel:#fff; --linea:#e2e5ea; --texto:#111827; --suave:#5f6875;
+  --marca:#276f45; --marca-suave:#e6f4ec;
+  --rim:inset 1px 1px 0 rgba(255,255,255,.55),inset -1px -1px 0 rgba(17,24,39,.05);
+  --sombra:0 1px 2px rgba(0,0,0,.06),0 2px 8px rgba(17,24,39,.05); --alto:0 10px 30px rgba(17,24,39,.12);
+  --curva:cubic-bezier(.2,.7,.3,1);
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0b0d12;--panel:#171a21;--linea:#262a33;--texto:#e5e7eb;--suave:#9aa3b2;--marca:#5fbf86;--marca-suave:#173424;
+    --rim:inset 1px 1px 0 rgba(255,255,255,.10),inset -1px -1px 0 rgba(0,0,0,.35);--sombra:none;--alto:0 12px 34px rgba(0,0,0,.45)}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--texto);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body::before{content:"";position:fixed;inset:-20%;z-index:-1;pointer-events:none;opacity:.7;
+  background:radial-gradient(600px 500px at 10% 8%,#bfe3cf,transparent 60%),radial-gradient(700px 600px at 92% 18%,#c7d6f5,transparent 60%),radial-gradient(600px 520px at 60% 100%,#f6e3c8,transparent 60%);filter:blur(45px)}
+@media (prefers-color-scheme: dark){body::before{opacity:.3}}
+/* Grano: una pizca de textura para que el fondo no se sienta de plástico. */
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.18;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23r)' opacity='.5'/%3E%3C/svg%3E")}
+@media (prefers-color-scheme: dark){body::after{opacity:.14}}
+.envoltura{max-width:900px;margin:0 auto;padding:0 22px}
+header{padding:56px 0 18px}
+.marca{display:flex;align-items:baseline;gap:10px}
+.marca b{font-size:38px;color:var(--marca);letter-spacing:-.03em;line-height:1}
+.marca span{color:var(--suave);font-size:14px}
+h1{font-size:30px;line-height:1.25;margin:22px 0 10px;letter-spacing:-.01em;max-width:18em}
+.entrada{color:var(--suave);font-size:18px;max-width:34em;margin:0 0 26px}
+.tarjetas{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin:30px 0}
+.tarjeta{position:relative;background:linear-gradient(180deg,color-mix(in srgb,var(--panel) 96%,#fff) 0%,var(--panel) 60%);
+  border:1px solid var(--linea);border-radius:18px;padding:18px 20px;box-shadow:var(--rim),var(--sombra);
+  transition:box-shadow .18s var(--curva),transform .18s var(--curva)}
+/* Una línea de luz arriba: es lo que hace que la tarjeta se sienta levantada y no pegada al fondo. */
+.tarjeta::after{content:"";position:absolute;inset:0 14px auto;height:1px;border-radius:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent);pointer-events:none}
+@media (prefers-color-scheme: dark){.tarjeta::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}}
+.tarjeta:hover{box-shadow:var(--rim),var(--alto);transform:translateY(-1px)}
+@media (max-width:640px){.tarjetas{grid-template-columns:1fr}}
+.tarjeta h3{margin:0 0 6px;font-size:16px}
+.tarjeta p{margin:0;color:var(--suave);font-size:14.5px}
+h2{font-size:20px;margin:36px 0 12px}
+ol{padding-left:20px;margin:0 0 10px}
+li{margin-bottom:8px}
+li b{font-weight:600}
+.nota{background:var(--marca-suave);border-left:3px solid var(--marca);border-radius:4px 16px 16px 4px;padding:16px 18px;margin:26px 0;font-size:15px;box-shadow:var(--rim)}
+.nota b{color:var(--marca)}
+footer{border-top:1px solid var(--linea);margin-top:44px;padding:20px 0 50px;color:var(--suave);font-size:13.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+a{color:var(--marca)}
+.boton{display:inline-flex;align-items:center;min-height:44px;background:linear-gradient(180deg,color-mix(in srgb,var(--marca) 88%,#fff) 0%,var(--marca) 100%);
+  color:#fff;text-decoration:none;padding:0 22px;border-radius:999px;font-weight:600;font-size:15px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 2px 4px rgba(17,24,39,.18),0 8px 18px rgba(39,111,69,.22);
+  transition:transform .15s var(--curva),box-shadow .15s var(--curva)}
+.boton:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 3px 6px rgba(17,24,39,.2),0 12px 26px rgba(39,111,69,.28);transform:translateY(-1px)}
+.boton:active{transform:translateY(1px);box-shadow:inset 0 2px 5px rgba(0,0,0,.25)}
+.boton:focus-visible{outline:2px solid var(--marca);outline-offset:3px}
+/* En oscuro el verde es claro: el texto va oscuro, si no el botón no pasa contraste. */
+@media (prefers-color-scheme: dark){.boton{color:#08150e;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 6px rgba(0,0,0,.5),0 10px 24px rgba(0,0,0,.4)}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}.boton:hover,.tarjeta:hover{transform:none}}
+@media (max-width:560px){header{padding-top:34px}h1{font-size:25px}.marca b{font-size:32px}}
+</style>
+</head>
+<body>
+<div class="envoltura">
+
+  <header>
+    <div class="marca"><b>aiva</b><span>Artificial Intelligence Virtual Assistant</span></div>
+    <h1>Atiende a tus clientes cuando tú no puedes, y te deja solo lo que necesita una persona.</h1>
+    <p class="entrada">Responde por WhatsApp y por el chat de tu sitio, agenda citas de tu agenda real, anota lo que
+    el cliente dijo y te avisa cuándo vale la pena que entres tú.</p>
+    <a class="boton" href="consola">Entrar a la consola</a>
+  </header>
+
+  <div class="tarjetas">
+    <div class="tarjeta">
+      <h3>No inventa</h3>
+      <p>Si no está en la información del negocio, no lo supone: dice que lo verifica y la pregunta le llega al
+      equipo. Lo que le responden una vez, lo aprende.</p>
+    </div>
+    <div class="tarjeta">
+      <h3>Agenda de verdad</h3>
+      <p>Ofrece horarios que existen, confirma, mueve y cancela, y recuerda la cita el día antes.</p>
+    </div>
+    <div class="tarjeta">
+      <h3>Entiende cómo hablamos</h3>
+      <p>«De hoy en quince», «a la hora del almuerzo», «la que sea». Lo que no entienda se le enseña y queda
+      aprendido.</p>
+    </div>
+    <div class="tarjeta">
+      <h3>Un cliente, una ficha</h3>
+      <p>Si escribe por el sitio y después por WhatsApp, llega sabiendo de qué hablaban y no lo deja con dos citas.</p>
+    </div>
+  </div>
+
+  <h2>Cómo trabaja</h2>
+  <ol>
+    <li><b>Atiende</b> a cualquier hora, con la información del negocio.</li>
+    <li><b>Anota</b> lo que importa —qué busca, para cuándo, presupuesto— sin interrogar a nadie.</li>
+    <li><b>Agenda</b> la cita y la recuerda el día antes.</li>
+    <li><b>Califica</b> cada conversación con un puntaje que explica por qué sube y por qué baja.</li>
+    <li><b>Avisa</b> cuando alguien pide una persona, cuando no supo algo o cuando un prospecto se pone caliente.</li>
+  </ol>
+
+  <div class="nota">
+    <b>Cada negocio, con lo suyo aparte.</b> Su información, sus conversaciones, su WhatsApp y su embudo: una
+    boutique agenda citas, una financiera resuelve solicitudes, una litografía cotiza y produce. Lo que no se
+    mezcla no se puede filtrar.
+  </div>
+
+  <h2>¿Eres cliente de aiva?</h2>
+  <p class="entrada" style="font-size:16px">Tu tablero tiene su propia dirección y su propia clave: la que te
+  entregamos al montar tu negocio. Si la perdiste, escríbenos y te la reponemos.</p>
+
+  <footer>
+    <span>aiva · CRM conversacional con IA</span>
+    <span>HRC Technologies</span>
+  </footer>
+
+</div>
+</body>
+</html>

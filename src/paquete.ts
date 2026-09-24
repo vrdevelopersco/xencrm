@@ -1,7 +1,8 @@
 // Arma UN paquete para subir aiva a una plataforma de apps (Hostinger y parecidas), con todos los clientes bajo
 // un solo dominio y separados por ruta:
 //
-//     aiva.hrctechnologies.com/            → la consola
+//     aiva.hrctechnologies.com/            → la portada: qué es aiva
+//     aiva.hrctechnologies.com/consola     → la consola (vigilancia y atención)
 //     aiva.hrctechnologies.com/confia/     → el tablero y el chat de CONFIA
 //     aiva.hrctechnologies.com/hrc/        → los de HRC
 //
@@ -29,7 +30,7 @@ const PUERTO_INTERNO = 4100; // los procesos de adentro; nadie los ve desde afue
 const ARRANQUE = String.raw`// Generado por: pnpm paquete — no editar a mano.
 //
 // Levanta un proceso por cliente y uno para la consola, y pone delante un enrutador que reparte por la ruta:
-// /confia/... va al proceso de CONFIA sin el prefijo, y todo lo demás a la consola. Así un solo despliegue atiende
+// / es la portada, /confia/... va al proceso de CONFIA sin el prefijo, y lo demás a la consola. Así un despliegue atiende
 // a todos los clientes sin mezclar sus datos: cada proceso tiene su base, su WhatsApp y su configuración.
 import { spawn } from 'node:child_process';
 import http from 'node:http';
@@ -78,6 +79,19 @@ function levantar(slug, guion, env, puerto) {
   hijos.set(slug, { puerto, hijo });
 }
 
+// Aquí no hay Ollama ni va a haberlo: si al panel se le olvidó una variable, igual se usa OpenAI en vez de
+// quedarse esperando un modelo local que no existe. Lo que sí esté en el panel manda sobre esto.
+const porDefecto = {
+  LIGHT_ENGINE: process.env.LIGHT_ENGINE || 'openai',
+  HEAVY_ENGINE: process.env.HEAVY_ENGINE || 'openai',
+  GATE_ENGINE: process.env.GATE_ENGINE || 'openai',
+  ANALYSIS_ENGINE: process.env.ANALYSIS_ENGINE || 'openai',
+  EMBED_ENGINE: process.env.EMBED_ENGINE || 'openai',
+  // WhatsApp arranca apagado: se enciende desde el tablero de cada cliente, en Canales, cuando vayan a escanear
+  // el código. Esto es solo el arranque de fábrica; una vez lo prenden, queda prendido en su base.
+  WHATSAPP_ENABLED: process.env.WHATSAPP_ENABLED || 'false',
+};
+
 clientes.forEach((c, i) => {
   const mio = join(datos, c.slug);
   for (const sub of ['', 'data', 'auth', 'catalogo', 'conocimiento']) mkdirSync(join(mio, sub), { recursive: true });
@@ -89,6 +103,7 @@ clientes.forEach((c, i) => {
   const configPath = join(mio, 'aiva.config.json');
   writeFileSync(configPath, JSON.stringify(config, null, 2));
   levantar(c.slug, 'dist/index.js', {
+    ...porDefecto,
     AIVA_CONFIG: configPath,
     DB_PATH: join(mio, 'data', 'aiva.db'),
     WHATSAPP_AUTH_DIR: join(mio, 'auth'),
@@ -120,8 +135,21 @@ const puertoConsola = puertoInterno + clientes.length;
 levantar('consola', 'dist/consola.js', { AIVA_CLIENTES_DIR: dirClientes, CONSOLA_HOST: '127.0.0.1', CONSOLA_PORT: String(puertoConsola) }, puertoConsola);
 
 // ── El enrutador ────────────────────────────────────────────────────────────
+// La portada: una página que explica qué es aiva. La sirve el enrutador mismo, sin molestar a nadie, porque es
+// lo único que ve quien llega al dominio pelado. La consola queda en /consola, y sus llamadas (/api/...) siguen
+// saliendo de la raíz, que es a donde van por defecto.
+const PORTADA = (() => {
+  try {
+    return readFileSync(join(aqui, 'public', 'inicio.html'));
+  } catch {
+    return null;
+  }
+})();
+
 function haciaDonde(url) {
-  const m = /^\/([a-z0-9][a-z0-9_-]*)(\/.*)?$/i.exec(url.split('?')[0] || '/');
+  const camino = url.split('?')[0] || '/';
+  if (camino === '/consola' || camino === '/consola/') return { puerto: puertoConsola, ruta: '/', prefijo: '' };
+  const m = /^\/([a-z0-9][a-z0-9_-]*)(\/.*)?$/i.exec(camino);
   const destino = m && hijos.get(m[1]);
   if (!destino) return { puerto: puertoConsola, ruta: url, prefijo: '' };
   const resto = url.slice(1 + m[1].length) || '/';
@@ -130,6 +158,12 @@ function haciaDonde(url) {
 
 http
   .createServer((pide, responde) => {
+    const camino = (pide.url || '/').split('?')[0];
+    if (PORTADA && (camino === '/' || camino === '/index.html')) {
+      responde.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' });
+      responde.end(pide.method === 'HEAD' ? undefined : PORTADA);
+      return;
+    }
     const { puerto, ruta, prefijo } = haciaDonde(pide.url || '/');
     const salida = http.request(
       { host: '127.0.0.1', port: puerto, path: ruta, method: pide.method, headers: { ...pide.headers, host: '127.0.0.1:' + puerto } },
@@ -151,7 +185,8 @@ http
   })
   .listen(PUERTO, () => {
     console.log('[aiva] escuchando en ' + PUERTO);
-    console.log('[aiva]   https://' + dominio + '/            → la consola');
+    console.log('[aiva]   https://' + dominio + '/            → qué es aiva');
+    console.log('[aiva]   https://' + dominio + '/consola     → la consola (tu pantalla)');
     for (const c of clientes) console.log('[aiva]   https://' + dominio + '/' + c.slug + '/  → ' + c.nombre);
   });
 `;
@@ -202,7 +237,8 @@ writeFileSync(
     'aiva · todos los clientes en un solo despliegue',
     '',
     `Al subirlo queda:`,
-    `  https://${DOMINIO}/            la consola (tu pantalla)`,
+    `  https://${DOMINIO}/            la portada: qué es aiva`,
+    `  https://${DOMINIO}/consola     la consola (tu pantalla)`,
     ...clientes.map((c) => `  https://${DOMINIO}/${c.slug}/${' '.repeat(Math.max(1, 12 - c.slug.length))}${c.nombre}: su tablero en /${c.slug}/admin y su chat en /${c.slug}/`),
     '',
     'En el panel, al desplegar:',
@@ -235,7 +271,8 @@ console.log(`
 
   Un solo despliegue, y adentro:
 
-     https://${DOMINIO}/            la consola
+     https://${DOMINIO}/            la portada: qué es aiva
+     https://${DOMINIO}/consola     la consola (tu pantalla)
 ${clientes.map((c) => `     https://${DOMINIO}/${c.slug}/${' '.repeat(Math.max(1, 12 - c.slug.length))}${c.nombre}`).join('\n')}
 
   En el panel:  Node 24 · compilar "npm install --omit=dev" · iniciar "npm start"
