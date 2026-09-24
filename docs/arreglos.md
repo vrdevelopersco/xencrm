@@ -7,6 +7,22 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-09-24
+
+### Una portada en la raíz, y la consola en /consola · `becf4b0`
+El dominio pelado mostraba la consola: quien llegaba se topaba con una pantalla de trabajo pidiendo clave. Ahora
+la raíz explica qué es aiva y la consola vive en `/consola`; la sirve el enrutador mismo, sin proceso extra, y las
+llamadas de la consola siguen saliendo de la raíz. Salieron tres cosas más al probar el paquete: un cliente
+llamado "consola" o "api" habría quedado tapado por el enrutador (ahora se rechaza al crear); los motores
+arrancan en OpenAI solos, porque en un hosting de apps no hay Ollama y una variable olvidada dejaba al cliente
+esperando un modelo que no existe; y **WhatsApp arranca apagado**, que antes los tres clientes escupían el QR al
+primer arranque. Comprobado con el ZIP descomprimido aparte: `/`, `/consola` y `/<cliente>/health` dan 200,
+`/dunor/admin` carga su JavaScript y lo que no existe da 404. `pnpm test:clientes` con dos casos nuevos.
+
+🪤 Lo que costó media hora: una prueba anterior seguía viva en el 3500 y las peticiones le llegaban **a la
+vieja**, que no conocía a dunor. El paquete estaba bien desde el principio. Antes de probar,
+`lsof -ti :3500 | xargs -r kill -9`.
+
 ## 2026-09-22
 
 ### El embudo lo pone cada negocio · `0a03709`
