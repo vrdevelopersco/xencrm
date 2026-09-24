@@ -27,7 +27,8 @@ function envRaiz(clave: string): string {
 }
 
 export const CONSOLA_TOKEN = envRaiz('CONSOLA_TOKEN') || randomBytes(16).toString('hex');
-const PUERTO = Number(envRaiz('CONSOLA_PORT') || 3900);
+// PORT lo inyectan las plataformas de apps; CONSOLA_PORT manda si está, para no pisarlo en una máquina propia.
+const PUERTO = Number(envRaiz('CONSOLA_PORT') || envRaiz('PORT') || 3900);
 const HOST = envRaiz('CONSOLA_HOST') || '127.0.0.1';
 
 export interface Ticket {

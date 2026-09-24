@@ -3,7 +3,7 @@ import { basename, extname, join, relative } from 'node:path';
 import { createHash } from 'node:crypto';
 import { convert } from 'html-to-text';
 import { business } from '../config.js';
-import { embed } from '../llm/ollama.js';
+import { embed } from '../llm/embeddings.js';
 import { countDocs, replaceDocs, type Doc } from './store.js';
 import { profileDocs } from './profile-index.js';
 

@@ -5,7 +5,9 @@
   if (window.__aivaLoaded) return;
   window.__aivaLoaded = true;
   var script = document.currentScript;
-  var BASE = script && script.src ? new URL(script.src).origin : '';
+  // La base sale de la dirección del propio script, sin quedarse solo con el dominio: si aiva vive en
+  // https://…/confia/widget.js, las llamadas tienen que ir a https://…/confia/api/…, no a la raíz.
+  var BASE = script && script.src ? script.src.replace(/\/widget\.js(\?.*)?$/, '') : '';
   var RAW = (script && script.getAttribute('data-color')) || '__BRAND_COLOR__';
   if (!/^#[0-9a-fA-F]{6}$/.test(RAW)) RAW = '#2f7d4f';
   var LOGO = '__BRAND_LOGO__';

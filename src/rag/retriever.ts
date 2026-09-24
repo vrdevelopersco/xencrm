@@ -1,4 +1,4 @@
-import { embed } from '../llm/ollama.js';
+import { embed } from '../llm/embeddings.js';
 import { business } from '../config.js';
 import { allDocs, ftsSearch, getDocs, vectorSearch, type Doc, type DocKind, type ScoredDoc } from './store.js';
 import { profileText } from '../profile.js';

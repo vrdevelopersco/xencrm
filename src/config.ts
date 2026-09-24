@@ -40,6 +40,9 @@ export const env = {
   ollamaUrl: (process.env.OLLAMA_URL ?? 'http://localhost:11434').replace(/\/$/, ''),
   chatModel: process.env.CHAT_MODEL || 'gemma4:e4b',
   gateModel: process.env.GATE_MODEL || process.env.CHAT_MODEL || 'gemma4:e4b',
+  // De dónde salen los vectores de búsqueda: 'ollama' (local, gratis, pide RAM) u 'openai' (centavos, sin
+  // dependencias). Al cambiarlo hay que volver a indexar: los vectores de dos modelos no se comparan.
+  embedEngine: (process.env.EMBED_ENGINE === 'openai' ? 'openai' : 'ollama') as 'ollama' | 'openai',
   embedModel: process.env.EMBED_MODEL || 'bge-m3',
   numCtx: num(process.env.NUM_CTX, 8192),
   keepAlive: process.env.KEEP_ALIVE || "1h",

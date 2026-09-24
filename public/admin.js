@@ -2,6 +2,9 @@
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
+  // Dónde vive este tablero. Servido en la raíz, BASE queda vacío; servido en /confia/admin, BASE es "/confia".
+  // Así el mismo archivo sirve para una instancia por dominio y para varias bajo un dominio compartido.
+  var BASE = location.pathname.replace(/\/admin\/?$/, '');
   var state = { token: '', name: '', view: 'today', filter: 'all', q: '', contacts: [], current: null, detail: null, kind: 'knowledge', theme: 'light', sound: true, stageLabels: {}, stages: [], es: null, notifs: [], notifSeen: 0, detailOpen: false };
   try { state.token = localStorage.getItem('aiva.admin.token') || ''; state.name = localStorage.getItem('aiva.admin.name') || ''; state.theme = localStorage.getItem('aiva.admin.theme') || 'light'; state.sound = localStorage.getItem('aiva.admin.sound') !== '0'; state.notifSeen = Number(localStorage.getItem('aiva.admin.notifSeen') || 0); } catch (e) {}
 
@@ -59,7 +62,7 @@
     opts = opts || {};
     var headers = { 'x-admin-token': state.token };
     if (opts.body) headers['content-type'] = 'application/json';
-    return fetch('/admin/api' + path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined }).then(function (r) {
+    return fetch(BASE + '/admin/api' + path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined }).then(function (r) {
       if (r.status === 401) { showLogin('Token inválido'); throw new Error('401'); }
       return r.json();
     });
@@ -67,7 +70,7 @@
 
   // Descargar un archivo del tablero sin poner el token en la dirección (una dirección se comparte sin querer).
   function download(path, name) {
-    return fetch('/admin/api' + path, { headers: { 'x-admin-token': state.token } })
+    return fetch(BASE + '/admin/api' + path, { headers: { 'x-admin-token': state.token } })
       .then(function (r) { if (r.status === 401) { showLogin('Token inválido'); throw new Error('401'); } return r.blob(); })
       .then(function (blob) {
         var url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -1048,7 +1051,7 @@
         '<div id="dict-msg" role="status" class="small"></div>';
       var mode = 'merge';
       $('dict-export').onclick = function () {
-        fetch('/admin/api/dictionary/export', { headers: { 'x-admin-token': state.token } }).then(function (r) {
+        fetch(BASE + '/admin/api/dictionary/export', { headers: { 'x-admin-token': state.token } }).then(function (r) {
           var name = (/filename="([^"]+)"/.exec(r.headers.get('content-disposition') || '') || [])[1] || 'diccionario.json';
           return r.blob().then(function (b) { var u = URL.createObjectURL(b), l = document.createElement('a'); l.href = u; l.download = name; document.body.appendChild(l); l.click(); l.remove(); URL.revokeObjectURL(u); });
         });
@@ -1248,7 +1251,7 @@
   // ---------- eventos en vivo ----------
   function connect() {
     if (state.es) state.es.close();
-    var es = new EventSource('/admin/api/stream?token=' + encodeURIComponent(state.token));
+    var es = new EventSource(BASE + '/admin/api/stream?token=' + encodeURIComponent(state.token));
     state.es = es;
     es.onopen = function () { $('conn').textContent = '● en vivo'; $('conn').style.color = 'var(--ok)'; };
     es.onerror = function () { $('conn').textContent = '● reconectando…'; $('conn').style.color = 'var(--warn)'; };

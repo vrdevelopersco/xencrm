@@ -21,8 +21,9 @@
     <p>Prueba preguntar por productos, envíos o pagos, y también algo fuera de tema (por ejemplo, una pregunta de programación) para ver el límite del asistente.</p>
   </main>
   <script>
-    document.getElementById('snippet').textContent = '<script src="' + location.origin + '/widget.js" async><\/script>';
+    var base = location.origin + location.pathname.replace(/\/(index\.html)?$/, '');
+    document.getElementById('snippet').textContent = '<script src="' + base + '/widget.js" async><\/script>';
   </script>
-  <script src="/widget.js" async></script>
+  <script src="widget.js" async></script>
 </body>
 </html>

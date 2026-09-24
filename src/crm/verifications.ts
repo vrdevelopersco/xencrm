@@ -4,7 +4,7 @@
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { business } from '../config.js';
-import { embed } from '../llm/ollama.js';
+import { embed } from '../llm/embeddings.js';
 import { getDb, upsertDoc } from '../rag/store.js';
 import { emitEvent } from './events.js';
 import { sendToContact } from './outbox.js';

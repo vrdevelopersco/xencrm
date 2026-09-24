@@ -3,7 +3,7 @@
 import { getDb } from '../rag/store.js';
 
 /** light/heavy = responder; gate = clasificar; analysis = ficha y puntaje; when = interpretar fechas. */
-export type Task = 'light' | 'heavy' | 'gate' | 'analysis' | 'when';
+export type Task = 'light' | 'heavy' | 'gate' | 'analysis' | 'when' | 'embeddings';
 
 export interface UsageTag {
   task?: Task;
@@ -31,6 +31,9 @@ const PRICES: Record<string, { input: number; cached: number; output: number }> 
   'gpt-5-mini': { input: 0.25, cached: 0.025, output: 2 },
   'gpt-4.1-mini': { input: 0.4, cached: 0.1, output: 1.6 },
   'gpt-4o-mini': { input: 0.15, cached: 0.075, output: 0.6 },
+  // Vectores de búsqueda: no generan salida, solo leen. Son centavos al año con este volumen.
+  'text-embedding-3-small': { input: 0.02, cached: 0.02, output: 0 },
+  'text-embedding-3-large': { input: 0.13, cached: 0.13, output: 0 },
 };
 
 /** Costo en USD de una llamada; null si el modelo no tiene precio conocido (los locales cuestan 0). */
@@ -124,7 +127,7 @@ export function usageSummary(since: number, opts: { userPrefix?: string } = {}):
   };
 }
 
-const TASK_NAMES: Record<string, string> = { light: 'responder (liviano)', heavy: 'responder (pesado)', gate: 'clasificar', analysis: 'análisis', when: 'fechas' };
+const TASK_NAMES: Record<string, string> = { light: 'responder (liviano)', heavy: 'responder (pesado)', gate: 'clasificar', analysis: 'análisis', when: 'fechas', embeddings: 'búsqueda (vectores)' };
 
 /** Tabla de texto para la consola. */
 export function formatUsage(s: UsageSummary): string {

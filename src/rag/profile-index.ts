@@ -1,6 +1,6 @@
 // El perfil del negocio en el índice de búsqueda (para los motores que buscan en vez de ver todo): un documento con lo
 // confirmado. Con OpenAI y un negocio chico no hace falta, porque el perfil va entero en el prompt.
-import { embed } from '../llm/ollama.js';
+import { embed } from '../llm/embeddings.js';
 import { profileText } from '../profile.js';
 import { business } from '../config.js';
 import { replaceDocs, type Doc } from './store.js';

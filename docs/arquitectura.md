@@ -119,6 +119,19 @@ está en la configuración cae a la primera, sin romperse.
 Cada una trae su embudo, si agenda citas y qué datos capturar; se mezclan sobre `aiva.config.example.json` al dar
 de alta un cliente. Es la primera pregunta del alta, porque de ahí sale cómo trabaja ese CRM.
 
+**Los vectores de búsqueda** (`llm/embeddings.ts`) salen de Ollama (`bge-m3`, local y gratis, pide ~3 GB) o de
+OpenAI (`text-embedding-3-small`, $0.02 por millón de tokens), según `EMBED_ENGINE`. Con OpenAI desaparece la
+única dependencia pesada, que es lo que permite correr aiva en una máquina chica o en un hosting de apps. **Al
+cambiar de motor hay que reindexar** (`pnpm ingest`): los vectores de dos modelos no se comparan.
+
+**Desplegar en una plataforma de apps** (`pnpm paquete`): arma un `.zip` con todo aiva compilado a JavaScript.
+Adentro, `arranque.js` levanta **un proceso por cliente** —cada uno con su base, su WhatsApp y su configuración— y
+pone delante un enrutador que reparte por la ruta: `/confia/...` va al proceso de CONFIA sin el prefijo, y el resto
+a la consola. Así un solo despliegue y un solo dominio atienden a todos los clientes sin mezclar sus datos. Dos
+detalles que lo hacen funcionar: el tablero y el widget calculan su base de la URL donde están servidos (por eso
+`admin.html` pide `admin.js` en relativo), y los datos se guardan **fuera de la carpeta del despliegue**, que en
+esas plataformas cambia en cada actualización. Ningún secreto viaja en el `.zip`: van como variables del panel.
+
 **Varios clientes en una máquina.** Un proceso por cliente, no una base compartida: son negocios distintos (una
 boutique, una financiera, una litografía) y lo que no se mezcla no se puede filtrar. Cada uno vive en
 `clientes/<slug>/` con su `aiva.config.json`, su `.env` (puerto, base, carpeta de WhatsApp, token, dominio), su
@@ -286,6 +299,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:score` | pesos del puntaje y el descuento por silencio al leer la ficha | no |
 | `pnpm test:cross` | la misma persona por dos canales: contexto, aviso y fichas separadas | no |
 | `pnpm test:clientes` | alta de un cliente: carpeta, puerto, token, pm2 y túnel | no |
+| `pnpm test:embeddings` | el selector de vectores (Ollama u OpenAI) y su consumo | no |
 | `pnpm test:consola` | tickets, orden de atención y el alta desde la consola | no |
 | `pnpm test:etapas` | un negocio con otro embudo (soporte, sin citas) funciona igual | no |
 | `pnpm test:usuarios` | quién entra a la consola y qué clientes alcanza a ver y atender | no |
