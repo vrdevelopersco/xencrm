@@ -77,6 +77,13 @@ check('no ve el equipo', (await comoAna('/api/usuarios')).status === 403);
 check('ni se copia los tokens de los tableros', (await comoAna('/api/clientes/confia/token')).status === 403);
 check('el super-admin sí ve el equipo', (await (await maestra('/api/usuarios')).json() as { usuarios: unknown[] }).usuarios.length === leerUsuarios().length);
 
+// --- un cliente puede vivir en otra máquina: la consola le habla por su URL ---
+const { urlDe, crearCliente: crear2 } = await import('../clientes.js');
+check('en esta máquina, la consola le habla por su puerto', urlDe({ puerto: 3007 }) === 'http://localhost:3007');
+crear2({ nombre: 'Cliente Lejano', slug: 'lejano', puerto: 39103, base: 'https://lejano.hrctechnologies.com/' });
+const lejano = (await import('../clientes.js')).leerIndice().find((c) => c.slug === 'lejano')!;
+check('si vive en otra parte, por su URL (sin la barra del final)', urlDe(lejano) === 'https://lejano.hrctechnologies.com', urlDe(lejano));
+
 // --- dar de baja un cliente no puede dejar usuarios a la deriva ---
 const { darDeBajaCliente, leerIndice: indice } = await import('../clientes.js');
 const { quitarClienteDeUsuarios, usuariosSinClientes } = await import('../consola-usuarios.js');

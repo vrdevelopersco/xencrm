@@ -21,3 +21,6 @@ ecosystem.config.cjs
 
 # sonda de hosting: su archivo de estado
 herramientas/sonda-hosting/sonda-estado.json
+
+# paquetes para desplegar en una plataforma de apps: se arman, no se guardan
+paquetes/

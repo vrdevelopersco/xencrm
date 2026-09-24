@@ -10,7 +10,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { readFileSync, existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
-import { actualizarCliente, crearCliente, darDeBajaCliente, leerIndice, PLANTILLAS, puertoLibre, tokenDe, type ClienteRef } from './clientes.js';
+import { actualizarCliente, crearCliente, darDeBajaCliente, leerIndice, PLANTILLAS, puertoLibre, tokenDe, urlDe, type ClienteRef } from './clientes.js';
 import { abrirSesion, actualizarUsuario, alcanza, borrarUsuario, cerrarSesion, crearUsuario, leerUsuarios, quitarClienteDeUsuarios, sesionDe, sinClave, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
 
 // El .env de la raíz, sin pasar por la configuración de un cliente (la consola no es de ningún cliente).
@@ -90,9 +90,9 @@ export function ordenar(filas: { cliente: ClienteRef; tickets: Ticket[] }[]) {
   return [...filas].sort((a, b) => peso(b) - peso(a) || a.cliente.nombre.localeCompare(b.cliente.nombre));
 }
 
-const pedir = async (puerto: number, ruta: string, token: string, ms = 2500): Promise<Record<string, unknown> | null> => {
+const pedir = async (cliente: Pick<ClienteRef, 'base' | 'puerto'>, ruta: string, token: string, ms = 2500): Promise<Record<string, unknown> | null> => {
   try {
-    const r = await fetch(`http://localhost:${puerto}${ruta}`, { headers: { 'x-admin-token': token }, signal: AbortSignal.timeout(ms) });
+    const r = await fetch(`${urlDe(cliente)}${ruta}`, { headers: { 'x-admin-token': token }, signal: AbortSignal.timeout(ms) });
     return r.ok ? ((await r.json()) as Record<string, unknown>) : null;
   } catch {
     return null;
@@ -104,11 +104,11 @@ export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
   const token = tokenDe(cliente.slug);
   if (!token) return { arriba: false };
   const [me, stats, hoy, canales, gasto] = await Promise.all([
-    pedir(cliente.puerto, '/admin/api/me', token, 1500),
-    pedir(cliente.puerto, '/admin/api/stats', token),
-    pedir(cliente.puerto, '/admin/api/today', token),
-    pedir(cliente.puerto, '/admin/api/channels', token),
-    pedir(cliente.puerto, '/admin/api/usage?days=30', token),
+    pedir(cliente, '/admin/api/me', token, 1500),
+    pedir(cliente, '/admin/api/stats', token),
+    pedir(cliente, '/admin/api/today', token),
+    pedir(cliente, '/admin/api/channels', token),
+    pedir(cliente, '/admin/api/usage?days=30', token),
   ]);
   if (!me) return { arriba: false };
   const lista = (x: unknown) => (Array.isArray(x) ? x.length : 0);
@@ -166,7 +166,7 @@ export async function pendientes(usuario: UsuarioPublico | null = null): Promise
     clientes.map(async (cliente): Promise<Pendiente[]> => {
       const token = tokenDe(cliente.slug);
       if (!token) return [];
-      const hoy = await pedir(cliente.puerto, '/admin/api/today', token);
+      const hoy = await pedir(cliente, '/admin/api/today', token);
       if (!hoy) return [];
       const base = { slug: cliente.slug, cliente: cliente.nombre, prioridad: cliente.prioridad };
       const nombre = (c: Record<string, unknown>) => String(c.name ?? '') || String(c.id ?? '').replace(/^(wa|meta|web|cli|mcp):/, '').slice(0, 14);
@@ -262,7 +262,7 @@ export function mountConsola(app: Hono) {
   // El alta la hace el super-admin desde aquí: crea la carpeta, el token y el puerto. No arranca nada.
   app.post('/api/clientes', async (c) => {
     if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin da de alta clientes' }, 403);
-    const body = (await c.req.json().catch(() => ({}))) as { nombre?: string; slug?: string; host?: string; puerto?: number; prioridad?: ClienteRef['prioridad']; plantilla?: string };
+    const body = (await c.req.json().catch(() => ({}))) as { nombre?: string; slug?: string; host?: string; puerto?: number; base?: string; prioridad?: ClienteRef['prioridad']; plantilla?: string };
     if (!body.nombre?.trim()) return c.json({ error: 'falta el nombre del negocio' }, 400);
     try {
       const { cliente, token } = crearCliente({
@@ -270,6 +270,7 @@ export function mountConsola(app: Hono) {
         slug: body.slug,
         host: body.host?.trim(),
         puerto: body.puerto ? Number(body.puerto) : undefined,
+        base: body.base?.trim(),
         prioridad: body.prioridad,
         plantilla: body.plantilla,
       });
@@ -302,7 +303,7 @@ export function mountConsola(app: Hono) {
     const cliente = leerIndice().find((x) => x.slug === slug);
     const token = cliente ? tokenDe(slug) : '';
     if (!cliente || !token) return c.json({ error: 'ese cliente no existe' }, 404);
-    const url = new URL(`http://localhost:${cliente.puerto}/admin/api/${c.req.param('ruta')}`);
+    const url = new URL(`${urlDe(cliente)}/admin/api/${c.req.param('ruta')}`);
     for (const [k, v] of Object.entries(c.req.query())) url.searchParams.set(k, v);
     const method = c.req.method;
     const body = method === 'GET' || method === 'HEAD' ? undefined : await c.req.text();

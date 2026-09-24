@@ -18,6 +18,12 @@ export interface ClienteRef {
   puerto: number;
   /** Subdominio por el que entran sus clientes y su equipo. Vacío mientras no haya dominio. */
   host: string;
+  /**
+   * Dónde vive su instancia, si no es en esta máquina. Vacío = `http://localhost:<puerto>`, que es el caso normal
+   * (un proceso por cliente aquí). Con una URL, la consola le habla por ahí: así los clientes pueden estar en una
+   * plataforma de apps, cada uno con su dominio, y seguir operándose desde una sola pantalla.
+   */
+  base?: string;
   /** Para la consola: qué tan pendiente hay que estar de este cliente. */
   prioridad: 'alta' | 'media' | 'baja';
   desde: string;
@@ -127,8 +133,14 @@ export function rutas(slug: string) {
   };
 }
 
-/** El token del tablero de un cliente, leído de su .env (lo necesita la consola para preguntarle cómo va). */
+/**
+ * El token del tablero de un cliente, para que la consola pueda preguntarle cómo va. Sale de su `.env`, o de una
+ * variable de entorno `TOKEN_<SLUG>`: eso último es para las plataformas de apps, donde los secretos se ponen en
+ * el panel y no en un archivo que viaje dentro del paquete.
+ */
 export function tokenDe(slug: string): string {
+  const porEntorno = process.env[`TOKEN_${slug.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`];
+  if (porEntorno) return porEntorno.trim();
   const env = rutas(slug).env;
   if (!existsSync(env)) return '';
   for (const line of readFileSync(env, 'utf8').split('\n')) {
@@ -138,8 +150,11 @@ export function tokenDe(slug: string): string {
   return '';
 }
 
-/** Cambia lo que el super-admin puede ajustar de un cliente: prioridad, dominio y notas. */
-export function actualizarCliente(slug: string, cambios: Partial<Pick<ClienteRef, 'prioridad' | 'host' | 'notas' | 'nombre'>>): ClienteRef {
+/** A dónde le habla la consola: su URL si está en otra parte, o su puerto en esta máquina. */
+export const urlDe = (c: Pick<ClienteRef, 'base' | 'puerto'>): string => (c.base ? c.base.replace(/\/$/, '') : `http://localhost:${c.puerto}`);
+
+/** Cambia lo que el super-admin puede ajustar de un cliente: prioridad, dominio, notas y dónde vive. */
+export function actualizarCliente(slug: string, cambios: Partial<Pick<ClienteRef, 'prioridad' | 'host' | 'notas' | 'nombre' | 'base'>>): ClienteRef {
   const clientes = leerIndice();
   const i = clientes.findIndex((c) => c.slug === slug);
   if (i === -1) throw new Error('ese cliente no existe');
@@ -160,6 +175,8 @@ export function crearCliente(opts: {
   plantilla?: string;
   puerto?: number;
   host?: string;
+  /** Si la instancia no corre en esta máquina: la URL donde responde. */
+  base?: string;
   prioridad?: ClienteRef['prioridad'];
   hoy?: string;
 }): { cliente: ClienteRef; token: string } {
@@ -209,6 +226,7 @@ export function crearCliente(opts: {
     nombre: opts.nombre,
     puerto,
     host,
+    ...(opts.base ? { base: opts.base.replace(/\/$/, '') } : {}),
     prioridad: opts.prioridad ?? 'media',
     desde: (opts.hoy ?? new Date().toISOString()).slice(0, 10),
   };
@@ -292,6 +310,17 @@ async function main() {
     return;
   }
 
+  if (accion === 'base') {
+    const [, slug, url] = process.argv.slice(2);
+    if (!slug) {
+      console.log('Uso: pnpm cliente base <slug> <url>   ·   pnpm cliente base <slug> aqui   (para volver a localhost)');
+      return;
+    }
+    const cliente = actualizarCliente(slug, { base: !url || url === 'aqui' ? undefined : url });
+    console.log(`${cliente.nombre}: la consola ahora le habla a ${cliente.base ?? `http://localhost:${cliente.puerto}`}`);
+    return;
+  }
+
   if (accion === 'pm2') {
     writeFileSync('ecosystem.config.cjs', pm2Config(clientes));
     console.log(`ecosystem.config.cjs con ${clientes.length} cliente${clientes.length === 1 ? '' : 's'}.`);
@@ -341,7 +370,7 @@ async function main() {
     return;
   }
 
-  console.log('Acciones: lista · nuevo · pm2 · tunel');
+  console.log('Acciones: lista · nuevo · base · pm2 · tunel');
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) await main();

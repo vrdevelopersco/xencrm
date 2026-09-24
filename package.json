@@ -22,6 +22,7 @@
     "cliente": "tsx src/clientes.ts",
     "consola": "tsx src/consola.ts",
     "producto": "tsx src/producto.ts",
+    "paquete": "tsx src/paquete.ts",
     "test:when": "tsx src/eval/when.ts",
     "usage": "tsx src/eval/usage.ts",
     "replay": "tsx src/eval/replay.ts",
