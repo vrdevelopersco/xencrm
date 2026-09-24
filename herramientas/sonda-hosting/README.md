@@ -34,5 +34,19 @@ hosting compartido normalmente **no** tiene:
 | El archivo sobrevivió al reinicio | ✅ La base de datos está a salvo |
 | El disco no acepta escrituras | ❌ No sirve: cada cliente necesita su archivo |
 
-Si las cuatro salen bien, falta una sola cosa antes de mover aiva ahí: **cuántas apps permite el plan**. aiva corre
-un proceso por cliente más la consola, así que con tres clientes son cuatro apps (o un VPS donde corren todas).
+## La quinta pregunta, que es la que muerde
+
+Hay hostings que despliegan en una carpeta nueva cada vez (`…/versions/<uuid>/`). Ahí, lo que la app escriba al
+lado de su código **sobrevive a un reinicio pero no a un redespliegue**: la versión nueva estrena carpeta y los
+datos quedan huérfanos en la vieja. Para una base SQLite eso es perderlo todo en la primera actualización.
+
+Por eso la sonda busca además **un sitio estable fuera de la carpeta del despliegue** y cuenta los arranques ahí
+por separado. Para comprobarlo:
+
+1. Despliega y abre la sonda. Anota los dos números: `arranques` y `arranquesEnSitioEstable`.
+2. **Vuelve a desplegar** (sube el mismo ZIP otra vez).
+3. Abre de nuevo. Si `arranques` volvió a 1 pero `arranquesEnSitioEstable` siguió subiendo, ahí es donde va la base
+   de datos, y el hosting sirve. Si los dos volvieron a 1, no hay dónde guardar nada que dure.
+
+Si todo sale bien, falta una sola cosa antes de mover aiva ahí: **cuántas apps permite el plan**. aiva corre un
+proceso por cliente más la consola, así que con tres clientes son cuatro apps (o un VPS donde corren todas).

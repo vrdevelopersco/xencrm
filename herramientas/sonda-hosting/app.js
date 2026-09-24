@@ -19,6 +19,34 @@ const PUERTO = process.env.PORT || 3000;
 const ARCHIVO = path.join(process.env.SONDA_DIR || __dirname, 'sonda-estado.json');
 const ARRANQUE = Date.now();
 
+// ---------- 5: ¿hay un sitio donde los datos sobrevivan a un DESPLIEGUE? ----------
+// Algunos hostings despliegan en una carpeta nueva cada vez (.../versions/<uuid>/), así que lo que la app escriba
+// al lado de su código se queda huérfano en la versión vieja. Para una base SQLite eso es perder los datos en la
+// primera actualización. Aquí se busca un sitio estable FUERA de esa carpeta y se cuenta aparte.
+function sitiosEstables() {
+  const fuera = path.resolve(__dirname, '..', '..', '..', '..'); // arriba de versions/<uuid>/nodejs
+  return [
+    process.env.SONDA_DATOS,
+    path.join(os.homedir(), 'datos-persistentes'),
+    path.join(fuera, 'datos-persistentes'),
+    path.join(os.tmpdir(), 'datos-persistentes'),
+  ].filter(Boolean);
+}
+const estable = { ruta: null, arranques: 0, error: null };
+for (const dir of sitiosEstables()) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const f = path.join(dir, 'sonda-persistente.json');
+    const previo = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : { arranques: 0 };
+    estable.arranques = (previo.arranques || 0) + 1;
+    estable.ruta = f;
+    fs.writeFileSync(f, JSON.stringify({ arranques: estable.arranques, ultimo: new Date().toISOString() }, null, 2));
+    break;
+  } catch (e) {
+    estable.error = `${dir}: ${e.message || e}`;
+  }
+}
+
 // ---------- 1 y 4: ¿el proceso sobrevive y cuántas veces lo reiniciaron? ----------
 let estado = { arranques: 0, primerArranque: ARRANQUE, ultimoLatido: ARRANQUE, latidos: 0, discoEscribe: false };
 try {
@@ -160,8 +188,21 @@ function veredicto() {
     estado.discoEscribe ? 'El disco acepta escrituras (la base de cada cliente es un archivo).' : `El disco NO acepta escrituras: ${estado.errorDisco ?? ''}`,
   );
 
-  if (estado.arranques > 1) bien.push(`El archivo sobrevivió a ${estado.arranques - 1} reinicio(s): el disco es persistente.`);
-  else problemas.push('Todavía no se ha reiniciado: reinicia la app desde el panel y vuelve a mirar, para saber si el disco sobrevive.');
+  if (estado.arranques > 1) bien.push(`El archivo de al lado del código sobrevivió a ${estado.arranques - 1} arranque(s).`);
+  else problemas.push('Todavía no se ha reiniciado: reinicia la app desde el panel y vuelve a mirar.');
+
+  // Lo que de verdad decide para una base SQLite: sobrevivir a un DESPLIEGUE, no a un reinicio.
+  const versionado = /versions?\/[0-9a-f-]{8,}/i.test(ARCHIVO);
+  if (versionado) {
+    problemas.push(`Ojo: la app vive en una carpeta por despliegue (…${ARCHIVO.slice(-72)}). Lo que escriba ahí se queda en la versión vieja cuando redespliegues.`);
+  }
+  if (estable.ruta) {
+    bien.push(`Sitio estable fuera del despliegue: ${estable.ruta} (lleva ${estable.arranques} arranque(s) contados ahí).`);
+    if (estable.arranques > estado.arranques) bien.push('Ese sitio YA sobrevivió a un redespliegue: ahí va la base de datos.');
+    else problemas.push('Vuelve a desplegar la app y mira este número: si el estable sigue subiendo y el otro se reinicia en 1, la base va en el estable.');
+  } else {
+    problemas.push(`No encontré dónde guardar datos fuera de la carpeta del despliegue${estable.error ? ` (${estable.error})` : ''}. Sin eso, una base SQLite se pierde al actualizar.`);
+  }
 
   if (minutosVivo < 30) problemas.push(`Lleva ${Math.round(minutosVivo)} min corriendo. Déjala una hora sin visitarla y vuelve: ahí se ve si la duermen.`);
 
@@ -184,6 +225,9 @@ http
         pid: process.pid,
         vivoMinutos: +((Date.now() - ARRANQUE) / 60000).toFixed(1),
         arranques: estado.arranques,
+        arranquesEnSitioEstable: estable.arranques,
+        sitioEstable: estable.ruta,
+        carpetaPorDespliegue: /versions?\/[0-9a-f-]{8,}/i.test(ARCHIVO),
         latidos: estado.latidos,
         websocket: ws,
         archivoDeEstado: ARCHIVO,
