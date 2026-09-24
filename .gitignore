@@ -18,3 +18,6 @@ sidecar/bin/
 # clientes: cada uno con su configuración, su base, su WhatsApp y su token
 clientes/
 ecosystem.config.cjs
+
+# sonda de hosting: su archivo de estado
+herramientas/sonda-hosting/sonda-estado.json
