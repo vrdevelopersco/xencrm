@@ -12,6 +12,8 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const tls = require('node:tls');
+const crypto = require('node:crypto');
 
 const PUERTO = process.env.PORT || 3000;
 const ARCHIVO = path.join(process.env.SONDA_DIR || __dirname, 'sonda-estado.json');
@@ -46,41 +48,88 @@ setInterval(() => {
 }, 15000).unref?.();
 
 // ---------- 2: ¿puede abrir un WebSocket hacia afuera y sostenerlo? ----------
-const ws = { estado: 'probando', abiertoDesde: null, error: null, mensajes: 0 };
-function probarWebSocket() {
-  if (typeof WebSocket === 'undefined') {
-    ws.estado = 'node viejo';
-    ws.error = 'Este Node no trae WebSocket (hace falta Node 20+)';
-    return;
-  }
-  try {
-    const s = new WebSocket('wss://ws.postman-echo.com/raw');
-    s.addEventListener('open', () => {
+// Node 20 todavía no trae WebSocket global (llegó en la 22), así que si no está se hace el handshake a mano sobre
+// TLS: es exactamente lo que necesita Baileys —salir por el 443 y que el hosting deje pasar el Upgrade.
+const ws = { estado: 'probando', via: null, abiertoDesde: null, error: null, mensajes: 0 };
+const HOST_WS = 'ws.postman-echo.com';
+const RUTA_WS = '/raw';
+
+function probarConGlobal() {
+  const s = new WebSocket(`wss://${HOST_WS}${RUTA_WS}`);
+  s.addEventListener('open', () => {
+    ws.estado = 'abierto';
+    ws.via = 'WebSocket de Node';
+    ws.abiertoDesde = Date.now();
+    s.send('hola');
+    setInterval(() => {
+      try {
+        s.send('sigo aqui');
+      } catch {
+        /* si se cayó, el close lo cuenta */
+      }
+    }, 20000).unref?.();
+  });
+  s.addEventListener('message', () => {
+    ws.mensajes += 1;
+  });
+  s.addEventListener('error', () => {
+    ws.estado = 'bloqueado';
+    ws.error = 'no se pudo abrir la conexión hacia afuera';
+  });
+  s.addEventListener('close', () => {
+    if (ws.estado === 'abierto') {
+      ws.estado = 'se cerró';
+      ws.cerradoA = Date.now();
+    }
+    setTimeout(probarWebSocket, 10000);
+  });
+}
+
+function probarAMano() {
+  const clave = crypto.randomBytes(16).toString('base64');
+  const s = tls.connect({ host: HOST_WS, port: 443, servername: HOST_WS }, () => {
+    s.write(
+      `GET ${RUTA_WS} HTTP/1.1\r\nHost: ${HOST_WS}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n` +
+        `Sec-WebSocket-Key: ${clave}\r\nSec-WebSocket-Version: 13\r\n\r\n`,
+    );
+  });
+  s.once('data', (d) => {
+    const primera = d.toString('latin1').split('\r\n')[0];
+    if (/\b101\b/.test(primera)) {
       ws.estado = 'abierto';
+      ws.via = 'handshake a mano (Node sin WebSocket)';
       ws.abiertoDesde = Date.now();
-      s.send('hola');
+      // Un ping cada 20 s para sostenerla: frame 0x89 con máscara, como manda el protocolo del lado del cliente.
       setInterval(() => {
         try {
-          s.send('sigo aqui');
+          s.write(Buffer.concat([Buffer.from([0x89, 0x80]), crypto.randomBytes(4)]));
+          ws.mensajes += 1;
         } catch {
-          /* si se cayó, el evento close lo cuenta */
+          /* el close lo cuenta */
         }
       }, 20000).unref?.();
-    });
-    s.addEventListener('message', () => {
-      ws.mensajes += 1;
-    });
-    s.addEventListener('error', () => {
+    } else {
       ws.estado = 'bloqueado';
-      ws.error = 'no se pudo abrir la conexión hacia afuera';
-    });
-    s.addEventListener('close', () => {
-      if (ws.estado === 'abierto') {
-        ws.estado = 'se cerró';
-        ws.cerradoA = Date.now();
-      }
-      setTimeout(probarWebSocket, 10000); // reintenta, a ver si es intermitente
-    });
+      ws.error = `el hosting respondió "${primera}" en vez de aceptar el Upgrade`;
+    }
+  });
+  s.on('error', (e) => {
+    ws.estado = 'bloqueado';
+    ws.error = String(e.message || e);
+  });
+  s.on('close', () => {
+    if (ws.estado === 'abierto') {
+      ws.estado = 'se cerró';
+      ws.cerradoA = Date.now();
+    }
+    setTimeout(probarWebSocket, 10000);
+  });
+}
+
+function probarWebSocket() {
+  try {
+    if (typeof WebSocket !== 'undefined') return probarConGlobal();
+    return probarAMano();
   } catch (e) {
     ws.estado = 'bloqueado';
     ws.error = String(e);
@@ -103,7 +152,7 @@ function veredicto() {
     problemas.push('El proceso NO late solo: el hosting lo duerme entre peticiones. WhatsApp no funcionaría.');
   }
 
-  if (ws.estado === 'abierto') bien.push(`WebSocket saliente abierto hace ${Math.round((Date.now() - ws.abiertoDesde) / 60000)} min (${ws.mensajes} mensajes).`);
+  if (ws.estado === 'abierto') bien.push(`WebSocket saliente abierto hace ${Math.round((Date.now() - ws.abiertoDesde) / 60000)} min · ${ws.via}.`);
   else if (ws.estado === 'probando') problemas.push('El WebSocket todavía está conectando: recarga en un minuto.');
   else problemas.push(`WebSocket saliente: ${ws.estado}${ws.error ? ` (${ws.error})` : ''}. Sin esto, WhatsApp por QR no sirve.`);
 
