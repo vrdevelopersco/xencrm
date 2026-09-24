@@ -141,15 +141,19 @@ await run('el evento es el viernes', { step: 'confirmar', offered, chosen: offer
     : null,
 );
 {
+  // El evento, a cinco días: así siempre quedan días hábiles antes, caiga hoy en el día de la semana que caiga.
+  const p = tzParts(new Date(Date.now() + 5 * 86400_000));
+  const evento = dayKey(p.y, p.m, p.d);
+  const nombreDia = formatDay(zoned(p.y, p.m, p.d, 12, 0)).split(',')[0]!;
   const userId = `test:booking-${++n}`;
   touchUser(userId, 'cli', 'Prueba');
   updateContact(userId, { name: 'Arnulfo', phone: '+573000000000' }, { silent: true });
-  const text = await startBooking(userId, 'El evento es este viernes, quiero una cita');
+  const text = await startBooking(userId, `El evento es el ${nombreDia}, quiero una cita`);
   const st = getContact(userId)?.data.booking as State | undefined;
   const days = (st?.offered ?? []).map(day);
-  const ok = days.length > 0 && days.every((d) => d < friday);
+  const ok = days.length > 0 && days.every((d) => d < evento);
   if (!ok) fail++;
-  console.log(`${ok ? '✓' : '✗'} agendar diciendo cuándo es el evento: espacios antes del viernes${ok ? '' : `
+  console.log(`${ok ? '✓' : '✗'} agendar diciendo cuándo es el evento: espacios antes del ${nombreDia}${ok ? '' : `
    ${days.join(', ')} · ${text.replace(/\n/g, ' ⏎ ')}`}`);
 }
 

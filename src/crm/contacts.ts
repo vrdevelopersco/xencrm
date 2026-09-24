@@ -1,7 +1,7 @@
 // Ficha de prospecto (contacto) sobre la tabla users, con etapa, puntaje explicable y modo humano.
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
-import { decayed } from './score.js';
+import { decayed, silencePenalty } from './score.js';
 import { emitEvent } from './events.js';
 
 // El embudo sale de la configuración del negocio (crm.stages): una boutique agenda citas, una financiera estudia
@@ -108,18 +108,49 @@ export function getContact(id: string): Contact | null {
 }
 
 /**
- * El número del contacto, solo dígitos y con indicativo: el que dio o el de su WhatsApp (la dirección lo trae).
+ * El número de un contacto, solo dígitos y con indicativo: el que dio o el de su WhatsApp (la dirección lo trae).
  * Sirve para escribirle, llamarlo y para saber si dos fichas son la misma persona.
  */
-export function contactNumber(c: Contact | null): string | null {
-  if (!c) return null;
-  const m = /^(?:wa:(\d{8,15})@s\.whatsapp\.net|meta:(\d{8,15}))$/.exec(c.id);
-  const raw = c.phone ?? (m ? (m[1] ?? m[2]!) : null);
+export function numeroNormalizado(id: string, phone: string | null): string | null {
+  const m = /^(?:wa:(\d{8,15})@s\.whatsapp\.net|meta:(\d{8,15}))$/.exec(id);
+  const raw = phone ?? (m ? (m[1] ?? m[2]!) : null);
   if (!raw) return null;
   let digits = raw.replace(/\D/g, '');
   // "300 123 4567" y "+57 300 123 4567" son el mismo número.
   if (digits.length === business.business.phoneLocalDigits) digits = business.business.phoneCountryCode + digits;
   return digits.length >= 8 ? digits : null;
+}
+
+export const contactNumber = (c: Contact | null): string | null => (c ? numeroNormalizado(c.id, c.phone) : null);
+
+/** Guarda el número normalizado en su columna (indexada), para no tener que recorrer los contactos buscándolo. */
+export function guardarNumero(id: string, phone: string | null) {
+  getDb().prepare('UPDATE users SET number = ? WHERE id = ?').run(numeroNormalizado(id, phone), id);
+}
+
+/**
+ * Las fichas viejas no tienen el número guardado (la columna es nueva). Se llena una sola vez, la primera vez que
+ * alguien lo necesita: así no hay que migrar a mano ni pagarlo al arrancar.
+ */
+let numerosAlDia = false;
+export function ponerNumerosAlDia() {
+  if (numerosAlDia) return;
+  numerosAlDia = true;
+  const db = getDb();
+  const faltan = db
+    .prepare("SELECT id, phone FROM users WHERE number IS NULL AND (phone IS NOT NULL OR id LIKE 'wa:%' OR id LIKE 'meta:%')")
+    .all() as { id: string; phone: string | null }[];
+  if (!faltan.length) return;
+  const set = db.prepare('UPDATE users SET number = ? WHERE id = ?');
+  db.exec('BEGIN');
+  try {
+    for (const f of faltan) set.run(numeroNormalizado(f.id, f.phone), f.id);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  console.log(`[crm] número normalizado guardado en ${faltan.length} fichas`);
 }
 
 export function listContacts(opts: { stage?: Stage; humanMode?: boolean; q?: string; limit?: number; archived?: boolean } = {}): Contact[] {
@@ -195,6 +226,7 @@ export function updateContact(id: string, patch: ContactPatch, opts: { silent?: 
   if (sets.length) {
     params.push(id);
     getDb().prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    if (patch.phone !== undefined) guardarNumero(id, patch.phone ?? null); // el número vive en su columna, indexado
   }
   const c = getContact(id);
   if (c && !opts.silent) emitEvent('contact', id, { contact: c });
@@ -236,8 +268,11 @@ export function stats() {
   for (const r of db.prepare('SELECT stage, COUNT(*) n FROM users WHERE archived = 0 GROUP BY stage').all() as { stage: Stage; n: number }[]) byStage[r.stage] = r.n;
   const total = (db.prepare('SELECT COUNT(*) n FROM users WHERE archived = 0').get() as { n: number }).n;
   const avgScore = (db.prepare('SELECT AVG(score) a FROM users WHERE archived = 0').get() as { a: number | null }).a ?? 0;
-  // Calientes de hoy: el puntaje ya con el descuento por silencio, igual que lo que se ve en las listas.
-  const hot = listContacts({ limit: 100000 }).filter((c) => c.score >= 60).length;
+  // Calientes de hoy: el puntaje con el descuento por silencio, igual que en las listas. Solo se leen las tres
+  // columnas que hacen falta: construir la ficha entera de cada contacto costaba 130 ms con 20.000.
+  const hot = (db.prepare('SELECT score, stage, last_message_at FROM users WHERE archived = 0').all() as { score: number; stage: Stage; last_message_at: number | null }[]).filter(
+    (r) => Number(r.score) - silencePenalty(r.last_message_at, r.stage) >= 60,
+  ).length;
   const human = (db.prepare('SELECT COUNT(*) n FROM users WHERE human_mode = 1 AND archived = 0').get() as { n: number }).n;
   const unread = (db.prepare('SELECT COALESCE(SUM(unread), 0) n FROM users WHERE archived = 0').get() as { n: number }).n;
   const sentiments = Object.fromEntries(

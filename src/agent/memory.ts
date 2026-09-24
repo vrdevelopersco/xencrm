@@ -1,4 +1,4 @@
-import { primeraEtapa } from '../crm/contacts.js';
+import { guardarNumero, primeraEtapa } from '../crm/contacts.js';
 import { siblingIds } from '../crm/merge.js';
 import { getDb } from '../rag/store.js';
 import { env } from '../config.js';
@@ -22,6 +22,7 @@ export function touchUser(id: string, channel: string, name?: string | null): Us
        name = COALESCE(excluded.name, users.name),
        archived = 0`, // si estaba archivada y el cliente vuelve a escribir, reaparece
   ).run(id, channel, name ?? null, primeraEtapa(), now, now);
+  guardarNumero(id, null); // de la dirección de WhatsApp sale el número; si dio otro, se actualiza al guardarlo
   const row = db.prepare('SELECT id, channel, name, first_seen, last_seen FROM users WHERE id = ?').get(id) as Record<
     string,
     unknown

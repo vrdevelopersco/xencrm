@@ -3,7 +3,7 @@
 // análisis y el consumo quedan en la ficha que se conserva, y la otra desaparece. No se puede deshacer, así que el
 // tablero lo pregunta antes (el respaldo diario es la red de seguridad).
 import { getDb } from '../rag/store.js';
-import { addEvent, contactNumber, getContact, STAGES, type Contact, type Stage } from './contacts.js';
+import { addEvent, contactNumber, getContact, ponerNumerosAlDia, STAGES, type Contact, type Stage } from './contacts.js';
 import { emitEvent } from './events.js';
 
 const TABLES = ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses', 'llm_usage'];
@@ -13,11 +13,11 @@ export function findDuplicates(id: string): { contact: Contact; reason: string }
   const c = getContact(id);
   const number = c && contactNumber(c);
   if (!c || !number) return [];
-  const rows = getDb().prepare('SELECT id FROM users WHERE id <> ?').all(id) as { id: string }[];
+  ponerNumerosAlDia(); // las fichas de antes de la columna
+  const rows = getDb().prepare('SELECT id FROM users WHERE number = ? AND id <> ?').all(number, id) as { id: string }[];
   return rows.flatMap((r) => {
     const other = getContact(r.id);
-    if (!other || contactNumber(other) !== number) return [];
-    return [{ contact: other, reason: `mismo número (${number})` }];
+    return other ? [{ contact: other, reason: `mismo número (${number})` }] : [];
   });
 }
 

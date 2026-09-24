@@ -188,6 +188,10 @@ function migrate(d: DatabaseSync) {
   addUser('human_by', 'TEXT');
   addUser('human_since', 'INTEGER');
   addUser('archived', 'INTEGER NOT NULL DEFAULT 0'); // conversaciones guardadas: no salen en las listas
+  // El número normalizado (con indicativo). Buscar "la misma persona" por aquí es una consulta indexada; antes
+  // había que recorrer todos los contactos en cada mensaje.
+  addUser('number', 'TEXT');
+  d.exec('CREATE INDEX IF NOT EXISTS users_number ON users(number)');
   const appts = cols('appointments');
   // Recordatorio del día antes: estado (enviado, a_mano, no_hace_falta), cuándo, por qué, y qué respondió el cliente.
   for (const [name, ddl] of [['reminder_status', 'TEXT'], ['reminder_at', 'INTEGER'], ['reminder_note', 'TEXT'], ['customer_reply', 'TEXT']] as const)
