@@ -30,6 +30,8 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
 - [`docs/demo.md`](docs/demo.md): el guion del demo en vivo, con la lista de lo que hay que dejar listo antes.
 - [`docs/aprender-del-historial.md`](docs/aprender-del-historial.md): cómo aprovechar las conversaciones que ya
   tiene un cliente (el estilo sí, los precios no) y qué hace falta antes de tocarlas.
+- [`docs/migrar-a-hostinger.md`](docs/migrar-a-hostinger.md): qué apps de OCI caben en un hosting de apps y
+  cuáles no, con el porqué de cada una.
 - [`docs/consola.md`](docs/consola.md): operar varios clientes: montar uno nuevo, atenderlos a todos desde una
   pantalla, roles y qué pasa al dar de baja a un cliente.
 - [`docs/aiva-producto.pdf`](docs/aiva-producto.pdf): lo que hace aiva, en una hoja, para mostrarle a un cliente
