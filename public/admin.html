@@ -4,14 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aiva · Tablero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#eef0f4;--panel:#fff;--glass:rgba(255,255,255,.70);--glass-strong:rgba(255,255,255,.80);--glass-overlay:rgba(255,255,255,.92);--glass-border:rgba(17,24,39,.08);--glass-inset:inset 0 -1px 0 rgba(17,24,39,.06);--glass-shadow:0 10px 32px rgba(17,24,39,.10);--blob1:#bfe3cf;--blob2:#c7d6f5;--blob3:#f6e3c8;--line:#e2e5ea;--text:#111827;--muted:#5f6875;--brand:#276f45;--brand-soft:#e6f4ec;--cita:#276f45;--cita-soft:#e6f4ec;--si:#276f45;--si-soft:#e6f4ec;--warn:#a3480a;--warn-soft:#fef3c7;--bad:#b91c1c;--bad-soft:#fee2e2;--ok:#166534;--ok-soft:#dcfce7;--me:#dbeafe;--bot:#f3f4f6;--human:#fef9c3;--shadow:0 1px 2px rgba(0,0,0,.06)}
-[data-theme=dark]{--bg:#0b0d12;--panel:#171a21;--glass:rgba(24,28,36,.58);--glass-strong:rgba(24,28,36,.78);--glass-overlay:rgba(24,28,36,.92);--glass-border:rgba(255,255,255,.09);--glass-inset:inset 0 1px 0 rgba(255,255,255,.06);--glass-shadow:0 12px 36px rgba(0,0,0,.45);--blob1:#12392a;--blob2:#15264a;--blob3:#3a2a12;--line:#262a33;--text:#e5e7eb;--muted:#9aa3b2;--brand:#5fbf86;--brand-soft:#173424;--cita:#5fbf86;--cita-soft:#173424;--si:#5fbf86;--si-soft:#173424;--warn:#f59e0b;--warn-soft:#3a2a08;--bad:#f87171;--bad-soft:#3b1212;--ok:#4ade80;--ok-soft:#0f2e1b;--me:#1e3a5f;--bot:#20242d;--human:#3a3410;--shadow:none}
+:root{--bg:#f6f5f1;--panel:#fff;--glass:rgba(255,255,255,.82);--glass-strong:rgba(255,255,255,.9);--glass-overlay:rgba(255,255,255,.96);--glass-border:#e8e4da;--glass-inset:inset 0 1px 0 rgba(255,255,255,.7);--glass-shadow:0 1px 2px rgba(20,17,12,.05),0 8px 24px rgba(20,17,12,.06);--blob1:#f7ecc4;--blob2:#e7eaf3;--blob3:#f1ece0;--line:#e8e4da;--text:#14110c;--muted:#5e5950;--brand:#7b660f;--brand-soft:#fdf6dd;--cita:#7b660f;--cita-soft:#fdf6dd;--si:#2c6b3f;--si-soft:#e6f3e9;--warn:#8a5a08;--warn-soft:#fdf3dd;--bad:#a4231b;--bad-soft:#fdeceb;--ok:#2c6b3f;--ok-soft:#e6f3e9;--me:#eef1f8;--bot:#f2f0ea;--human:#fdf6dd;--shadow:0 1px 2px rgba(20,17,12,.05)}
+[data-theme=dark]{--bg:#14120d;--panel:#1e1b15;--glass:rgba(30,27,21,.72);--glass-strong:rgba(30,27,21,.86);--glass-overlay:rgba(30,27,21,.95);--glass-border:rgba(255,255,255,.10);--glass-inset:inset 0 1px 0 rgba(255,255,255,.06);--glass-shadow:0 12px 36px rgba(0,0,0,.5);--blob1:#3a2f10;--blob2:#1a2033;--blob3:#2a2318;--line:#2e2a22;--text:#f0ece4;--muted:#a9a296;--brand:#e2c04c;--brand-soft:#332a10;--cita:#e2c04c;--cita-soft:#332a10;--si:#6cc48a;--si-soft:#14301f;--warn:#e9b03c;--warn-soft:#37290c;--bad:#f08b84;--bad-soft:#3a1714;--ok:#6cc48a;--ok-soft:#14301f;--me:#1f2a3d;--bot:#26221a;--human:#332a10;--shadow:none}
 *{box-sizing:border-box}html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-body::before{content:"";position:fixed;inset:-20%;z-index:-1;pointer-events:none;background:radial-gradient(600px 500px at 8% 10%,var(--blob1),transparent 60%),radial-gradient(700px 600px at 90% 20%,var(--blob2),transparent 60%),radial-gradient(600px 500px at 60% 100%,var(--blob3),transparent 60%);filter:blur(40px);opacity:.9}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14.5px/1.5 Figtree,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:-20%;z-index:-1;pointer-events:none;background:radial-gradient(600px 500px at 8% 10%,var(--blob1),transparent 60%),radial-gradient(700px 600px at 90% 20%,var(--blob2),transparent 60%),radial-gradient(600px 500px at 60% 100%,var(--blob3),transparent 60%);filter:blur(50px);opacity:.55}
 /* Liquid glass: superficies translúcidas con desenfoque y borde con brillo. Solo en contenedores, no en filas ni burbujas. */
-.glass{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow)}
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow)}
 button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--brand)}
 .app{display:grid;grid-template-columns:220px 1fr;height:100vh}
@@ -305,7 +310,7 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
    Reglas (con HRCAPOLO): todo relleno de color lleva su --on-* medido; la textura va en lo que se toca o se
    escanea, nunca en lo que se lee de corrido; el grabado se valida al tamaño real (solo en el botón primario). */
 :root{
-  --on-brand:#fff;--brand-deep:#205b39;--on-bad:#fff;
+  --on-brand:#fff;--brand-deep:#5d4c0b;--on-bad:#fff;
   --human-accent:#f2cc55;--human-deep:#e0b737;--human-edge:#7a5d0c;--on-human:#111827;
   --bevel-hi:inset 0 1px 0 rgba(255,255,255,.38);
   --well:inset 0 2px 5px rgba(17,24,39,.16),inset 0 0 0 1px rgba(17,24,39,.07);
@@ -321,7 +326,7 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
   --t-press:80ms;--t-slide:220ms cubic-bezier(.2,.8,.2,1);
 }
 [data-theme=dark]{
-  --on-brand:#0b0d12;--brand-deep:#52a473;--on-bad:#0b0d12;
+  --on-brand:#14110c;--brand-deep:#b99a2e;--on-bad:#14110c;
   --human-accent:#e8c350;--human-deep:#cfa935;--human-edge:#cfa935;--on-human:#0b0d12;
   --bevel-hi:inset 0 1px 0 rgba(255,255,255,.30);
   --well:inset 0 2px 6px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.05);
