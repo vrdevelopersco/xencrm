@@ -42,6 +42,8 @@ export interface Ticket {
 export interface EstadoCliente {
   arriba: boolean;
   negocio?: string;
+  /** Cómo se llama su asistente: es el nombre que sus clientes ya conocen. */
+  agente?: string;
   contactos?: number;
   calientes?: number;
   sinLeer?: number;
@@ -133,6 +135,7 @@ export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
   return {
     arriba: true,
     negocio: String(me.business ?? cliente.nombre),
+    agente: String(me.agent ?? ''),
     contactos: Number(stats?.total ?? 0),
     calientes: Number(stats?.hot ?? 0),
     sinLeer: Number(stats?.unread ?? 0),

@@ -61,8 +61,10 @@ arriba. Al abrir una, la conversación sale en un **panel al lado** —no parte 
 pendiente y la caja para responder. La consola habla por ese cliente con su token: no hay que abrir cinco tableros
 ni repartir llaves. Lo que envíes queda a tu nombre (el que pongas en «Respondes como»).
 
-**Con quién firmas es de cada cliente.** El campo «Respondes como» vive dentro de la conversación y se recuerda
-por cliente: "Arthur" atendiendo a la boutique no firma en la financiera. Arranca con tu propio nombre.
+**Con quién firmas es de cada cliente, y no es un adorno**: por WhatsApp ese nombre se le antepone al mensaje que
+recibe el cliente (*Camila:* …). El campo «Respondes como» vive dentro de la conversación, se recuerda por cliente
+y **arranca con el nombre del asistente de ese negocio** —el que sus clientes ya conocen—, no con el tuyo, que
+allá no le dice nada a nadie. Si quien contesta quiere firmar con su nombre, lo cambia ahí.
 
 **Varias personas pueden atender la misma conversación.** Si alguien más está adentro, sale el aviso «Camila
 también está aquí». No bloquea a nadie a propósito —la idea es que la IA y el equipo convivan en el chat, no que

@@ -548,8 +548,20 @@
       };
       $('board').innerHTML = stages.map(function (s) {
         var cards = list.filter(function (c) { return c.stage === s; });
-        return '<div class="col" data-stage="' + s + '"><h3>' + esc(state.stageLabels[s]) + '<span class="muted">' + cards.length + '</span></h3><div class="cards">' +
-          cards.map(function (c) { return '<div class="card" draggable="true" data-id="' + esc(c.id) + '"><div class="body"><div class="t"><button type="button" class="card-open" title="Abrir la conversación">' + esc(nameOf(c)) + '</button>' + scoreChip(c) + '</div><div class="s">' + esc(c.recap || c.summary || channelIcon(c.channel)) + '</div>' + moveTo(c) + '</div></div>'; }).join('') +
+        // El color de la columna sale del PAPEL de la etapa, no de su nombre: cada negocio las llama distinto y
+        // con los nombres fijos una financiera veía el tablero entero en gris.
+        var def = (state.stages || []).find(function (x) { return x.id === s; }) || {};
+        return '<div class="col" data-stage="' + s + '" data-rol="' + esc(def.rol || '') + '">' +
+          '<h3>' + esc(state.stageLabels[s]) + '<span class="cuenta">' + cards.length + '</span></h3><div class="cards">' +
+          cards.map(function (c) {
+            return '<div class="card" draggable="true" data-id="' + esc(c.id) + '"><div class="body">' +
+              '<div class="t">' + scoreChip(c) + '<span class="grow"></span><span class="cuando">' + esc(c.lastMessageAt ? rel(c.lastMessageAt) : '') + '</span></div>' +
+              '<button type="button" class="card-open" title="Abrir la conversación">' + esc(nameOf(c)) + '</button>' +
+              '<div class="s">' + esc(c.recap || c.summary || '') + '</div>' +
+              '<div class="pie">' + channelIcon(c.channel) + (c.unread ? '<span class="chip sin-leer">' + c.unread + ' sin leer</span>' : '') +
+                (c.humanMode ? '<span class="chip who">con una persona</span>' : '') + '</div>' +
+              moveTo(c) + '</div></div>';
+          }).join('') +
           '</div></div>';
       }).join('');
       $('board').querySelectorAll('.card').forEach(function (card) {
@@ -1308,6 +1320,9 @@
       $('brand-name').firstChild.textContent = me.agent + ' ';
       $('brand-biz').textContent = me.business;
       state.bizName = me.business; state.agentName = me.agent;
+      // Entrando por la consola nadie escribió un nombre, y ese nombre le llega al cliente delante del mensaje
+      // por WhatsApp: el del asistente es el que sus clientes ya conocen.
+      if (!state.name) { state.name = me.agent || 'equipo'; try { localStorage.setItem('aiva.admin.name', state.name); } catch (e) {} }
       document.title = me.agent + ' · Tablero';
       return api('/stats');
     }).then(function (s) {

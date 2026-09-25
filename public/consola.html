@@ -754,7 +754,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         '<div class="chats">' + (msgs || '<div class="muted small">Sin mensajes.</div>') + '</div>' +
         '<div class="fila firma"><label class="small muted" for="quien">Respondes como</label>' +
           '<input id="quien" style="width:150px" value="' + esc(comoFirmo(p.slug)) + '" placeholder="tu nombre">' +
-          '<span class="small muted">así lo verá el cliente de ' + esc(p.cliente) + '</span></div>' +
+          '<span class="small muted">así lo verá el cliente de ' + esc(p.cliente) + ' (por WhatsApp va delante del mensaje)</span></div>' +
         '<div id="msg2" class="small" role="status"></div>' + accion;
       marcarPresencia(p);
       if ($('enviar')) $('enviar').onclick = function () { responder(p); };
@@ -802,13 +802,16 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     cli(p.slug + '/contacts/' + encodeURIComponent(p.userId) + '/presencia', { method: 'POST', body: { by: quien, salir: true } }).catch(function () {});
   }
 
-  // 🪤 Con quién firma uno es COSA DE CADA CLIENTE: "Arthur" puede ser de la boutique y no tiene nada que hacer
-  // en la financiera. Antes era un solo campo en la barra y el nombre se iba con uno de un cliente a otro.
+  // 🪤 Con quién firma uno es COSA DE CADA CLIENTE, y no es un adorno: por WhatsApp ese nombre se le antepone al
+  // mensaje que recibe el cliente (*Camila:* ...). Por eso arranca con el nombre del asistente de ESE negocio,
+  // que es el que sus clientes ya conocen, y no con el de uno, que allá no le dice nada a nadie.
   function comoFirmo(slug) {
     try {
       var guardado = localStorage.getItem('aiva.consola.quien.' + slug);
       if (guardado) return guardado;
-    } catch (e) { /* sin almacenamiento, se usa el nombre de uno */ }
+    } catch (e) { /* sin almacenamiento, se usa lo de abajo */ }
+    var f = (window.__clientes || []).find(function (x) { return x.cliente.slug === slug; });
+    if (f && f.estado && f.estado.agente) return f.estado.agente;
     return yo ? yo.nombre : '';
   }
 

@@ -205,6 +205,15 @@ texto en tinta y el chip con su dorado intacto, en `public/hrc-technologies.png`
 🪤 El modo oscuro del tablero no se ha visto renderizado: el tablero fija el tema al arrancar y pisa lo que uno
 ponga a mano en una maqueta. Los valores están medidos, pero la primera vez que se despliegue hay que darle al 🌙.
 
+### El tablero de prospectos se pinta por el papel de la etapa (2026-09-25)
+
+Las columnas tenían el tono fijado por el **nombre** de la etapa (`interesado`, `cita_agendada`, `vendido`). Con
+el embudo por negocio eso significa que cualquier cliente que no fuera una boutique veía el tablero **entero en
+gris**: una financiera tiene "En revisión" y "Resuelto", que no están en esa lista. Ahora el tono sale del
+`rol` (`activo`, `interes`, `cita`, `ganado`, `perdido`), que es lo único que significa lo mismo en todos los
+negocios. La cita tiene tono propio (azul) en vez de compartir el dorado del acento: es un estado distinto, no
+"lo más importante".
+
 ### Tres trampas que costaron caro
 
 Las tres dan el mismo síntoma —«la página no hace nada»— y ninguna la coge una prueba de HTTP.
