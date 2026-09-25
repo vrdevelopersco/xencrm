@@ -174,6 +174,18 @@ abono, precios, políticas y datos propios (tallas, tiempos, lo que venden o no)
   el significado como siempre: solo se guardan si con eso ya se entienden.
 - **Guardar perfil** guarda y deja una copia de la versión anterior.
 
+### Con qué nombre respondes
+
+Abajo a la izquierda está tu perfil: el icono con tus iniciales y el nombre con el que sales cuando contestas.
+Se hace clic y se cambia ahí mismo.
+
+🪤 No es un adorno: **por WhatsApp ese nombre va delante del mensaje** que recibe el cliente (*Camila:* claro que
+sí, con gusto). Arranca con el nombre del asistente, así que si lo dejas así el cliente no nota el cambio de
+persona; si prefieres firmar con tu nombre, lo escribes.
+
+Tu usuario, tu correo y tu clave no se manejan aquí: este tablero es del negocio. Eso vive en la consola, en
+**Mi cuenta**.
+
 ## El negocio
 
 La configuración del negocio, en la otra pestaña del mismo modal del Perfil. Aquí se cambia **sin tocar archivos**:

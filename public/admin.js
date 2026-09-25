@@ -1326,7 +1326,7 @@
       document.title = me.agent + ' · Tablero';
       return api('/stats');
     }).then(function (s) {
-      state.stageLabels = s.stageLabels; state.stages = s.stages || []; etapasDelNegocio(); $('foot-user').textContent = state.name || 'asesor'; connect(); loadNotifs(); loadCalendar();
+      state.stageLabels = s.stageLabels; state.stages = s.stages || []; etapasDelNegocio(); pintarQuienSoy(); connect(); loadNotifs(); loadCalendar();
       // Enlace directo a una conversación (p. ej. desde la cita en Google Calendar): /admin#c=<id>
       var m = /^#c=(.+)$/.exec(location.hash);
       if (m) { go('inbox'); openContact(decodeURIComponent(m[1])); history.replaceState(null, '', location.pathname); } else go('today');
@@ -1517,6 +1517,38 @@
       (otros.length === 1 ? '<b>' + nombres + '</b> también está aquí' : '<b>' + nombres + '</b> también están aquí') +
       ' <span class="muted">· pónganse de acuerdo para no contestar lo mismo</span>';
   }
+
+
+  // ---------- Quién responde (el pie) ----------
+  // No es un adorno: por WhatsApp este nombre va delante del mensaje que recibe el cliente. Por eso se puede
+  // cambiar de un clic, con el ejemplo a la vista. Usuario, correo y clave no viven aquí: son de la consola.
+  function inicialesDe(nombre) {
+    var p = String(nombre || 'A').trim().split(/\s+/);
+    return ((p[0] || 'A')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
+  }
+  function pintarQuienSoy() {
+    var nombre = state.name || state.agentName || 'asesor';
+    $('foot-nombre').textContent = nombre;
+    $('foot-ini').textContent = inicialesDe(nombre);
+    $('foot-user').title = 'Respondes como ' + nombre;
+  }
+  $('foot-user').onclick = function () {
+    $('yo-nombre').value = state.name || state.agentName || '';
+    $('yo-ejemplo').textContent = state.name || state.agentName || 'Aiva';
+    $('yo-msg').textContent = '';
+    $('yo-cuenta').hidden = !PORLACONSOLA;
+    $('dlg-yo').showModal();
+    $('yo-nombre').focus();
+  };
+  $('yo-nombre').oninput = function () { $('yo-ejemplo').textContent = this.value.trim() || (state.agentName || 'Aiva'); };
+  $('yo-cerrar').onclick = function () { $('dlg-yo').close(); };
+  $('yo-guardar').onclick = function () {
+    state.name = $('yo-nombre').value.trim() || state.agentName || 'asesor';
+    try { localStorage.setItem('aiva.admin.name', state.name); } catch (e) {}
+    pintarQuienSoy();
+    $('yo-msg').textContent = 'Listo ✓';
+    setTimeout(function () { $('dlg-yo').close(); }, 500);
+  };
 
   boot();
 })();

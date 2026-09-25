@@ -490,6 +490,15 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 }
 @media(max-width:420px){.nav button,.nav .nav-more{padding:6px 4px;min-width:50px}}
 
+/* El pie: quién responde, como un perfil y no como una etiqueta suelta. */
+.perfil-btn{display:flex;align-items:center;gap:8px;width:100%;border:1px solid transparent;background:none;
+  color:var(--text);font:inherit;padding:6px 8px;border-radius:12px;cursor:pointer;text-align:left}
+.perfil-btn:hover{background:color-mix(in srgb,var(--brand) 10%,transparent);border-color:var(--glass-border)}
+.perfil-btn .avatar{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;flex:none;
+  background:var(--brand-soft);color:var(--brand);font-weight:700;font-size:12px;border:1px solid color-mix(in srgb,var(--brand) 25%,transparent)}
+.perfil-btn .quien-soy{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:13px}
+.perfil-btn .caret{color:var(--muted);font-size:13px}
+
 /* Quién más está metido en esta conversación. Avisa, no bloquea: la IA y varias personas pueden convivir ahí. */
 .presentes{display:flex;align-items:center;gap:8px;margin:0 14px 8px;padding:8px 12px;border-radius:12px;
   background:var(--warn-soft);color:var(--warn);font-size:13px;border:1px solid color-mix(in srgb,var(--warn) 25%,transparent)}
@@ -597,7 +606,9 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
     </nav>
     <div class="spacer"></div>
     <div class="foot">
-      <div class="row"><span class="lbl" id="foot-user">asesor</span></div>
+      <div class="row"><button class="perfil-btn" id="foot-user" title="Con qué nombre respondes">
+        <span class="avatar" id="foot-ini">A</span><span class="quien-soy" id="foot-nombre">asesor</span><span class="caret">⌄</span>
+      </button></div>
       <div class="row">
         <button class="icon-btn" id="theme-btn" title="Modo oscuro / claro">🌙</button>
         <button class="icon-btn" id="sound-btn" title="Sonido de notificaciones">🔔</button>
@@ -764,6 +775,27 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
   <div class="modal-cuerpo">
     <div id="negocio" class="cfg-pane"></div>
     <div id="profile" class="cfg-pane" hidden></div>
+  </div>
+</dialog>
+
+<dialog id="dlg-yo" class="modal-config">
+  <div class="modal-cabeza">
+    <div><b>Con qué nombre respondes</b><div class="small muted">Es lo que ve el cliente cuando contesta una persona</div></div>
+    <button class="btn sm" id="yo-cerrar" type="button" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="modal-cuerpo">
+    <div class="prof-field">
+      <div class="lbl"><label class="small" for="yo-nombre"><b>Nombre</b></label></div>
+      <input type="text" id="yo-nombre" autocomplete="off">
+      <div class="small muted">Por WhatsApp va delante del mensaje: <b><span id="yo-ejemplo">Aiva</span>:</b> claro que sí, con gusto.
+      Déjalo con el nombre del asistente si prefieres que el cliente no note el cambio de persona.</div>
+    </div>
+    <div class="fila" style="gap:8px;margin-top:12px"><button class="btn primary" id="yo-guardar" type="button">Guardar</button>
+      <span id="yo-msg" class="small" role="status"></span></div>
+    <div id="yo-cuenta" class="small muted" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line)" hidden>
+      Tu usuario, tu correo y tu clave se manejan en la consola, no aquí: este tablero es del negocio.
+      <a href="/" id="yo-consola">Ir a Mi cuenta en la consola</a>.
+    </div>
   </div>
 </dialog>
 
