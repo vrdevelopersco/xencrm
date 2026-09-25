@@ -242,6 +242,17 @@ dialog.panel[open]{animation:entra-panel .22s var(--curva)}
 dialog.panel #detalle{padding:16px 18px 24px;overflow:auto;flex:1}
 @media (prefers-reduced-motion: reduce){dialog.panel[open]{animation:none}}
 
+/* La franja de resumen: tarjetitas flotando, no una tabla. */
+.resumen-todos{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin-bottom:12px}
+.tarjetita{background:var(--vidrio);border:1px solid var(--vidrio-borde);border-radius:16px;padding:12px 14px;
+  box-shadow:var(--filo),var(--shadow);-webkit-backdrop-filter:var(--desenfoque);backdrop-filter:var(--desenfoque)}
+.tarjetita b{display:block;font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
+.tarjetita span{font-size:11.5px;color:var(--tenue)}
+.tarjetita.urge{border-color:color-mix(in srgb,var(--alta) 45%,transparent);background:color-mix(in srgb,var(--alta) 7%,var(--vidrio))}
+.tarjetita.urge b{color:var(--alta)}
+.buscador{margin-bottom:12px}
+.buscador input{flex:1;min-height:44px;border-radius:999px;padding:0 18px;background:var(--vidrio-fuerte);border:1px solid var(--vidrio-borde)}
+
 .lista-clientes{background:var(--vidrio);border:1px solid var(--vidrio-borde);border-radius:var(--r-card);box-shadow:var(--filo),var(--shadow);overflow:hidden}
 .cliente{padding:14px 16px;border-top:1px solid var(--line);transition:background .2s var(--curva)}
 .cliente:first-child{border-top:none}
@@ -267,6 +278,10 @@ dialog.panel #detalle{padding:16px 18px 24px;overflow:auto;flex:1}
 .equipo-cliente .persona{padding:5px 0;border-top:1px solid var(--line)}
 .equipo-cliente .persona:first-of-type{border-top:none}
 .ok-msg{color:var(--ok);min-height:16px}
+.paleta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.tinta{width:30px;height:30px;border-radius:10px;border:2px solid transparent;cursor:pointer;box-shadow:var(--rim),var(--shadow)}
+.tinta.puesto{border-color:var(--tinta);box-shadow:0 0 0 3px color-mix(in srgb,var(--oro-claro) 40%,transparent)}
+.avatar.chico{display:grid;place-items:center;width:26px;height:26px;border-radius:9px;color:#fff;font-weight:700;font-size:12px;flex:none}
 .firma{margin:10px 0 4px;padding:8px 10px;background:var(--baja-soft);border-radius:12px}
 .presentes{display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;border-radius:12px;
   background:var(--media-soft);color:var(--media);font-size:13px;border:1px solid #f2e3bd}
@@ -286,6 +301,10 @@ dialog.panel #detalle{padding:16px 18px 24px;overflow:auto;flex:1}
 .equipo-cliente .persona{padding:5px 0;border-top:1px solid var(--line)}
 .equipo-cliente .persona:first-of-type{border-top:none}
 .ok-msg{color:var(--ok);min-height:16px}
+.paleta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.tinta{width:30px;height:30px;border-radius:10px;border:2px solid transparent;cursor:pointer;box-shadow:var(--rim),var(--shadow)}
+.tinta.puesto{border-color:var(--tinta);box-shadow:0 0 0 3px color-mix(in srgb,var(--oro-claro) 40%,transparent)}
+.avatar.chico{display:grid;place-items:center;width:26px;height:26px;border-radius:9px;color:#fff;font-weight:700;font-size:12px;flex:none}
 .firma{margin:10px 0 4px;padding:8px 10px;background:var(--baja-soft);border-radius:12px}
 .presentes{display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;border-radius:12px;
   background:var(--media-soft);color:var(--media);font-size:13px;border:1px solid #f2e3bd}
@@ -405,6 +424,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     <p class="muted small" style="margin:0">Tu nombre, tu correo y tu clave. El rol y los clientes que atiendes los decide el super-admin.</p>
     <label>Nombre <input id="y-nombre" required></label>
     <label>Correo <input id="y-correo" type="email" placeholder="opcional"><span class="muted small">Si lo pones, también puedes entrar con él.</span></label>
+    <div><b class="small">Tu color</b><div class="small muted">Con esto te reconocen en la consola.</div><div class="paleta" id="y-paleta"></div></div>
     <hr style="border:none;border-top:1px solid var(--line);width:100%">
     <label>Clave actual <input id="y-clave-actual" type="password" autocomplete="current-password" placeholder="solo si vas a cambiarla"></label>
     <label>Clave nueva <input id="y-clave-nueva" type="password" autocomplete="new-password" placeholder="8 o más caracteres"></label>
@@ -456,9 +476,10 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   }
   function sesionLista() {
     return api('/yo').then(function (d) {
-      yo = d.usuario; esSuper = d.super;
+      yo = d.usuario; esSuper = d.super; COLORES = d.colores || COLORES;
       var comoMeLlamo = yo ? yo.nombre : 'llave maestra';
       $('yo-nombre').textContent = comoMeLlamo;
+      if (yo && yo.color) { $('yo-ini').style.background = yo.color; $('yo-ini').style.color = '#fff'; $('yo-ini').style.borderColor = 'transparent'; }
       $('yo-ini').textContent = (function (n) {
         var p = String(n || 'A').trim().split(/\s+/);
         return ((p[0] || 'A')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
@@ -519,15 +540,30 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     pintarPendientes();
   });
 
+  var COLORES = [];
+  function pintarPaleta(elegido) {
+    $('y-paleta').innerHTML = COLORES.map(function (c) {
+      return '<button type="button" class="tinta' + (c === elegido ? ' puesto' : '') + '" data-color="' + c + '" style="background:' + c + '" aria-label="Color ' + c + '"></button>';
+    }).join('');
+    $('y-paleta').querySelectorAll('.tinta').forEach(function (b) {
+      b.onclick = function () {
+        $('y-paleta').querySelectorAll('.tinta').forEach(function (x) { x.classList.remove('puesto'); });
+        b.classList.add('puesto');
+      };
+    });
+  }
+
   $('yo').onclick = function () {
     if (!yo) { alert('Entraste con la llave maestra, que no es una cuenta. Crea tu usuario en Equipo y entra con él.'); return; }
     $('y-nombre').value = yo.nombre || '';
     $('y-correo').value = yo.correo || '';
+    pintarPaleta(yo.color);
     $('y-clave-actual').value = ''; $('y-clave-nueva').value = ''; $('y-msg').textContent = '';
     $('dlg-yo').showModal();
   };
   $('y-guardar').onclick = function () {
-    var cuerpo = { nombre: $('y-nombre').value.trim(), correo: $('y-correo').value.trim() };
+    var puesto = $('y-paleta').querySelector('.tinta.puesto');
+    var cuerpo = { nombre: $('y-nombre').value.trim(), correo: $('y-correo').value.trim(), color: puesto ? puesto.getAttribute('data-color') : '' };
     if ($('y-clave-nueva').value) { cuerpo.claveActual = $('y-clave-actual').value; cuerpo.claveNueva = $('y-clave-nueva').value; }
     $('y-msg').textContent = 'Guardando…';
     api('/yo', { method: 'PATCH', body: cuerpo }).then(function (d) {
@@ -546,6 +582,37 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   };
 
   var PRIORIDADES = { alta: 'Alta', media: 'Media', baja: 'Baja' };
+  // La franja de arriba: todo junto, de todos los clientes. Es lo primero que uno mira al entrar y responde
+  // "¿cómo vamos?" sin abrir nada.
+  function resumenDeTodos(filas) {
+    var arriba = filas.filter(function (f) { return f.estado.arriba; });
+    var suma = function (campo) { return arriba.reduce(function (a, f) { return a + Number(f.estado[campo] || 0); }, 0); };
+    var porAtender = suma('sinLeer') + suma('esperanRespuesta') + suma('porVerificar');
+    var gasto = arriba.reduce(function (a, f) { return a + Number(f.estado.gastoMes || 0); }, 0);
+    var conEfectividad = arriba.filter(function (f) { return f.estado.efectividad != null; });
+    var efectividad = conEfectividad.length
+      ? Math.round(conEfectividad.reduce(function (a, f) { return a + f.estado.efectividad; }, 0) / conEfectividad.length)
+      : null;
+    var datos = [
+      { n: porAtender, t: 'por atender', urge: porAtender > 0 },
+      { n: suma('mensajesHoy'), t: 'mensajes hoy' },
+      { n: suma('contactos'), t: 'conversaciones' },
+      { n: suma('calientes'), t: 'prospectos calientes' },
+      { n: suma('citas'), t: 'citas próximas' },
+      { n: efectividad == null ? '—' : efectividad + '%', t: 'efectividad media' },
+      { n: '$' + gasto.toFixed(2), t: 'IA · 30 días' },
+      { n: arriba.length + '/' + filas.length, t: 'instancias arriba', urge: arriba.length < filas.length },
+    ];
+    return '<div class="resumen-todos">' + datos.map(function (d) {
+      return '<div class="tarjetita' + (d.urge ? ' urge' : '') + '"><b>' + esc(d.n) + '</b><span>' + d.t + '</span></div>';
+    }).join('') + '</div>';
+  }
+
+  function buscadorDeClientes() {
+    return '<div class="fila buscador"><input id="buscar-cliente" placeholder="Buscar un cliente…" autocomplete="off">' +
+      '<span class="small muted">' + (window.__clientes || []).length + ' en total</span></div>';
+  }
+
   // Cada cliente, una fila: quién es, cómo va y qué hay que atenderle. El vistazo es lo que uno mira de reojo
   // para decidir a cuál entrar, así que va con números grandes y sin adornos.
   function sigla(nombre) {
@@ -583,6 +650,8 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       (suyos.length
         ? suyos.map(function (u) {
             return '<div class="fila persona" data-usuario="' + esc(u.usuario) + '">' +
+              '<span class="avatar chico" style="background:' + esc(u.color || '#7b660f') + '">' +
+                esc(String(u.nombre || u.usuario).trim().charAt(0).toUpperCase()) + '</span>' +
               '<span>' + esc(u.nombre) + '</span><span class="chip">' + esc(u.usuario) + '</span>' +
               (u.rol === 'super' ? '<span class="chip">super-admin</span>' : '') +
               '<span class="grow"></span>' +
@@ -656,9 +725,16 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       var pendientes = filas.reduce(function (a, f) { return a + f.tickets.length; }, 0);
       $('resumen').textContent = filas.length + (filas.length === 1 ? ' cliente' : ' clientes') + ' · ' + pendientes + (pendientes === 1 ? ' cosa por atender' : ' cosas por atender');
       window.__clientes = filas;
-      $('lista').innerHTML = filas.length
-        ? '<div class="lista-clientes">' + filas.map(tarjeta).join('') + '</div>'
-        : '<div class="card"><div class="vacio">Todavía no hay clientes. <b>Nuevo cliente</b> crea el primero.</div></div>';
+      $('lista').innerHTML = (filas.length ? resumenDeTodos(filas) + buscadorDeClientes() : '') +
+        (filas.length
+          ? '<div class="lista-clientes">' + filas.map(tarjeta).join('') + '</div>'
+          : '<div class="card"><div class="vacio">Todavía no hay clientes. <b>Nuevo cliente</b> crea el primero.</div></div>');
+      if ($('buscar-cliente')) $('buscar-cliente').oninput = function () {
+        var q = this.value.trim().toLowerCase();
+        $('lista').querySelectorAll('.cliente').forEach(function (fila) {
+          fila.hidden = Boolean(q) && fila.textContent.toLowerCase().indexOf(q) === -1;
+        });
+      };
       $('lista').querySelectorAll('.ver-mas').forEach(function (b) {
         b.onclick = function () {
           var fila = b.closest('[data-slug]'), caja = fila.querySelector('.detalle');

@@ -8,8 +8,24 @@
   // Servido desde la consola: ella le pone el token a cada petición, así que aquí no hace falta ninguno. La marca
   // la inyecta la consola al pasar la página.
   var PORLACONSOLA = typeof window.AIVA_CONSOLA === 'string';
+  // 🪤 Todos los clientes viven en el MISMO dominio (aiva.../dunor, aiva.../confia), y el almacenamiento del
+  // navegador es por dominio: sin separar las llaves, el nombre con el que respondes, el token y hasta el tema
+  // se iban de un cliente a otro. Cada uno lleva su prefijo, que sale de su ruta.
+  var QUIEN = (window.AIVA_CONSOLA || BASE || 'raiz').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'raiz';
+  var LLAVE = function (que) { return 'aiva.admin.' + QUIEN + '.' + que; };
+  // Lo que estaba guardado con la llave vieja (compartida) se muda una vez y se borra, para no dejar a nadie
+  // fuera al actualizar.
+  (function mudar() {
+    try {
+      ['token', 'name', 'theme', 'sound', 'notifSeen'].forEach(function (que) {
+        var viejo = localStorage.getItem('aiva.admin.' + que);
+        if (viejo !== null && localStorage.getItem(LLAVE(que)) === null) localStorage.setItem(LLAVE(que), viejo);
+      });
+      ['token', 'name'].forEach(function (que) { localStorage.removeItem('aiva.admin.' + que); });
+    } catch (e) { /* sin almacenamiento, se entra como la primera vez */ }
+  })();
   var state = { token: '', name: '', view: 'today', filter: 'all', q: '', contacts: [], current: null, detail: null, kind: 'knowledge', theme: 'light', sound: true, stageLabels: {}, stages: [], es: null, notifs: [], notifSeen: 0, detailOpen: false };
-  try { state.token = localStorage.getItem('aiva.admin.token') || ''; state.name = localStorage.getItem('aiva.admin.name') || ''; state.theme = localStorage.getItem('aiva.admin.theme') || 'light'; state.sound = localStorage.getItem('aiva.admin.sound') !== '0'; state.notifSeen = Number(localStorage.getItem('aiva.admin.notifSeen') || 0); } catch (e) {}
+  try { state.token = localStorage.getItem(LLAVE('token')) || ''; state.name = localStorage.getItem(LLAVE('name')) || ''; state.theme = localStorage.getItem(LLAVE('theme')) || 'light'; state.sound = localStorage.getItem(LLAVE('sound')) !== '0'; state.notifSeen = Number(localStorage.getItem(LLAVE('notifSeen')) || 0); } catch (e) {}
 
   // ---------- íconos (monocromos, el color de estado queda para los chips) ----------
   var ICONS = {
@@ -90,20 +106,20 @@
     $('login').hidden = false; $('login-err').textContent = err || ''; $('login-name').value = state.name; ($('login-name').value ? $('login-token') : $('login-name')).focus(); }
   $('login-btn').onclick = function () {
     state.name = $('login-name').value.trim() || 'asesor'; state.token = $('login-token').value.trim();
-    try { localStorage.setItem('aiva.admin.token', state.token); localStorage.setItem('aiva.admin.name', state.name); } catch (e) {}
+    try { localStorage.setItem(LLAVE('token'), state.token); localStorage.setItem(LLAVE('name'), state.name); } catch (e) {}
     boot();
   };
   $('login-token').onkeydown = function (e) { if (e.key === 'Enter') $('login-btn').click(); };
   $('login-name').onkeydown = function (e) { if (e.key === 'Enter') $('login-token').focus(); };
   $('logout-btn').onclick = function () {
     if (PORLACONSOLA) { location.href = '/'; return; } // de vuelta a la consola, que es de donde se vino
-    try { localStorage.removeItem('aiva.admin.token'); } catch (e) {}
+    try { localStorage.removeItem(LLAVE('token')); } catch (e) {}
     location.reload();
   };
   function applyTheme() { document.documentElement.setAttribute('data-theme', state.theme); $('theme-btn').textContent = state.theme === 'dark' ? '☀️' : '🌙'; }
-  $('theme-btn').onclick = function () { state.theme = state.theme === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('aiva.admin.theme', state.theme); } catch (e) {} applyTheme(); };
+  $('theme-btn').onclick = function () { state.theme = state.theme === 'dark' ? 'light' : 'dark'; try { localStorage.setItem(LLAVE('theme'), state.theme); } catch (e) {} applyTheme(); };
   function applySound() { $('sound-btn').classList.toggle('on', state.sound); $('sound-btn').textContent = state.sound ? '🔔' : '🔕'; }
-  $('sound-btn').onclick = function () { state.sound = !state.sound; try { localStorage.setItem('aiva.admin.sound', state.sound ? '1' : '0'); } catch (e) {} applySound(); };
+  $('sound-btn').onclick = function () { state.sound = !state.sound; try { localStorage.setItem(LLAVE('sound'), state.sound ? '1' : '0'); } catch (e) {} applySound(); };
   applyTheme(); applySound();
 
   // ---------- navegación ----------
@@ -428,7 +444,12 @@
       var down = t.public && (t.public.state === 'caida' || t.public.state === 'otro_servidor')
         ? '<div class="panel help-first" role="alert"><span class="grow"><b>La dirección pública no responde.</b> <span class="small">' + esc(publicDetail(t.public)) + '</span></span><button class="btn primary" data-go="channels">Ver en Canales</button></div>'
         : '';
-      $('today').innerHTML = down + helpBanner() + sections.map(function (s) { return '<div class="panel"><h3>' + esc(s.t) + '<span class="chip">' + s.n + '</span></h3>' + (s.html || '<div class="ok">' + esc(s.empty) + '</div>') + '</div>'; }).join('');
+      // Cada sección con su color: lo urgente no puede verse igual que lo que ya está resuelto.
+      var TONOS = ['verificar', 'esperan', 'persona', 'pasadas', 'recordar', 'citas', 'calientes', 'leidas', 'proximas'];
+      $('today').innerHTML = down + helpBanner() + sections.map(function (s, i) {
+        return '<div class="panel" data-tono="' + (TONOS[i] || '') + '"><h3>' + esc(s.t) + '<span class="chip">' + s.n + '</span></h3>' +
+          (s.html || '<div class="ok">' + esc(s.empty) + '</div>') + '</div>';
+      }).join('');
       $('today').querySelectorAll('.row').forEach(function (r) { r.onclick = function () { go('inbox'); openContact(r.getAttribute('data-id')); }; });
       $('today').querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-open')); }; });
       $('today').querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
@@ -533,7 +554,7 @@
   function loadNotifs() { api('/notifications').then(function (list) { state.notifs = list; renderNotifs(); }); }
   $('bell-btn').onclick = function (e) { e.stopPropagation(); $('notif').classList.toggle('open'); };
   document.addEventListener('click', function (e) { if (!$('notif').contains(e.target) && e.target !== $('bell-btn')) $('notif').classList.remove('open'); });
-  $('notif-clear').onclick = function () { state.notifSeen = state.notifs.length ? Math.max.apply(null, state.notifs.map(function (n) { return n.id; })) : 0; try { localStorage.setItem('aiva.admin.notifSeen', String(state.notifSeen)); } catch (e) {} renderNotifs(); };
+  $('notif-clear').onclick = function () { state.notifSeen = state.notifs.length ? Math.max.apply(null, state.notifs.map(function (n) { return n.id; })) : 0; try { localStorage.setItem(LLAVE('notifSeen'), String(state.notifSeen)); } catch (e) {} renderNotifs(); };
 
   // ---------- pipeline ----------
   function loadPipeline(focusId) {
@@ -1322,7 +1343,7 @@
       state.bizName = me.business; state.agentName = me.agent;
       // Entrando por la consola nadie escribió un nombre, y ese nombre le llega al cliente delante del mensaje
       // por WhatsApp: el del asistente es el que sus clientes ya conocen.
-      if (!state.name) { state.name = me.agent || 'equipo'; try { localStorage.setItem('aiva.admin.name', state.name); } catch (e) {} }
+      if (!state.name) { state.name = me.agent || 'equipo'; try { localStorage.setItem(LLAVE('name'), state.name); } catch (e) {} }
       document.title = me.agent + ' · Tablero';
       return api('/stats');
     }).then(function (s) {
@@ -1544,7 +1565,7 @@
   $('yo-cerrar').onclick = function () { $('dlg-yo').close(); };
   $('yo-guardar').onclick = function () {
     state.name = $('yo-nombre').value.trim() || state.agentName || 'asesor';
-    try { localStorage.setItem('aiva.admin.name', state.name); } catch (e) {}
+    try { localStorage.setItem(LLAVE('name'), state.name); } catch (e) {}
     pintarQuienSoy();
     $('yo-msg').textContent = 'Listo ✓';
     setTimeout(function () { $('dlg-yo').close(); }, 500);

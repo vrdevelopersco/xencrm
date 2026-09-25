@@ -16,6 +16,8 @@ export interface Usuario {
   nombre: string;
   /** Para saber a quién escribirle y, si alguien prefiere, para entrar con él en vez del usuario. */
   correo?: string;
+  /** El color con el que se le reconoce en la consola. Sale de su nombre si no elige. */
+  color?: string;
   rol: Rol;
   /** Clientes que atiende. Vacío en un super-admin: los ve todos. */
   clientes: string[];
@@ -45,6 +47,28 @@ function guardar(usuarios: Usuario[]) {
 
 const hashear = (clave: string, sal = randomBytes(16).toString('hex')) => `${sal}:${scryptSync(clave, sal, 32).toString('hex')}`;
 
+/**
+ * Los colores con los que alguien se puede distinguir. Cerrada a propósito: una lista corta se reconoce de un
+ * vistazo, y todos están medidos contra el papel de la consola.
+ */
+export const COLORES = ['#7b660f', '#2b5ea8', '#2c6b3f', '#a4231b', '#6b3fa0', '#0f6b73', '#8a5a08', '#4a4740'];
+
+/** Si no eligió, uno estable sacado de su nombre: el mismo cada vez, sin guardar nada. */
+export function colorDe(usuario: { usuario: string; color?: string }): string {
+  if (usuario.color && COLORES.includes(usuario.color)) return usuario.color;
+  let n = 0;
+  for (const c of usuario.usuario) n = (n * 31 + c.charCodeAt(0)) % 100000;
+  return COLORES[n % COLORES.length]!;
+}
+
+const colorLimpio = (color: string | undefined): string | undefined => {
+  if (color === undefined) return undefined;
+  const c = color.trim();
+  if (!c) return '';
+  if (!COLORES.includes(c)) throw new Error('ese color no está en la lista');
+  return c;
+};
+
 /** Un correo con forma de correo, o vacío. No se comprueba que exista: eso lo dirá el primer mensaje. */
 export function correoLimpio(correo: string | undefined, quien = ''): string {
   const c = (correo ?? '').trim().toLowerCase();
@@ -70,17 +94,19 @@ function comprobarClientes(slugs: string[]): string[] {
 }
 
 /** Crea a alguien del equipo. `clientes` vacío en un super-admin (los ve todos). */
-export function crearUsuario(datos: { usuario: string; nombre?: string; correo?: string; clave: string; rol?: Rol; clientes?: string[]; hoy?: string }): UsuarioPublico {
+export function crearUsuario(datos: { usuario: string; nombre?: string; correo?: string; color?: string; clave: string; rol?: Rol; clientes?: string[]; hoy?: string }): UsuarioPublico {
   const usuario = datos.usuario.trim().toLowerCase();
   if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) throw new Error('el usuario va en minúsculas, de 3 a 30 letras o números');
   if (datos.clave.length < 8) throw new Error('la clave necesita al menos 8 caracteres');
   const usuarios = leerUsuarios();
   if (usuarios.some((u) => u.usuario === usuario)) throw new Error('ya existe alguien con ese usuario');
   const correo = correoLimpio(datos.correo);
+  const color = colorLimpio(datos.color);
   const nuevo: Usuario = {
     usuario,
     nombre: datos.nombre?.trim() || usuario,
     correo,
+    color,
     rol: datos.rol ?? 'agente',
     clientes: datos.rol === 'super' ? [] : comprobarClientes(datos.clientes ?? []),
     activo: true,
@@ -92,7 +118,7 @@ export function crearUsuario(datos: { usuario: string; nombre?: string; correo?:
 }
 
 /** Cambia lo que el super-admin puede cambiar: nombre, rol, clientes, si sigue activo y la clave. */
-export function actualizarUsuario(usuario: string, cambios: Partial<Pick<Usuario, 'nombre' | 'correo' | 'rol' | 'clientes' | 'activo'>> & { clave?: string }): UsuarioPublico {
+export function actualizarUsuario(usuario: string, cambios: Partial<Pick<Usuario, 'nombre' | 'correo' | 'color' | 'rol' | 'clientes' | 'activo'>> & { clave?: string }): UsuarioPublico {
   const usuarios = leerUsuarios();
   const i = usuarios.findIndex((u) => u.usuario === usuario);
   if (i === -1) throw new Error('ese usuario no existe');
@@ -103,6 +129,7 @@ export function actualizarUsuario(usuario: string, cambios: Partial<Pick<Usuario
     ...actual,
     ...cambios,
     correo: cambios.correo === undefined ? actual.correo : correoLimpio(cambios.correo, usuario),
+    color: cambios.color === undefined ? actual.color : colorLimpio(cambios.color),
     rol,
     clientes: rol === 'super' ? [] : comprobarClientes(cambios.clientes ?? actual.clientes),
     clave: cambios.clave ? hashear(cambios.clave) : actual.clave,
@@ -119,7 +146,7 @@ export function actualizarUsuario(usuario: string, cambios: Partial<Pick<Usuario
  */
 export function cambiarLoMio(
   usuario: string,
-  cambios: { nombre?: string; correo?: string; claveActual?: string; claveNueva?: string },
+  cambios: { nombre?: string; correo?: string; color?: string; claveActual?: string; claveNueva?: string },
 ): UsuarioPublico {
   const usuarios = leerUsuarios();
   const i = usuarios.findIndex((u) => u.usuario === usuario);
@@ -135,6 +162,7 @@ export function cambiarLoMio(
     ...actual,
     nombre,
     correo: cambios.correo === undefined ? actual.correo : correoLimpio(cambios.correo, usuario),
+    color: cambios.color === undefined ? actual.color : colorLimpio(cambios.color),
     clave: cambios.claveNueva ? hashear(cambios.claveNueva) : actual.clave,
   };
   guardar(usuarios);

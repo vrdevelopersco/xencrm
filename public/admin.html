@@ -426,6 +426,37 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 .card .pie{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--muted)}
 .card .pie .chip{font-size:11px;padding:2px 8px}
 .card .pie .sin-leer{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+/* ── Hoy: cada fila es una hojita de bloc, y cada sección tiene su color ────────────────────────────────────
+   Lo urgente no puede verse igual que lo que ya está resuelto, y el objeto dice de qué se trata antes de leerlo. */
+#today .panel{--tono:var(--muted)}
+#today .panel[data-tono=verificar]{--tono:var(--warn)}
+#today .panel[data-tono=esperan]{--tono:var(--bad)}
+#today .panel[data-tono=persona]{--tono:var(--brand)}
+#today .panel[data-tono=citas],#today .panel[data-tono=proximas]{--tono:var(--cita)}
+#today .panel[data-tono=calientes]{--tono:var(--warn)}
+#today .panel[data-tono=recordar]{--tono:var(--brand)}
+#today .panel[data-tono=pasadas]{--tono:var(--ok)}
+#today .panel h3{border-bottom:2px solid color-mix(in srgb,var(--tono) 45%,transparent);padding-bottom:8px}
+#today .panel h3 .chip{background:color-mix(in srgb,var(--tono) 85%,var(--text));color:var(--panel);border-color:transparent;font-weight:700}
+#today .row,#today .appt,#today .verify{position:relative;border:1px solid color-mix(in srgb,var(--tono) 38%,var(--glass-border));
+  border-radius:11px;overflow:hidden;padding:11px 12px 11px 24px;margin-bottom:8px;
+  background:
+    linear-gradient(90deg,transparent 0 17px,color-mix(in srgb,var(--bad) 38%,transparent) 17px 18px,transparent 18px),
+    repeating-linear-gradient(180deg,transparent 0 21px,color-mix(in srgb,var(--text) 8%,transparent) 21px 22px),
+    var(--papel-bloc);
+  box-shadow:inset 0 3px 6px -4px rgba(20,17,12,.3),var(--shadow)}
+/* El cabezal del color de su sección, con la perforación. */
+#today .row::before,#today .appt::before,#today .verify::before{content:"";position:absolute;left:0;right:0;top:0;height:7px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--tono) 78%,#2a241a),color-mix(in srgb,var(--tono) 58%,#2a241a))}
+#today .row::after,#today .appt::after,#today .verify::after{content:"";position:absolute;left:0;right:0;top:4px;height:5px;
+  background:radial-gradient(circle at 3.5px 0,var(--papel-bloc) 0 2.4px,transparent 2.6px) repeat-x;background-size:7px 5px}
+#today .row > *,#today .appt > *,#today .verify > *{position:relative}
+#today .row{padding-top:15px;border-bottom:1px solid color-mix(in srgb,var(--tono) 38%,var(--glass-border))}
+#today .row:hover{background:
+    linear-gradient(90deg,transparent 0 17px,color-mix(in srgb,var(--bad) 38%,transparent) 17px 18px,transparent 18px),
+    repeating-linear-gradient(180deg,transparent 0 21px,color-mix(in srgb,var(--text) 8%,transparent) 21px 22px),
+    color-mix(in srgb,var(--tono) 7%,var(--papel-bloc))}
+
 /* Cada tarjeta es un bloc de notas: cabezal del color de su etapa, perforación de arrancar y papel con
    renglones. Es lo que hace que el tablero no se sienta una hoja de cálculo. El color sigue significando lo
    mismo: el papel es igual en todas, lo que cambia es el cabezal. */

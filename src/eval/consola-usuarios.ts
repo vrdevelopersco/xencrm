@@ -8,7 +8,7 @@ import { join } from 'node:path';
 const base = mkdtempSync(join(tmpdir(), 'aiva-usuarios-'));
 process.env.AIVA_CLIENTES_DIR = base;
 process.env.CONSOLA_TOKEN = 'llave-maestra';
-const { crearUsuario, actualizarUsuario, borrarUsuario, verificar, abrirSesion, sesionDe, cerrarSesion, leerUsuarios, alcanza, cambiarLoMio } = await import('../consola-usuarios.js');
+const { crearUsuario, actualizarUsuario, borrarUsuario, verificar, abrirSesion, sesionDe, cerrarSesion, leerUsuarios, alcanza, cambiarLoMio, colorDe, COLORES } = await import('../consola-usuarios.js');
 const { crearCliente } = await import('../clientes.js');
 const { mountConsola } = await import('../consola.js');
 const { Hono } = await import('hono');
@@ -122,6 +122,19 @@ check('cambiar la clave sin la actual, no', (() => { try { cambiarLoMio('pablo',
 cambiarLoMio('pablo', { claveActual: 'clave-de-prueba', claveNueva: 'otra-clave-larga' });
 check('con la actual, sí', verificar('pablo', 'otra-clave-larga')?.usuario === 'pablo' && verificar('pablo', 'clave-de-prueba') === null);
 check('y no se puede subir el rol a sí mismo', leerUsuarios().find((u) => u.usuario === 'pablo')!.rol === 'agente');
+
+
+// --- el color con el que se reconoce a cada quien ---
+check('sin elegir, sale un color estable de su usuario', colorDe({ usuario: 'pablo' }) === colorDe({ usuario: 'pablo' }) && COLORES.includes(colorDe({ usuario: 'pablo' })));
+// Con ocho colores dos nombres pueden coincidir y no pasa nada; lo que importa es que el reparto no se quede
+// pegado en uno solo.
+const repartidos = new Set(['ana', 'pablo', 'sofia', 'camilo', 'marcela', 'jorge', 'laura', 'andres', 'paola', 'diego'].map((u) => colorDe({ usuario: u })));
+check('el reparto usa varios colores, no siempre el mismo', repartidos.size >= 4, [...repartidos].join(' '));
+check('el elegido manda sobre el automático', colorDe({ usuario: 'pablo', color: COLORES[3] }) === COLORES[3]);
+cambiarLoMio('pablo', { color: COLORES[2] });
+check('cada quien se elige el suyo', leerUsuarios().find((u) => u.usuario === 'pablo')!.color === COLORES[2]);
+check('un color inventado se rechaza', (() => { try { cambiarLoMio('pablo', { color: '#ff00ff' }); return false; } catch { return true; } })());
+check('y vaciarlo devuelve al automático', (() => { cambiarLoMio('pablo', { color: '' }); return colorDe(leerUsuarios().find((u) => u.usuario === 'pablo')!) === colorDe({ usuario: 'pablo' }); })());
 
 
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
