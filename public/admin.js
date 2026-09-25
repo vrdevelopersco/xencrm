@@ -5,6 +5,9 @@
   // Dónde vive este tablero. Servido en la raíz, BASE queda vacío; servido en /confia/admin, BASE es "/confia".
   // Así el mismo archivo sirve para una instancia por dominio y para varias bajo un dominio compartido.
   var BASE = location.pathname.replace(/\/admin\/?$/, '');
+  // Servido desde la consola: ella le pone el token a cada petición, así que aquí no hace falta ninguno. La marca
+  // la inyecta la consola al pasar la página.
+  var PORLACONSOLA = typeof window.AIVA_CONSOLA === 'string';
   var state = { token: '', name: '', view: 'today', filter: 'all', q: '', contacts: [], current: null, detail: null, kind: 'knowledge', theme: 'light', sound: true, stageLabels: {}, stages: [], es: null, notifs: [], notifSeen: 0, detailOpen: false };
   try { state.token = localStorage.getItem('aiva.admin.token') || ''; state.name = localStorage.getItem('aiva.admin.name') || ''; state.theme = localStorage.getItem('aiva.admin.theme') || 'light'; state.sound = localStorage.getItem('aiva.admin.sound') !== '0'; state.notifSeen = Number(localStorage.getItem('aiva.admin.notifSeen') || 0); } catch (e) {}
 
@@ -81,7 +84,10 @@
   }
 
   // ---------- login / tema / sonido ----------
-  function showLogin(err) { $('login').hidden = false; $('login-err').textContent = err || ''; $('login-name').value = state.name; ($('login-name').value ? $('login-token') : $('login-name')).focus(); }
+  function showLogin(err) {
+    // Entrando por la consola no hay token que pedir: si algo falla es que la sesión venció.
+    if (PORLACONSOLA) { location.href = '/'; return; }
+    $('login').hidden = false; $('login-err').textContent = err || ''; $('login-name').value = state.name; ($('login-name').value ? $('login-token') : $('login-name')).focus(); }
   $('login-btn').onclick = function () {
     state.name = $('login-name').value.trim() || 'asesor'; state.token = $('login-token').value.trim();
     try { localStorage.setItem('aiva.admin.token', state.token); localStorage.setItem('aiva.admin.name', state.name); } catch (e) {}
@@ -89,7 +95,11 @@
   };
   $('login-token').onkeydown = function (e) { if (e.key === 'Enter') $('login-btn').click(); };
   $('login-name').onkeydown = function (e) { if (e.key === 'Enter') $('login-token').focus(); };
-  $('logout-btn').onclick = function () { try { localStorage.removeItem('aiva.admin.token'); } catch (e) {} location.reload(); };
+  $('logout-btn').onclick = function () {
+    if (PORLACONSOLA) { location.href = '/'; return; } // de vuelta a la consola, que es de donde se vino
+    try { localStorage.removeItem('aiva.admin.token'); } catch (e) {}
+    location.reload();
+  };
   function applyTheme() { document.documentElement.setAttribute('data-theme', state.theme); $('theme-btn').textContent = state.theme === 'dark' ? '☀️' : '🌙'; }
   $('theme-btn').onclick = function () { state.theme = state.theme === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('aiva.admin.theme', state.theme); } catch (e) {} applyTheme(); };
   function applySound() { $('sound-btn').classList.toggle('on', state.sound); $('sound-btn').textContent = state.sound ? '🔔' : '🔕'; }
@@ -1290,6 +1300,7 @@
 
   // ---------- arranque ----------
   function boot() {
+    if (PORLACONSOLA) state.token = state.token || 'por-la-consola'; // el valor da igual: la consola lo reemplaza
     if (!state.token) { showLogin(); return; }
     api('/me').then(function (me) {
       $('login').hidden = true;

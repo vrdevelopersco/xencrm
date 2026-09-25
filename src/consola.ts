@@ -291,6 +291,7 @@ export function mountConsola(app: Hono) {
     const cuerpo = metodo === 'GET' || metodo === 'HEAD' ? undefined : await c.req.text();
     // El flujo en vivo (SSE) no puede llevar reloj: se queda abierto a propósito.
     const esFlujo = resto.endsWith('admin/api/stream');
+    const esLaPagina = resto === 'admin';
     try {
       const r = await fetch(url, {
         method: metodo,
@@ -298,6 +299,13 @@ export function mountConsola(app: Hono) {
         body: cuerpo,
         ...(esFlujo ? {} : { signal: AbortSignal.timeout(15000) }),
       });
+      // 🪤 El tablero, si no encuentra un token en el navegador, ni lo intenta: enseña su pantalla de token. Pero
+      // entrando por aquí no hace falta ninguno —la consola se lo pone a cada petición—, así que se le avisa con
+      // una marca en la página. Sin esto, un super-admin entraba a un cliente y le volvían a pedir el token.
+      if (esLaPagina && r.ok) {
+        const html = (await r.text()).replace('</head>', `<script>window.AIVA_CONSOLA=${JSON.stringify(slug)}</script></head>`);
+        return c.html(html);
+      }
       return new Response(r.body, {
         status: r.status,
         headers: {
