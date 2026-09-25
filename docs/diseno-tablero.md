@@ -214,6 +214,26 @@ gris**: una financiera tiene "En revisión" y "Resuelto", que no están en esa l
 negocios. La cita tiene tono propio (azul) en vez de compartir el dorado del acento: es un estado distinto, no
 "lo más importante".
 
+### Vidrio, y por qué necesita luz debajo (2026-09-25)
+
+El material vuelve a ser **vidrio**, ahora en las tres pantallas: superficies translúcidas (50 % de blanco),
+`blur(22px) saturate(180%)` y un filo de luz arriba (`inset 0 1px 0 rgba(255,255,255,.9)`). Antes solo el
+contenedor era vidrio y el contenido iba sólido encima: el efecto no se leía.
+
+🪤 **El vidrio sin nada detrás es gris.** Necesita color debajo para desenfocar, así que las tres pantallas
+llevan manchas de luz fijas (`body::before`): dorado arriba a la izquierda, azul a la derecha, y una rosada y una
+cálida abajo. Sin ellas se pierde media hora subiendo el desenfoque sin entender por qué no pasa nada.
+
+Lo que **no** cambia: el texto nunca va sobre el vidrio sin medir. Lo peor que puede quedar debajo de una
+superficie translúcida es una mancha clara, y ahí el texto principal sigue en 16:1 y el secundario sobre 6:1.
+
+### La consola tiene cuerpo de aplicación (2026-09-25)
+
+Era una barra con todo encima y nada más: sin menú, sin sitio donde estar. Ahora tiene la misma forma que el
+tablero de un cliente —barra lateral con la marca, las secciones y, abajo, el perfil con su avatar— porque son
+dos aplicaciones hermanas y cambiar de una a otra no debería sentirse como cambiar de producto. Bajo 900 px la
+barra lateral se acuesta arriba.
+
 ### Tres trampas que costaron caro
 
 Las tres dan el mismo síntoma —«la página no hace nada»— y ninguna la coge una prueba de HTTP.
