@@ -662,8 +662,15 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         return;
       }
       if (!r || r.error) { alert('No se pudo restaurar: ' + ((r && r.error) || 'sin respuesta')); return; }
-      alert('Restaurado en ' + nombre + ': ' + r.escrito.join(', ') + '.\n\nLa copia de lo anterior quedó en el servidor.\nHay que reiniciar ese cliente para que lo tome.');
-      cargarTodo();
+      // Restaurar sin reindexar no sirve: lo que no está indexado, para el asistente no existe.
+      var texto = 'Restaurado en ' + nombre + ': ' + r.escrito.join(', ') + '.\n\nLa copia de lo anterior quedó en el servidor.';
+      if (confirm(texto + '\n\n¿Indexo ahora el catálogo y lo que sabe? (cuesta unos centavos y tarda unos segundos)')) {
+        cli(slug + '/reindexar', { method: 'POST' }).then(function (x) {
+          alert(x && x.error ? 'Restaurado, pero no se pudo indexar: ' + x.error
+            : 'Listo. Indexado: ' + (x.products || 0) + ' productos y ' + (x.knowledge || 0) + ' fragmentos.\n\nReinicia ese cliente para que tome la configuración.');
+          cargarTodo();
+        });
+      } else { cargarTodo(); }
     }).catch(function () { alert('No se pudo restaurar.'); });
   }
 

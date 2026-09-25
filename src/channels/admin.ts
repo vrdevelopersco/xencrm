@@ -21,6 +21,7 @@ import { usageSummary } from '../llm/usage.js';
 import { entrar as entrarALaConversacion, salir as salirDeLaConversacion, quienesEstan } from '../crm/presencia.js';
 import { actividadPorHora, nuevasPorDia, semanaContraSemana } from '../crm/series.js';
 import { accentOn, logoUrl } from '../brand.js';
+import { runIngest } from '../rag/ingest.js';
 import { armar as armarRespaldo, restaurar as restaurarRespaldo, revisar as revisarRespaldo } from '../crm/respaldo.js';
 import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
@@ -520,6 +521,23 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     try {
       const hecho = restaurarRespaldo(donde, revisado.respaldo, { carpetaCopias: resolve(join(donde.config, '..', 'respaldos')) });
       return c.json({ ok: true, ...hecho, hayQueReiniciar: true });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 500);
+    }
+  });
+
+  /**
+   * Volver a indexar el catálogo y lo que sabe el negocio. Hace falta después de restaurar un respaldo o de
+   * cambiar archivos a mano: los documentos que no están indexados, para el asistente **no existen**.
+   *
+   * 🪤 Cuesta dinero: cada fragmento pasa por el modelo de vectores. Por eso es un botón, no algo automático.
+   */
+  app.post('/admin/api/reindexar', async (c) => {
+    const que = c.req.query('que');
+    const only = que === 'products' || que === 'knowledge' || que === 'site' ? que : undefined;
+    try {
+      await runIngest(only ? { only } : {});
+      return c.json({ ok: true, ...countDocs() });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 500);
     }
