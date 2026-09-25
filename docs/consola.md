@@ -80,6 +80,11 @@ La pestaña **Clientes** es una lista con una fila por cliente. De un vistazo, s
 esperan · por verificar · citas · calientes · contactos**. Lo que está en cero no se pinta, para que el ruido no
 esconda lo que sí pasa.
 
+Arriba, la **franja de todos los clientes** —por atender, mensajes de hoy, conversaciones, calientes, citas,
+efectividad media, gasto de IA e instancias arriba— y la gráfica de **conversaciones nuevas por día**, sumando
+todos. Cada instancia calcula la suya y la consola las suma; un cliente apagado no aporta, en vez de tumbar la
+pantalla.
+
 Debajo de cada fila salen los **tickets, que aparecen solos** según el estado:
 
 | Ticket | Urgencia |

@@ -250,6 +250,9 @@ dialog.panel #detalle{padding:16px 18px 24px;overflow:auto;flex:1}
 .tarjetita span{font-size:11.5px;color:var(--tenue)}
 .tarjetita.urge{border-color:color-mix(in srgb,var(--alta) 45%,transparent);background:color-mix(in srgb,var(--alta) 7%,var(--vidrio))}
 .tarjetita.urge b{color:var(--alta)}
+.grafica-todos{margin-bottom:12px}
+.leyenda-mini{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
+.leyenda-mini i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
 .buscador{margin-bottom:12px}
 .buscador input{flex:1;min-height:44px;border-radius:999px;padding:0 18px;background:var(--vidrio-fuerte);border:1px solid var(--vidrio-borde)}
 
@@ -605,7 +608,44 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     ];
     return '<div class="resumen-todos">' + datos.map(function (d) {
       return '<div class="tarjetita' + (d.urge ? ' urge' : '') + '"><b>' + esc(d.n) + '</b><span>' + d.t + '</span></div>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' +
+      '<div class="card grafica-todos"><b>De dónde llega la gente</b>' +
+      '<div class="small muted">Conversaciones nuevas por día, sumando todos los clientes</div>' +
+      '<div id="g-todos"><div class="small muted" style="padding:16px 0;text-align:center">Cargando…</div></div></div>';
+  }
+
+  // La gráfica de todos: la misma que ve cada negocio en su Análisis, pero sumada. Se dibuja a mano en SVG,
+  // sin librería, y un día en cero se ve en cero.
+  function cargarGrafica() {
+    api('/series').then(function (d) {
+      var caja = $('g-todos');
+      if (!caja) return;
+      var dias = d.nuevas || [];
+      var total = dias.reduce(function (a, x) { return a + x.total; }, 0);
+      if (!total) { caja.innerHTML = '<div class="small muted" style="padding:16px 0;text-align:center">Todavía no ha entrado nadie esta quincena.</div>'; return; }
+      var W = 900, H = 150, izq = 26, abajo = 20;
+      var max = Math.max.apply(null, dias.map(function (x) { return x.total; })) || 1;
+      var x = function (i) { return izq + (i * (W - izq - 6)) / Math.max(1, dias.length - 1); };
+      var y = function (v) { return H - abajo - (v * (H - abajo - 8)) / max; };
+      var banda = function (hasta, color) {
+        var arriba = dias.map(function (p, i) { return x(i) + ',' + y(hasta(p)); });
+        var base = dias.map(function (p, i) { return x(i) + ',' + y(0); }).reverse();
+        return '<polygon points="' + arriba.concat(base).join(' ') + '" fill="' + color + '" fill-opacity=".85"></polygon>';
+      };
+      var reglas = [0, Math.round(max / 2), max].map(function (v) {
+        return '<line x1="' + izq + '" y1="' + y(v) + '" x2="' + W + '" y2="' + y(v) + '" stroke="currentColor" stroke-opacity=".12"></line>' +
+          '<text x="0" y="' + (y(v) + 3) + '" fill="currentColor" fill-opacity=".55" font-size="9">' + v + '</text>';
+      }).join('');
+      var etiquetas = dias.map(function (p, i) {
+        return i % 2 ? '' : '<text x="' + x(i) + '" y="' + (H - 5) + '" text-anchor="middle" fill="currentColor" fill-opacity=".55" font-size="9">' + p.dia.slice(5).replace('-', '/') + '</text>';
+      }).join('');
+      caja.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Conversaciones nuevas por día, todos los clientes">' +
+        reglas + banda(function (p) { return p.total; }, 'var(--oro-claro)') +
+        banda(function (p) { return p.whatsapp + p.otros; }, 'var(--oro)') + etiquetas + '</svg>' +
+        '<div class="leyenda-mini"><span><i style="background:var(--oro)"></i>WhatsApp</span>' +
+        '<span><i style="background:var(--oro-claro)"></i>Chat del sitio</span>' +
+        '<span class="muted">' + total + ' conversaciones nuevas en 14 días, de ' + d.clientes + (d.clientes === 1 ? ' cliente' : ' clientes') + '</span></div>';
+    }).catch(function () {});
   }
 
   function buscadorDeClientes() {
@@ -729,6 +769,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         (filas.length
           ? '<div class="lista-clientes">' + filas.map(tarjeta).join('') + '</div>'
           : '<div class="card"><div class="vacio">Todavía no hay clientes. <b>Nuevo cliente</b> crea el primero.</div></div>');
+      cargarGrafica();
       if ($('buscar-cliente')) $('buscar-cliente').oninput = function () {
         var q = this.value.trim().toLowerCase();
         $('lista').querySelectorAll('.cliente').forEach(function (fila) {

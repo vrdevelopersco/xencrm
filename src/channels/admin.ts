@@ -19,6 +19,7 @@ import { onEvent } from '../crm/events.js';
 import { listNotifications, startNotifications } from '../crm/notifications.js';
 import { usageSummary } from '../llm/usage.js';
 import { entrar as entrarALaConversacion, salir as salirDeLaConversacion, quienesEstan } from '../crm/presencia.js';
+import { actividadPorHora, nuevasPorDia, semanaContraSemana } from '../crm/series.js';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
@@ -472,6 +473,21 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   app.get('/admin/api/stats', (c) => c.json({ ...stats(), stageLabels: STAGE_LABELS, stages: STAGE_DEFS }));
 
   // Vista "Hoy": lo que un asesor debe atender primero, cada fila abre la conversación.
+  /**
+   * Las dos gráficas: de dónde llega la gente (nuevas por día y canal) y a qué horas escribe. Se calculan al
+   * vuelo desde lo que ya está guardado; con miles de mensajes son milisegundos y no hay nada que mantener.
+   */
+  app.get('/admin/api/series', (c) => {
+    const dias = Math.min(60, Math.max(7, Number(c.req.query('dias') ?? 14) || 14));
+    return c.json({
+      dias,
+      zona: business.timezone,
+      nuevas: nuevasPorDia(dias),
+      actividad: actividadPorHora(dias),
+      semana: semanaContraSemana(),
+    });
+  });
+
   app.get('/admin/api/today', (c) => {
     const now = Date.now();
     const startOfDay = new Date();

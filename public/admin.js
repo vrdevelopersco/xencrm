@@ -764,14 +764,16 @@
     });
   }
   function loadAnalysis() {
+    cargarSeries();
     api('/stats').then(function (s) {
       var tiles = [
         { n: s.total, l: 'Contactos', f: 'all' },
         { n: s.unread, l: 'Mensajes sin leer', f: 'unread' },
         { n: s.hot, l: 'Prospectos claros', f: 'hot' },
         { n: s.human, l: 'Atendidos por una persona', f: 'human' },
-        { n: s.byStage.interesado, l: 'Interesados', f: 'stage:interesado' },
-        { n: s.byStage.cita_agendada, l: 'Con cita agendada', f: 'stage:cita_agendada' },
+        // Por papel, no por nombre: en un negocio de soporte no existe "interesado" ni "cita_agendada".
+        { n: s.byStage[etapaCon('interes')] || 0, l: state.stageLabels[etapaCon('interes')] || 'Interesados', f: 'stage:' + etapaCon('interes') },
+        { n: s.byStage[etapaCon('cita')] || 0, l: state.stageLabels[etapaCon('cita')] || 'Con cita', f: 'stage:' + etapaCon('cita') },
         { n: s.upcomingAppointments, l: 'Citas en los próximos 7 días', v: 'calendar' },
         { n: s.messagesToday, l: 'Mensajes de clientes (24 h)', f: 'all' },
       ];
@@ -1570,6 +1572,105 @@
     $('yo-msg').textContent = 'Listo ✓';
     setTimeout(function () { $('dlg-yo').close(); }, 500);
   };
+
+
+  // ---------- Las dos gráficas ----------
+  // Dibujadas a mano en SVG: sin librería, sin ejes inventados y sin suavizar la curva, que suavizar es mentir
+  // sobre la forma. Lo que no hay, no se pinta: un día en cero se ve en cero.
+  function cargarSeries() {
+    api('/series?dias=14').then(function (d) {
+      pintarDeltas(d.semana);
+      pintarNuevas(d.nuevas);
+      pintarHoras(d.actividad);
+    }).catch(function () {});
+  }
+
+  function chipCambio(c) {
+    if (c.delta === null) return '<span class="cambio igual">primera semana</span>';
+    if (c.delta === 0) return '<span class="cambio igual">igual</span>';
+    var sube = c.delta > 0;
+    return '<span class="cambio ' + (sube ? 'sube' : 'baja') + '">' + (sube ? '+' : '') + c.delta + ' %</span>';
+  }
+
+  function pintarDeltas(s) {
+    var datos = [
+      { q: 'Conversaciones nuevas', c: s.conversaciones },
+      { q: 'Mensajes de clientes', c: s.mensajes },
+      { q: 'Citas agendadas', c: s.citas },
+    ];
+    $('deltas').innerHTML = datos.map(function (d) {
+      return '<div class="delta"><b>' + d.c.ahora + '</b><span class="que">' + d.q + ' · 7 días</span><br>' + chipCambio(d.c) + '</div>';
+    }).join('');
+  }
+
+  var DIAS_CORTOS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  function etiquetaDia(iso) {
+    var p = iso.split('-');
+    var f = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    return DIAS_CORTOS[f.getDay()] + ' ' + p[2];
+  }
+
+  // Área apilada: WhatsApp abajo, el chat del sitio encima. Si alguien no usa un canal, esa banda no aparece.
+  function pintarNuevas(dias) {
+    var caja = $('g-nuevas');
+    var total = dias.reduce(function (a, d) { return a + d.total; }, 0);
+    if (!total) { caja.innerHTML = '<div class="sin-datos">Todavía no ha entrado nadie en estos días.</div>'; return; }
+    var W = 620, H = 170, izq = 26, abajo = 22;
+    var max = Math.max.apply(null, dias.map(function (d) { return d.total; })) || 1;
+    var x = function (i) { return izq + (i * (W - izq - 6)) / Math.max(1, dias.length - 1); };
+    var y = function (v) { return H - abajo - (v * (H - abajo - 10)) / max; };
+    var banda = function (hasta, color) {
+      var arriba = dias.map(function (d, i) { return x(i) + ',' + y(hasta(d)); });
+      var base = dias.map(function (d, i) { return x(i) + ',' + y(0); }).reverse();
+      return '<polygon points="' + arriba.concat(base).join(' ') + '" fill="' + color + '" fill-opacity=".85"></polygon>';
+    };
+    var linea = function (hasta, color) {
+      return '<polyline points="' + dias.map(function (d, i) { return x(i) + ',' + y(hasta(d)); }).join(' ') +
+        '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linejoin="round"></polyline>';
+    };
+    var reglas = [0, Math.round(max / 2), max].map(function (v) {
+      return '<line x1="' + izq + '" y1="' + y(v) + '" x2="' + W + '" y2="' + y(v) + '" stroke="currentColor" stroke-opacity=".12"></line>' +
+        '<text class="eje" x="0" y="' + (y(v) + 3) + '">' + v + '</text>';
+    }).join('');
+    var etiquetas = dias.map(function (d, i) {
+      return i % 2 ? '' : '<text class="eje" x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + etiquetaDia(d.dia) + '</text>';
+    }).join('');
+    caja.innerHTML = '<svg class="grafica" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Conversaciones nuevas por día">' +
+      reglas +
+      banda(function (d) { return d.total; }, 'var(--cita)') +
+      banda(function (d) { return d.whatsapp + d.otros; }, 'var(--brand)') +
+      linea(function (d) { return d.total; }, 'var(--cita)') +
+      etiquetas + '</svg>' +
+      '<div class="leyenda"><span><i style="background:var(--brand)"></i>WhatsApp</span>' +
+      '<span><i style="background:var(--cita)"></i>Chat del sitio</span>' +
+      '<span class="muted">' + total + ' en 14 días</span></div>';
+  }
+
+  // Mapa de calor: cuanto más oscura la celda, más mensajes a esa hora ese día.
+  function pintarHoras(a) {
+    var caja = $('g-horas');
+    if (!a.total) { caja.innerHTML = '<div class="sin-datos">Sin mensajes en estos días.</div>'; return; }
+    var izq = 30, arriba = 4, celda = 15, hueco = 3;
+    var W = izq + a.dias.length * (celda + hueco), H = arriba + a.horas.length * (celda + hueco) + 16;
+    var cuadros = a.celdas.map(function (fila, f) {
+      return fila.map(function (n, c) {
+        var fuerza = n ? 0.18 + 0.82 * (n / a.max) : 0;
+        return '<rect class="celda" x="' + (izq + c * (celda + hueco)) + '" y="' + (arriba + f * (celda + hueco)) + '" ' +
+          'width="' + celda + '" height="' + celda + '" rx="4" fill="var(--brand)" fill-opacity="' + fuerza.toFixed(2) + '">' +
+          '<title>' + etiquetaDia(a.dias[c]) + ' · ' + a.horas[f] + ':00 · ' + n + (n === 1 ? ' mensaje' : ' mensajes') + '</title></rect>';
+      }).join('');
+    }).join('');
+    var horas = a.horas.map(function (h, f) {
+      return '<text class="eje" x="0" y="' + (arriba + f * (celda + hueco) + 11) + '">' + h + ':00</text>';
+    }).join('');
+    var dias = a.dias.map(function (d, c) {
+      return c % 2 ? '' : '<text class="eje" x="' + (izq + c * (celda + hueco) + celda / 2) + '" y="' + (H - 4) + '" text-anchor="middle">' + d.slice(8) + '</text>';
+    }).join('');
+    // A tamaño natural: estirado a lo ancho, un mapa de calor se vuelve una pared de bloques.
+    caja.innerHTML = '<svg class="grafica mapa" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Mensajes por hora y día">' +
+      cuadros + horas + dias + '</svg>' +
+      '<div class="leyenda"><span class="muted">Lo más cargado: ' + a.max + (a.max === 1 ? ' mensaje' : ' mensajes') + ' en una hora · ' + a.total + ' en 14 días</span></div>';
+  }
 
   boot();
 })();

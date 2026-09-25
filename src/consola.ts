@@ -395,6 +395,46 @@ export function mountConsola(app: Hono) {
     return borrarUsuario(c.req.param('usuario')) ? c.json({ ok: true }) : c.json({ error: 'no existe' }, 404);
   });
 
+  /**
+   * Las gráficas de todos los clientes juntas: cada instancia calcula la suya y aquí se suman. Un cliente
+   * apagado simplemente no aporta, en vez de tumbar la pantalla.
+   */
+  app.get('/api/series', async (c) => {
+    const usuario = c.get('usuario' as never) as UsuarioPublico | null;
+    const clientes = leerIndice().filter((x) => alcanza(usuario, x.slug));
+    const partes = await Promise.all(
+      clientes.map(async (cliente) => {
+        const token = tokenDe(cliente.slug);
+        if (!token) return null;
+        return (await pedir(cliente, '/admin/api/series?dias=14', token, 4000)) as
+          | { nuevas?: { dia: string; whatsapp: number; web: number; otros: number; total: number }[]; semana?: Record<string, { ahora: number; antes: number }> }
+          | null;
+      }),
+    );
+    const vivas = partes.filter(Boolean) as NonNullable<(typeof partes)[number]>[];
+    const porDia = new Map<string, { dia: string; whatsapp: number; web: number; otros: number; total: number }>();
+    for (const p of vivas) {
+      for (const d of p.nuevas ?? []) {
+        const acc = porDia.get(d.dia) ?? { dia: d.dia, whatsapp: 0, web: 0, otros: 0, total: 0 };
+        acc.whatsapp += d.whatsapp;
+        acc.web += d.web;
+        acc.otros += d.otros;
+        acc.total += d.total;
+        porDia.set(d.dia, acc);
+      }
+    }
+    const sumarSemana = (campo: string) => {
+      const ahora = vivas.reduce((a, p) => a + Number(p.semana?.[campo]?.ahora ?? 0), 0);
+      const antes = vivas.reduce((a, p) => a + Number(p.semana?.[campo]?.antes ?? 0), 0);
+      return { ahora, antes, delta: antes === 0 ? null : Math.round(((ahora - antes) / antes) * 100) };
+    };
+    return c.json({
+      clientes: vivas.length,
+      nuevas: [...porDia.values()].sort((a, b) => a.dia.localeCompare(b.dia)),
+      semana: { conversaciones: sumarSemana('conversaciones'), mensajes: sumarSemana('mensajes'), citas: sumarSemana('citas') },
+    });
+  });
+
   app.get('/api/clientes', async (c) => c.json({ clientes: await tablero(c.get('usuario' as never) as UsuarioPublico | null), puertoSugerido: puertoLibre() }));
 
   // Cómo atiende el negocio: de aquí salen su embudo y si agenda citas.

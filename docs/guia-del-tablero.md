@@ -154,6 +154,21 @@ etapa, puntaje, qué busca, ocasión, fecha del evento, etiquetas y notas; las c
 servicio, estado, lugar y cómo fue el recordatorio. Las conversaciones archivadas no salen. El archivo lleva
 teléfonos y notas de clientes: trátalo como la base misma.
 
+### Las dos gráficas
+
+En **Análisis**, arriba de todo:
+
+- **De dónde llega la gente**: conversaciones nuevas por día, partidas por canal (WhatsApp abajo, el chat del
+  sitio encima). Es lo que dice dónde vale la pena poner la plata.
+- **A qué horas te escriben**: un mapa de hora × día; cuanto más oscura la casilla, más mensajes a esa hora. Es
+  lo que dice si hace falta alguien a las 7 de la noche o si el asistente está solo a esa hora.
+
+Y tres números con su comparación contra la semana pasada: conversaciones nuevas, mensajes de clientes y citas
+agendadas. La primera semana no hay con qué comparar y lo dice, en vez de inventar un porcentaje.
+
+🪤 Los días y las horas se cuentan en la **zona horaria del negocio** (la de Configuración › El negocio), no en
+la del servidor: un mensaje de las 11 de la noche no puede aparecer al día siguiente.
+
 ## Perfil
 
 Lo que el asistente dice de tu negocio: nombre, dirección, horarios, zona que atienden, contacto, formas de pago,
