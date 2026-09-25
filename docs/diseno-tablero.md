@@ -214,6 +214,24 @@ gris**: una financiera tiene "En revisión" y "Resuelto", que no están en esa l
 negocios. La cita tiene tono propio (azul) en vez de compartir el dorado del acento: es un estado distinto, no
 "lo más importante".
 
+### Cada tarjeta es una hoja de bloc (2026-09-25)
+
+Donde una tarjeta representa **a una persona** —un prospecto en el tablero, algo por atender en la consola— la
+tarjeta es una hoja de bloc de notas: cabezal de color con su costura, la perforación de arrancar mordiendo el
+cabezal, papel con renglones cada 22 px y el margen rojo a la izquierda. El texto va con `line-height: 22px`
+para que se siente **sobre** los renglones: ese es el detalle que lo vende.
+
+Por qué, y no como capricho: esto no es otro CRM de filas grises. Lo que hay en esa tarjeta es lo que alguien
+apuntaría en una libreta —quién llamó, qué quería, para cuándo—, y el objeto lo dice antes de leerlo.
+
+Tres reglas para que no se vuelva disfraz:
+- **El color sigue significando lo mismo.** El papel es igual en todas; lo que cambia es el cabezal, que lleva el
+  tono de la columna (su etapa, o su urgencia en la consola). El adorno no pisa el dato.
+- **Solo donde hay una persona detrás.** Las filas de clientes, los paneles de Hoy y los modales siguen siendo
+  vidrio: convertir todo en papel sería ruido.
+- **El texto se mide igual.** Sobre el papel claro, 18.4:1 el principal y 6.8:1 el secundario; sobre el oscuro,
+  13.8:1 y 6.4:1.
+
 ### Vidrio, y por qué necesita luz debajo (2026-09-25)
 
 El material vuelve a ser **vidrio**, ahora en las tres pantallas: superficies translúcidas (50 % de blanco),

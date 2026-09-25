@@ -13,7 +13,7 @@
 :root{
   --papel:#f3f1ea; --panel:#fff; --tinta:#14110c; --muted:#5e5950; --tenue:#8b857a;
   --oro:#7b660f; --oro-claro:#d4af13; --oro-vivo:#f1cb05; --oro-papel:#fdf6dd;
-  --line:#e8e4da; --glass:rgba(255,255,255,.86); --glass-border:#e8e4da;
+  --line:#e8e4da; --glass:rgba(255,255,255,.86); --glass-border:#e8e4da; --papel-bloc:#fffdf0;
   --alta:#a4231b; --alta-soft:#fdeceb; --media:#8a5a08; --media-soft:#fdf3dd;
   --baja:#4a4740; --baja-soft:#f2f0ea; --ok:#2c6b3f; --ok-soft:#e6f3e9;
   --brand:var(--oro); --brand-soft:var(--oro-papel); --text:var(--tinta); --bg:var(--papel);
@@ -197,10 +197,33 @@ ul.tickets li.media{border-color:var(--media)}
 .columna.urge{background:linear-gradient(180deg,rgba(253,236,235,.8),rgba(255,255,255,.5))}
 .columna.media{background:linear-gradient(180deg,rgba(253,243,221,.8),rgba(255,255,255,.5))}
 .columna-vacia{color:var(--tenue);font-size:13px;padding:14px 6px;text-align:center}
-.tarjeta{background:var(--vidrio-fuerte);border:1px solid var(--vidrio-borde);border-radius:14px;padding:12px 13px;cursor:pointer;
-  box-shadow:var(--rim),var(--shadow);display:flex;flex-direction:column;gap:6px;
-  transition:box-shadow .2s var(--curva),transform .2s var(--curva),border-color .2s var(--curva)}
+/* Cada pendiente es una hoja de bloc: cabezal del color de su columna, perforación y renglones. Lo que hace
+   que esto no se sienta una bandeja de correo. */
+.tarjeta{position:relative;padding:0;border-radius:13px;overflow:hidden;cursor:pointer;
+  border:1px solid color-mix(in srgb,var(--tono) 42%,var(--vidrio-borde));
+  background:linear-gradient(180deg,color-mix(in srgb,var(--tono) 78%,#2a241a),color-mix(in srgb,var(--tono) 58%,#2a241a));
+  box-shadow:var(--rim),var(--shadow);display:block;
+  transition:box-shadow .2s var(--curva),transform .2s var(--curva)}
+.tarjeta::before{content:"";display:block;height:14px;
+  background:repeating-linear-gradient(90deg,transparent 0 5px,rgba(255,255,255,.45) 5px 9px);
+  background-size:auto 1px;background-position:0 6px;background-repeat:repeat-x;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.tarjeta .hoja{position:relative;border-radius:0 0 12px 12px;padding:12px 13px 11px 26px;
+  display:flex;flex-direction:column;gap:2px;
+  background:
+    linear-gradient(90deg,transparent 0 19px,color-mix(in srgb,var(--alta) 38%,transparent) 19px 20px,transparent 20px),
+    repeating-linear-gradient(180deg,transparent 0 21px,color-mix(in srgb,var(--tinta) 9%,transparent) 21px 22px),
+    var(--papel-bloc);
+  box-shadow:inset 0 3px 6px -3px rgba(20,17,12,.35)}
+.tarjeta .hoja::before{content:"";position:absolute;left:0;right:0;top:-4px;height:5px;
+  background:radial-gradient(circle at 3.5px 0,var(--papel-bloc) 0 2.4px,transparent 2.6px) repeat-x;
+  background-size:7px 5px}
+.tarjeta .hoja > *{position:relative}
+.tarjeta .fila,.tarjeta .qq,.tarjeta p{line-height:22px}
 .tarjeta:hover{box-shadow:var(--rim),var(--lift);transform:translateY(-2px)}
+.columna{--tono:var(--baja)}
+.columna.urge{--tono:var(--alta)}
+.columna.media{--tono:var(--media)}
 .tarjeta:focus-visible{outline:2px solid var(--oro-claro);outline-offset:2px}
 .tarjeta.sel{border-color:var(--oro-claro);box-shadow:0 0 0 3px rgba(212,175,19,.18),var(--lift)}
 .tarjeta .qq{font-weight:700;letter-spacing:-.01em}
@@ -774,12 +797,13 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
           ? suyas.map(function (x) {
               var p = x.p;
               return '<article class="tarjeta' + (elegido === x.i ? ' sel' : '') + '" data-i="' + x.i + '" tabindex="0">' +
+                '<div class="hoja">' +
                 '<div class="fila"><span class="chip ' + (p.prioridad === 'alta' ? 'alta' : p.prioridad === 'media' ? 'media' : '') + '">' + esc(p.cliente) + '</span>' +
                   '<span class="grow"></span><span class="muted small">' + esc(rel(p.ts)) + '</span></div>' +
                 '<div class="qq">' + esc(p.nombre) + '</div>' +
                 '<p class="muted small">' + esc((p.texto || '').slice(0, 130)) + '</p>' +
                 (p.ventana ? '<span class="chip alta">' + esc(p.ventana) + '</span>' : '') +
-                '</article>';
+                '</div></article>';
             }).join('')
           : '<div class="columna-vacia">Nada por aquí</div>') +
         '</section>';
