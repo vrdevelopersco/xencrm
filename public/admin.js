@@ -21,7 +21,8 @@
     plug: '<path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/>',
     grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     help: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
-    store: '<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/>'
+    store: '<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/>',
+    sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h10M18 18h2"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'
   };
   document.querySelectorAll('.ic').forEach(function (el) { el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[el.getAttribute('data-ic')] || '') + '</svg>'; });
 
@@ -130,6 +131,7 @@
     if (view === 'analysis') loadAnalysis();
     if (view === 'agent') loadAgent();
     if (view === 'profile') loadProfile();
+    if (view === 'negocio') loadNegocio();
     if (view === 'help') loadHelp();
     if (view === 'channels') loadChannels();
     if (view === 'knowledge') loadKnowledge();
@@ -1302,5 +1304,138 @@
       if (m) { go('inbox'); openContact(decodeURIComponent(m[1])); history.replaceState(null, '', location.pathname); } else go('today');
     }).catch(function () {});
   }
+
+  // ---------- El negocio: la configuración del cliente, editable sin tocar archivos ----------
+  // Lo que se guarda aquí va a `aiva.config.json`. Se lee al arrancar, así que hasta que el cliente no reinicie
+  // sigue atendiendo con lo viejo: por eso el aviso de arriba y el botón de reiniciar, que solo aparece donde
+  // hay quien lo vuelva a levantar.
+  var DIAS = [['Dom', 0], ['Lun', 1], ['Mar', 2], ['Mié', 3], ['Jue', 4], ['Vie', 5], ['Sáb', 6]];
+
+  function loadNegocio() { api('/config').then(function (d) { state.negocio = d; renderNegocio(); }); }
+
+  function campo(id, etiqueta, valor, opts) {
+    opts = opts || {};
+    var entrada = opts.largo
+      ? '<textarea id="' + id + '" rows="' + (opts.filas || 2) + '">' + esc(valor == null ? '' : valor) + '</textarea>'
+      : '<input type="' + (opts.tipo || 'text') + '" id="' + id + '" value="' + esc(valor == null ? '' : valor) + '"' +
+        (opts.min != null ? ' min="' + opts.min + '"' : '') + (opts.max != null ? ' max="' + opts.max + '"' : '') + '>';
+    return '<div class="prof-field"><div class="lbl"><label class="small" for="' + id + '"><b>' + esc(etiqueta) + '</b></label></div>' + entrada +
+      (opts.pista ? '<div class="small muted">' + esc(opts.pista) + '</div>' : '') + '</div>';
+  }
+
+  function renderNegocio() {
+    var d = state.negocio, a = d.guardado, ci = a.citas;
+    var aviso = d.alDia ? '' :
+      '<div class="aviso" style="margin-bottom:12px"><b>Hay cambios guardados que todavía no se aplican.</b> ' +
+      'El asistente sigue atendiendo con la configuración anterior hasta que reinicie. ' +
+      (d.puedeReiniciarse ? '<button class="btn sm" id="neg-reiniciar">Reiniciar ahora</button>'
+                          : '<span class="small muted">Reinícialo tú: aquí nadie lo volvería a levantar solo.</span>') + '</div>';
+
+    var zonas = d.zonas.indexOf(a.timezone) === -1 ? [a.timezone].concat(d.zonas) : d.zonas;
+
+    $('negocio').innerHTML = aviso +
+      '<div class="card"><h2 class="h">El negocio</h2>' +
+        campo('n-nombre', 'Nombre', a.negocio.name, { pista: 'Como lo nombra el asistente al presentarse.' }) +
+        campo('n-desc', 'En una línea', a.negocio.description, { largo: true, pista: 'Qué vende o qué hace. Va en lo que el asistente sabe de entrada.' }) +
+        campo('n-sitio', 'Sitio web', a.negocio.siteUrl, { pista: 'Con https://' }) +
+        campo('n-humano', 'Cuando piden una persona', a.negocio.humanContact, { largo: true, pista: 'Lo que el asistente responde cuando alguien quiere hablar con alguien de carne y hueso.' }) +
+        '<div class="fila-3">' + campo('n-pais', 'País', a.negocio.country) + campo('n-moneda', 'Moneda', a.negocio.currency) +
+          campo('n-indicativo', 'Indicativo', a.negocio.phoneCountryCode, { pista: 'Sin el +' }) +
+          campo('n-digitos', 'Dígitos del teléfono', a.negocio.phoneLocalDigits, { tipo: 'number', min: 6, max: 12 }) + '</div>' +
+      '</div>' +
+
+      '<div class="card"><h2 class="h">El asistente</h2>' +
+        campo('n-agente', 'Se llama', a.agente.name) +
+        campo('n-estilo', 'Cómo habla', a.agente.style, { largo: true, pista: 'Por ejemplo: cálido, cercano, tutea, mensajes cortos.' }) +
+        campo('n-meta', 'Qué busca en cada conversación', a.agente.goal, { largo: true, pista: 'Vacío: solo responde y toma datos.' }) +
+        campo('n-saludo', 'Primer saludo', a.agente.greeting, { largo: true, pista: 'Vacío: saluda con sus propias palabras.' }) +
+        campo('n-verifico', 'Cuando no sabe algo', a.agente.verifyPhrase, { largo: true, pista: 'Lo que dice antes de que la pregunta te llegue a ti. Nunca inventa.' }) +
+      '</div>' +
+
+      '<div class="card"><h2 class="h">Marca y hora</h2>' +
+        '<div class="fila-3">' +
+          campo('n-color', 'Color', a.marca.color, { tipo: 'color' }) +
+          campo('n-logo', 'Logo (URL)', a.marca.logo) +
+          '<div class="prof-field"><div class="lbl"><label class="small" for="n-zona"><b>Zona horaria</b></label></div>' +
+            '<select id="n-zona">' + zonas.map(function (z) { return '<option' + (z === a.timezone ? ' selected' : '') + '>' + esc(z) + '</option>'; }).join('') + '</select>' +
+            '<div class="small muted">Con esto entiende «mañana a las 3».</div></div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="card"><h2 class="h">Citas</h2>' +
+        '<label class="prof-check" for="n-citas"><input type="checkbox" id="n-citas"' + (ci.enabled ? ' checked' : '') + '> Este negocio agenda citas</label>' +
+        '<div id="n-citas-detalle"' + (ci.enabled ? '' : ' hidden') + '>' +
+          '<div class="fila-3">' + campo('n-servicio', 'Cómo se llama la cita', ci.service) + campo('n-lugar', 'Dónde', ci.location) +
+            campo('n-dura', 'Dura (minutos)', ci.durationMin, { tipo: 'number', min: 5, max: 480 }) + '</div>' +
+          '<div class="fila-3">' + campo('n-cupo', 'Cuántas a la vez', ci.capacity, { tipo: 'number', min: 1, max: 50 }) +
+            campo('n-aviso', 'Con cuánta anticipación (horas)', ci.minLeadHours, { tipo: 'number', min: 0, max: 720 }) +
+            campo('n-hasta', 'Hasta cuántos días adelante', ci.maxDaysAhead, { tipo: 'number', min: 1, max: 365 }) + '</div>' +
+          '<div class="prof-field"><div class="lbl"><b class="small">Días que atiende</b></div><div class="dias">' +
+            DIAS.map(function (x) { return '<label class="prof-check"><input type="checkbox" class="n-dia" value="' + x[1] + '"' + (ci.days.indexOf(x[1]) !== -1 ? ' checked' : '') + '> ' + x[0] + '</label>'; }).join('') +
+          '</div></div>' +
+          '<div class="prof-field"><div class="lbl"><b class="small">Franjas del día</b></div><div id="n-franjas">' +
+            ci.hours.map(franja).join('') + '</div><button class="btn sm" type="button" id="n-mas-franja">Agregar franja</button></div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="fila" style="gap:10px;align-items:center"><button class="btn primary" id="n-guardar">Guardar</button>' +
+        '<span id="n-msg" class="small" role="status"></span></div>' +
+      '<div class="small muted" style="margin-top:10px">El embudo y los datos que captura salen de cómo se dio de alta el cliente y no se cambian desde aquí: ' +
+      'tocarlos en caliente dejaría fichas en etapas que ya no existen.</div>';
+
+    $('n-citas').onchange = function () { $('n-citas-detalle').hidden = !this.checked; };
+    $('n-mas-franja').onclick = function () { $('n-franjas').insertAdjacentHTML('beforeend', franja(['09:00', '13:00'])); enganchaFranjas(); };
+    enganchaFranjas();
+    if ($('neg-reiniciar')) $('neg-reiniciar').onclick = function () {
+      this.disabled = true; this.textContent = 'Reiniciando…';
+      api('/config/restart', { method: 'POST' }).catch(function () {});
+      setTimeout(loadNegocio, 6000); // vuelve a preguntar cuando ya debería estar arriba
+    };
+    $('n-guardar').onclick = guardarNegocio;
+  }
+
+  function franja(h) {
+    return '<div class="franja"><input type="time" value="' + esc(h[0]) + '" aria-label="Desde"> <span class="muted">a</span> ' +
+      '<input type="time" value="' + esc(h[1]) + '" aria-label="Hasta"> <button class="btn sm" type="button" data-quitar>Quitar</button></div>';
+  }
+  function enganchaFranjas() {
+    $('n-franjas').querySelectorAll('[data-quitar]').forEach(function (b) {
+      b.onclick = function () { b.parentNode.remove(); };
+    });
+  }
+
+  function guardarNegocio() {
+    var num = function (id) { return Number($(id).value); };
+    var cuerpo = {
+      negocio: {
+        name: $('n-nombre').value, description: $('n-desc').value, siteUrl: $('n-sitio').value,
+        currency: $('n-moneda').value, country: $('n-pais').value, humanContact: $('n-humano').value,
+        phoneCountryCode: $('n-indicativo').value, phoneLocalDigits: num('n-digitos')
+      },
+      agente: { name: $('n-agente').value, style: $('n-estilo').value, goal: $('n-meta').value, greeting: $('n-saludo').value, verifyPhrase: $('n-verifico').value },
+      marca: { color: $('n-color').value, logo: $('n-logo').value },
+      timezone: $('n-zona').value,
+      citas: {
+        enabled: $('n-citas').checked,
+        service: $('n-servicio') ? $('n-servicio').value : '',
+        location: $('n-lugar') ? $('n-lugar').value : '',
+        durationMin: $('n-dura') ? num('n-dura') : 45,
+        days: Array.prototype.map.call(document.querySelectorAll('.n-dia:checked'), function (x) { return Number(x.value); }),
+        hours: Array.prototype.map.call($('n-franjas').querySelectorAll('.franja'), function (f) {
+          var e = f.querySelectorAll('input'); return [e[0].value, e[1].value];
+        }),
+        capacity: $('n-cupo') ? num('n-cupo') : 1,
+        minLeadHours: $('n-aviso') ? num('n-aviso') : 0,
+        maxDaysAhead: $('n-hasta') ? num('n-hasta') : 21
+      }
+    };
+    $('n-msg').textContent = 'Guardando…';
+    api('/config', { method: 'PUT', body: cuerpo }).then(function (r) {
+      if (r.error) { $('n-msg').innerHTML = '<span class="v-no">' + esc(r.error) + '</span>'; return; }
+      $('n-msg').textContent = r.hayQueReiniciar ? 'Guardado. Se aplica al reiniciar.' : 'Guardado.';
+      loadNegocio();
+    });
+  }
+
   boot();
 })();

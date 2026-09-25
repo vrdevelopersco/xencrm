@@ -113,7 +113,7 @@ function engineName(v: string | undefined, def: 'ollama' | 'apple' | 'openai'): 
 }
 
 // ---------- Configuración del negocio (aiva.config.json) ----------
-const BusinessConfig = z.object({
+export const BusinessConfigSchema = z.object({
   business: z.object({
     name: z.string(),
     description: z.string(),
@@ -240,14 +240,14 @@ const BusinessConfig = z.object({
   /** Datos de demostración (pnpm seed). */
   seedFile: z.string().optional(),
 });
-export type BusinessConfig = z.infer<typeof BusinessConfig>;
+export type BusinessConfig = z.infer<typeof BusinessConfigSchema>;
 
 export function loadBusinessConfig(path = 'aiva.config.json'): BusinessConfig {
   const abs = resolve(path);
   if (!existsSync(abs)) {
     throw new Error(`No existe ${path}. Copia aiva.config.example.json a aiva.config.json y ajústalo.`);
   }
-  return BusinessConfig.parse(JSON.parse(readFileSync(abs, 'utf8')));
+  return BusinessConfigSchema.parse(JSON.parse(readFileSync(abs, 'utf8')));
 }
 
 // AIVA_CONFIG elige otro archivo: un proceso por cliente, o una copia para pruebas que no toquen el diccionario real.

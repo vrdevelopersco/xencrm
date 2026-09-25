@@ -470,6 +470,15 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 }
 @media(max-width:420px){.nav button,.nav .nav-more{padding:6px 4px;min-width:50px}}
 
+/* El negocio: la configuración del cliente. Filas de tres que se apilan en celular. */
+.fila-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0 14px}
+.dias{display:flex;flex-wrap:wrap;gap:6px 14px}
+.franja{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.franja input[type=time]{min-height:38px}
+#negocio .card{margin-bottom:14px}
+#negocio h2.h{font-size:15px;margin:0 0 10px}
+.aviso{background:var(--warn-soft,#fef3c7);color:var(--warn,#a3480a);border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
 /* Ayuda: tutorial rápido (una secuencia real, por eso numerada) y preguntas frecuentes. */
 .help-step{display:grid;grid-template-columns:32px 1fr;gap:4px 12px;padding:12px 0;border-top:1px solid var(--line)}
 .help-step:first-of-type{border-top:0}
@@ -525,6 +534,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       <button data-view="analysis" class="nav-2"><i class="ic" data-ic="chart"></i>Análisis</button>
       <div class="group">Configuración</div>
       <button data-view="profile" class="nav-2"><i class="ic" data-ic="store"></i>Perfil</button>
+      <button data-view="negocio" class="nav-2"><i class="ic" data-ic="sliders"></i>El negocio</button>
       <button data-view="agent" class="nav-2"><i class="ic" data-ic="bot"></i>Agente</button>
       <button data-view="channels" class="nav-2"><i class="ic" data-ic="plug"></i>Canales</button>
       <button data-view="knowledge" class="nav-2"><i class="ic" data-ic="book"></i>Lo que sabe</button>
@@ -667,6 +677,10 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
     <section class="view" id="view-profile">
       <div class="topbar"><h1>Perfil del negocio</h1><span class="muted small">Lo que confirmes aquí es lo que el bot dice de tu negocio</span></div>
       <div class="pad" id="profile"></div>
+    </section>
+    <section class="view" id="view-negocio">
+      <div class="topbar"><h1>El negocio</h1><span class="muted small">Cómo se llama, cómo habla el asistente y cómo agenda</span></div>
+      <div class="pad" id="negocio"></div>
     </section>
     <section class="view" id="view-agent">
       <div class="topbar"><h1>Agente</h1></div>

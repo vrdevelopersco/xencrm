@@ -110,3 +110,30 @@ eso se hace con `pm2 stop aiva-<slug>`, a propósito.
 - Que la **dirección pública** de cada cliente responda: si se cae, no entran ni el chat del sitio ni WhatsApp.
 - El **consumo de IA** por cliente, que es lo que se factura.
 - Los **respaldos**: cada instancia guarda una copia diaria de su base (14 días) en su carpeta.
+
+## La configuración de cada cliente
+
+Desde el tablero de un cliente —al que se entra por la consola—, en **El negocio**, se cambia sin tocar archivos:
+
+| Qué | Para qué sirve |
+|---|---|
+| Nombre, descripción, sitio, país, moneda | Lo que el asistente sabe de entrada sobre el negocio |
+| Indicativo y dígitos del teléfono | Con eso entiende «300 123 4567» y lo guarda como +57… |
+| Cuando piden una persona | Lo que responde cuando alguien quiere hablar con alguien de carne y hueso |
+| Cómo se llama el asistente, cómo habla, qué busca, cómo saluda | La persona que atiende |
+| Cuando no sabe algo | La frase antes de que la pregunta le llegue al equipo |
+| Color y logo | La marca en el chat del sitio y en la página de la cita |
+| Zona horaria | Con eso entiende «mañana a las 3» |
+| Citas: si agenda, cómo se llama, dónde, duración, cupo, días y franjas | La agenda de verdad |
+
+**El embudo y los datos que captura no se tocan desde ahí**: salen de cómo se dio de alta el cliente (citas,
+soporte o cotización). Cambiarlos en caliente dejaría fichas en etapas que ya no existen.
+
+🪤 La configuración se lee **una vez, al arrancar**. Guardar deja el archivo listo, pero el asistente sigue
+atendiendo con lo anterior hasta que su proceso reinicie: por eso aparece el aviso y, donde hay quien lo vuelva a
+levantar (el arranque del paquete o pm2), el botón **Reiniciar ahora**. Donde no lo hay, no se ofrece: salir
+dejaría al cliente sin atender a nadie.
+
+Nada se guarda sin validar contra el mismo esquema con el que se lee al arrancar, y antes de pisar el archivo se
+deja una copia en `aiva.config.json.anterior`. Una actualización del despliegue tampoco pisa lo editado: si el
+cliente ya tiene su configuración en los datos, manda esa; la que trae el paquete solo se usa la primera vez.

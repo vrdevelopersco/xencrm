@@ -18,6 +18,7 @@ import { reminderTime, remindersBoard } from '../crm/reminders.js';
 import { onEvent } from '../crm/events.js';
 import { listNotifications, startNotifications } from '../crm/notifications.js';
 import { usageSummary } from '../llm/usage.js';
+import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
@@ -249,6 +250,48 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     } catch (err) {
       return c.json({ errors: (err as Error).message.split('\n') }, 400);
     }
+  });
+
+  /**
+   * La configuración del negocio: nombre, asistente, marca, zona horaria y citas. Se edita aquí —y por lo tanto
+   * desde la consola, que sirve este tablero— en vez de a mano en `aiva.config.json`.
+   *
+   * 🪤 Se lee al arrancar, así que guardar deja el archivo listo pero el proceso sigue con lo viejo hasta que
+   * reinicie. Por eso se devuelve lo que corre, lo que está guardado y si hay quien lo levante al reiniciar.
+   */
+  app.get('/admin/api/config', (c) => {
+    let guardado = null;
+    try {
+      guardado = ajustesEnDisco();
+    } catch {
+      /* el archivo quedó raro: se muestra lo que corre y ya */
+    }
+    return c.json({
+      corriendo: ajustesDe(),
+      guardado: guardado ?? ajustesDe(),
+      alDia: alDia(),
+      puedeReiniciarse: puedeReiniciarse(),
+      zonas: ZONAS_HORARIAS,
+    });
+  });
+
+  app.put('/admin/api/config', async (c) => {
+    try {
+      const r = guardarAjustes(await c.req.json());
+      return c.json({ ok: true, ajustes: r.ajustes, hayQueReiniciar: r.hayQueReiniciar, puedeReiniciarse: puedeReiniciarse() });
+    } catch (err) {
+      return c.json({ error: comoSeLee(err) }, 400);
+    }
+  });
+
+  /**
+   * Reiniciar para que lo guardado se aplique. Solo donde hay quien lo vuelva a levantar (el arranque del paquete
+   * o pm2): sin eso, salir dejaría al cliente sin atender a nadie.
+   */
+  app.post('/admin/api/config/restart', (c) => {
+    if (!puedeReiniciarse()) return c.json({ error: 'aquí nadie lo volvería a levantar: reinícialo tú' }, 409);
+    setTimeout(() => process.exit(0), 300); // le da tiempo a contestar
+    return c.json({ ok: true });
   });
 
   /**

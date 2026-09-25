@@ -39,7 +39,7 @@ const ARRANQUE = String.raw`// Generado por: pnpm paquete — no editar a mano.
 // ERR_REQUIRE_ASYNC_MODULE. Los hijos sí arrancan como se debe, con node, y siguen siendo ESM.
 const { spawn } = require('node:child_process');
 const http = require('node:http');
-const { mkdirSync, readFileSync, writeFileSync } = require('node:fs');
+const { existsSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
 const { homedir, tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 
@@ -111,6 +111,9 @@ const porDefecto = {
   GATE_ENGINE: process.env.GATE_ENGINE || 'openai',
   ANALYSIS_ENGINE: process.env.ANALYSIS_ENGINE || 'openai',
   EMBED_ENGINE: process.env.EMBED_ENGINE || 'openai',
+  // Aquí hay quien los vuelva a levantar (este mismo arranque), así que el tablero puede ofrecer reiniciar para
+  // aplicar un cambio de configuración sin miedo a dejar al cliente abajo.
+  AIVA_SUPERVISADO: '1',
   // WhatsApp arranca apagado: se enciende desde el tablero de cada cliente, en Canales, cuando vayan a escanear
   // el código. Esto es solo el arranque de fábrica; una vez lo prenden, queda prendido en su base.
   WHATSAPP_ENABLED: process.env.WHATSAPP_ENABLED || 'false',
@@ -120,11 +123,16 @@ clientes.forEach((c, i) => {
   const mio = join(datos, c.slug);
   for (const sub of ['', 'data', 'auth', 'catalogo', 'conocimiento']) mkdirSync(join(mio, sub), { recursive: true });
   // La configuración viaja en el paquete con las rutas de la máquina donde se armó: aquí se reescriben.
-  const config = JSON.parse(readFileSync(join(aqui, 'config', c.slug + '.json'), 'utf8'));
+  //
+  // 🪤 Si el cliente ya tiene la suya en los datos, manda ESA: ahí están los cambios que hicieron desde el
+  // tablero (nombre, asistente, citas, marca), y pisarlos en cada actualización sería borrarles el trabajo. La
+  // que trae el paquete solo se usa la primera vez.
+  const configPath = join(mio, 'aiva.config.json');
+  const deFabrica = join(aqui, 'config', c.slug + '.json');
+  const config = JSON.parse(readFileSync(existsSync(configPath) ? configPath : deFabrica, 'utf8'));
   config.dictionaryFile = join(mio, 'dictionary.json');
   config.profileFile = join(mio, 'profile.json');
   config.sources = { ...(config.sources ?? {}), productsFile: join(mio, 'catalogo', 'productos.json'), knowledgeDir: join(mio, 'conocimiento') };
-  const configPath = join(mio, 'aiva.config.json');
   writeFileSync(configPath, JSON.stringify(config, null, 2));
   levantar(c.slug, 'dist/index.js', {
     ...porDefecto,
