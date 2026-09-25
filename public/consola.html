@@ -136,6 +136,42 @@ ul.tickets li.media{border-color:var(--media)}
 .burbuja .who{display:block;font-size:11px;color:var(--tenue);margin-bottom:2px}
 .chats{max-height:46vh;overflow:auto;padding-right:4px}
 
+/* ── El tablero de Atender: una columna por clasificación ───────────────────── */
+.tablero{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}
+@media (max-width:1000px){.tablero{grid-template-columns:1fr}}
+.columna{background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:18px;padding:12px;
+  display:flex;flex-direction:column;gap:10px;min-height:120px}
+.columna-cabeza{display:flex;align-items:center;gap:8px;padding:2px 4px 0}
+.columna-cabeza b{font-size:14px;letter-spacing:-.01em}
+.cuenta{margin-left:auto;display:grid;place-items:center;min-width:24px;height:24px;padding:0 7px;border-radius:999px;
+  background:var(--tinta);color:#fff;font-size:12px;font-weight:700}
+.columna.urge .cuenta{background:var(--alta)}
+.columna.media .cuenta{background:var(--media)}
+.columna.urge{background:linear-gradient(180deg,rgba(253,236,235,.8),rgba(255,255,255,.5))}
+.columna.media{background:linear-gradient(180deg,rgba(253,243,221,.8),rgba(255,255,255,.5))}
+.columna-vacia{color:var(--tenue);font-size:13px;padding:14px 6px;text-align:center}
+.tarjeta{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 13px;cursor:pointer;
+  box-shadow:var(--rim),var(--shadow);display:flex;flex-direction:column;gap:6px;
+  transition:box-shadow .2s var(--curva),transform .2s var(--curva),border-color .2s var(--curva)}
+.tarjeta:hover{box-shadow:var(--rim),var(--lift);transform:translateY(-2px)}
+.tarjeta:focus-visible{outline:2px solid var(--oro-claro);outline-offset:2px}
+.tarjeta.sel{border-color:var(--oro-claro);box-shadow:0 0 0 3px rgba(212,175,19,.18),var(--lift)}
+.tarjeta .qq{font-weight:700;letter-spacing:-.01em}
+.tarjeta p{margin:0}
+
+/* El panel lateral donde se atiende, para no partir el tablero en dos */
+/* 🪤 El display va en [open]: puesto suelto, le gana al display:none del navegador y el panel se queda a la
+   vista con el diálogo cerrado. Es el mismo tropiezo que el de [hidden]. */
+dialog.panel{max-width:620px;width:min(620px,100%);height:100svh;max-height:100svh;margin:0 0 0 auto;
+  border-radius:22px 0 0 22px;overflow:hidden}
+dialog.panel[open]{display:flex;flex-direction:column}
+dialog.panel[open]{animation:entra-panel .22s var(--curva)}
+@keyframes entra-panel{from{transform:translateX(26px);opacity:.4}to{transform:none;opacity:1}}
+.panel-cabeza{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line);background:var(--glass)}
+.panel-cabeza b{font-size:15px;letter-spacing:-.01em}
+dialog.panel #detalle{padding:16px 18px 24px;overflow:auto;flex:1}
+@media (prefers-reduced-motion: reduce){dialog.panel[open]{animation:none}}
+
 .lista-clientes{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--rim),var(--shadow);overflow:hidden}
 .cliente{padding:14px 16px;border-top:1px solid var(--line);transition:background .2s var(--curva)}
 .cliente:first-child{border-top:none}
@@ -225,13 +261,21 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     <button class="btn" id="yo" title="Mi cuenta"></button>
     <button class="btn" id="salir">Salir</button>
   </header>
-  <main id="atender" class="dos">
-    <div id="pend"></div>
-    <div id="detalle" class="card"><div class="vacio">Elige algo de la izquierda para atenderlo.</div></div>
+  <main id="atender">
+    <div id="pend" class="tablero"></div>
   </main>
   <main id="lista" hidden></main>
   <main id="equipo" hidden></main>
 </div>
+
+<dialog id="dlg-atender" class="panel">
+  <div class="panel-cabeza">
+    <b id="panel-titulo">Atender</b>
+    <span class="grow"></span>
+    <button class="btn sm" id="panel-cerrar" type="button">Cerrar</button>
+  </div>
+  <div id="detalle"><div class="vacio">Elige algo del tablero para atenderlo.</div></div>
+</dialog>
 
 <dialog id="dlg-yo">
   <form class="alta" method="dialog" id="form-yo">
@@ -339,6 +383,9 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   };
   // Mi cuenta: cada quien se cambia lo suyo sin pedirle nada al super-admin. Con la llave maestra no hay cuenta
   // que cambiar, así que ahí el botón solo lo dice.
+  $('panel-cerrar').onclick = function () { $('dlg-atender').close(); };
+  $('dlg-atender').addEventListener('close', function () { elegido = null; pintarPendientes(); });
+
   $('yo').onclick = function () {
     if (!yo) { alert('Entraste con la llave maestra, que no es una cuenta. Crea tu usuario en Equipo y entra con él.'); return; }
     $('y-nombre').value = yo.nombre || '';
@@ -492,25 +539,51 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     var h = Math.round(m / 60);
     return h < 24 ? 'hace ' + h + ' h' : 'hace ' + Math.round(h / 24) + ' d';
   }
+  // El tablero: una columna por clasificación, y en cada una lo que lleva más esperando arriba. Se mira para
+  // decidir por dónde empezar, así que la tarjeta dice lo justo: de quién es, de qué cliente y cuánto lleva.
+  var COLUMNAS = [
+    { tipo: 'persona', titulo: 'Piden una persona', pinta: 'urge' },
+    { tipo: 'verificar', titulo: 'No supo: por verificar', pinta: 'media' },
+    { tipo: 'espera', titulo: 'Esperan respuesta', pinta: '' },
+  ];
+
   function pintarPendientes() {
     $('n-pend').textContent = pendientes.length;
-    $('pend').innerHTML = pendientes.length
-      ? pendientes.map(function (p, i) {
-          return '<div class="pend' + (elegido === i ? ' sel' : '') + '" data-i="' + i + '">' +
-            '<div class="fila"><span class="chip ' + (p.tipo === 'espera' ? 'media' : 'alta') + '">' + esc(TIPOS[p.tipo]) + '</span>' +
-              '<span class="chip">' + esc(p.cliente) + '</span><span class="grow"></span><span class="muted small">' + esc(rel(p.ts)) + '</span></div>' +
-            '<div class="qq">' + esc(p.nombre) + '</div>' +
-            '<div class="muted small">' + esc((p.texto || '').slice(0, 120)) + '</div></div>';
-        }).join('')
-      : '<div class="vacio">Nada pendiente en ningún cliente 🎉</div>';
-    $('pend').querySelectorAll('.pend').forEach(function (el) {
-      el.onclick = function () { abrir(Number(el.getAttribute('data-i'))); };
+    if (!pendientes.length) {
+      $('pend').innerHTML = '<div class="card" style="grid-column:1/-1"><div class="vacio">Nada pendiente en ningún cliente 🎉</div></div>';
+      return;
+    }
+    $('pend').innerHTML = COLUMNAS.map(function (col) {
+      var suyas = pendientes.map(function (p, i) { return { p: p, i: i }; }).filter(function (x) { return x.p.tipo === col.tipo; });
+      return '<section class="columna ' + col.pinta + '">' +
+        '<div class="columna-cabeza"><b>' + esc(col.titulo) + '</b><span class="cuenta">' + suyas.length + '</span></div>' +
+        (suyas.length
+          ? suyas.map(function (x) {
+              var p = x.p;
+              return '<article class="tarjeta' + (elegido === x.i ? ' sel' : '') + '" data-i="' + x.i + '" tabindex="0">' +
+                '<div class="fila"><span class="chip ' + (p.prioridad === 'alta' ? 'alta' : p.prioridad === 'media' ? 'media' : '') + '">' + esc(p.cliente) + '</span>' +
+                  '<span class="grow"></span><span class="muted small">' + esc(rel(p.ts)) + '</span></div>' +
+                '<div class="qq">' + esc(p.nombre) + '</div>' +
+                '<p class="muted small">' + esc((p.texto || '').slice(0, 130)) + '</p>' +
+                (p.ventana ? '<span class="chip alta">' + esc(p.ventana) + '</span>' : '') +
+                '</article>';
+            }).join('')
+          : '<div class="columna-vacia">Nada por aquí</div>') +
+        '</section>';
+    }).join('');
+    $('pend').querySelectorAll('.tarjeta').forEach(function (el) {
+      var ir = function () { abrir(Number(el.getAttribute('data-i'))); };
+      el.onclick = ir;
+      el.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir(); } };
     });
   }
+
   function abrir(i) {
     elegido = i;
     pintarPendientes();
     var p = pendientes[i];
+    $('panel-titulo').textContent = p.nombre + ' · ' + p.cliente;
+    if (!$('dlg-atender').open) $('dlg-atender').showModal();
     $('detalle').innerHTML = '<div class="muted small">Cargando la conversación…</div>';
     cli(p.slug + '/contacts/' + encodeURIComponent(p.userId)).then(function (d) {
       var msgs = (d.messages || []).slice(-12).map(function (m) {
@@ -529,7 +602,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
           '<div class="fila"><button class="btn primary" id="enviar">Enviar</button><button class="btn" id="devolver">Devolvérsela a Aiva</button></div>';
       $('detalle').innerHTML =
         '<div class="fila"><span class="nombre">' + esc(p.nombre) + '</span><span class="chip">' + esc(p.cliente) + '</span>' +
-          (c.score != null ? '<span class="chip">' + esc(c.score) + ' · ' + esc(c.temperature || '') + '</span>' : '') + aviso +
+          (c.score != null ? '<span class="chip">' + esc(c.score) + (c.temperature ? ' · ' + esc(c.temperature) : ' de puntaje') + '</span>' : '') + aviso +
           '<span class="grow"></span><a class="btn" target="_blank" rel="noopener" href="' + esc(urlTablero(p.slug)) + '#c=' + encodeURIComponent(p.userId) + '">Abrir en su tablero</a></div>' +
         '<div class="chats">' + (msgs || '<div class="muted small">Sin mensajes.</div>') + '</div>' +
         '<div id="msg2" class="small" role="status"></div>' + accion;
