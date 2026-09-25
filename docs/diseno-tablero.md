@@ -167,3 +167,57 @@ Decisiones:
   marca, porque aiva todavía no tiene la piel de cada cliente. Cuando la tenga, esa página debe usarla fija.
 - El enlace secreto del calendario va enmascarado; "Copiar enlace" es la acción principal y "Mostrar" es opcional.
 
+
+## La marca de la casa (2026-09-25)
+
+Hasta aquí cada pantalla se había diseñado sola: la portada por un lado, la consola por otro, el tablero por otro.
+Se sentía cambiar de aplicación al pasar de una a otra. Ahora las tres hablan el lenguaje de
+**hrctechnologies.com**, que es de donde viene el producto:
+
+| | Valor |
+|---|---|
+| Tipografía | **Figtree** (400/500/600/700), con fallback del sistema |
+| Papel | `#f6f5f1` claro · `#14120d` oscuro |
+| Tinta | `#14110c` claro · `#f0ece4` oscuro |
+| Acento | **dorado** `#7b660f` claro · `#e2c04c` oscuro |
+| Dorado vivo | `#f1cb05`, el del chip del logo: solo en manchas pequeñas, nunca debajo de texto |
+| Línea | `#e8e4da` claro · `#2e2a22` oscuro |
+
+El **verde se queda donde significa algo** —confirmado, cita cumplida— y no como acento: un dato no debe cambiar de
+sentido porque cambie la marca. Es la misma regla de «colores de dato aparte del acento», ahora que el acento
+cambió de verdad.
+
+El logo de HRC viene blanco sobre transparente (solo sirve en oscuro); para fondo claro hay una versión con el
+texto en tinta y el chip con su dorado intacto, en `public/hrc-technologies.png`.
+
+### Contrastes medidos (2026-09-25)
+
+| Sobre | Ratio |
+|---|---|
+| Tinta sobre papel, claro | 17.3:1 |
+| Gris secundario sobre papel, claro | 6.4:1 |
+| Dorado sobre papel, claro | 5.4:1 |
+| Blanco sobre el botón dorado | 5.6:1 |
+| Tinta sobre papel, oscuro | 15.9:1 |
+| Gris secundario, oscuro | 6.8:1 |
+| Dorado sobre papel, oscuro | 10.6:1 |
+
+🪤 El modo oscuro del tablero no se ha visto renderizado: el tablero fija el tema al arrancar y pisa lo que uno
+ponga a mano en una maqueta. Los valores están medidos, pero la primera vez que se despliegue hay que darle al 🌙.
+
+### Tres trampas que costaron caro
+
+Las tres dan el mismo síntoma —«la página no hace nada»— y ninguna la coge una prueba de HTTP.
+
+1. **`display` suelto le gana a `[hidden]`.** `.entrada{display:grid}` en el login: el navegador le pone
+   `display:none` a `[hidden]`, pero una regla propia manda más. Después de entrar, el login se quedaba encima de
+   la consola. Sale con `[hidden]{display:none!important}`.
+2. **Lo mismo con `<dialog>`.** `dialog.panel{display:flex}` dejaba el panel a la vista con el diálogo cerrado. El
+   `display` va en `dialog[open]`, nunca suelto.
+3. **El marcado que el JavaScript engancha tiene que existir antes que el `<script>`.** Un `<dialog>` puesto
+   *después* de `<script src="admin.js">` hacía que `$('cfg-cerrar').onclick` reventara con `null` y se cayera el
+   JavaScript **entero** del tablero: se veía la pantalla de token porque no llegaba a arrancar nada.
+
+La tercera vivió un día entero sin que nadie la viera: el servidor contestaba 200 y el HTML era correcto. Salió
+abriendo la página en un navegador de verdad con la sesión puesta (`node herramientas/mirar.mjs`), que imprime los
+errores de JavaScript. **Una pantalla nueva no está probada hasta que se abre en un navegador.**

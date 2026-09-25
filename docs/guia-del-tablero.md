@@ -9,10 +9,16 @@ un aviso que lleva al tutorial. Esta guía es la referencia completa, para entre
 
 ## Cómo entrar
 
-Abre la dirección del tablero (termina en `/admin`) desde el computador o el celular y escribe el token que te
-dieron. En el celular el menú queda abajo, con Hoy, Chats, Calendario, Prospectos y **Más**. En
-Más están Análisis, Perfil, Agente, Canales, Lo que sabe, Ayuda, el tema claro u oscuro, el sonido y **Salir**. En el
-computador todo está en la barra lateral, con Salir al pie.
+**Si eres del equipo de aiva**, entra por la consola y abre el tablero del cliente desde su fila: no te va a pedir
+nada, porque ya entraste allá.
+
+**Si eres el negocio**, abre la dirección del tablero (termina en `/admin`) desde el computador o el celular y
+escribe el token que te dieron. En el celular el menú queda abajo, con Hoy, Chats, Calendario, Prospectos y **Más**. En
+Más están Análisis, Perfil, El negocio, Agente, Canales, Lo que sabe, Ayuda, el tema claro u oscuro, el sonido y
+**Salir**. En el computador todo está en la barra lateral, con Salir al pie.
+
+**Perfil** y **El negocio** no son pantallas: abren un **modal con dos pestañas** encima de lo que estés haciendo,
+y al cerrarlo vuelves donde estabas.
 
 ## La idea
 
@@ -159,6 +165,28 @@ abono, precios, políticas y datos propios (tallas, tiempos, lo que venden o no)
   ("de hoy en quince", "terno"). Con **Llevarlas a «Frases que no entendimos»** quedan en Agente, donde les pones
   el significado como siempre: solo se guardan si con eso ya se entienden.
 - **Guardar perfil** guarda y deja una copia de la versión anterior.
+
+## El negocio
+
+La configuración del negocio, en la otra pestaña del mismo modal del Perfil. Aquí se cambia **sin tocar archivos**:
+
+- **El negocio**: nombre, la línea que lo describe, sitio, país, moneda, el indicativo y los dígitos del teléfono,
+  y qué responde cuando piden una persona.
+- **El asistente**: cómo se llama, cómo habla, qué busca en cada conversación, cómo saluda y qué dice cuando no
+  sabe algo.
+- **Marca y hora**: color, logo y zona horaria (con eso entiende «mañana a las 3»).
+- **Citas**: si agenda, cómo se llama la cita, dónde, cuánto dura, cuántas a la vez, con cuánta anticipación,
+  hasta cuántos días adelante, qué días y qué franjas.
+
+El **embudo** y los datos que captura no se tocan aquí: salen de cómo se dio de alta el cliente. Cambiarlos en
+caliente dejaría fichas en etapas que ya no existen.
+
+🪤 **Guardar no basta.** La configuración se lee al arrancar, así que el asistente sigue atendiendo con lo
+anterior hasta que su proceso reinicie. El modal lo avisa arriba y, donde hay quien lo vuelva a levantar, ofrece
+**Reiniciar ahora** (tarda unos segundos). Donde no lo hay, no se ofrece: salir dejaría al cliente sin atender a
+nadie.
+
+Nada se guarda sin validar, y antes de pisar el archivo queda una copia del anterior.
 
 ## Agente
 

@@ -78,9 +78,11 @@ y por qué.
 | `src/rag/` | `store.ts` (SQLite: tablas, vectores, FTS5, migraciones), `retriever.ts` (búsqueda y ficha completa), `ingest.ts` (catálogo, markdown, sitio, Shopify, perfil), `profile-index.ts` |
 | `src/crm/` | `contacts.ts`, `merge.ts` (fichas de la misma persona en dos canales), `analyzer.ts` (análisis y puntaje), `score.ts` (el puntaje se enfría solo), `cross.ts` (la misma persona por dos canales), `followup.ts` (posponer seguimiento), `export.ts` (CSV), `signals.ts` (datos exactos por código), `recap.ts`, `appointments.ts` (agenda y zona horaria), `when.ts` (fechas y franjas), `booking.ts` (flujo de citas), `reminders.ts` (recordatorio del día antes), `calendar.ts` + `busy.ts` (iCalendar), `verifications.ts`, `misses.ts` (frases que no entendimos), `outbox.ts` (enviar al cliente, ventana de 24 h, plantillas), `notifications.ts`, `events.ts` (bus en memoria), `settings.ts` |
 | `src/channels/` | `web.ts` (servidor, widget, página demo), `admin.ts` (API del tablero y SSE), `whatsapp.ts` (Baileys), `meta.ts` (Cloud API) + `meta-credentials.ts`, `registry.ts` + `switches.ts` (Canales), `calendar.ts` (rutas públicas), `public-check.ts` (¿responde la dirección pública?) |
-| `src/` | `config.ts` (esquemas y variables), `profile.ts` (perfil del negocio), `brand.ts` (color, contraste y logo), `envfile.ts` (escribir `.env`), `index.ts` (arranque), `onboard.ts`, `cli.ts`, `seed.ts` |
+| `src/` | `config.ts` (esquemas y variables), `profile.ts` (perfil del negocio), `ajustes.ts` (lo editable de la configuración desde el tablero), `brand.ts` (color, contraste y logo), `envfile.ts` (escribir `.env`), `index.ts` (arranque), `onboard.ts`, `cli.ts`, `seed.ts` |
+| `src/` (varios clientes) | `clientes.ts` (alta, baja, índice, tokens), `consola.ts` (tickets, bandeja, proxy del tablero), `consola-usuarios.ts` (quién entra: claves, roles, sesiones), `paquete.ts` (el ZIP del despliegue) |
 | `src/eval/` | pruebas sin modelo, escenarios, repasos y consumo |
-| `public/` | `admin.html` + `admin.js` (tablero, sin framework), `widget.js`, `demo.html` |
+| `public/` | `admin.html` + `admin.js` (tablero, sin framework), `consola.html` (la consola), `inicio.html` (la portada), `widget.js`, `demo.html` |
+| `herramientas/` | `mirar.mjs` (abrir una pantalla en un navegador de verdad y ver sus errores), `sonda-hosting/` |
 
 ## Datos
 
@@ -208,6 +210,7 @@ Respaldo diario con `VACUUM INTO` a `data/backups/` (`rag/backup.ts`), con las �
 | El negocio y cómo atiende | `aiva.config.json` (`AIVA_CONFIG` elige otro) | quien instala (`pnpm onboard`) |
 | La máquina y los secretos | `.env` (`AIVA_ENV_FILE` elige otro) | quien instala; las credenciales de Meta, también el tablero |
 | Lo que el dueño confirma | `profileFile` | el tablero (Perfil) |
+| Nombre, asistente, marca, hora y citas | `aiva.config.json` | el tablero (El negocio) — se aplica **al reiniciar** |
 | Lo que el negocio enseña | `dictionaryFile` | el tablero (Diccionario, Frases que no entendimos) |
 | Canales encendidos | tabla `settings` | el tablero (Canales) |
 
@@ -218,6 +221,31 @@ Precedencia:
 - Una variable del proceso pisa la de `.env`.
 - Guardar desde el tablero aplica al instante: el perfil y el diccionario en memoria, y las credenciales de Meta en
   el canal en marcha. Los archivos se guardan con copia del anterior (`.anterior.json`).
+- 🪤 **Menos la configuración del negocio** (`El negocio`): `aiva.config.json` se lee **una vez, al arrancar**.
+  Guardar deja el archivo listo y el tablero avisa que hay cambios sin aplicar; se aplican al reiniciar ese
+  cliente. Por eso `ajustes.ts` valida contra el mismo esquema con el que se lee al arrancar: lo que se guarde
+  tiene que poder levantar el proceso.
+
+## Varios clientes
+
+Un **proceso por cliente**, no una base compartida con `tenant_id`: son negocios distintos y lo que no se mezcla
+no se puede filtrar. Cada uno tiene su `aiva.config.json`, su base, su WhatsApp y su `ADMIN_TOKEN`.
+
+La **consola** (`src/consola.ts`) no guarda nada propio: le pregunta a cada instancia por su API con el token de
+ese cliente. De ahí salen los tickets y la bandeja única.
+
+Para no repartir tokens, la consola **sirve el tablero de cada cliente** en `/c/<slug>/admin` y le pone el token
+al pasar cada petición. Tres detalles que lo hacen funcionar:
+
+1. El tablero calcula solo dónde vive (`BASE` sale de la ruta), así que servido ahí sus llamadas caen en
+   `/c/<slug>/admin/api/...` y vuelven a pasar por la consola. No hubo que tocarlo.
+2. La sesión viaja en una **galleta** (`aiva_consola`, HttpOnly, 12 h) además de la cabecera: una navegación
+   normal y un `EventSource` no pueden poner cabeceras.
+3. La consola le deja una **marca** a la página al pasarla (`window.AIVA_CONSOLA`). Sin eso el tablero, al no
+   encontrar un token en el navegador, enseñaba su pantalla de token aunque no hiciera falta ninguno.
+
+Por la consola solo se llega al tablero de un cliente, no al resto de su instancia, y quien atiende a un cliente
+no entra a los otros ni sabiéndose la dirección.
 
 ## Motores y costo
 
@@ -289,6 +317,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:brand` | contraste de la marca con 500 colores | no |
 | `pnpm test:meta` | credenciales de Meta: validar, verificar, guardar | no (Meta simulado) |
 | `pnpm test:profile` | perfil: guardar, aplicar, lo que llega al bot | no |
+| `pnpm test:ajustes` | configuración del negocio: qué se guarda, qué se rechaza, qué no se toca | no |
 | `pnpm test:router` | qué modelo responde: el pesado solo para lo específico | no |
 | `pnpm test:schedule` | cuándo corre el análisis: ráfaga, conversación activa, flush | no |
 | `pnpm test:archive` | archivar (sale de listas y cuentas, vuelve al escribir) y borrar | no |
@@ -323,6 +352,16 @@ Reglas para probar sin romper nada:
   # copia aiva.config.json a /tmp/aiva-prueba y apunta dictionaryFile y profileFile a copias allí
   AIVA_CONFIG=/tmp/aiva-prueba/aiva.config.json DB_PATH=/tmp/aiva-prueba/aiva.db PORT=3100 WHATSAPP_ENABLED=false npx tsx src/index.ts
   ```
+
+### Lo que las pruebas no cogen
+
+Todas las de arriba prueban el servidor. Ninguna abre una pantalla, así que un error de JavaScript en el
+navegador deja la página muerta mientras el HTTP sigue dando 200 y el HTML sigue siendo correcto. Ya pasó: un
+`<dialog>` puesto después del `<script>` tumbó el tablero entero durante un día.
+
+Para eso está `node herramientas/mirar.mjs <url> <sesion> <salida.png>`: abre la pantalla en Chrome con la sesión
+puesta, guarda una captura y **imprime los errores de JavaScript**. Una pantalla nueva no está probada hasta que
+se abre en un navegador.
 
 ## Extender
 

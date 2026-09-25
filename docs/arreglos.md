@@ -7,6 +7,63 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-09-25
+
+### Cada cliente se estira con su micro-tablero y su equipo · `fd085a2`
+La fila decía qué atender pero no cómo iba el negocio: ahora **Ver más** abre mensajes de hoy, conversaciones,
+calientes, puntaje promedio, cuántas llegaron a cita, cuántas se ganaron, efectividad y gasto de IA. La
+efectividad se calcula por el **papel** de las etapas (`cita`, `ganado`), no por su nombre, que cada negocio las
+llama distinto. Debajo, quién lo atiende, con cambiar clave, quitar y asignar a la mano.
+
+### El tablero ya no pide token entrando por la consola, y no se moría al cargar · `d907f47`
+Dos cosas encadenadas. El tablero, sin token guardado en el navegador, ni lo intentaba: enseñaba su pantalla de
+token, aunque entrando por la consola no hace falta ninguno. Y peor: el diálogo de configuración había quedado
+**después** del `<script>`, así que `$('cfg-cerrar').onclick` reventaba con null y se caía el JavaScript entero
+del tablero. Lo que se veía era la pantalla de token porque no arrancaba nada.
+
+🪤 El HTTP daba 200 y el HTML era correcto: ninguna prueba lo vio. Salió abriendo la página en un navegador de
+verdad con la sesión puesta, con `node herramientas/mirar.mjs`, que imprime los errores de JavaScript. Una
+pantalla nueva no está probada hasta que se abre en un navegador.
+
+### El tablero del cliente, con el lenguaje de la casa · `2270c30`
+Se pasaba de la consola a un tablero verde con vidrio esmerilado y se sentía otra aplicación. Cambiado por los
+tokens, no regla por regla: acento dorado, papel cálido, Figtree, y el vidrio de 24 px de desenfoque a 14. El
+verde se queda donde significa algo. Contrastes en `docs/diseno-tablero.md`.
+
+### Perfil y El negocio se abren en un modal · `a4627c1`
+Eran dos páginas largas a las que había que navegar. Son configuración: ahora un modal de dos pestañas encima de
+lo que estabas haciendo, con los campos cortos en dos columnas.
+
+### Atender es un tablero por columnas · `a67eeb6`
+La bandeja era una lista donde todo pesaba igual. Ahora tres columnas —piden una persona, no supo, esperan
+respuesta— con su cuenta, lo que más ha esperado arriba, y la conversación en un panel al lado.
+
+### La consola y la portada, con la marca de HRC · `26183ff`, `f99de66`
+La portada salió calcada de otros sitios de la casa y en oscuro; rehecha en claro con Figtree, el dorado y el
+logo. La consola iba por su lado: entrar es una pantalla partida, y los clientes pasan de tarjetas a filas con su
+vistazo.
+
+🪤 De ahí salieron dos trampas de CSS que dan el mismo síntoma: un `display` suelto le gana al `display:none` que
+el navegador pone en `[hidden]` y en un `<dialog>` cerrado. Está en `docs/diseno-tablero.md`.
+
+### Mi cuenta, y usuarios con correo · `7d52b8c`
+Para cambiar una clave había que ser super-admin. Ahora cada quien se cambia su nombre, su correo y su clave
+—pidiendo la actual—, y quien tenga correo puede entrar con él.
+
+### El empaquetador borra solo lo que él crea · `9934d5f`
+`pnpm paquete` barría `paquetes/` entera y se llevó por delante unas credenciales que había dejado ahí. Ahora
+borra su directorio de trabajo y el zip, nada más. Las credenciales de la máquina viven en `~/aiva-credenciales`.
+
+### La configuración de cada cliente se edita desde el tablero · `4afb5eb`
+Nombre, asistente, marca, zona horaria y citas salían del archivo a mano. Se validan con el mismo esquema con el
+que se leen al arrancar, se guarda copia del anterior, y como la configuración se lee al arrancar, el tablero
+avisa que hay cambios sin aplicar y ofrece reiniciar donde hay quien lo levante.
+
+### El tablero de cada cliente se abre desde la consola · `d16085e`
+Entrar como super-admin y que el cliente pidiera otro token rompía el modelo. La consola sirve el tablero en
+`/c/<slug>/admin` y le pone el token al pasar; la sesión viaja en una galleta porque una navegación y un
+EventSource no pueden poner cabeceras.
+
 ## 2026-09-24
 
 ### Una portada en la raíz, y la consola en /consola · `becf4b0`

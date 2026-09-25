@@ -47,24 +47,30 @@ Después queda: llenar su **Perfil** desde su tablero (o traer su historial, ver
 
 ## Atender
 
-La pestaña **Atender** junta en una sola bandeja lo que espera a una persona en **todos** los clientes:
+La pestaña **Atender** es un tablero con lo que espera a una persona en **todos** los clientes, repartido en tres
+columnas:
 
-- **Por verificar**: el asistente no supo y el cliente está esperando la respuesta del equipo.
-- **Pidió una persona**: el asistente se calló y avisó que alguien escribiría.
-- **Espera respuesta**: la última palabra la tiene el cliente.
+| Columna | Qué es |
+|---|---|
+| **Piden una persona** | El asistente se calló y avisó que alguien escribiría. |
+| **No supo: por verificar** | No supo algo y el cliente está esperando la respuesta del equipo. |
+| **Esperan respuesta** | La última palabra la tiene el cliente. |
 
-Cada fila dice de qué cliente es, y el orden es **urgencia × prioridad del cliente**: lo urgente de un cliente
-grande va antes que lo urgente de uno chico. Al abrir una se ve la conversación y se responde ahí mismo: la consola
-habla por ese cliente con su token, sin abrir cinco tableros ni repartir llaves. Lo que envíes queda a tu nombre
-(el que pongas en «Respondes como»).
+Cada tarjeta dice de qué cliente es y cuánto lleva esperando; dentro de cada columna, lo que más ha esperado va
+arriba. Al abrir una, la conversación sale en un **panel al lado** —no parte la pantalla— con el chat, la pregunta
+pendiente y la caja para responder. La consola habla por ese cliente con su token: no hay que abrir cinco tableros
+ni repartir llaves. Lo que envíes queda a tu nombre (el que pongas en «Respondes como»).
 
 Cuando entra algo nuevo de tus clientes **suena un pito**, el número queda en el título de la pestaña y, si tienes
 la ventana atrás, sale una notificación del navegador. Se silencia con la campana.
 
 ## Vigilar
 
-La pestaña **Clientes** tiene una tarjeta por cliente con su estado, sus números (contactos, calientes, citas,
-consumo de IA de 30 días) y **tickets que salen solos**:
+La pestaña **Clientes** es una lista con una fila por cliente. De un vistazo, sin entrar a nada: **sin leer ·
+esperan · por verificar · citas · calientes · contactos**. Lo que está en cero no se pinta, para que el ruido no
+esconda lo que sí pasa.
+
+Debajo de cada fila salen los **tickets, que aparecen solos** según el estado:
 
 | Ticket | Urgencia |
 |---|---|
@@ -75,7 +81,28 @@ consumo de IA de 30 días) y **tickets que salen solos**:
 | Gente esperando respuesta | media |
 | Citas sin resultado | baja |
 
-La **prioridad** de cada cliente se cambia ahí mismo y es la que pesa en el orden de todo.
+**Ver más** estira la fila con el micro-tablero del negocio:
+
+```
+61 mensajes hoy · 38 conversaciones · 5 calientes · 54 puntaje promedio
+9 llegaron a cita · 6 ganadas · 39 % efectividad · $1.42 de IA (30 días)
+```
+
+La **efectividad** es cuántas de las conversaciones abiertas llegaron a cita o se ganaron. Se calcula por el
+**papel** de las etapas (`cita`, `ganado`), no por su nombre: cada negocio las llama distinto y el papel es lo
+único que significa lo mismo en todos.
+
+Ahí mismo sale **quién atiende a ese cliente**, con lo que se necesita a la mano: cambiarle la clave a alguien,
+quitarlo de ese cliente o asignarle a otra persona, sin ir hasta Equipo.
+
+La **prioridad** de cada cliente se cambia en su fila y es la que pesa en el orden de todo.
+
+### Abrir el tablero de un cliente
+
+**Abrir tablero** lo abre *dentro de la consola*, en `/c/<slug>/admin`: la consola le pone el token del cliente a
+cada petición y el tablero entra con tu sesión. No hay que volver a identificarse ni repartir los `ADMIN_TOKEN`.
+Quien atiende a un cliente entra al suyo y a ningún otro, ni sabiéndose la dirección. «Salir» devuelve a la
+consola, que es de donde se vino.
 
 ## Quién entra y qué ve
 
@@ -113,7 +140,9 @@ eso se hace con `pm2 stop aiva-<slug>`, a propósito.
 
 ## La configuración de cada cliente
 
-Desde el tablero de un cliente —al que se entra por la consola—, en **El negocio**, se cambia sin tocar archivos:
+Desde el tablero de un cliente —al que se entra por la consola—, en **El negocio**, se cambia sin tocar archivos.
+Se abre en un **modal con dos pestañas** (El negocio · Perfil) encima de lo que estuvieras haciendo, no en otra
+pantalla: es configuración, y al cerrar uno vuelve donde estaba.
 
 | Qué | Para qué sirve |
 |---|---|

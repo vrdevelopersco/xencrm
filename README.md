@@ -38,6 +38,8 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
   qué queda publicado, qué variables van en el panel y dónde quedan los datos.
 - [`docs/aiva-producto.pdf`](docs/aiva-producto.pdf): lo que hace aiva, en una hoja, para mostrarle a un cliente
   (se regenera con `pnpm producto`).
+- [`herramientas/mirar.mjs`](herramientas/mirar.mjs): abre una pantalla en un navegador de verdad, con la sesión
+  puesta, y dice qué se ve y qué errores de JavaScript hubo. Las pruebas no cogen eso.
 - [`docs/arreglos.md`](docs/arreglos.md): la bitácora de arreglos: qué fallaba, qué cambió y cómo se comprobó, con
   su commit.
 - `examples/dunor/POR-CONFIRMAR.md`: lo que falta confirmar con DUNOR (se llena en el Perfil).
