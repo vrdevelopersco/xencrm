@@ -10,7 +10,7 @@
 //   pnpm paquete midominio.com
 //
 // Por qué un solo paquete y no uno por cliente: en estas plataformas cada app es un despliegue, un dominio y un
-// juego de variables. Con cinco clientes eso son seis. Aquí se sube una vez y adentro `arranque.js` levanta un
+// juego de variables. Con cinco clientes eso son seis. Aquí se sube una vez y adentro `app.js` levanta un
 // proceso por cliente —cada uno con su base y su WhatsApp, que es lo que no se puede mezclar— y un enrutador
 // delante que reparte por la ruta.
 //
@@ -32,14 +32,18 @@ const ARRANQUE = String.raw`// Generado por: pnpm paquete — no editar a mano.
 // Levanta un proceso por cliente y uno para la consola, y pone delante un enrutador que reparte por la ruta:
 // / es la portada, /confia/... va al proceso de CONFIA sin el prefijo, y lo demás a la consola. Así un despliegue atiende
 // a todos los clientes sin mezclar sus datos: cada proceso tiene su base, su WhatsApp y su configuración.
-import { spawn } from 'node:child_process';
-import http from 'node:http';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir, tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+//
+// 🪤 Este archivo es CommonJS a propósito, y por eso la carpeta no declara "type": "module" (lo declara dist/,
+// que sí es ESM). El servidor de estas plataformas —LiteSpeed— no ejecuta "npm start": hace require() del archivo
+// de inicio dentro de su propio proceso. Un require() de un módulo ESM con await arriba revienta con
+// ERR_REQUIRE_ASYNC_MODULE. Los hijos sí arrancan como se debe, con node, y siguen siendo ESM.
+const { spawn } = require('node:child_process');
+const http = require('node:http');
+const { mkdirSync, readFileSync, writeFileSync } = require('node:fs');
+const { homedir, tmpdir } = require('node:os');
+const { join, resolve } = require('node:path');
 
-const aqui = dirname(fileURLToPath(import.meta.url));
+const aqui = __dirname;
 const PUERTO = Number(process.env.PORT || 3000);
 const { dominio, puertoInterno, clientes } = JSON.parse(readFileSync(join(aqui, 'clientes.json'), 'utf8'));
 
@@ -67,17 +71,37 @@ const tokenDe = (slug) => process.env['TOKEN_' + slug.toUpperCase().replace(/[^A
 
 // ── Un proceso por cliente ──────────────────────────────────────────────────
 const hijos = new Map();
+let cerrando = false;
 function levantar(slug, guion, env, puerto) {
+  if (cerrando) return;
   const hijo = spawn(process.execPath, [join(aqui, guion)], {
     env: { ...process.env, ...env, PORT: String(puerto) },
     stdio: ['ignore', 'inherit', 'inherit'],
   });
   hijo.on('exit', (code) => {
+    if (cerrando) return;
     console.error('[aiva] ' + slug + ' se cayó (' + code + '); lo levanto en 5 s');
     setTimeout(() => levantar(slug, guion, env, puerto), 5000);
   });
   hijos.set(slug, { puerto, hijo });
 }
+
+// Si se van sin nosotros, los hijos quedan agarrando sus puertos y la siguiente versión no puede arrancar: da
+// EADDRINUSE y uno se vuelve loco buscando el error en el código nuevo. Al cerrar, se van todos.
+function cerrar(senal) {
+  if (cerrando) return;
+  cerrando = true;
+  for (const [slug, h] of hijos) {
+    try {
+      h.hijo.kill(senal === 'SIGKILL' ? 'SIGKILL' : 'SIGTERM');
+    } catch {
+      console.error('[aiva] no pude cerrar ' + slug);
+    }
+  }
+  setTimeout(() => process.exit(0), 1500).unref();
+}
+for (const s of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(s, () => cerrar(s));
+process.on('exit', () => cerrar('SIGKILL'));
 
 // Aquí no hay Ollama ni va a haberlo: si al panel se le olvidó una variable, igual se usa OpenAI en vez de
 // quedarse esperando un modelo local que no existe. Lo que sí esté en el panel manda sobre esto.
@@ -212,13 +236,17 @@ writeFileSync(
   join(dir, 'clientes.json'),
   `${JSON.stringify({ dominio: DOMINIO, puertoInterno: PUERTO_INTERNO, clientes: clientes.map((c) => ({ slug: c.slug, nombre: c.nombre, prioridad: c.prioridad, desde: c.desde })) }, null, 2)}\n`,
 );
-writeFileSync(join(dir, 'arranque.js'), ARRANQUE);
+writeFileSync(join(dir, 'app.js'), ARRANQUE);
 
 const base = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { dependencies: Record<string, string> };
 writeFileSync(
   join(dir, 'package.json'),
-  `${JSON.stringify({ name: 'aiva', private: true, type: 'module', engines: { node: '>=22.13' }, scripts: { start: 'node arranque.js' }, dependencies: base.dependencies }, null, 2)}\n`,
+  `${JSON.stringify({ name: 'aiva', private: true, main: 'app.js', engines: { node: '>=22.13' }, scripts: { start: 'node app.js' }, dependencies: base.dependencies }, null, 2)}\n`,
 );
+// La raíz NO declara "type": "module": el arranque tiene que ser CommonJS porque el servidor de la plataforma
+// hace require() del archivo de inicio, y un require() de ESM con await arriba revienta. Lo compilado sí es ESM,
+// y se lo dice este package.json de adentro, que manda sobre el de la raíz para todo lo que cuelgue de dist/.
+writeFileSync(join(dir, 'dist', 'package.json'), '{ "type": "module" }\n');
 
 const variables = [
   'OPENAI_API_KEY=PONER',
@@ -243,8 +271,14 @@ writeFileSync(
     '',
     'En el panel, al desplegar:',
     '  Versión de Node ........ 24',
+    '  Archivo de inicio ...... app.js        ← IMPORTANTE, ver abajo',
     '  Comando de compilación . npm install --omit=dev',
     '  Comando de inicio ...... npm start',
+    '',
+    'El archivo de inicio tiene que ser app.js y no otro. Estas plataformas no ejecutan "npm start": el servidor',
+    'hace require() del archivo que uno le diga, dentro de su propio proceso. Si queda apuntando a dist/index.js',
+    '—que es el servidor de UN cliente, y además es ESM— revienta con ERR_REQUIRE_ASYNC_MODULE y no arranca nada.',
+    'app.js es el que levanta a todos y reparte por ruta.',
     '',
     'Variables de entorno: cópialas tal cual. Las que dicen «PONER» las reemplazas tú.',
     '',

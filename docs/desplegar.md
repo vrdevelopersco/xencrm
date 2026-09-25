@@ -29,11 +29,28 @@ identificador de un cliente**: los tapa el enrutador. `pnpm cliente nuevo` los r
 
 ```
 Versión de Node ........ 24
+Archivo de inicio ...... app.js
 Comando de compilación . npm install --omit=dev
 Comando de inicio ...... npm start
 ```
 
 `PORT` lo pone la plataforma: no se define.
+
+### 🪤 El archivo de inicio tiene que ser `app.js`
+
+Estas plataformas **no ejecutan `npm start`**. El servidor (LiteSpeed, con su `lsnode.js`) hace `require()` del
+archivo de inicio dentro de su propio proceso. De ahí salen dos trampas:
+
+1. Si el panel queda apuntando a `dist/index.js` —que es el servidor de **un** cliente— no arranca el enrutador
+   ni los demás, aunque el ZIP esté bien.
+2. Un `require()` de un módulo ESM con `await` arriba revienta con `ERR_REQUIRE_ASYNC_MODULE`. Todo lo compilado
+   es ESM, así que ninguno de esos archivos sirve como inicio.
+
+Por eso `app.js` es **CommonJS** y la raíz del paquete no declara `"type": "module"`: lo declara `dist/package.json`,
+que manda sobre lo que cuelgue de ahí. Los clientes arrancan como procesos aparte, con `node`, y siguen siendo
+ESM sin problema.
+
+Si el error aparece, no es el código: es el campo del panel.
 
 ## Variables de entorno
 
@@ -81,7 +98,14 @@ cd /tmp && rm -rf prueba && mkdir prueba && cd prueba
 unzip -q ~/proyectos/aiva/paquetes/aiva.zip
 ln -s ~/proyectos/aiva/node_modules node_modules
 PORT=3500 AIVA_DATOS=/tmp/prueba-datos OPENAI_API_KEY=sk-de-prueba \
-  CONSOLA_TOKEN=x TOKEN_DUNOR=x TOKEN_CONFIA=x TOKEN_HRC=x node arranque.js
+  CONSOLA_TOKEN=x TOKEN_DUNOR=x TOKEN_CONFIA=x TOKEN_HRC=x node app.js
+```
+
+Para probarlo **como lo arranca la plataforma** —que es distinto— se le hace `require()` desde CommonJS, igual
+que `lsnode.js`:
+
+```bash
+echo "require('./app.js')" > simula.cjs && node simula.cjs
 ```
 
 Y del otro lado: `/` y `/consola` dan 200, y `/<cliente>/health` responde con el nombre del negocio.
