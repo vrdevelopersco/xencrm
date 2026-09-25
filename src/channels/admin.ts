@@ -22,6 +22,7 @@ import { entrar as entrarALaConversacion, salir as salirDeLaConversacion, quiene
 import { actividadPorHora, nuevasPorDia, semanaContraSemana } from '../crm/series.js';
 import { accentOn, logoUrl } from '../brand.js';
 import { runIngest } from '../rag/ingest.js';
+import { archivoDemo, cargar as cargarDemo, cuantas as cuantasDemo, quitar as quitarDemo } from '../crm/demo.js';
 import { armar as armarRespaldo, restaurar as restaurarRespaldo, revisar as revisarRespaldo } from '../crm/respaldo.js';
 import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
@@ -532,6 +533,33 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    *
    * 🪤 Cuesta dinero: cada fragmento pasa por el modelo de vectores. Por eso es un botón, no algo automático.
    */
+  /**
+   * Conversaciones de demostración: para que un tablero recién montado no se vea desierto al mostrarlo.
+   *
+   * 🪤 Son datos falsos en la base de un cliente real. Lo importante es que se quitan exactamente: todo lo
+   * sembrado lleva el prefijo `wa:seed-`, que ninguna conversación real puede tener.
+   */
+  app.get('/admin/api/demo', (c) =>
+    c.json({
+      cuantas: cuantasDemo(),
+      hay: Boolean(archivoDemo()),
+      // Para avisar antes de un demo: sin catálogo ni conocimiento indexados, el asistente dice "lo verifico" a
+      // todo lo concreto y parece que no supiera nada.
+      indice: countDocs(),
+    }),
+  );
+
+  app.post('/admin/api/demo', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { on?: boolean };
+    try {
+      if (body.on === false) return c.json({ ok: true, quitadas: quitarDemo(), cuantas: cuantasDemo() });
+      const cargadas = cargarDemo();
+      return c.json({ ok: true, cargadas, cuantas: cuantasDemo() });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  });
+
   app.post('/admin/api/reindexar', async (c) => {
     const que = c.req.query('que');
     const only = que === 'products' || que === 'knowledge' || que === 'site' ? que : undefined;

@@ -281,6 +281,10 @@ dialog.panel #detalle{padding:16px 18px 24px;overflow:auto;flex:1}
 .equipo-cliente .persona{padding:5px 0;border-top:1px solid var(--line)}
 .equipo-cliente .persona:first-of-type{border-top:none}
 .ok-msg{color:var(--ok);min-height:16px}
+.zona-demo{background:rgba(255,255,255,.5);border:1px dashed var(--vidrio-borde);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.zona-demo.encendido{background:color-mix(in srgb,var(--media) 8%,rgba(255,255,255,.5));border-color:color-mix(in srgb,var(--media) 45%,transparent);border-style:solid}
+.demo-aviso.alerta{color:var(--alta)}
+.v-si{color:var(--ok)}
 .paleta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .tinta{width:30px;height:30px;border-radius:10px;border:2px solid transparent;cursor:pointer;box-shadow:var(--rim),var(--shadow)}
 .tinta.puesto{border-color:var(--tinta);box-shadow:0 0 0 3px color-mix(in srgb,var(--oro-claro) 40%,transparent)}
@@ -304,6 +308,10 @@ dialog.panel #detalle{padding:16px 18px 24px;overflow:auto;flex:1}
 .equipo-cliente .persona{padding:5px 0;border-top:1px solid var(--line)}
 .equipo-cliente .persona:first-of-type{border-top:none}
 .ok-msg{color:var(--ok);min-height:16px}
+.zona-demo{background:rgba(255,255,255,.5);border:1px dashed var(--vidrio-borde);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.zona-demo.encendido{background:color-mix(in srgb,var(--media) 8%,rgba(255,255,255,.5));border-color:color-mix(in srgb,var(--media) 45%,transparent);border-style:solid}
+.demo-aviso.alerta{color:var(--alta)}
+.v-si{color:var(--ok)}
 .paleta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .tinta{width:30px;height:30px;border-radius:10px;border:2px solid transparent;cursor:pointer;box-shadow:var(--rim),var(--shadow)}
 .tinta.puesto{border-color:var(--tinta);box-shadow:0 0 0 3px color-mix(in srgb,var(--oro-claro) 40%,transparent)}
@@ -473,7 +481,26 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     return fetch('/api' + path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined })
       .then(function (r) { if (r.status === 401) { entrar(false, 'Vuelve a entrar'); throw new Error('401'); } return r.json(); });
   }
+  // 🪤 Entrar y salir tienen que BORRAR lo que había pintado. Sin esto, al salir de super-admin y entrar como
+  // alguien que atiende un solo cliente, esa persona alcanzaba a ver —unos segundos, hasta que llegaba /yo— la
+  // lista de todos los clientes de aiva, que es de lo peor que puede pasar en un producto multicliente.
+  function olvidarLoAnterior() {
+    yo = null; esSuper = false;
+    window.__clientes = []; window.__usuarios = [];
+    pendientes = []; elegido = null;
+    $('lista').innerHTML = '';
+    $('equipo').innerHTML = '';
+    $('pend').innerHTML = '';
+    $('resumen').textContent = '';
+    $('n-pend').textContent = '';
+    $('yo-nombre').textContent = '…';
+    $('tab-equipo').hidden = true;   // hasta que /yo diga que es super
+    $('nuevo').hidden = true;
+    if ($('dlg-atender').open) $('dlg-atender').close();
+  }
+
   function entrar(ok, msg) {
+    if (!ok) olvidarLoAnterior();
     $('login').hidden = ok; $('app').hidden = !ok;
     if (msg) $('login-msg').textContent = msg;
   }
@@ -502,6 +529,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d.error) { $('login-msg').textContent = d.error; return; }
+        olvidarLoAnterior(); // nada de la sesión anterior puede quedar en pantalla
         sesion = d.sesion; token = '';
         localStorage.setItem('aiva.consola.sesion', sesion);
         localStorage.removeItem('aiva.consola.token');
@@ -527,6 +555,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d.error) { $('login-msg').textContent = d.error; return; }
+        olvidarLoAnterior();
         sesion = d.sesion; token = llave;
         localStorage.setItem('aiva.consola.sesion', sesion);
         localStorage.setItem('aiva.consola.token', llave);
@@ -706,6 +735,51 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       '<div class="small muted">Efectividad: de las conversaciones abiertas, cuántas llegaron a cita o se ganaron.</div>';
   }
 
+  // Datos de demostración: para enseñar un tablero recién montado sin que se vea desierto. Se quitan exactos,
+  // así que se puede hacer sobre un cliente de verdad y dejarlo limpio después.
+  function zonaDemo(slug) {
+    if (!esSuper) return '';
+    return '<div class="zona-demo" data-demo="' + esc(slug) + '">' +
+      '<div class="fila"><b class="small">Modo demo</b><span class="grow"></span>' +
+      '<button class="btn sm demo-toggle">…</button></div>' +
+      '<div class="small demo-estado muted">…</div>' +
+      '<div class="small demo-aviso" hidden></div></div>';
+  }
+
+  // El estado del demo y, de paso, el aviso que de verdad importa antes de mostrarle esto a alguien: si el
+  // cliente no tiene su catálogo indexado, el asistente responde "lo verifico" a todo lo concreto.
+  function estadoDemo(slug, caja) {
+    var boton = caja.querySelector('.demo-toggle');
+    var estado = caja.querySelector('.demo-estado');
+    var aviso = caja.querySelector('.demo-aviso');
+    boton.disabled = true; estado.textContent = 'Consultando…';
+    cli(slug + '/demo').then(function (r) {
+      if (!r || r.error) { estado.textContent = 'No se pudo consultar.'; return; }
+      var puesto = r.cuantas > 0;
+      caja.classList.toggle('encendido', puesto);
+      boton.textContent = puesto ? 'Apagar y limpiar' : 'Encender modo demo';
+      boton.className = 'btn sm demo-toggle' + (puesto ? '' : ' primary');
+      boton.disabled = !puesto && !r.hay;
+      boton.setAttribute('data-on', puesto ? '1' : '0');
+      estado.textContent = puesto
+        ? r.cuantas + ' conversaciones de ejemplo cargadas · se quitan exactas, sin tocar las de verdad'
+        : (r.hay ? 'Apagado. Llena el tablero con conversaciones de ejemplo para mostrarlo.' : 'Este cliente no trae ejemplos.');
+      estado.className = 'small demo-estado ' + (puesto ? 'v-si' : 'muted');
+
+      var prod = (r.indice && r.indice.products) || 0, saben = (r.indice && r.indice.knowledge) || 0;
+      if (!prod && !saben) {
+        aviso.hidden = false;
+        aviso.className = 'small demo-aviso alerta';
+        aviso.innerHTML = '<b>Ojo antes de mostrarlo:</b> este cliente no tiene catálogo ni información indexada, ' +
+          'así que a cualquier pregunta concreta va a responder «deja te verifico». Restaura su respaldo (arriba) e indexa.';
+      } else {
+        aviso.hidden = false;
+        aviso.className = 'small demo-aviso muted';
+        aviso.textContent = 'Sabe de: ' + prod + ' productos y ' + saben + ' fragmentos de información.';
+      }
+    }).catch(function () { estado.textContent = 'No se pudo consultar.'; });
+  }
+
   function equipoDe(slug) {
     if (!esSuper) return '';
     var todos = window.__usuarios || [];
@@ -777,7 +851,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
             '<button class="btn sm copiar" title="Copiar el token de su tablero">Token</button><button class="btn sm baja">Dar de baja</button>' : '') +
         '</div>' +
       '</div>' + pendientes +
-      '<div class="detalle" hidden>' + microTablero(e) + equipoDe(c.slug) + '</div></div>';
+      '<div class="detalle" hidden>' + microTablero(e) + equipoDe(c.slug) + zonaDemo(c.slug) + '</div></div>';
   }
 
   // Los clientes y, si soy super-admin, el equipo: el equipo se pinta dentro de cada fila.
@@ -835,6 +909,19 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
             });
           };
           campo.click();
+        };
+      });
+      $('lista').querySelectorAll('.zona-demo').forEach(function (caja) {
+        var slug = caja.getAttribute('data-demo');
+        estadoDemo(slug, caja);
+        caja.querySelector('.demo-toggle').onclick = function () {
+          var encender = this.getAttribute('data-on') !== '1';
+          if (encender && !confirm('Esto mete conversaciones de ejemplo en la base de este cliente.\n\nSe apagan con el mismo botón y no tocan las conversaciones de verdad. ¿Sigo?')) return;
+          this.disabled = true;
+          cli(slug + '/demo', { method: 'POST', body: { on: encender } }).then(function (r) {
+            if (r && r.error) alert('No se pudo: ' + r.error);
+            estadoDemo(slug, caja); cargarTodo();
+          });
         };
       });
       $('lista').querySelectorAll('.ver-mas').forEach(function (b) {
