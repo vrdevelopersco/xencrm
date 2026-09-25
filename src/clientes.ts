@@ -102,7 +102,7 @@ export function guardarIndice(clientes: ClienteRef[]) {
 }
 
 /** Rutas que el enrutador del despliegue ya ocupa: un cliente con uno de estos nombres quedaría tapado. */
-export const RESERVADOS = new Set(['consola', 'api', 'admin', 'public', 'index', 'assets', 'static', 'widget']);
+export const RESERVADOS = new Set(['consola', 'c', 'api', 'admin', 'public', 'index', 'assets', 'static', 'widget']);
 
 export const slugificar = (s: string) =>
   s

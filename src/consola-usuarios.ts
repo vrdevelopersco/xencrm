@@ -113,12 +113,16 @@ export function verificar(usuario: string, clave: string): UsuarioPublico | null
 }
 
 // ---------- Sesiones (en memoria: si la consola se reinicia, se vuelve a entrar) ----------
-const sesiones = new Map<string, { usuario: UsuarioPublico; hasta: number }>();
+const sesiones = new Map<string, { usuario: UsuarioPublico; hasta: number; maestra: boolean }>();
 const DURACION = 12 * 3600_000;
 
-export function abrirSesion(usuario: UsuarioPublico, now = Date.now()): string {
+/**
+ * Abre sesión. `maestra` es la de quien entró con el CONSOLA_TOKEN: ese "usuario" no está en el archivo, así que
+ * su sesión no se relee contra él —si no, se caería sola al primer uso—. Es la salida de emergencia.
+ */
+export function abrirSesion(usuario: UsuarioPublico, now = Date.now(), maestra = false): string {
   const token = randomBytes(24).toString('hex');
-  sesiones.set(token, { usuario, hasta: now + DURACION });
+  sesiones.set(token, { usuario, hasta: now + DURACION, maestra });
   return token;
 }
 
@@ -130,6 +134,7 @@ export function sesionDe(token: string | undefined, now = Date.now()): UsuarioPu
     sesiones.delete(token);
     return null;
   }
+  if (s.maestra) return s.usuario; // no está en el archivo: no hay nada que releer
   // Se relee por si le cambiaron el rol o los clientes mientras estaba adentro.
   const fresco = leerUsuarios().find((u) => u.usuario === s.usuario.usuario);
   if (!fresco || !fresco.activo) {

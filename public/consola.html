@@ -167,11 +167,20 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
   $('p').onkeydown = function (e) { if (e.key === 'Enter') $('entrar').click(); };
   $('u').onkeydown = function (e) { if (e.key === 'Enter') $('p').focus(); };
   $('ver-maestra').onclick = function () { $('maestra').hidden = !$('maestra').hidden; };
+  // La llave maestra también abre sesión: así queda la galleta y se puede entrar a los tableros desde aquí.
   $('entrar-maestra').onclick = function () {
-    token = $('t').value.trim(); sesion = '';
-    localStorage.setItem('aiva.consola.token', token);
-    localStorage.removeItem('aiva.consola.sesion');
-    entrar(true); sesionLista();
+    var llave = $('t').value.trim();
+    $('login-msg').textContent = 'Entrando…';
+    fetch('/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ maestra: llave }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error) { $('login-msg').textContent = d.error; return; }
+        sesion = d.sesion; token = llave;
+        localStorage.setItem('aiva.consola.sesion', sesion);
+        localStorage.setItem('aiva.consola.token', llave);
+        $('t').value = '';
+        entrar(true); sesionLista();
+      });
   };
   $('salir').onclick = function () {
     api('/salir', { method: 'POST' }).catch(function () {});
@@ -184,7 +193,9 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
   function tarjeta(f) {
     var c = f.cliente, e = f.estado;
     var estado = e.arriba ? '<span class="chip ok">Arriba</span>' : '<span class="chip alta">Apagado</span>';
-    var url = c.host ? 'https://' + c.host + '/admin' : 'http://localhost:' + c.puerto + '/admin';
+    // El tablero se abre por dentro de la consola: /c/<slug>/admin. Así no hay que volver a identificarse ni
+    // repartir el token de cada cliente; la consola le pone el token al pasar la petición.
+    var url = '/c/' + encodeURIComponent(c.slug) + '/admin';
     var nums = e.arriba
       ? '<div class="nums">' +
         [[e.contactos, 'contactos'], [e.calientes, 'calientes'], [e.sinLeer, 'sin leer'], [e.citas, 'citas próximas'],
@@ -341,7 +352,7 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
   }
   function urlTablero(slug) {
     var f = (window.__clientes || []).find(function (x) { return x.cliente.slug === slug; });
-    return f && f.cliente.host ? 'https://' + f.cliente.host + '/admin' : 'http://localhost:' + (f ? f.cliente.puerto : '') + '/admin';
+    return f ? '/c/' + encodeURIComponent(f.cliente.slug) + '/admin' : '#';
   }
   function responder(p) {
     var texto = $('resp').value.trim();

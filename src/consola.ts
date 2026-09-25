@@ -7,7 +7,8 @@
 //
 //   pnpm consola          arranca en http://localhost:3900
 import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { readFileSync, existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { actualizarCliente, crearCliente, darDeBajaCliente, leerIndice, PLANTILLAS, puertoLibre, tokenDe, urlDe, type ClienteRef } from './clientes.js';
@@ -194,30 +195,110 @@ export async function pendientes(usuario: UsuarioPublico | null = null): Promise
   return listas.flat().sort((a, b) => peso(b) - peso(a) || a.ts - b.ts); // a igual peso, lo que lleva más esperando
 }
 
+// ---------- Quién entra ----------
+// La sesión viaja en una galleta además de la cabecera: es lo único que sirve para una navegación normal (abrir
+// el tablero de un cliente) y para el flujo en vivo, que no pueden poner cabeceras.
+const GALLETA = 'aiva_consola';
+
+/** Con la llave maestra se entra como super-admin, sin usuario en el archivo. */
+const SUPER_DE_EMERGENCIA: UsuarioPublico = {
+  usuario: 'maestra',
+  nombre: 'Llave maestra',
+  rol: 'super',
+  clientes: [],
+  activo: true,
+  desde: new Date().toISOString().slice(0, 10),
+};
+
+const porHttps = (c: Context) => c.req.header('x-forwarded-proto') === 'https' || c.req.url.startsWith('https:');
+const galletaDe = (c: Context) => getCookie(c, GALLETA);
+const ponerGalleta = (c: Context, sesion: string) =>
+  setCookie(c, GALLETA, sesion, { path: '/', httpOnly: true, sameSite: 'Lax', secure: porHttps(c), maxAge: 12 * 60 * 60 });
+const quitarGalleta = (c: Context) => deleteCookie(c, GALLETA, { path: '/' });
+
+/** Quién hace la petición, por cabecera o por galleta. `usuario` null con la llave maestra: alcanza a todos. */
+function quienEs(c: Context): { usuario: UsuarioPublico | null; esSuper: boolean } | null {
+  if ((c.req.header('x-consola-token') ?? c.req.query('token')) === CONSOLA_TOKEN) return { usuario: null, esSuper: true };
+  const usuario = sesionDe(c.req.header('x-consola-sesion') ?? galletaDe(c));
+  return usuario ? { usuario, esSuper: usuario.rol === 'super' } : null;
+}
+
 export function mountConsola(app: Hono) {
   app.get('/', (c) => c.html(readFileSync(new URL('../public/consola.html', import.meta.url), 'utf8')));
 
   // Entrar con usuario y clave; la llave maestra (CONSOLA_TOKEN) sigue valiendo como super-admin.
+  //
+  // La sesión sale por dos vías a la vez: en el cuerpo (para las llamadas del panel, que la mandan por cabecera) y
+  // en una galleta. La galleta es lo que permite abrir el tablero de un cliente aquí dentro: una navegación normal
+  // y un EventSource no pueden poner cabeceras, pero la galleta viaja sola.
   app.post('/api/entrar', async (c) => {
-    const body = (await c.req.json().catch(() => ({}))) as { usuario?: string; clave?: string };
-    const u = body.usuario && body.clave ? verificar(body.usuario, body.clave) : null;
-    if (!u) return c.json({ error: 'Usuario o clave incorrectos' }, 401);
-    return c.json({ sesion: abrirSesion(u), usuario: u });
+    const body = (await c.req.json().catch(() => ({}))) as { usuario?: string; clave?: string; maestra?: string };
+    const conMaestra = Boolean(body.maestra) && body.maestra === CONSOLA_TOKEN;
+    const u = conMaestra ? SUPER_DE_EMERGENCIA : body.usuario && body.clave ? verificar(body.usuario, body.clave) : null;
+    if (!u) return c.json({ error: conMaestra ? 'Llave maestra incorrecta' : 'Usuario o clave incorrectos' }, 401);
+    const sesion = abrirSesion(u, Date.now(), conMaestra);
+    ponerGalleta(c, sesion);
+    return c.json({ sesion, usuario: u });
   });
   app.post('/api/salir', (c) => {
-    cerrarSesion(c.req.header('x-consola-sesion'));
+    cerrarSesion(c.req.header('x-consola-sesion') ?? galletaDe(c));
+    quitarGalleta(c);
     return c.json({ ok: true });
   });
 
   app.use('/api/*', async (c, next) => {
     if (c.req.path === '/api/entrar' || c.req.path === '/api/salir') return next();
-    const maestra = (c.req.header('x-consola-token') ?? c.req.query('token')) === CONSOLA_TOKEN;
-    const usuario = sesionDe(c.req.header('x-consola-sesion'));
-    if (!maestra && !usuario) return c.json({ error: 'no autorizado' }, 401);
-    // Con la llave maestra se entra como super-admin: ve y atiende todos los clientes.
-    c.set('usuario' as never, (usuario ?? null) as never);
-    c.set('esSuper' as never, (maestra || usuario?.rol === 'super') as never);
+    const quien = quienEs(c);
+    if (!quien) return c.json({ error: 'no autorizado' }, 401);
+    c.set('usuario' as never, quien.usuario as never);
+    c.set('esSuper' as never, quien.esSuper as never);
     await next();
+  });
+
+  /**
+   * El tablero de un cliente, servido desde aquí con su token puesto por dentro.
+   *
+   * Es lo que hace que un super-admin no tenga que volver a identificarse —ni repartir tokens— para entrar a un
+   * cliente: se entra una vez a la consola y desde ahí se abre cualquier tablero al que uno alcance. El tablero
+   * calcula solo dónde vive (BASE sale de la ruta), así que servido en /c/dunor/admin sus llamadas caen en
+   * /c/dunor/admin/api/... y por aquí vuelven a pasar.
+   */
+  app.all('/c/:slug/:resto{.*}', async (c) => {
+    const quien = quienEs(c);
+    if (!quien) return c.redirect('/', 302); // sin sesión, a la puerta de la consola
+    const slug = c.req.param('slug');
+    if (!alcanza(quien.usuario, slug)) return c.text('Ese cliente no es tuyo.', 403);
+    const cliente = leerIndice().find((x) => x.slug === slug);
+    const token = cliente ? tokenDe(slug) : '';
+    if (!cliente || !token) return c.text('Ese cliente no existe o no tiene token.', 404);
+
+    const resto = c.req.param('resto') || '';
+    const ruta = resto === 'admin' || resto === 'admin.js' || resto.startsWith('admin/api/') ? `/${resto}` : null;
+    if (!ruta) return c.text('No encontrado', 404);
+
+    const url = new URL(urlDe(cliente) + ruta);
+    for (const [k, v] of Object.entries(c.req.query())) url.searchParams.set(k, v);
+    const metodo = c.req.method;
+    const cuerpo = metodo === 'GET' || metodo === 'HEAD' ? undefined : await c.req.text();
+    // El flujo en vivo (SSE) no puede llevar reloj: se queda abierto a propósito.
+    const esFlujo = resto.endsWith('admin/api/stream');
+    try {
+      const r = await fetch(url, {
+        method: metodo,
+        headers: { 'x-admin-token': token, ...(cuerpo ? { 'content-type': 'application/json' } : {}) },
+        body: cuerpo,
+        ...(esFlujo ? {} : { signal: AbortSignal.timeout(15000) }),
+      });
+      return new Response(r.body, {
+        status: r.status,
+        headers: {
+          'content-type': r.headers.get('content-type') ?? 'application/json',
+          'cache-control': esFlujo ? 'no-cache' : (r.headers.get('cache-control') ?? 'no-cache'),
+        },
+      });
+    } catch {
+      return c.text('La instancia de ese cliente no responde.', 502);
+    }
   });
 
   app.get('/api/yo', (c) => {

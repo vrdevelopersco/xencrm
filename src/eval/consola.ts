@@ -86,5 +86,35 @@ check('por un cliente que no existe, no habla', (await pedir('/api/c/nadie/stats
 check('y sin el token de la consola, nada', (await app.request('http://local/api/c/financiera-del-caribe/stats')).status === 401);
 check('la bandeja tampoco se ve sin token', (await app.request('http://local/api/pendientes')).status === 401);
 
+// --- entrar una vez y abrir el tablero de un cliente desde aquí ---
+// Es lo que evita repartir el token de cada cliente: la consola pone el token al pasar la petición, y lo único
+// que viaja por el navegador es la sesión, en una galleta (una navegación no puede poner cabeceras).
+const entrada = await app.request('http://local/api/entrar', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ maestra: 'token-de-prueba' }),
+});
+const galleta = entrada.headers.get('set-cookie') ?? '';
+const sesionMaestra = (await entrada.json()) as { sesion?: string; usuario?: { rol?: string } };
+check('con la llave maestra se abre sesión de super-admin', entrada.status === 200 && sesionMaestra.usuario?.rol === 'super', JSON.stringify(sesionMaestra).slice(0, 90));
+check('y la sesión sale en una galleta, que no se puede leer desde el navegador', /aiva_consola=/.test(galleta) && /HttpOnly/i.test(galleta), galleta);
+check('con una llave maestra equivocada, no', (await app.request('http://local/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ maestra: 'otra' }) })).status === 401);
+
+const conGalleta = (ruta: string) => app.request(`http://local${ruta}`, { headers: { cookie: `aiva_consola=${sesionMaestra.sesion}` } });
+check('la galleta vale para la API', (await conGalleta('/api/yo')).status === 200);
+check('el tablero de un cliente se abre desde la consola', (await conGalleta('/c/financiera-del-caribe/admin/api/me')).status === 502, 'la instancia está apagada: 502 quiere decir que pasó el control');
+check('sin sesión, el tablero manda a la puerta', (await app.request('http://local/c/financiera-del-caribe/admin')).status === 302);
+check('por la consola solo se llega al tablero, no a lo demás del cliente', (await conGalleta('/c/financiera-del-caribe/health')).status === 404, 'el chat del sitio de un cliente no se sirve desde aquí');
+
+// Quien atiende a un cliente no entra al de otro, ni sabiéndose la dirección.
+const { crearUsuario: nuevoUsuario, abrirSesion: abrir } = await import('../consola-usuarios.js');
+nuevoUsuario({ usuario: 'ana', nombre: 'Ana', clave: 'clave-de-prueba', rol: 'agente', clientes: ['financiera-del-caribe'] });
+const sesionAna = abrir({ usuario: 'ana', nombre: 'Ana', rol: 'agente', clientes: ['financiera-del-caribe'], activo: true, desde: '2026-09-25' });
+const comoAna = (ruta: string) => app.request(`http://local${ruta}`, { headers: { cookie: `aiva_consola=${sesionAna}` } });
+check('entra al tablero del cliente que atiende', (await comoAna('/c/financiera-del-caribe/admin/api/me')).status === 502);
+check('y al de otro cliente, no', (await comoAna('/c/litografia-industrial/admin')).status === 403);
+check('tampoco a su API', (await comoAna('/c/litografia-industrial/admin/api/contacts')).status === 403);
+
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);
