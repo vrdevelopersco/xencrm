@@ -4,79 +4,213 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Consola · aiva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#eef0f4;--panel:#fff;--glass:rgba(255,255,255,.72);--glass-border:rgba(17,24,39,.08);--line:#e2e5ea;--text:#111827;--muted:#5f6875;--brand:#276f45;--brand-soft:#e6f4ec;--alta:#b91c1c;--alta-soft:#fee2e2;--media:#a3480a;--media-soft:#fef3c7;--baja:#374151;--baja-soft:#eef0f4;--ok:#166534;--ok-soft:#dcfce7;--rim:inset 1px 1px 0 rgba(255,255,255,.55),inset -1px -1px 0 rgba(17,24,39,.05);--lift:0 8px 24px rgba(17,24,39,.10);--shadow:0 1px 2px rgba(0,0,0,.06)}
-@media (prefers-color-scheme: dark){:root{--bg:#0b0d12;--panel:#171a21;--glass:rgba(24,28,36,.72);--glass-border:rgba(255,255,255,.09);--line:#262a33;--text:#e5e7eb;--muted:#9aa3b2;--brand:#5fbf86;--brand-soft:#173424;--alta:#f87171;--alta-soft:#3b1212;--media:#f59e0b;--media-soft:#3a2a08;--baja:#cbd5e1;--baja-soft:#20242d;--ok:#4ade80;--ok-soft:#0f2e1b;--rim:inset 1px 1px 0 rgba(255,255,255,.10),inset -1px -1px 0 rgba(0,0,0,.35);--lift:0 10px 28px rgba(0,0,0,.45);--shadow:none}}
+/* El mismo lenguaje de la portada (hrctechnologies.com): Figtree, el dorado y el papel cálido. Lo que se ve al
+   entrar tiene que parecerse a lo que se veía afuera; si no, uno siente que cambió de aplicación. */
+:root{
+  --papel:#f6f5f1; --panel:#fff; --tinta:#14110c; --muted:#5e5950; --tenue:#8b857a;
+  --oro:#7b660f; --oro-claro:#d4af13; --oro-vivo:#f1cb05; --oro-papel:#fdf6dd;
+  --line:#e8e4da; --glass:rgba(255,255,255,.86); --glass-border:#e8e4da;
+  --alta:#a4231b; --alta-soft:#fdeceb; --media:#8a5a08; --media-soft:#fdf3dd;
+  --baja:#4a4740; --baja-soft:#f2f0ea; --ok:#2c6b3f; --ok-soft:#e6f3e9;
+  --brand:var(--oro); --brand-soft:var(--oro-papel); --text:var(--tinta); --bg:var(--papel);
+  --rim:inset 0 1px 0 rgba(255,255,255,.7);
+  --shadow:0 1px 2px rgba(20,17,12,.05),0 6px 18px rgba(20,17,12,.05);
+  --lift:0 2px 6px rgba(20,17,12,.07),0 16px 38px rgba(20,17,12,.11);
+  --curva:cubic-bezier(.22,.7,.28,1);
+  --r-card:16px; --r-input:11px;
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-header{display:flex;align-items:baseline;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-h1{font-size:18px;margin:0}
+/* 🪤 `display:grid` en .entrada le gana al display:none que el navegador le pone a [hidden]: sin esto, el login
+   se queda encima de la consola después de entrar. */
+[hidden]{display:none!important}
+body{margin:0;background:var(--papel);color:var(--tinta);
+  font:15px/1.5 Figtree,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
 .muted{color:var(--muted)}
-.small{font-size:12px}
+.small{font-size:12.5px}
 .grow{flex:1}
-main{padding:16px 20px 60px;max-width:1100px;margin:0 auto}
-main.dos{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:12px;max-width:1240px;align-items:start}
-@media (max-width:900px){main.dos{grid-template-columns:1fr}}
-.pend{background:var(--panel);border:1px solid var(--glass-border);border-radius:14px;box-shadow:var(--rim),var(--shadow);padding:10px 12px;margin-bottom:8px;cursor:pointer;display:flex;flex-direction:column;gap:4px}
-.pend:hover{box-shadow:var(--rim),var(--lift)}
-.pend.sel{border-color:var(--brand);box-shadow:var(--rim),var(--lift)}
-.pend .qq{font-weight:600}
-.burbuja{border-radius:14px;padding:8px 11px;margin:6px 0;max-width:80%;box-shadow:var(--rim),var(--shadow);font-size:13px}
-.burbuja.cliente{background:var(--baja-soft)}
-.burbuja.negocio{background:var(--brand-soft);margin-left:auto}
-.burbuja .who{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
-textarea{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--glass-border);border-radius:10px;padding:8px 10px;width:100%;min-height:80px;box-shadow:inset 0 1px 2px rgba(17,24,39,.06)}
-.tab{border-radius:999px}
-.tab.on{background:var(--brand);color:#fff;border-color:transparent}
-.seg{display:flex;gap:6px}
-.chats{max-height:46vh;overflow:auto;padding-right:4px}
-.card{background:var(--panel);border:1px solid var(--glass-border);border-radius:16px;box-shadow:var(--rim),var(--shadow);padding:14px 16px;margin-bottom:12px}
+a{color:var(--oro)}
+
+/* ── Entrar: media pantalla el formulario, media la marca ───────────────────── */
+.entrada{min-height:100svh;display:grid;grid-template-columns:1fr 1fr;gap:0}
+@media (max-width:900px){.entrada{grid-template-columns:1fr}.entrada .vitrina{display:none}}
+.entrada .forma{display:flex;flex-direction:column;justify-content:center;padding:clamp(28px,6vw,84px);max-width:620px;width:100%;margin:0 auto}
+.entrada .logo{height:26px;width:auto;margin-bottom:auto;align-self:flex-start}
+.entrada h1{font-size:clamp(30px,3.4vw,40px);line-height:1.1;letter-spacing:-.03em;margin:34px 0 8px;font-weight:700}
+.entrada .sub{color:var(--muted);margin:0 0 30px}
+.campo{margin-bottom:14px}
+.campo label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.campo .caja{position:relative;display:flex;align-items:center}
+.campo input{width:100%;min-height:52px;border-radius:999px;border:1px solid var(--line);background:var(--panel);
+  padding:0 20px;font:inherit;color:inherit;box-shadow:var(--rim);transition:border-color .2s var(--curva),box-shadow .2s var(--curva)}
+.campo input:focus{outline:none;border-color:var(--oro-claro);box-shadow:0 0 0 4px rgba(212,175,19,.16)}
+.campo .ojo{position:absolute;right:8px;width:38px;height:38px;border:none;background:transparent;cursor:pointer;
+  border-radius:50%;display:grid;place-items:center;color:var(--tenue);font-size:15px}
+.campo .ojo:hover{background:var(--oro-papel);color:var(--tinta)}
+.entrada .principal{width:100%;min-height:54px;border:none;border-radius:999px;background:var(--tinta);color:#fff;
+  font:inherit;font-weight:600;font-size:16px;cursor:pointer;margin-top:10px;box-shadow:var(--shadow);
+  transition:transform .18s var(--curva),box-shadow .18s var(--curva),background .18s var(--curva)}
+.entrada .principal:hover{background:#2a251b;transform:translateY(-1px);box-shadow:var(--lift)}
+.entrada .principal:active{transform:translateY(1px)}
+.o-bien{display:flex;align-items:center;gap:14px;margin:26px 0 18px;color:var(--tenue);font-size:12.5px}
+.o-bien::before,.o-bien::after{content:"";height:1px;background:var(--line);flex:1}
+.enlace-suave{background:none;border:none;font:inherit;color:var(--oro);cursor:pointer;padding:6px 2px;font-weight:600}
+.enlace-suave:hover{text-decoration:underline}
+.vitrina{background:linear-gradient(160deg,#fdf6dd 0%,#f7f3e4 55%,#f1efe6 100%);display:flex;flex-direction:column;
+  justify-content:center;gap:18px;padding:clamp(28px,5vw,76px);position:relative;overflow:hidden}
+.vitrina::after{content:"";position:absolute;inset:auto -20% -30% -20%;height:60%;background:radial-gradient(circle,rgba(241,203,5,.22),transparent 65%);filter:blur(50px)}
+.vitrina h2{font-size:clamp(22px,2.4vw,30px);line-height:1.2;letter-spacing:-.02em;margin:0;max-width:14em;position:relative}
+.vitrina p{color:var(--muted);margin:0;max-width:26em;position:relative}
+.muestra{position:relative;display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.muestra .burbujita{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 14px;
+  box-shadow:var(--shadow);max-width:82%;font-size:13.5px}
+.muestra .burbujita.yo{margin-left:auto;background:var(--oro-papel);border-color:#f0e4b0}
+.muestra .etiqueta{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--muted);box-shadow:var(--shadow)}
+.muestra .etiqueta b{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+
+/* ── La aplicación ──────────────────────────────────────────────────────────── */
+header{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--glass);
+  border-bottom:1px solid var(--line);flex-wrap:wrap;position:sticky;top:0;z-index:20;backdrop-filter:blur(12px)}
+header .marca{display:flex;align-items:center;gap:10px}
+header .marca img{height:22px;width:auto}
+header .marca span{font-weight:700;letter-spacing:-.01em}
+h1{font-size:18px;margin:0}
+main{padding:18px 20px 60px;max-width:1180px;margin:0 auto}
+main.dos{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:14px;max-width:1320px;align-items:start}
+@media (max-width:980px){main.dos{grid-template-columns:1fr}}
+
+.seg{display:flex;gap:4px;background:var(--baja-soft);padding:4px;border-radius:999px}
+.tab{border-radius:999px;border:none;background:transparent;box-shadow:none;min-height:34px;padding:6px 16px;font-weight:600;color:var(--muted)}
+.tab:hover{color:var(--tinta);box-shadow:none;background:rgba(255,255,255,.6)}
+.tab.on{background:var(--panel);color:var(--tinta);box-shadow:var(--shadow)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:8px 14px;
+  border-radius:999px;border:1px solid var(--line);background:var(--panel);text-decoration:none;
+  color:var(--tinta);box-shadow:var(--rim),var(--shadow);cursor:pointer;font:inherit;font-weight:500;
+  transition:box-shadow .2s var(--curva),transform .2s var(--curva),background .2s var(--curva)}
+.btn:hover{box-shadow:var(--rim),var(--lift);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn.primary{background:var(--oro);color:#fff;border-color:transparent;font-weight:600}
+.btn.primary:hover{background:#8f7614}
+.btn.sm{min-height:32px;padding:5px 12px;font-size:13px}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--oro-claro);outline-offset:2px}
+@media (pointer:coarse){.btn{min-height:44px}}
+select,input,textarea{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-input);padding:9px 12px;box-shadow:var(--rim)}
+textarea{width:100%;min-height:80px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--rim),var(--shadow);
+  padding:16px 18px;margin-bottom:12px;transition:box-shadow .2s var(--curva)}
 .card:hover{box-shadow:var(--rim),var(--lift)}
 .fila{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.nombre{font-weight:700;font-size:15px}
-.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 9px;font-size:12px;border:1px solid var(--glass-border);background:var(--baja-soft);color:var(--baja)}
-.chip.ok{background:var(--ok-soft);color:var(--ok)}
-.chip.alta{background:var(--alta-soft);color:var(--alta)}
-.chip.media{background:var(--media-soft);color:var(--media)}
-.nums{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px}
-.num b{display:block;font-size:17px}
-.num span{font-size:11px;color:var(--muted)}
-ul.tickets{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
-ul.tickets li{display:flex;gap:8px;align-items:flex-start;border-left:3px solid var(--line);padding:4px 0 4px 10px}
+.nombre{font-weight:700;font-size:16px;letter-spacing:-.01em}
+
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:12px;
+  border:1px solid var(--line);background:var(--baja-soft);color:var(--baja);font-weight:500}
+.chip.ok{background:var(--ok-soft);color:var(--ok);border-color:#cfe6d6}
+.chip.alta{background:var(--alta-soft);color:var(--alta);border-color:#f7d7d4}
+.chip.media{background:var(--media-soft);color:var(--media);border-color:#f2e3bd}
+
+.nums{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.num{background:var(--baja-soft);border-radius:12px;padding:8px 12px;min-width:92px}
+.num b{display:block;font-size:18px;font-weight:700;letter-spacing:-.02em}
+.num span{font-size:11.5px;color:var(--tenue)}
+
+ul.tickets{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+ul.tickets li{display:flex;gap:8px;align-items:flex-start;border-left:3px solid var(--line);padding:5px 0 5px 10px;font-size:13.5px}
 ul.tickets li.alta{border-color:var(--alta)}
 ul.tickets li.media{border-color:var(--media)}
-.btn{min-height:36px;padding:7px 12px;border-radius:10px;border:1px solid var(--glass-border);background:var(--panel);color:var(--text);box-shadow:var(--rim),var(--shadow);cursor:pointer;font:inherit}
-.btn:hover{box-shadow:var(--rim),var(--lift)}
-.btn.primary{background:var(--brand);color:#fff;border-color:transparent}
-@media (pointer:coarse){.btn{min-height:44px}}
-select,input{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--glass-border);border-radius:10px;padding:8px 10px;box-shadow:inset 0 1px 2px rgba(17,24,39,.06)}
-a{color:var(--brand)}
-dialog{border:none;border-radius:18px;padding:0;background:var(--panel);color:var(--text);box-shadow:var(--lift);max-width:520px;width:calc(100% - 32px)}
-dialog::backdrop{background:rgba(17,24,39,.45)}
-form.alta{padding:18px;display:flex;flex-direction:column;gap:10px}
-form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
-.login{max-width:380px;margin:12vh auto;text-align:center}
+
+.pend{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--rim),var(--shadow);
+  padding:11px 13px;margin-bottom:8px;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.pend:hover{box-shadow:var(--rim),var(--lift)}
+.pend.sel{border-color:var(--oro-claro);box-shadow:0 0 0 3px rgba(212,175,19,.18),var(--lift)}
+.pend .qq{font-weight:600}
+.burbuja{border-radius:14px;padding:9px 12px;margin:6px 0;max-width:80%;box-shadow:var(--rim),var(--shadow);font-size:13.5px}
+.burbuja.cliente{background:var(--baja-soft)}
+.burbuja.negocio{background:var(--oro-papel);margin-left:auto;border:1px solid #f0e4b0}
+.burbuja .who{display:block;font-size:11px;color:var(--tenue);margin-bottom:2px}
+.chats{max-height:46vh;overflow:auto;padding-right:4px}
+
+.lista-clientes{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--rim),var(--shadow);overflow:hidden}
+.cliente{padding:14px 16px;border-top:1px solid var(--line);transition:background .2s var(--curva)}
+.cliente:first-child{border-top:none}
+.cliente:hover{background:#fcfbf7}
+.cliente .cabeza{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.sigla{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:var(--oro-papel);
+  border:1px solid #f0e4b0;color:var(--oro);font-weight:700;font-size:15px;flex:none;letter-spacing:-.02em}
+.cliente .quien{min-width:180px;flex:1}
+.vistazo{display:flex;gap:8px;flex-wrap:wrap}
+.dato{display:inline-flex;align-items:baseline;gap:5px;background:var(--baja-soft);border-radius:10px;
+  padding:5px 10px;font-size:12.5px;color:var(--muted);border:1px solid transparent}
+.dato b{font-size:15px;font-weight:700;color:var(--tinta);letter-spacing:-.02em}
+.dato.urge{background:var(--media-soft);border-color:#f2e3bd;color:var(--media)}
+.dato.urge b{color:var(--media)}
+.dato.calma{background:transparent;border-color:var(--line)}
+.cliente .acciones{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto}
+.cliente ul.tickets{margin-left:56px}
+@media (max-width:760px){.cliente .acciones{margin-left:0;width:100%}.cliente ul.tickets{margin-left:0}}
+
+dialog{border:none;border-radius:20px;padding:0;background:var(--panel);color:var(--tinta);box-shadow:var(--lift);
+  max-width:560px;width:calc(100% - 32px)}
+dialog::backdrop{background:rgba(20,17,12,.42);backdrop-filter:blur(2px)}
+form.alta{padding:22px;display:flex;flex-direction:column;gap:12px}
+form.alta h2{margin:0;font-size:20px;letter-spacing:-.02em}
+form.alta label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}
+form.alta label input,form.alta label select,form.alta label textarea{font-weight:400}
+.vacio{text-align:center;color:var(--muted);padding:44px 12px}
 #msg{min-height:20px}
-.vacio{text-align:center;color:var(--muted);padding:40px 10px}
 </style>
 </head>
 <body>
-<div id="login" class="login card" hidden>
-  <h1>Consola de aiva</h1>
-  <p class="muted small">Entra con tu usuario. Verás los clientes que atiendes.</p>
-  <div class="fila"><input id="u" placeholder="Usuario" class="grow" autocomplete="username"></div>
-  <div class="fila"><input id="p" type="password" placeholder="Clave" class="grow" autocomplete="current-password"><button class="btn primary" id="entrar">Entrar</button></div>
-  <div id="login-msg" class="small" role="status"></div>
-  <div class="small muted" style="margin-top:10px"><button class="btn" id="ver-maestra">Entrar con la llave maestra</button></div>
-  <div id="maestra" hidden style="margin-top:8px">
-    <div class="fila"><input id="t" type="password" placeholder="CONSOLA_TOKEN" class="grow"><button class="btn" id="entrar-maestra">Entrar</button></div>
-    <div class="small muted">La del .env. Entra como super-admin: úsala la primera vez y para emergencias.</div>
+<div id="login" class="entrada" hidden>
+  <div class="forma">
+    <img class="logo" src="hrc-technologies.png" alt="HRC Technologies" width="520" height="107">
+    <h1>Hola de nuevo.</h1>
+    <p class="sub">Entra a la consola de aiva. Verás los clientes que atiendes y lo que está esperando respuesta.</p>
+
+    <div class="campo">
+      <label for="u">Usuario o correo</label>
+      <div class="caja"><input id="u" autocomplete="username" placeholder="tu usuario o tu correo"></div>
+    </div>
+    <div class="campo">
+      <label for="p">Clave</label>
+      <div class="caja">
+        <input id="p" type="password" autocomplete="current-password" placeholder="tu clave">
+        <button class="ojo" id="ver-clave" type="button" aria-label="Mostrar la clave" aria-pressed="false">👁</button>
+      </div>
+    </div>
+    <button class="principal" id="entrar">Entrar</button>
+    <div id="login-msg" class="small" role="status" style="margin-top:10px;min-height:18px"></div>
+
+    <div class="o-bien">o</div>
+    <button class="enlace-suave" id="ver-maestra">Entrar con la llave maestra</button>
+    <div id="maestra" hidden style="margin-top:10px">
+      <div class="campo"><div class="caja"><input id="t" type="password" placeholder="CONSOLA_TOKEN"></div></div>
+      <button class="btn" id="entrar-maestra">Entrar con la llave</button>
+      <div class="small muted" style="margin-top:8px">La del panel. Entra como super-admin: es para la primera vez y para emergencias.</div>
+    </div>
+  </div>
+
+  <div class="vitrina">
+    <h2>Todos tus clientes, en una sola pantalla.</h2>
+    <p>Lo que está esperando respuesta, lo que el asistente no supo y los prospectos que se pusieron calientes,
+    de todos los negocios a la vez.</p>
+    <div class="muestra">
+      <div class="burbujita">Hola, ¿tienen disponible para el sábado?</div>
+      <div class="burbujita yo">Claro. Tengo el sábado a las 10:00 y a las 3:00. ¿Cuál te sirve?</div>
+      <div class="etiqueta"><b></b> Cita agendada · sábado 10:00</div>
+    </div>
   </div>
 </div>
 
 <div id="app" hidden>
   <header>
-    <h1>Consola</h1>
+    <span class="marca"><img src="hrc-technologies.png" alt="HRC Technologies" width="520" height="107"><span>Consola</span></span>
     <div class="seg" role="tablist">
       <button class="btn tab on" id="tab-atender" role="tab">Atender <span class="chip" id="n-pend">0</span></button>
       <button class="btn tab" id="tab-clientes" role="tab">Clientes</button>
@@ -84,7 +218,7 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
     </div>
     <span class="muted small" id="resumen">…</span>
     <span class="grow"></span>
-    <span class="muted small">Respondes como</span><input id="quien" placeholder="tu nombre" style="width:130px">
+    <span class="muted small">Respondes como</span><input id="quien" placeholder="tu nombre" style="width:120px">
     <button class="btn" id="sonido" title="Avisarme cuando llegue algo">🔔</button>
     <button class="btn" id="refrescar">Actualizar</button>
     <button class="btn primary" id="nuevo">Nuevo cliente</button>
@@ -178,6 +312,13 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
         entrar(true); sesionLista();
       });
   };
+  $('ver-clave').onclick = function () {
+    var oculta = $('p').type === 'password';
+    $('p').type = oculta ? 'text' : 'password';
+    this.setAttribute('aria-pressed', String(oculta));
+    this.setAttribute('aria-label', oculta ? 'Ocultar la clave' : 'Mostrar la clave');
+    this.textContent = oculta ? '🙈' : '👁';
+  };
   $('p').onkeydown = function (e) { if (e.key === 'Enter') $('entrar').click(); };
   $('u').onkeydown = function (e) { if (e.key === 'Enter') $('p').focus(); };
   $('ver-maestra').onclick = function () { $('maestra').hidden = !$('maestra').hidden; };
@@ -225,36 +366,50 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
   };
 
   var PRIORIDADES = { alta: 'Alta', media: 'Media', baja: 'Baja' };
+  // Cada cliente, una fila: quién es, cómo va y qué hay que atenderle. El vistazo es lo que uno mira de reojo
+  // para decidir a cuál entrar, así que va con números grandes y sin adornos.
+  function sigla(nombre) {
+    var p = String(nombre || '?').replace(/[^\wÁÉÍÓÚÑáéíóúñ ]/g, '').trim().split(/\s+/);
+    return ((p[0] || '?')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
+  }
+
   function tarjeta(f) {
     var c = f.cliente, e = f.estado;
-    var estado = e.arriba ? '<span class="chip ok">Arriba</span>' : '<span class="chip alta">Apagado</span>';
-    // El tablero se abre por dentro de la consola: /c/<slug>/admin. Así no hay que volver a identificarse ni
-    // repartir el token de cada cliente; la consola le pone el token al pasar la petición.
     var url = '/c/' + encodeURIComponent(c.slug) + '/admin';
-    var nums = e.arriba
-      ? '<div class="nums">' +
-        [[e.contactos, 'contactos'], [e.calientes, 'calientes'], [e.sinLeer, 'sin leer'], [e.citas, 'citas próximas'],
-         [e.gastoMes == null ? '—' : '$' + Number(e.gastoMes).toFixed(2), 'IA · 30 días']]
-          .map(function (n) { return '<div class="num"><b>' + esc(n[0]) + '</b><span>' + n[1] + '</span></div>'; }).join('') +
-        '</div>'
-      : '';
-    var tickets = f.tickets.length
+    var estado = e.arriba ? '<span class="chip ok">Arriba</span>' : '<span class="chip alta">Apagado</span>';
+    var prio = '<span class="chip ' + (c.prioridad === 'alta' ? 'alta' : c.prioridad === 'media' ? 'media' : '') + '">' + esc(PRIORIDADES[c.prioridad] || c.prioridad) + '</span>';
+
+    // Lo que importa mirar de reojo. Lo que está en cero no se pinta: el ruido esconde lo que sí pasa.
+    var vistazo = e.arriba
+      ? [[e.sinLeer, 'sin leer', 'urge'], [e.esperanRespuesta, 'esperan', 'urge'], [e.porVerificar, 'por verificar', 'urge'],
+         [e.citas, 'citas', ''], [e.calientes, 'calientes', ''], [e.contactos, 'contactos', 'calma']]
+          .filter(function (d) { return Number(d[0]) > 0; })
+          .map(function (d) { return '<span class="dato ' + d[2] + '"><b>' + esc(d[0]) + '</b>' + d[1] + '</span>'; }).join('')
+      : '<span class="dato calma">sin responder</span>';
+
+    var pendientes = f.tickets.length
       ? '<ul class="tickets">' + f.tickets.map(function (t) {
           return '<li class="' + t.urgencia + '"><b>' + esc(t.titulo) + '</b> <span class="muted small">' + esc(t.detalle) + '</span></li>';
         }).join('') + '</ul>'
-      : '<div class="small muted" style="margin-top:8px">Sin pendientes.</div>';
-    return '<div class="card" data-slug="' + esc(c.slug) + '">' +
-      '<div class="fila"><span class="nombre">' + esc(c.nombre) + '</span>' + estado +
-        '<span class="chip ' + (c.prioridad === 'alta' ? 'alta' : c.prioridad === 'media' ? 'media' : '') + '">Prioridad ' + esc(PRIORIDADES[c.prioridad] || c.prioridad) + '</span>' +
-        '<span class="grow"></span>' +
-        '<select class="prio" aria-label="Prioridad de ' + esc(c.nombre) + '">' +
-          Object.keys(PRIORIDADES).map(function (k) { return '<option value="' + k + '"' + (k === c.prioridad ? ' selected' : '') + '>' + PRIORIDADES[k] + '</option>'; }).join('') +
-        '</select>' +
-        '<a class="btn" href="' + esc(url) + '" target="_blank" rel="noopener">Abrir tablero</a>' +
-        (esSuper ? '<button class="btn copiar">Copiar token</button><button class="btn baja">Dar de baja</button>' : '') +
-      '</div>' +
-      '<div class="small muted">' + esc(c.slug) + ' · puerto ' + c.puerto + (c.host ? ' · ' + esc(c.host) : ' · sin dominio') + ' · desde ' + esc(c.desde) + '</div>' +
-      nums + tickets + '</div>';
+      : '';
+
+    return '<div class="cliente" data-slug="' + esc(c.slug) + '">' +
+      '<div class="cabeza">' +
+        '<span class="sigla">' + esc(sigla(c.nombre)) + '</span>' +
+        '<div class="quien">' +
+          '<div class="fila"><span class="nombre">' + esc(c.nombre) + '</span>' + estado + prio + '</div>' +
+          '<div class="small muted">' + esc(c.slug) + (c.host ? ' · ' + esc(c.host) : '') +
+            (e.gastoMes == null ? '' : ' · $' + Number(e.gastoMes).toFixed(2) + ' en IA (30 días)') + '</div>' +
+        '</div>' +
+        '<div class="vistazo">' + vistazo + '</div>' +
+        '<div class="acciones">' +
+          '<select class="prio" aria-label="Prioridad de ' + esc(c.nombre) + '">' +
+            Object.keys(PRIORIDADES).map(function (k) { return '<option value="' + k + '"' + (k === c.prioridad ? ' selected' : '') + '>' + PRIORIDADES[k] + '</option>'; }).join('') +
+          '</select>' +
+          '<a class="btn primary" href="' + esc(url) + '" target="_blank" rel="noopener">Abrir tablero</a>' +
+          (esSuper ? '<button class="btn sm copiar" title="Copiar el token de su tablero">Token</button><button class="btn sm baja">Dar de baja</button>' : '') +
+        '</div>' +
+      '</div>' + pendientes + '</div>';
   }
 
   function cargar() {
@@ -264,16 +419,18 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
       var pendientes = filas.reduce(function (a, f) { return a + f.tickets.length; }, 0);
       $('resumen').textContent = filas.length + (filas.length === 1 ? ' cliente' : ' clientes') + ' · ' + pendientes + (pendientes === 1 ? ' cosa por atender' : ' cosas por atender');
       window.__clientes = filas;
-      $('lista').innerHTML = filas.length ? filas.map(tarjeta).join('') : '<div class="vacio">Todavía no hay clientes. <b>Nuevo cliente</b> crea el primero.</div>';
+      $('lista').innerHTML = filas.length
+        ? '<div class="lista-clientes">' + filas.map(tarjeta).join('') + '</div>'
+        : '<div class="card"><div class="vacio">Todavía no hay clientes. <b>Nuevo cliente</b> crea el primero.</div></div>';
       $('lista').querySelectorAll('.prio').forEach(function (s) {
         s.onchange = function () {
-          var slug = s.closest('.card').getAttribute('data-slug');
+          var slug = s.closest('[data-slug]').getAttribute('data-slug');
           api('/clientes/' + encodeURIComponent(slug), { method: 'PATCH', body: { prioridad: s.value } }).then(cargar);
         };
       });
       $('lista').querySelectorAll('.baja').forEach(function (b) {
         b.onclick = function () {
-          var card = b.closest('.card'), slug = card.getAttribute('data-slug');
+          var card = b.closest('[data-slug]'), slug = card.getAttribute('data-slug');
           var f = filas.find(function (x) { return x.cliente.slug === slug; });
           var nombre = f ? f.cliente.nombre : slug;
           var quienes = (window.__usuarios || []).filter(function (u) { return (u.clientes || []).indexOf(slug) >= 0; });
@@ -297,7 +454,7 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
       });
       $('lista').querySelectorAll('.copiar').forEach(function (b) {
         b.onclick = function () {
-          var slug = b.closest('.card').getAttribute('data-slug');
+          var slug = b.closest('[data-slug]').getAttribute('data-slug');
           api('/clientes/' + encodeURIComponent(slug) + '/token').then(function (r) {
             navigator.clipboard.writeText(r.token || '');
             b.textContent = 'Copiado';

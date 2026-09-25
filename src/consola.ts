@@ -226,6 +226,15 @@ function quienEs(c: Context): { usuario: UsuarioPublico | null; esSuper: boolean
 export function mountConsola(app: Hono) {
   app.get('/', (c) => c.html(readFileSync(new URL('../public/consola.html', import.meta.url), 'utf8')));
 
+  // El logo de la casa. En el despliegue lo sirve el enrutador, pero la consola también corre sola (pnpm consola)
+  // y ahí nadie más lo serviría.
+  app.get('/hrc-technologies.png', (c) =>
+    c.body(readFileSync(new URL('../public/hrc-technologies.png', import.meta.url)), 200, {
+      'content-type': 'image/png',
+      'cache-control': 'public, max-age=86400',
+    }),
+  );
+
   // Entrar con usuario y clave; la llave maestra (CONSOLA_TOKEN) sigue valiendo como super-admin.
   //
   // La sesión sale por dos vías a la vez: en el cuerpo (para las llamadas del panel, que la mandan por cabecera) y
