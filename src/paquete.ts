@@ -230,9 +230,12 @@ if (!clientes.length) {
   process.exit(1);
 }
 
-rmSync(SALIDA, { recursive: true, force: true });
+// 🪤 Se borra SOLO lo que este guion crea. Antes barría `paquetes/` entera y se llevó por delante archivos que
+// alguien había dejado ahí (unas credenciales, en su momento): una carpeta de salida no es una carpeta propia.
 mkdirSync(SALIDA, { recursive: true });
 const dir = join(SALIDA, 'aiva');
+rmSync(dir, { recursive: true, force: true });
+rmSync(`${dir}.zip`, { force: true });
 mkdirSync(join(dir, 'config'), { recursive: true });
 
 console.log('→ compilando a JavaScript…');

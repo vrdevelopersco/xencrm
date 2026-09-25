@@ -55,7 +55,9 @@ Si el error aparece, no es el código: es el campo del panel.
 ## Variables de entorno
 
 Ningún secreto viaja dentro del ZIP. Se ponen en el panel, y el `LEEME.txt` de adentro las trae listas para
-copiar:
+copiar. En esta máquina están juntas en `~/aiva-credenciales/` (permisos 700, cada archivo 600).
+
+🪤 Ahí, y no en `paquetes/`: esa carpeta es la salida del empaquetador.
 
 - `OPENAI_API_KEY` — la clave. Sin ella no responde nadie.
 - `CONSOLA_TOKEN` — la llave maestra de la consola.
