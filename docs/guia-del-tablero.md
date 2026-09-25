@@ -119,6 +119,14 @@ cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo nú
 
 Si llegaron mensajes nuevos después del último análisis, la ficha lo dice y se recalcula sola.
 
+### Cuando son varios atendiendo
+
+Si alguien más del equipo tiene abierta la misma conversación, sale un aviso arriba del chat: «Camila también
+está aquí». Nadie queda bloqueado —el asistente sigue ahí y varias personas pueden escribir—, pero así no
+contestan lo mismo dos veces. El aviso desaparece solo cuando el otro cierra o se va.
+
+Cada respuesta va firmada con el nombre de quien la escribió, así que en el chat se ve quién dijo qué.
+
 ## Calendario
 
 La semana con las citas. Toca una para ver el detalle o cambiar su estado (completada, no asistió, cancelada), o

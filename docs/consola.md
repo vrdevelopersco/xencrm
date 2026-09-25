@@ -61,6 +61,14 @@ arriba. Al abrir una, la conversación sale en un **panel al lado** —no parte 
 pendiente y la caja para responder. La consola habla por ese cliente con su token: no hay que abrir cinco tableros
 ni repartir llaves. Lo que envíes queda a tu nombre (el que pongas en «Respondes como»).
 
+**Con quién firmas es de cada cliente.** El campo «Respondes como» vive dentro de la conversación y se recuerda
+por cliente: "Arthur" atendiendo a la boutique no firma en la financiera. Arranca con tu propio nombre.
+
+**Varias personas pueden atender la misma conversación.** Si alguien más está adentro, sale el aviso «Camila
+también está aquí». No bloquea a nadie a propósito —la idea es que la IA y el equipo convivan en el chat, no que
+uno se adueñe—, pero evita que dos contesten lo mismo. La presencia caduca sola a los tres minutos: quien cierra
+la pestaña no avisa.
+
 Cuando entra algo nuevo de tus clientes **suena un pito**, el número queda en el título de la pestaña y, si tienes
 la ventana atrás, sale una notificación del navegador. Se silencia con la campana.
 

@@ -9,6 +9,14 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-09-25
 
+### Con quién firmas es de cada cliente, y varias personas caben en un chat · `d93506e`
+🪤 El nombre con el que se responde era **uno solo para todos los clientes**: poner "Arthur" atendiendo a la
+boutique lo dejaba firmando en la financiera. Ahora vive dentro de la conversación y se guarda por cliente. De
+paso, el botón de la cuenta dice tu nombre y abre Mi cuenta, y el correo de cada quien se edita en la fila de su
+cliente. Y lo nuevo: la conversación lleva **quiénes están metidos ahora mismo**, en la consola y en el tablero,
+con aviso de «Camila también está aquí»; no bloquea a nadie, avisa. Caduca sola a los 3 minutos porque quien
+cierra la pestaña no avisa. `pnpm test:presencia` (13 casos) y comprobado sobre el paquete con dos personas.
+
 ### Cada cliente se estira con su micro-tablero y su equipo · `fd085a2`
 La fila decía qué atender pero no cómo iba el negocio: ahora **Ver más** abre mensajes de hoy, conversaciones,
 calientes, puntaje promedio, cuántas llegaron a cita, cuántas se ganaron, efectividad y gasto de IA. La
