@@ -116,8 +116,23 @@
     try { localStorage.removeItem(LLAVE('token')); } catch (e) {}
     location.reload();
   };
-  function applyTheme() { document.documentElement.setAttribute('data-theme', state.theme); $('theme-btn').textContent = state.theme === 'dark' ? '☀️' : '🌙'; }
-  $('theme-btn').onclick = function () { state.theme = state.theme === 'dark' ? 'light' : 'dark'; try { localStorage.setItem(LLAVE('theme'), state.theme); } catch (e) {} applyTheme(); };
+  // Tres temas: claro, oscuro y el del sistema. El del sistema es el que la gente espera hoy y el que sigue al
+  // computador cuando cambia solo al anochecer.
+  var DELSISTEMA = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  function temaReal() { return state.theme === 'auto' ? (DELSISTEMA && DELSISTEMA.matches ? 'dark' : 'light') : state.theme; }
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', temaReal());
+    $('theme-btn').textContent = state.theme === 'auto' ? '🌗' : temaReal() === 'dark' ? '☀️' : '🌙';
+    $('theme-btn').title = state.theme === 'auto' ? 'Tema: el del sistema' : temaReal() === 'dark' ? 'Tema: oscuro' : 'Tema: claro';
+  }
+  function ponerTema(cual) {
+    state.theme = cual;
+    try { localStorage.setItem(LLAVE('theme'), cual); } catch (e) {}
+    applyTheme();
+  }
+  if (DELSISTEMA && DELSISTEMA.addEventListener) DELSISTEMA.addEventListener('change', function () { if (state.theme === 'auto') applyTheme(); });
+  // El botón rota entre los tres; la ficha de perfil los tiene con su nombre.
+  $('theme-btn').onclick = function () { ponerTema(state.theme === 'light' ? 'dark' : state.theme === 'dark' ? 'auto' : 'light'); };
   function applySound() { $('sound-btn').classList.toggle('on', state.sound); $('sound-btn').textContent = state.sound ? '🔔' : '🔕'; }
   $('sound-btn').onclick = function () { state.sound = !state.sound; try { localStorage.setItem(LLAVE('sound'), state.sound ? '1' : '0'); } catch (e) {} applySound(); };
   applyTheme(); applySound();
@@ -1340,8 +1355,12 @@
     if (!state.token) { showLogin(); return; }
     api('/me').then(function (me) {
       $('login').hidden = true;
-      $('brand-name').firstChild.textContent = me.agent + ' ';
+      // Arriba va QUIÉN RESPONDE —que puede ser el asistente o una persona— y debajo el negocio. Los dos en el
+      // color de la marca, ya ajustado para que se lea.
+      if (me.colorClaro) document.documentElement.style.setProperty('--marca-clara', me.colorClaro);
+      if (me.colorOscuro) document.documentElement.style.setProperty('--marca-oscura', me.colorOscuro);
       $('brand-biz').textContent = me.business;
+      pintarQuienSoy();
       state.bizName = me.business; state.agentName = me.agent;
       // El logo del negocio en su propia barra: entrar a su tablero tiene que sentirse suyo, no de aiva.
       if (me.logo) {
@@ -1572,16 +1591,66 @@
     var nombre = state.name || state.agentName || 'asesor';
     $('foot-nombre').textContent = nombre;
     $('foot-ini').textContent = inicialesDe(nombre);
+    $('foot-ini').style.background = miColor();
+    $('foot-ini').style.color = '#fff';
+    $('foot-ini').style.borderColor = 'transparent';
     $('foot-user').title = 'Respondes como ' + nombre;
+    // La cabecera dice quién responde ahora mismo: si alguien toma el turno, ahí se ve.
+    var arriba = $('brand-name');
+    if (arriba && arriba.firstChild) arriba.firstChild.textContent = nombre + ' ';
   }
+  var COLORES_PERFIL = ['#7b660f', '#2b5ea8', '#2c6b3f', '#a4231b', '#6b3fa0', '#0f6b73', '#8a5a08', '#4a4740'];
+  function miColor() {
+    try {
+      var c = localStorage.getItem(LLAVE('color'));
+      if (c && COLORES_PERFIL.indexOf(c) !== -1) return c;
+    } catch (e) {}
+    var n = 0, nombre = state.name || 'a';
+    for (var i = 0; i < nombre.length; i++) n = (n * 31 + nombre.charCodeAt(i)) % 100000;
+    return COLORES_PERFIL[n % COLORES_PERFIL.length];
+  }
+  function pintarPaletaPerfil() {
+    var puesto = miColor();
+    $('yo-paleta').innerHTML = COLORES_PERFIL.map(function (c) {
+      return '<button type="button" class="tinta' + (c === puesto ? ' puesto' : '') + '" data-color="' + c + '" style="background:' + c + '" aria-label="Color ' + c + '"></button>';
+    }).join('');
+    $('yo-paleta').querySelectorAll('.tinta').forEach(function (b) {
+      b.onclick = function () {
+        $('yo-paleta').querySelectorAll('.tinta').forEach(function (x) { x.classList.remove('puesto'); });
+        b.classList.add('puesto');
+        try { localStorage.setItem(LLAVE('color'), b.getAttribute('data-color')); } catch (e) {}
+        pintarQuienSoy();
+      };
+    });
+  }
+  function pintarTema() {
+    $('yo-tema').querySelectorAll('[data-tema]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-tema') === state.theme));
+      b.classList.toggle('puesto', b.getAttribute('data-tema') === state.theme);
+    });
+  }
+  function pintarAvisos() {
+    var caja = $('yo-avisos');
+    if (!('Notification' in window)) { caja.innerHTML = '<span class="muted">Este navegador no los tiene.</span>'; return; }
+    var p = Notification.permission;
+    if (p === 'granted') caja.innerHTML = '<span class="v-si">Activadas</span> <span class="muted">· te avisa aunque el tablero esté detrás.</span>';
+    else if (p === 'denied') caja.innerHTML = '<span class="muted">Bloqueadas en este navegador. Se vuelven a permitir desde el candado de la barra de direcciones.</span>';
+    else caja.innerHTML = '<button class="btn sm" type="button" id="yo-pedir-avisos">Activar avisos</button> <span class="muted">· suenan igual sin esto, pero solo si el tablero está abierto.</span>';
+    if ($('yo-pedir-avisos')) $('yo-pedir-avisos').onclick = function () { Notification.requestPermission().then(pintarAvisos); };
+  }
+
   $('foot-user').onclick = function () {
     $('yo-nombre').value = state.name || state.agentName || '';
     $('yo-ejemplo').textContent = state.name || state.agentName || 'Aiva';
     $('yo-msg').textContent = '';
     $('yo-cuenta').hidden = !PORLACONSOLA;
+    pintarPaletaPerfil(); pintarTema(); pintarAvisos();
     $('dlg-yo').showModal();
     $('yo-nombre').focus();
   };
+  document.querySelectorAll('#yo-tema [data-tema]').forEach(function (b) {
+    b.onclick = function () { ponerTema(b.getAttribute('data-tema')); pintarTema(); };
+  });
   $('yo-nombre').oninput = function () { $('yo-ejemplo').textContent = this.value.trim() || (state.agentName || 'Aiva'); };
   $('yo-cerrar').onclick = function () { $('dlg-yo').close(); };
   $('yo-guardar').onclick = function () {

@@ -252,6 +252,13 @@ tablero de un cliente —barra lateral con la marca, las secciones y, abajo, el 
 dos aplicaciones hermanas y cambiar de una a otra no debería sentirse como cambiar de producto. Bajo 900 px la
 barra lateral se acuesta arriba.
 
+### El color de una marca casi nunca se lee (2026-09-25)
+
+El dorado de DUNOR (#b6a16d, el del logo, medido del manual) da **2.24:1** sobre el papel claro: como texto es
+ilegible. Por eso el servidor no manda el color de la marca a secas, sino **ya ajustado a cada fondo**
+(`accentOn`): #766947 sobre claro (4.79:1) y el dorado intacto sobre oscuro (7.4:1), que ahí sí se lee. La marca
+se conserva donde es relleno —el chip, el botón, el logo— y se oscurece solo donde tiene que leerse.
+
 ### Tres trampas que costaron caro
 
 Las tres dan el mismo síntoma —«la página no hace nada»— y ninguna la coge una prueba de HTTP.

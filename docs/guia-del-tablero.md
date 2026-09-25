@@ -189,12 +189,19 @@ abono, precios, políticas y datos propios (tallas, tiempos, lo que venden o no)
   el significado como siempre: solo se guardan si con eso ya se entienden.
 - **Guardar perfil** guarda y deja una copia de la versión anterior.
 
-### Con qué nombre respondes
+### Tu perfil
 
-Abajo a la izquierda está tu perfil: el icono con tus iniciales y el nombre con el que sales cuando contestas.
-Se hace clic y se cambia ahí mismo.
+Arriba a la izquierda, en el color de la marca del negocio: **quién responde** —el asistente o la persona que
+tomó el turno— y debajo el nombre del negocio.
 
-🪤 No es un adorno: **por WhatsApp ese nombre va delante del mensaje** que recibe el cliente (*Camila:* claro que
+Abajo, tu ficha: el icono con tus iniciales y tu nombre. Se hace clic y se abre todo lo tuyo:
+
+- **Con qué nombre respondes** (con el ejemplo de cómo le llega al cliente).
+- **Tu color**, para reconocerte cuando son varios atendiendo.
+- **El tema**: claro, oscuro o el del sistema —este último sigue al computador cuando cambia solo al anochecer.
+- **Los avisos del navegador**, que te avisan aunque el tablero esté detrás de otra ventana.
+
+🪤 El nombre no es un adorno: **por WhatsApp va delante del mensaje** que recibe el cliente (*Camila:* claro que
 sí, con gusto). Arranca con el nombre del asistente, así que si lo dejas así el cliente no nota el cambio de
 persona; si prefieres firmar con tu nombre, lo escribes.
 

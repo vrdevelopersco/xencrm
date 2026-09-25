@@ -20,7 +20,7 @@ import { listNotifications, startNotifications } from '../crm/notifications.js';
 import { usageSummary } from '../llm/usage.js';
 import { entrar as entrarALaConversacion, salir as salirDeLaConversacion, quienesEstan } from '../crm/presencia.js';
 import { actividadPorHora, nuevasPorDia, semanaContraSemana } from '../crm/series.js';
-import { logoUrl } from '../brand.js';
+import { accentOn, logoUrl } from '../brand.js';
 import { armar as armarRespaldo, restaurar as restaurarRespaldo, revisar as revisarRespaldo } from '../crm/respaldo.js';
 import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
@@ -73,6 +73,10 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       // Para que el tablero se sienta del negocio: su logo y su color, no los de aiva.
       logo: logoUrl(),
       color: business.brand.color,
+      // 🪤 El color de una marca casi nunca se lee como texto: el dorado de una boutique da 2.2:1 sobre papel.
+      // Se manda ya ajustado al mínimo legible sobre cada fondo, en vez de dejar que la pantalla lo resuelva mal.
+      colorClaro: accentOn(business.brand.color, '#f3f1ea'),
+      colorOscuro: accentOn(business.brand.color, '#14120d'),
     }),
   );
 

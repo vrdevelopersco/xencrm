@@ -23,8 +23,12 @@ button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--brand)}
 .app{display:grid;grid-template-columns:220px 1fr;height:100vh}
 .side{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);border-right:1px solid var(--glass-border);display:flex;flex-direction:column;padding:14px 10px;gap:4px}
-.brand{font-weight:700;font-size:16px;padding:6px 10px 12px;display:flex;align-items:center;gap:8px}
-.brand small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.brand{padding:6px 10px 12px;display:flex;align-items:center;gap:8px}
+/* Quién responde, grande y en el color de la marca; debajo, el negocio. El color viene ajustado del servidor
+   para que se lea: el de una marca casi nunca alcanza como texto. */
+#brand-name{font-weight:800;font-size:19px;letter-spacing:-.02em;line-height:1.15;color:var(--marca-clara,var(--brand))}
+#brand-name small{display:block;font-weight:600;font-size:12.5px;letter-spacing:0;color:var(--marca-clara,var(--brand));opacity:.85;margin-top:1px}
+[data-theme=dark] #brand-name,[data-theme=dark] #brand-name small{color:var(--marca-oscura,var(--brand))}
 .nav{display:flex;flex-direction:column;gap:2px}
 .nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:none;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--text)}
 .nav button:hover{background:rgba(127,127,127,.1)}.nav button.active{background:color-mix(in srgb,var(--brand) 16%,transparent);color:var(--brand);font-weight:600}
@@ -563,6 +567,14 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 }
 @media(max-width:420px){.nav button,.nav .nav-more{padding:6px 4px;min-width:50px}}
 
+/* La ficha de perfil: lo de cada quien, junto y en un solo sitio. */
+.ficha-bloque{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.paleta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.tinta{width:30px;height:30px;border-radius:10px;border:2px solid transparent;cursor:pointer;box-shadow:var(--bevel-hi),var(--raise)}
+.tinta.puesto{border-color:var(--text);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 40%,transparent)}
+.seg-tema{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.seg-tema .btn.puesto{background:var(--brand);color:var(--on-brand);border-color:transparent;font-weight:600}
+
 /* El logo del negocio en su barra lateral: su marca, no la nuestra. */
 .logo-cliente{max-width:150px;max-height:34px;width:auto;height:auto;display:block;margin-bottom:8px;object-fit:contain}
 
@@ -871,6 +883,26 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
     </div>
     <div class="fila" style="gap:8px;margin-top:12px"><button class="btn primary" id="yo-guardar" type="button">Guardar</button>
       <span id="yo-msg" class="small" role="status"></span></div>
+
+    <div class="ficha-bloque">
+      <b class="small">Tu color</b>
+      <div class="small muted">Con esto se te reconoce cuando son varios atendiendo.</div>
+      <div class="paleta" id="yo-paleta"></div>
+    </div>
+
+    <div class="ficha-bloque">
+      <b class="small">Tema</b>
+      <div class="seg-tema" id="yo-tema">
+        <button class="btn sm" type="button" data-tema="light" aria-pressed="false">Claro</button>
+        <button class="btn sm" type="button" data-tema="dark" aria-pressed="false">Oscuro</button>
+        <button class="btn sm" type="button" data-tema="auto" aria-pressed="false">El del sistema</button>
+      </div>
+    </div>
+
+    <div class="ficha-bloque">
+      <b class="small">Avisos del navegador</b>
+      <div class="small" id="yo-avisos" style="margin-top:6px"></div>
+    </div>
     <div id="yo-cuenta" class="small muted" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line)" hidden>
       Tu usuario, tu correo y tu clave se manejan en la consola, no aquí: este tablero es del negocio.
       <a href="/" id="yo-consola">Ir a Mi cuenta en la consola</a>.
