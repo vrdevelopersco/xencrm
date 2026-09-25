@@ -117,6 +117,9 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('more-sheet').hidden) closeMore(true); });
   $('more-sheet').querySelectorAll('[data-proxy]').forEach(function (b) { b.onclick = function () { closeMore(); $(b.getAttribute('data-proxy')).click(); }; });
   function go(view, opts) {
+    // Perfil y El negocio no son pantallas: son configuración, y se abren en un modal encima de lo que estabas
+    // haciendo. Así no se pierde de vista la conversación ni hay que volver a navegar.
+    if (view === 'profile' || view === 'negocio') { abrirConfig(view); return; }
     state.view = view;
     document.querySelectorAll('.nav button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
     // Celular: «Más» se ve activo cuando la sección está dentro de él.
@@ -130,8 +133,6 @@
     if (view === 'calendar') loadCalendar();
     if (view === 'analysis') loadAnalysis();
     if (view === 'agent') loadAgent();
-    if (view === 'profile') loadProfile();
-    if (view === 'negocio') loadNegocio();
     if (view === 'help') loadHelp();
     if (view === 'channels') loadChannels();
     if (view === 'knowledge') loadKnowledge();
@@ -1335,9 +1336,9 @@
 
     $('negocio').innerHTML = aviso +
       '<div class="card"><h2 class="h">El negocio</h2>' +
-        campo('n-nombre', 'Nombre', a.negocio.name, { pista: 'Como lo nombra el asistente al presentarse.' }) +
+        '<div class="fila-2">' + campo('n-nombre', 'Nombre', a.negocio.name, { pista: 'Como lo nombra el asistente al presentarse.' }) +
+          campo('n-sitio', 'Sitio web', a.negocio.siteUrl, { pista: 'Con https://' }) + '</div>' +
         campo('n-desc', 'En una línea', a.negocio.description, { largo: true, pista: 'Qué vende o qué hace. Va en lo que el asistente sabe de entrada.' }) +
-        campo('n-sitio', 'Sitio web', a.negocio.siteUrl, { pista: 'Con https://' }) +
         campo('n-humano', 'Cuando piden una persona', a.negocio.humanContact, { largo: true, pista: 'Lo que el asistente responde cuando alguien quiere hablar con alguien de carne y hueso.' }) +
         '<div class="fila-3">' + campo('n-pais', 'País', a.negocio.country) + campo('n-moneda', 'Moneda', a.negocio.currency) +
           campo('n-indicativo', 'Indicativo', a.negocio.phoneCountryCode, { pista: 'Sin el +' }) +
@@ -1436,6 +1437,29 @@
       loadNegocio();
     });
   }
+
+
+  // ---------- Configuración en un modal ----------
+  function abrirConfig(cual) {
+    var dlg = $('dlg-config');
+    $('negocio').hidden = cual !== 'negocio';
+    $('profile').hidden = cual !== 'profile';
+    document.querySelectorAll('.cfg-tabs [data-cfg]').forEach(function (b) {
+      b.setAttribute('aria-selected', String(b.getAttribute('data-cfg') === cual));
+    });
+    $('cfg-titulo').textContent = cual === 'negocio' ? 'El negocio' : 'Perfil del negocio';
+    $('cfg-sub').textContent = cual === 'negocio'
+      ? 'Cómo se llama, cómo habla el asistente y cómo agenda'
+      : 'Lo que confirmes aquí es lo que el asistente dice de tu negocio';
+    if (cual === 'negocio') loadNegocio(); else loadProfile();
+    if (!dlg.open) dlg.showModal();
+    dlg.querySelector('.modal-cuerpo').scrollTop = 0;
+    closeMore();
+  }
+  document.querySelectorAll('.cfg-tabs [data-cfg]').forEach(function (b) {
+    b.onclick = function () { abrirConfig(b.getAttribute('data-cfg')); };
+  });
+  $('cfg-cerrar').onclick = function () { $('dlg-config').close(); };
 
   boot();
 })();

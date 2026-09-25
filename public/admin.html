@@ -470,6 +470,33 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 }
 @media(max-width:420px){.nav button,.nav .nav-more{padding:6px 4px;min-width:50px}}
 
+/* Configuración en un modal: compacto, con pestañas arriba y el contenido con su propio desplazamiento. */
+.modal-config{border:none;padding:0;border-radius:20px;background:var(--panel);color:var(--text);
+  box-shadow:0 24px 60px rgba(17,24,39,.28);width:min(860px,calc(100% - 28px));max-width:none;max-height:88svh}
+.modal-config[open]{display:flex;flex-direction:column}
+.modal-config::backdrop{background:rgba(17,24,39,.45)}
+.modal-cabeza{display:flex;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.modal-cabeza b{font-size:17px}
+.cfg-tabs{display:flex;gap:6px;margin-left:auto}
+.cfg-tabs .btn[aria-selected=true]{background:var(--brand);color:#fff;border-color:transparent}
+.modal-cuerpo{overflow:auto;padding:16px 18px 22px}
+/* Compacto: es configuración, no una pantalla de lectura. */
+.modal-cuerpo .prof-field{padding:3px 0}
+.modal-cuerpo .prof-field textarea{min-height:52px}
+.modal-cuerpo h2.h{font-size:14px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.modal-cuerpo .card{padding:14px 16px;margin-bottom:12px}
+.fila-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 14px}
+/* El Perfil en dos columnas; lo que lleva texto largo ocupa el ancho entero. */
+@media (min-width:720px){
+  #profile .panel.prof{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;align-items:start}
+  #profile .panel.prof > *{grid-column:1/-1}
+  #profile .panel.prof > .prof-field{grid-column:auto}
+  #profile .panel.prof > .prof-field:has(textarea){grid-column:1/-1}
+}
+.cfg-pane .card{box-shadow:none;border-radius:14px}
+.cfg-pane > .card:first-child{margin-top:0}
+@media (max-width:620px){.modal-config{width:100%;max-width:100%;max-height:100svh;border-radius:0;height:100svh}}
+
 /* El negocio: la configuración del cliente. Filas de tres que se apilan en celular. */
 .fila-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0 14px}
 .dias{display:flex;flex-wrap:wrap;gap:6px 14px}
@@ -675,14 +702,6 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
       <div class="topbar"><h1>Ayuda</h1><span class="muted small">Lo esencial del tablero en dos minutos</span></div>
       <div class="pad" id="help"></div>
     </section>
-    <section class="view" id="view-profile">
-      <div class="topbar"><h1>Perfil del negocio</h1><span class="muted small">Lo que confirmes aquí es lo que el bot dice de tu negocio</span></div>
-      <div class="pad" id="profile"></div>
-    </section>
-    <section class="view" id="view-negocio">
-      <div class="topbar"><h1>El negocio</h1><span class="muted small">Cómo se llama, cómo habla el asistente y cómo agenda</span></div>
-      <div class="pad" id="negocio"></div>
-    </section>
     <section class="view" id="view-agent">
       <div class="topbar"><h1>Agente</h1></div>
       <div class="pad" id="agent"></div>
@@ -704,5 +723,23 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 </div>
 <div class="toasts" id="toasts"></div>
 <script src="admin.js"></script>
+<dialog id="dlg-config" class="modal-config">
+  <div class="modal-cabeza">
+    <div>
+      <b id="cfg-titulo">Configuración</b>
+      <div class="small muted" id="cfg-sub">Lo del negocio y lo que el asistente puede decir de él</div>
+    </div>
+    <div class="cfg-tabs" role="tablist">
+      <button class="btn sm" data-cfg="negocio" role="tab">El negocio</button>
+      <button class="btn sm" data-cfg="profile" role="tab">Perfil</button>
+    </div>
+    <button class="btn sm" id="cfg-cerrar" type="button" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="modal-cuerpo">
+    <div id="negocio" class="cfg-pane"></div>
+    <div id="profile" class="cfg-pane" hidden></div>
+  </div>
+</dialog>
+
 </body>
 </html>
