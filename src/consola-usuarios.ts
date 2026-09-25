@@ -14,6 +14,8 @@ export type Rol = 'super' | 'agente';
 export interface Usuario {
   usuario: string;
   nombre: string;
+  /** Para saber a quién escribirle y, si alguien prefiere, para entrar con él en vez del usuario. */
+  correo?: string;
   rol: Rol;
   /** Clientes que atiende. Vacío en un super-admin: los ve todos. */
   clientes: string[];
@@ -42,6 +44,15 @@ function guardar(usuarios: Usuario[]) {
 }
 
 const hashear = (clave: string, sal = randomBytes(16).toString('hex')) => `${sal}:${scryptSync(clave, sal, 32).toString('hex')}`;
+
+/** Un correo con forma de correo, o vacío. No se comprueba que exista: eso lo dirá el primer mensaje. */
+export function correoLimpio(correo: string | undefined, quien = ''): string {
+  const c = (correo ?? '').trim().toLowerCase();
+  if (!c) return '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(c)) throw new Error('ese correo no tiene forma de correo');
+  if (leerUsuarios().some((u) => u.correo === c && u.usuario !== quien)) throw new Error('ya hay alguien con ese correo');
+  return c;
+}
 function coincide(clave: string, guardada: string): boolean {
   const [sal, hash] = guardada.split(':');
   if (!sal || !hash) return false;
@@ -59,15 +70,17 @@ function comprobarClientes(slugs: string[]): string[] {
 }
 
 /** Crea a alguien del equipo. `clientes` vacío en un super-admin (los ve todos). */
-export function crearUsuario(datos: { usuario: string; nombre?: string; clave: string; rol?: Rol; clientes?: string[]; hoy?: string }): UsuarioPublico {
+export function crearUsuario(datos: { usuario: string; nombre?: string; correo?: string; clave: string; rol?: Rol; clientes?: string[]; hoy?: string }): UsuarioPublico {
   const usuario = datos.usuario.trim().toLowerCase();
   if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) throw new Error('el usuario va en minúsculas, de 3 a 30 letras o números');
   if (datos.clave.length < 8) throw new Error('la clave necesita al menos 8 caracteres');
   const usuarios = leerUsuarios();
   if (usuarios.some((u) => u.usuario === usuario)) throw new Error('ya existe alguien con ese usuario');
+  const correo = correoLimpio(datos.correo);
   const nuevo: Usuario = {
     usuario,
     nombre: datos.nombre?.trim() || usuario,
+    correo,
     rol: datos.rol ?? 'agente',
     clientes: datos.rol === 'super' ? [] : comprobarClientes(datos.clientes ?? []),
     activo: true,
@@ -79,7 +92,7 @@ export function crearUsuario(datos: { usuario: string; nombre?: string; clave: s
 }
 
 /** Cambia lo que el super-admin puede cambiar: nombre, rol, clientes, si sigue activo y la clave. */
-export function actualizarUsuario(usuario: string, cambios: Partial<Pick<Usuario, 'nombre' | 'rol' | 'clientes' | 'activo'>> & { clave?: string }): UsuarioPublico {
+export function actualizarUsuario(usuario: string, cambios: Partial<Pick<Usuario, 'nombre' | 'correo' | 'rol' | 'clientes' | 'activo'>> & { clave?: string }): UsuarioPublico {
   const usuarios = leerUsuarios();
   const i = usuarios.findIndex((u) => u.usuario === usuario);
   if (i === -1) throw new Error('ese usuario no existe');
@@ -89,9 +102,40 @@ export function actualizarUsuario(usuario: string, cambios: Partial<Pick<Usuario
   usuarios[i] = {
     ...actual,
     ...cambios,
+    correo: cambios.correo === undefined ? actual.correo : correoLimpio(cambios.correo, usuario),
     rol,
     clientes: rol === 'super' ? [] : comprobarClientes(cambios.clientes ?? actual.clientes),
     clave: cambios.clave ? hashear(cambios.clave) : actual.clave,
+  };
+  guardar(usuarios);
+  return sinClave(usuarios[i]!);
+}
+
+/**
+ * Lo que cada quien puede cambiar de sí mismo: su nombre, su correo y su clave. La clave pide la actual, que si
+ * no cualquiera que se siente en una sesión abierta se la cambia y deja al dueño afuera.
+ *
+ * El rol y los clientes NO se tocan aquí: eso lo decide el super-admin.
+ */
+export function cambiarLoMio(
+  usuario: string,
+  cambios: { nombre?: string; correo?: string; claveActual?: string; claveNueva?: string },
+): UsuarioPublico {
+  const usuarios = leerUsuarios();
+  const i = usuarios.findIndex((u) => u.usuario === usuario);
+  if (i === -1) throw new Error('ese usuario no existe');
+  const actual = usuarios[i]!;
+  if (cambios.claveNueva !== undefined) {
+    if (!coincide(cambios.claveActual ?? '', actual.clave)) throw new Error('la clave actual no es esa');
+    if (cambios.claveNueva.length < 8) throw new Error('la clave nueva necesita al menos 8 caracteres');
+  }
+  const nombre = cambios.nombre === undefined ? actual.nombre : cambios.nombre.trim();
+  if (!nombre) throw new Error('el nombre no puede quedar vacío');
+  usuarios[i] = {
+    ...actual,
+    nombre,
+    correo: cambios.correo === undefined ? actual.correo : correoLimpio(cambios.correo, usuario),
+    clave: cambios.claveNueva ? hashear(cambios.claveNueva) : actual.clave,
   };
   guardar(usuarios);
   return sinClave(usuarios[i]!);
@@ -107,7 +151,8 @@ export function borrarUsuario(usuario: string): boolean {
 
 /** Comprueba usuario y clave. Devuelve null si no coinciden o si está inactivo (sin decir cuál de las dos). */
 export function verificar(usuario: string, clave: string): UsuarioPublico | null {
-  const u = leerUsuarios().find((x) => x.usuario === usuario.trim().toLowerCase());
+  const quien = usuario.trim().toLowerCase();
+  const u = leerUsuarios().find((x) => x.usuario === quien || (Boolean(x.correo) && x.correo === quien));
   if (!u || !u.activo || !coincide(clave, u.clave)) return null;
   return sinClave(u);
 }

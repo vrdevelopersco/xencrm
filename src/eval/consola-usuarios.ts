@@ -8,7 +8,7 @@ import { join } from 'node:path';
 const base = mkdtempSync(join(tmpdir(), 'aiva-usuarios-'));
 process.env.AIVA_CLIENTES_DIR = base;
 process.env.CONSOLA_TOKEN = 'llave-maestra';
-const { crearUsuario, actualizarUsuario, borrarUsuario, verificar, abrirSesion, sesionDe, cerrarSesion, leerUsuarios, alcanza } = await import('../consola-usuarios.js');
+const { crearUsuario, actualizarUsuario, borrarUsuario, verificar, abrirSesion, sesionDe, cerrarSesion, leerUsuarios, alcanza, cambiarLoMio } = await import('../consola-usuarios.js');
 const { crearCliente } = await import('../clientes.js');
 const { mountConsola } = await import('../consola.js');
 const { Hono } = await import('hono');
@@ -107,6 +107,22 @@ check('al super-admin no se le toca la lista vacía', leerUsuarios().find((u) =>
 check('dar de baja algo que no existe avisa', (() => { try { darDeBajaCliente('nadie'); return false; } catch { return true; } })());
 
 check('quitar a alguien lo saca', borrarUsuario('jefe') && !leerUsuarios().some((u) => u.usuario === 'jefe'));
+
+// --- el correo y lo que cada quien puede cambiarse ---
+const conCorreo = crearUsuario({ usuario: 'pablo', nombre: 'Pablo', correo: 'Pablo@Dunor.CO ', clave: 'clave-de-prueba', rol: 'agente', clientes: [] });
+check('el correo se guarda en minúsculas y sin espacios', conCorreo.correo === 'pablo@dunor.co', String(conCorreo.correo));
+check('se puede entrar con el correo en vez del usuario', verificar('pablo@dunor.co', 'clave-de-prueba')?.usuario === 'pablo');
+check('y con el usuario, como siempre', verificar('pablo', 'clave-de-prueba')?.usuario === 'pablo');
+check('un correo con mala forma se rechaza', (() => { try { crearUsuario({ usuario: 'otro', correo: 'arroba-no', clave: 'clave-de-prueba' }); return false; } catch { return true; } })());
+check('dos personas no pueden tener el mismo correo', (() => { try { crearUsuario({ usuario: 'otro2', correo: 'pablo@dunor.co', clave: 'clave-de-prueba' }); return false; } catch { return true; } })());
+
+const mio = cambiarLoMio('pablo', { nombre: 'Pablo Ruiz', correo: 'pablo.ruiz@dunor.co' });
+check('cada quien se cambia su nombre y su correo', mio.nombre === 'Pablo Ruiz' && mio.correo === 'pablo.ruiz@dunor.co');
+check('cambiar la clave sin la actual, no', (() => { try { cambiarLoMio('pablo', { claveNueva: 'otra-clave-larga' }); return false; } catch (e) { return /clave actual/.test((e as Error).message); } })());
+cambiarLoMio('pablo', { claveActual: 'clave-de-prueba', claveNueva: 'otra-clave-larga' });
+check('con la actual, sí', verificar('pablo', 'otra-clave-larga')?.usuario === 'pablo' && verificar('pablo', 'clave-de-prueba') === null);
+check('y no se puede subir el rol a sí mismo', leerUsuarios().find((u) => u.usuario === 'pablo')!.rol === 'agente');
+
 
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

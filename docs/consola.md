@@ -137,3 +137,21 @@ dejaría al cliente sin atender a nadie.
 Nada se guarda sin validar contra el mismo esquema con el que se lee al arrancar, y antes de pisar el archivo se
 deja una copia en `aiva.config.json.anterior`. Una actualización del despliegue tampoco pisa lo editado: si el
 cliente ya tiene su configuración en los datos, manda esa; la que trae el paquete solo se usa la primera vez.
+
+## Cuentas
+
+Cada quien entra con **usuario y clave**, o con su **correo** y la clave si lo tiene puesto. El botón con tu
+nombre, arriba a la derecha, abre **Mi cuenta**: ahí cambias tu nombre, tu correo y tu clave sin pedirle nada al
+super-admin. Para cambiar la clave hay que poner la actual —si no, cualquiera que se siente frente a una sesión
+abierta te deja afuera—. El rol y los clientes que atiendes no se tocan ahí: eso lo decide el super-admin en
+**Equipo**.
+
+La llave maestra (`CONSOLA_TOKEN`) **no es una cuenta**: es la salida de emergencia para entrar la primera vez,
+antes de que exista un solo usuario, o si alguien pierde la suya. Entrando con ella no hay nada que cambiar en
+Mi cuenta.
+
+🪤 `ADMIN_TOKEN` y `CONSOLA_TOKEN` **se inventan solos en cada arranque si no están en el entorno**. Sirve para
+probar en la máquina de uno, pero en un despliegue significa que el token cambia cada vez que el proceso
+reinicia. Por eso van siempre en el panel (o en el `.env` del cliente). Entrando por la consola esto ya casi no
+se nota —los tableros se abren con tu sesión, no con el token—, pero el día que alguien quiera abrir
+`/<cliente>/admin` directo, lo va a necesitar.

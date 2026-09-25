@@ -12,7 +12,7 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { readFileSync, existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { actualizarCliente, crearCliente, darDeBajaCliente, leerIndice, PLANTILLAS, puertoLibre, tokenDe, urlDe, type ClienteRef } from './clientes.js';
-import { abrirSesion, actualizarUsuario, alcanza, borrarUsuario, cerrarSesion, crearUsuario, leerUsuarios, quitarClienteDeUsuarios, sesionDe, sinClave, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
+import { abrirSesion, actualizarUsuario, alcanza, borrarUsuario, cambiarLoMio, cerrarSesion, crearUsuario, leerUsuarios, quitarClienteDeUsuarios, sesionDe, sinClave, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
 
 // El .env de la raíz, sin pasar por la configuración de un cliente (la consola no es de ningún cliente).
 function envRaiz(clave: string): string {
@@ -312,12 +312,27 @@ export function mountConsola(app: Hono) {
     // `sinClientes` son los que atienden y se quedaron sin ninguno: no pueden hacer nada hasta que les asignen.
     return c.json({ usuarios: leerUsuarios().map(sinClave), sinClientes: usuariosSinClientes().map((u) => u.usuario) });
   });
+  /**
+   * Lo mío: nombre, correo y clave. Cualquiera que entró puede cambiarse lo suyo sin pedirle nada a nadie; para
+   * la clave hay que poner la actual. Con la llave maestra no hay nada que cambiar: no es un usuario del archivo.
+   */
+  app.patch('/api/yo', async (c) => {
+    const yo = c.get('usuario' as never) as UsuarioPublico | null;
+    if (!yo) return c.json({ error: 'entraste con la llave maestra: eso no es una cuenta. Crea tu usuario en Equipo.' }, 400);
+    const body = (await c.req.json().catch(() => ({}))) as { nombre?: string; correo?: string; claveActual?: string; claveNueva?: string };
+    try {
+      return c.json({ usuario: cambiarLoMio(yo.usuario, body) });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  });
+
   app.post('/api/usuarios', async (c) => {
     if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
-    const body = (await c.req.json().catch(() => ({}))) as { usuario?: string; nombre?: string; clave?: string; rol?: 'super' | 'agente'; clientes?: string[] };
+    const body = (await c.req.json().catch(() => ({}))) as { usuario?: string; nombre?: string; correo?: string; clave?: string; rol?: 'super' | 'agente'; clientes?: string[] };
     if (!body.usuario || !body.clave) return c.json({ error: 'falta el usuario o la clave' }, 400);
     try {
-      return c.json({ usuario: crearUsuario({ usuario: body.usuario, nombre: body.nombre, clave: body.clave, rol: body.rol, clientes: body.clientes }) });
+      return c.json({ usuario: crearUsuario({ usuario: body.usuario, nombre: body.nombre, correo: body.correo, clave: body.clave, rol: body.rol, clientes: body.clientes }) });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 409);
     }

@@ -88,7 +88,7 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
     <button class="btn" id="sonido" title="Avisarme cuando llegue algo">🔔</button>
     <button class="btn" id="refrescar">Actualizar</button>
     <button class="btn primary" id="nuevo">Nuevo cliente</button>
-    <span class="chip" id="yo"></span>
+    <button class="btn" id="yo" title="Mi cuenta"></button>
     <button class="btn" id="salir">Salir</button>
   </header>
   <main id="atender" class="dos">
@@ -98,6 +98,20 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
   <main id="lista" hidden></main>
   <main id="equipo" hidden></main>
 </div>
+
+<dialog id="dlg-yo">
+  <form class="alta" method="dialog" id="form-yo">
+    <h2 style="margin:0">Mi cuenta</h2>
+    <p class="muted small" style="margin:0">Tu nombre, tu correo y tu clave. El rol y los clientes que atiendes los decide el super-admin.</p>
+    <label>Nombre <input id="y-nombre" required></label>
+    <label>Correo <input id="y-correo" type="email" placeholder="opcional"><span class="muted small">Si lo pones, también puedes entrar con él.</span></label>
+    <hr style="border:none;border-top:1px solid var(--line);width:100%">
+    <label>Clave actual <input id="y-clave-actual" type="password" autocomplete="current-password" placeholder="solo si vas a cambiarla"></label>
+    <label>Clave nueva <input id="y-clave-nueva" type="password" autocomplete="new-password" placeholder="8 o más caracteres"></label>
+    <div id="y-msg" class="small" role="status"></div>
+    <div class="fila"><span class="grow"></span><button class="btn" value="cancelar">Cerrar</button><button class="btn primary" id="y-guardar" type="button">Guardar</button></div>
+  </form>
+</dialog>
 
 <dialog id="dlg">
   <form class="alta" method="dialog" id="form-alta">
@@ -182,6 +196,27 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
         entrar(true); sesionLista();
       });
   };
+  // Mi cuenta: cada quien se cambia lo suyo sin pedirle nada al super-admin. Con la llave maestra no hay cuenta
+  // que cambiar, así que ahí el botón solo lo dice.
+  $('yo').onclick = function () {
+    if (!yo) { alert('Entraste con la llave maestra, que no es una cuenta. Crea tu usuario en Equipo y entra con él.'); return; }
+    $('y-nombre').value = yo.nombre || '';
+    $('y-correo').value = yo.correo || '';
+    $('y-clave-actual').value = ''; $('y-clave-nueva').value = ''; $('y-msg').textContent = '';
+    $('dlg-yo').showModal();
+  };
+  $('y-guardar').onclick = function () {
+    var cuerpo = { nombre: $('y-nombre').value.trim(), correo: $('y-correo').value.trim() };
+    if ($('y-clave-nueva').value) { cuerpo.claveActual = $('y-clave-actual').value; cuerpo.claveNueva = $('y-clave-nueva').value; }
+    $('y-msg').textContent = 'Guardando…';
+    api('/yo', { method: 'PATCH', body: cuerpo }).then(function (d) {
+      if (d.error) { $('y-msg').textContent = d.error; return; }
+      yo = d.usuario;
+      $('yo').textContent = yo.nombre + (esSuper ? ' · super-admin' : '');
+      $('dlg-yo').close();
+    });
+  };
+
   $('salir').onclick = function () {
     api('/salir', { method: 'POST' }).catch(function () {});
     sesion = ''; token = ''; yo = null;
@@ -447,6 +482,7 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
         usuarios.map(function (u) {
           return '<div class="card" data-u="' + esc(u.usuario) + '">' +
             '<div class="fila"><span class="nombre">' + esc(u.nombre) + '</span><span class="chip">' + esc(u.usuario) + '</span>' +
+              (u.correo ? '<span class="chip">' + esc(u.correo) + '</span>' : '') +
               '<span class="chip ' + (u.rol === 'super' ? 'alta' : '') + '">' + (u.rol === 'super' ? 'Super-admin' : 'Atiende') + '</span>' +
               (u.activo ? '' : '<span class="chip media">Inactivo</span>') +
               '<span class="grow"></span>' +
@@ -457,8 +493,9 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
             '</div>';
         }).join('') +
         '<div class="card"><b>Agregar a alguien</b>' +
-          '<div class="fila" style="margin-top:8px"><input id="n-usuario" placeholder="usuario" style="width:140px"><input id="n-nombre" placeholder="Nombre" style="width:170px">' +
-          '<input id="n-clave" type="password" placeholder="clave (8+)" style="width:150px">' +
+          '<div class="fila" style="margin-top:8px"><input id="n-usuario" placeholder="usuario" style="width:130px"><input id="n-nombre" placeholder="Nombre" style="width:150px">' +
+          '<input id="n-correo" type="email" placeholder="correo (opcional)" style="width:180px">' +
+          '<input id="n-clave" type="password" placeholder="clave (8+)" style="width:140px">' +
           '<select id="n-rol"><option value="agente">Atiende clientes</option><option value="super">Super-admin</option></select>' +
           '<button class="btn primary" id="n-crear">Agregar</button></div>' +
           '<div class="fila" id="n-clientes" style="margin-top:8px">' + opciones([]) + '</div>' +
@@ -484,7 +521,7 @@ form.alta label{display:flex;flex-direction:column;gap:4px;font-size:13px}
       });
       $('n-crear').onclick = function () {
         var marcados = [...$('n-clientes').querySelectorAll('input[type=checkbox]')].filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
-        api('/usuarios', { method: 'POST', body: { usuario: $('n-usuario').value.trim(), nombre: $('n-nombre').value.trim(), clave: $('n-clave').value, rol: $('n-rol').value, clientes: marcados } })
+        api('/usuarios', { method: 'POST', body: { usuario: $('n-usuario').value.trim(), nombre: $('n-nombre').value.trim(), correo: $('n-correo').value.trim(), clave: $('n-clave').value, rol: $('n-rol').value, clientes: marcados } })
           .then(function (d) {
             if (d.error) { $('n-msg').textContent = d.error; return; }
             cargarEquipo();
