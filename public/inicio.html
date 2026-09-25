@@ -4,327 +4,266 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>aiva · Artificial Intelligence Virtual Assistant</title>
-<meta name="description" content="aiva atiende a tus clientes por WhatsApp y por el chat de tu sitio: responde, agenda citas de tu agenda real, califica prospectos y le pasa a tu equipo solo lo que necesita una persona.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='34' fill='none' stroke='%235fbf86' stroke-width='9'/><circle cx='50' cy='50' r='9' fill='%235fbf86'/></svg>">
+<meta name="description" content="aiva atiende a tus clientes por WhatsApp y por el chat de tu sitio: responde, agenda citas de tu agenda real, califica prospectos y le pasa a tu equipo solo lo que necesita una persona. Un producto de HRC Technologies.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='22' y='22' width='56' height='56' rx='10' fill='none' stroke='%23d4af13' stroke-width='9'/><rect x='42' y='42' width='16' height='16' rx='3' fill='%23d4af13'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* Lenguaje de la casa (hrctechnologies.com): Figtree, el dorado y el chip del logo. Aquí en claro: aiva se
+   muestra de día, no de noche, y el oro pesa más sobre papel que sobre negro. */
 :root{
-  /* --tenue es el gris más bajo que se usa (riel, pie, rótulo): medido, 4.8:1 sobre el fondo. Más abajo no. */
-  --fondo:#070b10; --texto:#eef2f6; --suave:#98a3b2; --tenue:#737e8e;
-  --verde:#5fbf86; --linea:rgba(238,242,246,.12);
-  --display:"Playfair Display",Georgia,"Times New Roman",serif;
-  --cuerpo:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --papel:#fafaf7; --panel:#fff; --tinta:#14110c; --suave:#5e5950; --tenue:#8b857a;
+  --oro:#7b660f;        /* texto y botones: 5.4:1 sobre el papel */
+  --oro-claro:#d4af13;  /* filetes y marcas */
+  --oro-vivo:#f1cb05;   /* el del chip del logo: solo en manchas pequeñas */
+  --oro-papel:#fdf6dd;
+  --linea:#e8e4da;
+  --sombra:0 1px 2px rgba(20,17,12,.05),0 8px 24px rgba(20,17,12,.06);
+  --alta:0 2px 6px rgba(20,17,12,.07),0 18px 44px rgba(20,17,12,.12);
   --curva:cubic-bezier(.22,.7,.28,1);
-  --gutter:clamp(22px,6vw,110px);
+  --gutter:clamp(20px,5vw,72px);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:var(--fondo);color:var(--texto);font-family:var(--cuerpo);font-size:16px;line-height:1.65;
-  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{margin:0;background:var(--papel);color:var(--tinta);font-family:Figtree,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 
-/* ── Atmósfera: manchas de luz que se mueven despacio, y grano encima ───────── */
-.luz{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.luz i{position:absolute;display:block;border-radius:50%;filter:blur(90px);opacity:.5;will-change:transform}
-.luz i:nth-child(1){width:52vw;height:52vw;left:-12vw;top:-14vw;background:#1d5c3d;animation:vagar1 34s var(--curva) infinite alternate}
-.luz i:nth-child(2){width:44vw;height:44vw;right:-10vw;top:6vw;background:#14384f;animation:vagar2 44s var(--curva) infinite alternate}
-.luz i:nth-child(3){width:38vw;height:38vw;left:34vw;bottom:-16vw;background:#4a3a18;opacity:.32;animation:vagar3 52s var(--curva) infinite alternate}
-@keyframes vagar1{to{transform:translate3d(9vw,7vw,0) scale(1.15)}}
-@keyframes vagar2{to{transform:translate3d(-8vw,10vw,0) scale(1.1)}}
-@keyframes vagar3{to{transform:translate3d(6vw,-8vw,0) scale(1.2)}}
-.grano{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.5;mix-blend-mode:overlay;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23r)'/%3E%3C/svg%3E")}
-/* La luz que sigue al cursor: se enciende sola cuando hay mouse. */
-.faro{position:fixed;top:0;left:0;width:620px;height:620px;margin:-310px 0 0 -310px;z-index:1;pointer-events:none;
-  background:radial-gradient(circle,rgba(95,191,134,.10),transparent 62%);opacity:0;transition:opacity .5s var(--curva);will-change:transform}
-body.con-mouse .faro{opacity:1}
+/* Fondo: papel cálido con un resplandor dorado y la retícula del circuito del logo, muy tenue. */
+.fondo{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.fondo .halo{position:absolute;border-radius:50%;filter:blur(80px)}
+.fondo .halo.a{width:54vw;height:40vw;left:-14vw;top:-22vw;background:rgba(241,203,5,.10)}
+.fondo .halo.b{width:42vw;height:34vw;right:-14vw;top:-4vw;background:rgba(120,140,200,.08)}
+.fondo .rejilla{position:absolute;inset:0;opacity:.5;
+  background-image:linear-gradient(var(--linea) 1px,transparent 1px),linear-gradient(90deg,var(--linea) 1px,transparent 1px);
+  background-size:52px 52px;
+  -webkit-mask-image:radial-gradient(120% 70% at 50% 0%,#000 30%,transparent 72%);
+  mask-image:radial-gradient(120% 70% at 50% 0%,#000 30%,transparent 72%)}
 
-/* ── Barra de arriba ────────────────────────────────────────────────────────── */
-header{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;
-  padding:26px var(--gutter);transition:background .4s var(--curva),backdrop-filter .4s var(--curva)}
-/* Al bajar, la barra se apoya en un vidrio para que el texto no se pelee con lo que pasa por debajo. */
-body.bajando header{background:rgba(7,11,16,.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--linea)}
-.marca{font-family:var(--display);font-size:23px;letter-spacing:-.02em;color:var(--texto);text-decoration:none;line-height:1}
-.marca em{color:var(--verde);font-style:italic}
-nav{display:flex;gap:26px;align-items:center}
-nav a{color:var(--texto);text-decoration:none;font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.72;
-  transition:opacity .25s var(--curva)}
-nav a:hover,nav a:focus-visible{opacity:1}
-@media (max-width:760px){nav a:not(.destacado){display:none}header{padding:18px var(--gutter)}}
+/* ── Barra flotante, como la de la casa ─────────────────────────────────────── */
+header{position:fixed;top:14px;left:var(--gutter);right:var(--gutter);z-index:30;display:flex;align-items:center;
+  gap:18px;padding:10px 12px 10px 20px;border-radius:999px;background:rgba(255,255,255,.82);
+  border:1px solid var(--linea);box-shadow:var(--sombra);backdrop-filter:blur(12px)}
+header .logo{display:flex;align-items:center}
+header .logo img{height:26px;width:auto;display:block}
+header .sep{width:1px;height:22px;background:var(--linea)}
+header .quien{font-weight:600;letter-spacing:-.01em}
+header .quien small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--tenue);font-weight:500}
+nav{margin-left:auto;display:flex;align-items:center;gap:6px}
+nav a{color:var(--suave);text-decoration:none;font-size:14.5px;font-weight:500;padding:9px 14px;border-radius:999px;
+  transition:background .2s var(--curva),color .2s var(--curva)}
+nav a:hover{background:var(--oro-papel);color:var(--tinta)}
+nav a.boton{background:var(--oro);color:#fff;font-weight:600;padding:11px 20px;box-shadow:var(--sombra)}
+nav a.boton:hover{background:#8f7614;color:#fff;box-shadow:var(--alta)}
+nav a:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
+@media (max-width:820px){nav a:not(.boton){display:none}header{padding-left:16px}header .sep,header .quien{display:none}}
 
-/* ── Riel numerado de la derecha ────────────────────────────────────────────── */
-.riel{position:fixed;right:clamp(16px,3vw,44px);top:50%;transform:translateY(-50%);z-index:15;display:flex;
-  flex-direction:column;gap:14px}
-.riel a{display:flex;align-items:center;gap:9px;justify-content:flex-end;text-decoration:none;
-  font-size:10.5px;letter-spacing:.18em;color:var(--tenue);transition:color .3s var(--curva)}
-.riel a::after{content:"";width:16px;height:1px;background:currentColor;transition:width .35s var(--curva)}
-.riel a.aqui{color:var(--verde)}
-.riel a.aqui::after{width:34px}
-.riel a:hover{color:var(--texto)}
-@media (max-width:860px){.riel{display:none}}
-
-/* ── Lo común a las secciones ───────────────────────────────────────────────── */
-main{position:relative;z-index:2}
-section{padding:clamp(90px,14vh,150px) var(--gutter);max-width:1320px;margin:0 auto}
-.num{font-size:11px;letter-spacing:.26em;color:var(--verde);margin-bottom:18px;font-variant-numeric:tabular-nums}
-h2{font-family:var(--display);font-weight:400;font-size:clamp(34px,5.6vw,68px);line-height:1.04;letter-spacing:-.02em;
-  margin:0 0 22px;max-width:16em}
-h2 em{font-style:italic;color:var(--verde)}
-h2 .punto{color:var(--verde)}
-.dice{color:var(--suave);font-size:clamp(16px,1.35vw,19px);max-width:38em;margin:0}
-.dice + .dice{margin-top:16px}
+/* ── Contenido ──────────────────────────────────────────────────────────────── */
+main{position:relative;z-index:1}
+section{max-width:1120px;margin:0 auto;padding:clamp(56px,9vh,104px) var(--gutter)}
+.marca-seccion{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--oro);margin-bottom:16px}
+.marca-seccion::before{content:"";width:22px;height:2px;background:var(--oro-claro);border-radius:2px}
+h2{font-size:clamp(26px,3.6vw,40px);line-height:1.15;letter-spacing:-.025em;font-weight:700;margin:0 0 14px;max-width:18em}
+h2 em{font-style:normal;color:var(--oro)}
+.dice{color:var(--suave);font-size:clamp(16px,1.2vw,18px);max-width:40em;margin:0}
 
 /* ── Portada ────────────────────────────────────────────────────────────────── */
-.portada{min-height:100svh;display:flex;flex-direction:column;justify-content:center;padding-top:120px;padding-bottom:120px;max-width:none}
-.portada h1{font-family:var(--display);font-weight:400;font-size:clamp(58px,13.5vw,186px);line-height:.92;
-  letter-spacing:-.035em;margin:0}
-.portada h1 em{font-style:italic;color:var(--verde)}
-.portada h1 .punto{color:var(--verde)}
-.linea{display:block;overflow:hidden}
-.linea > span{display:block;transform:translateY(105%);animation:subir 1.05s var(--curva) forwards}
-.linea:nth-child(2) > span{animation-delay:.1s}
-@keyframes subir{to{transform:translateY(0)}}
-.bajada{margin-top:38px;max-width:30em;color:var(--suave);font-size:clamp(16px,1.5vw,20px);opacity:0;animation:aparecer 1s var(--curva) .5s forwards}
-.abajo{margin-top:44px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;opacity:0;animation:aparecer 1s var(--curva) .68s forwards}
-@keyframes aparecer{to{opacity:1}}
-.rotulo{position:absolute;top:calc(100svh - 54px);left:var(--gutter);font-size:10.5px;letter-spacing:.24em;
-  text-transform:uppercase;color:var(--tenue)}
+.portada{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  padding-top:130px;padding-bottom:70px;max-width:none}
+.sello{display:inline-flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--linea);
+  border-radius:999px;padding:7px 16px 7px 8px;font-size:13px;color:var(--suave);box-shadow:var(--sombra);margin-bottom:26px}
+.sello b{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:var(--oro-vivo);color:#14110c;font-size:12px}
+h1{font-size:clamp(34px,5.4vw,64px);line-height:1.08;letter-spacing:-.03em;font-weight:700;margin:0;max-width:15.5em;text-wrap:balance}
+h1 em{font-style:normal;background:linear-gradient(100deg,var(--oro) 0%,#b08f12 45%,var(--oro-claro) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.bajada{margin:22px auto 0;max-width:36em;color:var(--suave);font-size:clamp(16px,1.5vw,19.5px)}
+.acciones{margin-top:34px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.pastilla{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 26px;border-radius:999px;
+  background:var(--oro);color:#fff;text-decoration:none;font-weight:600;font-size:15.5px;box-shadow:var(--sombra);
+  transition:transform .2s var(--curva),box-shadow .2s var(--curva),background .2s var(--curva)}
+.pastilla:hover{background:#8f7614;transform:translateY(-2px);box-shadow:var(--alta)}
+.pastilla.calma{background:var(--panel);color:var(--tinta);border:1px solid var(--linea)}
+.pastilla.calma:hover{background:#fff;border-color:var(--oro-claro)}
+.pastilla:focus-visible{outline:2px solid var(--oro);outline-offset:3px}
 
-/* ── Botones ────────────────────────────────────────────────────────────────── */
-.pastilla{display:inline-flex;align-items:center;gap:12px;min-height:52px;padding:0 10px 0 26px;border-radius:999px;
-  background:rgba(238,242,246,.05);border:1px solid var(--linea);color:var(--texto);text-decoration:none;
-  font-size:12px;letter-spacing:.2em;text-transform:uppercase;backdrop-filter:blur(6px);
-  transition:background .3s var(--curva),border-color .3s var(--curva),transform .3s var(--curva)}
-.pastilla .bolita{width:34px;height:34px;border-radius:50%;background:var(--verde);color:#06120b;display:grid;
-  place-items:center;font-size:15px;transition:transform .35s var(--curva)}
-.pastilla:hover{background:rgba(238,242,246,.1);border-color:rgba(95,191,134,.5);transform:translateY(-2px)}
-.pastilla:hover .bolita{transform:translateX(3px)}
-.pastilla:focus-visible{outline:2px solid var(--verde);outline-offset:4px}
-.plano{color:var(--suave);text-decoration:none;font-size:12px;letter-spacing:.2em;text-transform:uppercase;
-  padding:14px 4px;border-bottom:1px solid transparent;transition:color .3s,border-color .3s}
-.plano:hover{color:var(--texto);border-color:var(--verde)}
+/* Números de la portada: lo que hace, en una línea */
+.cifras{display:flex;gap:clamp(18px,4vw,56px);flex-wrap:wrap;justify-content:center;margin-top:54px;
+  padding-top:26px;border-top:1px solid var(--linea);width:min(100%,780px)}
+.cifra b{display:block;font-size:clamp(19px,2.2vw,26px);font-weight:700;letter-spacing:-.02em}
+.cifra span{font-size:13px;color:var(--tenue)}
 
-/* ── Rasgos: columnas con regla arriba ──────────────────────────────────────── */
-.rasgos{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:clamp(24px,3vw,52px);margin-top:66px}
-.rasgo{border-top:1px solid var(--linea);padding-top:22px}
-.rasgo h3{font-family:var(--display);font-weight:400;font-size:24px;margin:0 0 10px;letter-spacing:-.01em}
-.rasgo p{margin:0;color:var(--suave);font-size:15.5px}
+/* ── Tarjetas ───────────────────────────────────────────────────────────────── */
+.rejilla{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:38px}
+@media (max-width:1080px){.rejilla{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.rejilla{grid-template-columns:1fr}}
+.ficha{background:var(--panel);border:1px solid var(--linea);border-radius:18px;padding:22px;box-shadow:var(--sombra);
+  transition:box-shadow .25s var(--curva),transform .25s var(--curva),border-color .25s var(--curva)}
+.ficha:hover{box-shadow:var(--alta);transform:translateY(-2px);border-color:#ded8c8}
+.ficha .chip{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:var(--oro-papel);
+  border:1px solid #f0e4b0;margin-bottom:14px}
+.ficha .chip svg{width:19px;height:19px;stroke:var(--oro);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ficha h3{margin:0 0 7px;font-size:17px;font-weight:600;letter-spacing:-.01em}
+.ficha p{margin:0;color:var(--suave);font-size:15px}
 
-/* ── Los pasos ──────────────────────────────────────────────────────────────── */
-.pasos{margin-top:56px;border-top:1px solid var(--linea)}
-.paso{display:grid;grid-template-columns:64px 1fr;gap:clamp(16px,3vw,48px);align-items:baseline;
-  padding:26px 0;border-bottom:1px solid var(--linea);transition:background .4s var(--curva)}
-.paso:hover{background:rgba(238,242,246,.025)}
-.paso b{font-size:11px;letter-spacing:.2em;color:var(--verde);font-weight:500;font-variant-numeric:tabular-nums}
-.paso div{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
-.paso strong{font-family:var(--display);font-weight:400;font-size:clamp(21px,2.4vw,30px);letter-spacing:-.01em}
-.paso span{color:var(--suave);font-size:15.5px;max-width:44em}
-@media (max-width:620px){.paso{grid-template-columns:1fr;gap:6px}}
+/* ── Pasos ──────────────────────────────────────────────────────────────────── */
+.pasos{margin-top:34px;display:grid;gap:0}
+.paso{display:grid;grid-template-columns:44px 150px 1fr;gap:clamp(12px,2vw,26px);align-items:baseline;
+  padding:20px 4px;border-top:1px solid var(--linea)}
+.paso:last-child{border-bottom:1px solid var(--linea)}
+.paso b{color:var(--oro);font-weight:700;font-variant-numeric:tabular-nums;font-size:14px}
+.paso strong{font-size:17px;font-weight:600}
+.paso span{color:var(--suave);font-size:15px}
+@media (max-width:660px){.paso{grid-template-columns:40px 1fr;row-gap:4px}.paso span{grid-column:2}}
 
-/* ── Cierre ─────────────────────────────────────────────────────────────────── */
-.cierre{text-align:center;padding-bottom:clamp(90px,12vh,140px)}
-.cierre h2{margin-left:auto;margin-right:auto;max-width:13em}
-.cierre .dice{margin-left:auto;margin-right:auto;text-align:center}
-.cierre .abajo{justify-content:center;animation:none;opacity:1;margin-top:42px}
-footer{border-top:1px solid var(--linea);padding:26px var(--gutter) 40px;display:flex;justify-content:space-between;
-  gap:14px;flex-wrap:wrap;color:var(--tenue);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
-  position:relative;z-index:2}
+/* ── Nota de multicliente ───────────────────────────────────────────────────── */
+.aparte{background:var(--panel);border:1px solid var(--linea);border-left:4px solid var(--oro-claro);
+  border-radius:8px 20px 20px 8px;padding:26px 28px;box-shadow:var(--sombra);margin-top:34px}
+.aparte p{margin:0;color:var(--suave);max-width:46em}
+.aparte p + p{margin-top:12px}
+.aparte b{color:var(--tinta)}
+
+/* ── Cierre y pie ───────────────────────────────────────────────────────────── */
+.cierre{text-align:center}
+.cierre h2{margin-left:auto;margin-right:auto}
+.cierre .dice{margin-left:auto;margin-right:auto}
+.cierre .acciones{justify-content:center}
+footer{border-top:1px solid var(--linea);background:var(--panel);position:relative;z-index:1}
+.pie{max-width:1120px;margin:0 auto;padding:26px var(--gutter) 34px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.pie img{height:22px;width:auto;opacity:.9}
+.pie .small{font-size:13px;color:var(--tenue)}
+.pie .grow{flex:1}
 
 /* ── Aparecer al bajar ──────────────────────────────────────────────────────── */
-.revela{opacity:0;transform:translateY(26px);transition:opacity .9s var(--curva),transform .9s var(--curva)}
+.revela{opacity:0;transform:translateY(18px);transition:opacity .7s var(--curva),transform .7s var(--curva)}
 .revela.visible{opacity:1;transform:none}
-.revela[data-tarde]{transition-delay:.12s}
-
-/* En pantalla angosta el rótulo espaciado se saldría: se aprieta en vez de cortarse. */
-@media (max-width:560px){
-  .rotulo{font-size:9px;letter-spacing:.12em}
-  .abajo{gap:10px}
-  .pastilla{padding:0 8px 0 20px;font-size:11px}
-}
-
 @media (prefers-reduced-motion: reduce){
   html{scroll-behavior:auto}
-  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
-  .linea > span{transform:none}
-  .bajada,.abajo{opacity:1}
+  *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}
   .revela{opacity:1;transform:none}
 }
 </style>
 </head>
 <body>
 
-<div class="luz" aria-hidden="true"><i></i><i></i><i></i></div>
-<div class="grano" aria-hidden="true"></div>
-<div class="faro" aria-hidden="true"></div>
+<div class="fondo" aria-hidden="true"><span class="halo a"></span><span class="halo b"></span><span class="rejilla"></span></div>
 
 <header>
-  <a class="marca" href="#portada">aiva<em>.</em></a>
+  <a class="logo" href="https://hrctechnologies.com" aria-label="HRC Technologies"><img src="hrc-technologies.png" alt="HRC Technologies" width="520" height="107"></a>
+  <span class="sep"></span>
+  <span class="quien">aiva<small>Virtual Assistant</small></span>
   <nav>
-    <a href="#confianza">Qué hace</a>
+    <a href="#hace">Qué hace</a>
     <a href="#pasos">Cómo trabaja</a>
     <a href="#aparte">Multicliente</a>
-    <a class="destacado" href="consola">Consola</a>
+    <a class="boton" href="consola">Entrar a la consola</a>
   </nav>
 </header>
 
-<div class="riel" aria-hidden="true">
-  <a href="#portada" data-riel="portada" class="aqui">00</a>
-  <a href="#confianza" data-riel="confianza">01</a>
-  <a href="#agenda" data-riel="agenda">02</a>
-  <a href="#hablamos" data-riel="hablamos">03</a>
-  <a href="#pasos" data-riel="pasos">04</a>
-  <a href="#aparte" data-riel="aparte">05</a>
-  <a href="#entrar" data-riel="entrar">06</a>
-</div>
-
 <main>
 
-  <section class="portada" id="portada">
-    <h1>
-      <span class="linea"><span>Atiende</span></span>
-      <span class="linea"><span><em>siempre</em><span class="punto">.</span></span></span>
-    </h1>
-    <p class="bajada">aiva contesta por WhatsApp y por el chat de tu sitio, agenda citas de tu agenda real y te
-    pasa solo lo que necesita una persona.</p>
-    <div class="abajo">
-      <a class="pastilla" href="#confianza">Ver qué hace <span class="bolita">↓</span></a>
-      <a class="plano" href="consola">Entrar a la consola</a>
+  <section class="portada" id="inicio">
+    <span class="sello"><b>✦</b> Un producto de HRC Technologies</span>
+    <h1>Atiende a tus clientes <em>siempre</em>, y te deja solo lo que necesita una persona.</h1>
+    <p class="bajada">aiva contesta por WhatsApp y por el chat de tu sitio, agenda citas de tu agenda real, anota
+    lo que el cliente dijo y te avisa cuándo vale la pena que entres tú.</p>
+    <div class="acciones">
+      <a class="pastilla" href="consola">Entrar a la consola</a>
+      <a class="pastilla calma" href="#hace">Ver qué hace</a>
     </div>
-    <span class="rotulo">Artificial Intelligence Virtual Assistant</span>
-  </section>
-
-  <section id="confianza">
-    <p class="num revela">01 — La regla</p>
-    <h2 class="revela">No <em>inventa</em><span class="punto">.</span></h2>
-    <p class="dice revela" data-tarde>Si algo no está en la información del negocio, no lo supone: dice que lo
-    verifica y la pregunta le llega a tu equipo. Lo que le responden una vez, queda aprendido y no vuelve a
-    preguntarlo.</p>
-    <div class="rasgos">
-      <div class="rasgo revela">
-        <h3>Cifras, nunca de memoria</h3>
-        <p>Precios, plazos y medidas salen de lo que cargaste. Si no está, no se dice.</p>
-      </div>
-      <div class="rasgo revela" data-tarde>
-        <h3>Lo que no supo, te llega</h3>
-        <p>Cada pregunta sin respuesta queda anotada, y contestarla una vez la enseña para siempre.</p>
-      </div>
-      <div class="rasgo revela">
-        <h3>Y te cede el turno</h3>
-        <p>Cuando alguien pide una persona, avisa y se calla. No se pone a improvisar.</p>
-      </div>
+    <div class="cifras">
+      <div class="cifra"><b>24/7</b><span>Contesta a cualquier hora</span></div>
+      <div class="cifra"><b>2 canales</b><span>WhatsApp y el chat del sitio</span></div>
+      <div class="cifra"><b>1 ficha</b><span>Por cliente, no por canal</span></div>
+      <div class="cifra"><b>0 inventos</b><span>Lo que no sabe, lo verifica</span></div>
     </div>
   </section>
 
-  <section id="agenda">
-    <p class="num revela">02 — Las citas</p>
-    <h2 class="revela">Agenda <em>de verdad</em><span class="punto">.</span></h2>
-    <p class="dice revela" data-tarde>Ofrece horarios que existen —los que tu agenda tiene libres—, confirma,
-    mueve, cancela y recuerda la cita el día antes. El cliente responde «sí» y queda confirmada; responde «no
-    puedo» y tú te enteras a tiempo.</p>
-  </section>
-
-  <section id="hablamos">
-    <p class="num revela">03 — El idioma</p>
-    <h2 class="revela">Entiende <em>cómo hablamos</em><span class="punto">.</span></h2>
-    <p class="dice revela" data-tarde>«De hoy en quince», «a la hora del almuerzo», «el otro fin de semana», «la
-    que sea». No pide que le hablen bonito ni repregunta lo que ya se entiende.</p>
-    <p class="dice revela" data-tarde>Y lo que no entiende no se pierde: queda en un reporte, se le enseña desde
-    el tablero, y a la siguiente ya lo sabe.</p>
+  <section id="hace">
+    <span class="marca-seccion revela">Qué hace</span>
+    <h2 class="revela">Un asistente que <em>no improvisa</em>.</h2>
+    <p class="dice revela">Trabaja con la información de tu negocio. Lo que no está ahí, no lo supone: lo pregunta,
+    y lo que le respondan una vez queda aprendido.</p>
+    <div class="rejilla">
+      <div class="ficha revela">
+        <span class="chip"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 4.5-3.2 7.9-8 9-4.8-1.1-8-4.5-8-9V7z"/><path d="M9.2 12.2l2 2 3.6-3.9"/></svg></span>
+        <h3>No inventa</h3>
+        <p>Precios, plazos y medidas salen de lo que cargaste. Si no está, dice que lo verifica y la pregunta te llega.</p>
+      </div>
+      <div class="ficha revela">
+        <span class="chip"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M8 15h3"/></svg></span>
+        <h3>Agenda de verdad</h3>
+        <p>Ofrece horarios que existen, confirma, mueve, cancela y recuerda la cita el día antes.</p>
+      </div>
+      <div class="ficha revela">
+        <span class="chip"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg></span>
+        <h3>Entiende cómo hablamos</h3>
+        <p>«De hoy en quince», «a la hora del almuerzo», «la que sea». Lo que no entienda, se le enseña.</p>
+      </div>
+      <div class="ficha revela">
+        <span class="chip"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/></svg></span>
+        <h3>Un cliente, una ficha</h3>
+        <p>Si escribe por el sitio y después por WhatsApp, llega sabiendo de qué hablaban y no lo deja con dos citas.</p>
+      </div>
+    </div>
   </section>
 
   <section id="pasos">
-    <p class="num revela">04 — El recorrido</p>
-    <h2 class="revela">De un «hola» a una <em>cita</em><span class="punto">.</span></h2>
+    <span class="marca-seccion revela">Cómo trabaja</span>
+    <h2 class="revela">De un «hola» a una <em>cita agendada</em>.</h2>
     <div class="pasos">
-      <div class="paso revela"><b>01</b><div><strong>Atiende</strong><span>A cualquier hora, con la información del negocio.</span></div></div>
-      <div class="paso revela"><b>02</b><div><strong>Anota</strong><span>Qué busca, para cuándo, presupuesto. Sin interrogar a nadie.</span></div></div>
-      <div class="paso revela"><b>03</b><div><strong>Agenda</strong><span>La cita, y la recuerda el día antes.</span></div></div>
-      <div class="paso revela"><b>04</b><div><strong>Califica</strong><span>Un puntaje que explica por qué sube y por qué baja.</span></div></div>
-      <div class="paso revela"><b>05</b><div><strong>Avisa</strong><span>Cuando piden una persona, cuando no supo algo, cuando un prospecto se pone caliente.</span></div></div>
+      <div class="paso revela"><b>01</b><strong>Atiende</strong><span>A cualquier hora, con la información del negocio.</span></div>
+      <div class="paso revela"><b>02</b><strong>Anota</strong><span>Qué busca, para cuándo, presupuesto. Sin interrogar a nadie.</span></div>
+      <div class="paso revela"><b>03</b><strong>Agenda</strong><span>La cita, y la recuerda el día antes.</span></div>
+      <div class="paso revela"><b>04</b><strong>Califica</strong><span>Un puntaje que explica por qué sube y por qué baja.</span></div>
+      <div class="paso revela"><b>05</b><strong>Avisa</strong><span>Cuando piden una persona, cuando no supo algo, cuando un prospecto se pone caliente.</span></div>
     </div>
   </section>
 
   <section id="aparte">
-    <p class="num revela">05 — Varios negocios</p>
-    <h2 class="revela">Cada uno, con <em>lo suyo aparte</em><span class="punto">.</span></h2>
-    <p class="dice revela" data-tarde>Su información, sus conversaciones, su WhatsApp y su embudo. Una boutique
-    agenda citas; una financiera resuelve solicitudes; una litografía cotiza y produce. Lo que no se mezcla no se
-    puede filtrar.</p>
-    <p class="dice revela" data-tarde>Y todo se vigila desde una sola pantalla, con la urgencia de cada quien a
-    la vista.</p>
+    <span class="marca-seccion revela">Varios negocios</span>
+    <h2 class="revela">Cada uno, con <em>lo suyo aparte</em>.</h2>
+    <div class="aparte revela">
+      <p>Su información, sus conversaciones, su WhatsApp y su embudo. Una boutique agenda citas; una financiera
+      resuelve solicitudes; una litografía cotiza y produce. <b>Lo que no se mezcla no se puede filtrar.</b></p>
+      <p>Y todo se vigila desde una sola pantalla, con la urgencia de cada quien a la vista.</p>
+    </div>
   </section>
 
   <section class="cierre" id="entrar">
-    <p class="num revela">06 — Entrar</p>
-    <h2 class="revela">Tu tablero te <em>está esperando</em><span class="punto">.</span></h2>
-    <p class="dice revela" data-tarde>Cada negocio tiene su propia dirección y su propia clave, la que te
-    entregamos al montarlo. Si la perdiste, escríbenos y te la reponemos.</p>
-    <div class="abajo">
-      <a class="pastilla" href="consola">Entrar a la consola <span class="bolita">→</span></a>
-    </div>
+    <h2 class="revela">Tu tablero te <em>está esperando</em>.</h2>
+    <p class="dice revela">Cada negocio tiene su propia dirección y su propia clave, la que te entregamos al
+    montarlo. Si la perdiste, escríbenos y te la reponemos.</p>
+    <div class="acciones revela"><a class="pastilla" href="consola">Entrar a la consola</a></div>
   </section>
 
 </main>
 
 <footer>
-  <span>aiva · CRM conversacional con IA</span>
-  <span>HRC Technologies</span>
+  <div class="pie">
+    <img src="hrc-technologies.png" alt="HRC Technologies" width="520" height="107">
+    <span class="small">aiva · CRM conversacional con IA</span>
+    <span class="grow"></span>
+    <span class="small"><a href="https://hrctechnologies.com" style="color:var(--oro)">hrctechnologies.com</a></span>
+  </div>
 </footer>
 
 <script>
 (function () {
   var quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  // Aparecer al bajar. Sin observador (navegador viejo), se muestra todo y ya.
   var cosas = document.querySelectorAll('.revela');
   if ('IntersectionObserver' in window && !quieto) {
     var ojo = new IntersectionObserver(function (filas) {
-      filas.forEach(function (f) {
-        if (f.isIntersecting) { f.target.classList.add('visible'); ojo.unobserve(f.target); }
+      filas.forEach(function (f, i) {
+        if (!f.isIntersecting) return;
+        f.target.style.transitionDelay = (i % 4) * 60 + 'ms';
+        f.target.classList.add('visible');
+        ojo.unobserve(f.target);
       });
-    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.15 });
+    }, { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
     cosas.forEach(function (c) { ojo.observe(c); });
   } else {
     cosas.forEach(function (c) { c.classList.add('visible'); });
-  }
-
-  // El riel marca en qué sección va uno.
-  var rieles = {};
-  document.querySelectorAll('.riel a').forEach(function (a) { rieles[a.dataset.riel] = a; });
-  if ('IntersectionObserver' in window) {
-    var vigia = new IntersectionObserver(function (filas) {
-      filas.forEach(function (f) {
-        if (!f.isIntersecting) return;
-        for (var k in rieles) rieles[k].classList.remove('aqui');
-        if (rieles[f.target.id]) rieles[f.target.id].classList.add('aqui');
-      });
-    }, { rootMargin: '-45% 0px -45% 0px' });
-    document.querySelectorAll('main section').forEach(function (s) { vigia.observe(s); });
-  }
-
-  // La barra se pone de vidrio apenas uno se despega de la portada.
-  var bajando = false;
-  window.addEventListener('scroll', function () {
-    var deberia = window.scrollY > 80;
-    if (deberia === bajando) return;
-    bajando = deberia;
-    document.body.classList.toggle('bajando', bajando);
-  }, { passive: true });
-
-  // La luz que sigue al cursor. Solo si hay mouse de verdad, y sin pelear con el pintado.
-  var faro = document.querySelector('.faro'), x = 0, y = 0, pedido = false;
-  if (!quieto && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-    window.addEventListener('mousemove', function (e) {
-      x = e.clientX; y = e.clientY;
-      document.body.classList.add('con-mouse');
-      if (pedido) return;
-      pedido = true;
-      requestAnimationFrame(function () {
-        faro.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)';
-        pedido = false;
-      });
-    }, { passive: true });
   }
 })();
 </script>

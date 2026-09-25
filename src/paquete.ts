@@ -178,6 +178,19 @@ const PORTADA = (() => {
   }
 })();
 
+// Lo que la portada necesita al lado (el logo, por ahora). Un solo tramo, sin barras ni puntos dobles: nadie
+// pide "../../.env" por aquí. Y solo tipos que se sirven tal cual.
+const TIPOS = { png: 'image/png', jpg: 'image/jpeg', svg: 'image/svg+xml', webp: 'image/webp', ico: 'image/x-icon', css: 'text/css; charset=utf-8' };
+function archivoDeLaPortada(camino) {
+  const m = /^\/([a-z0-9][a-z0-9._-]*)\.(png|jpg|svg|webp|ico|css)$/i.exec(camino);
+  if (!m || camino.includes('..')) return null;
+  try {
+    return { cuerpo: readFileSync(join(aqui, 'public', m[1] + '.' + m[2])), tipo: TIPOS[m[2].toLowerCase()] };
+  } catch {
+    return null;
+  }
+}
+
 function haciaDonde(url) {
   const camino = url.split('?')[0] || '/';
   if (camino === '/consola' || camino === '/consola/') return { puerto: puertoConsola, ruta: '/', prefijo: '' };
@@ -194,6 +207,12 @@ http
     if (PORTADA && (camino === '/' || camino === '/index.html')) {
       responde.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' });
       responde.end(pide.method === 'HEAD' ? undefined : PORTADA);
+      return;
+    }
+    const suelto = archivoDeLaPortada(camino);
+    if (suelto) {
+      responde.writeHead(200, { 'content-type': suelto.tipo, 'cache-control': 'public, max-age=86400' });
+      responde.end(pide.method === 'HEAD' ? undefined : suelto.cuerpo);
       return;
     }
     const { puerto, ruta, prefijo } = haciaDonde(pide.url || '/');
