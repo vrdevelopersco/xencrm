@@ -18,6 +18,7 @@ import { reminderTime, remindersBoard } from '../crm/reminders.js';
 import { onEvent } from '../crm/events.js';
 import { listNotifications, startNotifications } from '../crm/notifications.js';
 import { usageSummary } from '../llm/usage.js';
+import { entrar as entrarALaConversacion, salir as salirDeLaConversacion, quienesEstan } from '../crm/presencia.js';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
@@ -90,6 +91,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       appointments: listAppointments({ userId: id, limit: 20 }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })),
       replyWindow: replyWindow(id),
       number: contactNumber(contact), // para escribirle o llamarlo desde el tablero
+      presentes: quienesEstan(id), // quién más está metido aquí ahora mismo
     });
   });
 
@@ -159,6 +161,20 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     if (!getContact(id)) return c.json({ error: 'no existe' }, 404);
     const contact = setHumanMode(id, Boolean(body.on), 'admin');
     return c.json({ contact });
+  });
+
+  /**
+   * Quién está metido en esta conversación ahora mismo. Se llama al abrirla y cada tanto mientras esté abierta;
+   * con `salir` se sale a propósito. No bloquea a nadie: varias personas pueden atender a la vez, y esto es lo
+   * que hace que se vean entre ellas en vez de pisarse.
+   */
+  app.post('/admin/api/contacts/:id/presencia', async (c) => {
+    const id = c.req.param('id');
+    if (!getContact(id)) return c.json({ error: 'no existe' }, 404);
+    const body = (await c.req.json().catch(() => ({}))) as { by?: string; salir?: boolean };
+    const quien = (body.by ?? '').trim();
+    const presentes = body.salir ? salirDeLaConversacion(id, quien) : entrarALaConversacion(id, quien);
+    return c.json({ presentes, otros: presentes.filter((p) => p.nombre !== quien) });
   });
 
   app.post('/admin/api/contacts/:id/reply', async (c) => {

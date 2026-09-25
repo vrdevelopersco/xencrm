@@ -475,6 +475,12 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 }
 @media(max-width:420px){.nav button,.nav .nav-more{padding:6px 4px;min-width:50px}}
 
+/* Quién más está metido en esta conversación. Avisa, no bloquea: la IA y varias personas pueden convivir ahí. */
+.presentes{display:flex;align-items:center;gap:8px;margin:0 14px 8px;padding:8px 12px;border-radius:12px;
+  background:var(--warn-soft);color:var(--warn);font-size:13px;border:1px solid color-mix(in srgb,var(--warn) 25%,transparent)}
+.presentes .punto{width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 25%,transparent)}
+
 /* Configuración en un modal: compacto, con pestañas arriba y el contenido con su propio desplazamiento. */
 .modal-config{border:none;padding:0;border-radius:20px;background:var(--panel);color:var(--text);
   box-shadow:0 24px 60px rgba(17,24,39,.28);width:min(860px,calc(100% - 28px));max-width:none;max-height:88svh}
@@ -637,6 +643,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
               <button class="btn sm" id="details-btn" style="display:none">Ficha</button>
             </div>
           </div>
+          <div class="presentes" id="presentes" hidden></div>
           <div class="msgs" id="msgs" hidden></div>
           <div class="composer" id="composer" hidden>
             <div class="ch-warn" id="window-warn" role="status" hidden></div>

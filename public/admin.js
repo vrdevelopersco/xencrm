@@ -208,6 +208,7 @@
     $('inbox').setAttribute('data-pane', 'chat');
     return api('/contacts/' + encodeURIComponent(id)).then(function (d) {
       state.detail = d; renderChat(); renderDetails();
+      anunciarme(id, d.presentes || []);
       api('/contacts/' + encodeURIComponent(id) + '/duplicates').then(renderDuplicates); // ¿otra ficha de la misma persona?
       bindArchive();
       var row = state.contacts.find(function (c) { return c.id === id; }); if (row) { row.unread = 0; renderRows(); updateBadges(); }
@@ -1471,6 +1472,36 @@
     b.onclick = function () { abrirConfig(b.getAttribute('data-cfg')); };
   });
   $('cfg-cerrar').onclick = function () { $('dlg-config').close(); };
+
+
+  // ---------- Quién más está en esta conversación ----------
+  // Varias personas del equipo pueden atender la misma conversación, y la IA sigue ahí: esto no bloquea a nadie,
+  // solo hace visible quién está. Se refresca mientras la conversación siga abierta; el que cierra la pestaña no
+  // avisa, así que del otro lado caduca solo.
+  var latidoPresencia = null;
+  function anunciarme(id, yaEstan) {
+    pintarPresentes(yaEstan.filter(function (p) { return p.nombre !== state.name; }));
+    var avisar = function () {
+      if (state.current !== id) { clearInterval(latidoPresencia); return; }
+      api('/contacts/' + encodeURIComponent(id) + '/presencia', { method: 'POST', body: { by: state.name || 'equipo' } })
+        .then(function (r) { if (state.current === id) pintarPresentes((r && r.otros) || []); })
+        .catch(function () {});
+    };
+    avisar();
+    clearInterval(latidoPresencia);
+    latidoPresencia = setInterval(avisar, 60000);
+  }
+
+  function pintarPresentes(otros) {
+    var caja = $('presentes');
+    if (!caja) return;
+    caja.hidden = !otros.length;
+    if (!otros.length) return;
+    var nombres = otros.map(function (o) { return esc(o.nombre); }).join(', ');
+    caja.innerHTML = '<span class="punto"></span>' +
+      (otros.length === 1 ? '<b>' + nombres + '</b> también está aquí' : '<b>' + nombres + '</b> también están aquí') +
+      ' <span class="muted">· pónganse de acuerdo para no contestar lo mismo</span>';
+  }
 
   boot();
 })();

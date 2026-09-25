@@ -201,6 +201,11 @@ dialog.panel #detalle{padding:16px 18px 24px;overflow:auto;flex:1}
 .equipo-cliente .persona{padding:5px 0;border-top:1px solid var(--line)}
 .equipo-cliente .persona:first-of-type{border-top:none}
 .ok-msg{color:var(--ok);min-height:16px}
+.firma{margin:10px 0 4px;padding:8px 10px;background:var(--baja-soft);border-radius:12px}
+.presentes{display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;border-radius:12px;
+  background:var(--media-soft);color:var(--media);font-size:13px;border:1px solid #f2e3bd}
+.presentes .punto{width:8px;height:8px;border-radius:50%;background:var(--media);flex:none;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--media) 25%,transparent)}
 @media (max-width:760px){.cliente .detalle{margin-left:0}}
 
 .cliente .acciones{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto}
@@ -215,6 +220,11 @@ dialog.panel #detalle{padding:16px 18px 24px;overflow:auto;flex:1}
 .equipo-cliente .persona{padding:5px 0;border-top:1px solid var(--line)}
 .equipo-cliente .persona:first-of-type{border-top:none}
 .ok-msg{color:var(--ok);min-height:16px}
+.firma{margin:10px 0 4px;padding:8px 10px;background:var(--baja-soft);border-radius:12px}
+.presentes{display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px 12px;border-radius:12px;
+  background:var(--media-soft);color:var(--media);font-size:13px;border:1px solid #f2e3bd}
+.presentes .punto{width:8px;height:8px;border-radius:50%;background:var(--media);flex:none;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--media) 25%,transparent)}
 @media (max-width:760px){.cliente .detalle{margin-left:0}}
 
 .cliente .acciones{margin-left:0;width:100%}.cliente ul.tickets{margin-left:0}}
@@ -282,7 +292,6 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     </div>
     <span class="muted small" id="resumen">…</span>
     <span class="grow"></span>
-    <span class="muted small como">Respondes como</span><input id="quien" placeholder="tu nombre" style="width:120px">
     <button class="btn" id="sonido" title="Avisarme cuando llegue algo">🔔</button>
     <button class="btn" id="refrescar">Actualizar</button>
     <button class="btn primary" id="nuevo">Nuevo cliente</button>
@@ -363,10 +372,12 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   function sesionLista() {
     return api('/yo').then(function (d) {
       yo = d.usuario; esSuper = d.super;
-      $('yo').textContent = yo ? yo.nombre + (esSuper ? ' · super-admin' : ' · ' + (yo.clientes.length === 1 ? '1 cliente' : yo.clientes.length + ' clientes')) : 'llave maestra';
+      $('yo').textContent = '👤 ' + (yo ? yo.nombre : 'llave maestra');
+      $('yo').title = yo
+        ? 'Mi cuenta · ' + (esSuper ? 'super-admin' : yo.clientes.length === 1 ? '1 cliente' : yo.clientes.length + ' clientes')
+        : 'Entraste con la llave maestra';
       $('nuevo').hidden = !esSuper;
       $('tab-equipo').hidden = !esSuper;
-      if (!$('quien').value) $('quien').value = yo ? yo.nombre : '';
       cargarTodo(); cargarPendientes();
       ver(localStorage.getItem('aiva.consola.vista') || 'atender');
     });
@@ -412,7 +423,11 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   // Mi cuenta: cada quien se cambia lo suyo sin pedirle nada al super-admin. Con la llave maestra no hay cuenta
   // que cambiar, así que ahí el botón solo lo dice.
   $('panel-cerrar').onclick = function () { $('dlg-atender').close(); };
-  $('dlg-atender').addEventListener('close', function () { elegido = null; pintarPendientes(); });
+  $('dlg-atender').addEventListener('close', function () {
+    if (elegido != null && pendientes[elegido]) salirDeLaConversacion(pendientes[elegido]);
+    elegido = null;
+    pintarPendientes();
+  });
 
   $('yo').onclick = function () {
     if (!yo) { alert('Entraste con la llave maestra, que no es una cuenta. Crea tu usuario en Equipo y entra con él.'); return; }
@@ -480,8 +495,9 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
             return '<div class="fila persona" data-usuario="' + esc(u.usuario) + '">' +
               '<span>' + esc(u.nombre) + '</span><span class="chip">' + esc(u.usuario) + '</span>' +
               (u.rol === 'super' ? '<span class="chip">super-admin</span>' : '') +
-              (u.correo ? '<span class="chip">' + esc(u.correo) + '</span>' : '') +
               '<span class="grow"></span>' +
+              '<input class="correo-nuevo" type="email" placeholder="correo" value="' + esc(u.correo || '') + '" style="width:170px">' +
+              '<button class="btn sm poner-correo">Guardar correo</button>' +
               '<input class="clave-nueva" type="password" placeholder="clave nueva (8+)" style="width:150px">' +
               '<button class="btn sm poner-clave">Cambiar clave</button>' +
               (u.rol === 'super' ? '' : '<button class="btn sm quitar-de">Quitar de aquí</button>') +
@@ -566,6 +582,14 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       $('lista').querySelectorAll('.persona').forEach(function (fila) {
         var quien = fila.getAttribute('data-usuario');
         var aviso = fila.closest('.equipo-cliente').querySelector('.ok-msg');
+        fila.querySelector('.poner-correo').onclick = function () {
+          var correo = fila.querySelector('.correo-nuevo').value.trim();
+          api('/usuarios/' + encodeURIComponent(quien), { method: 'PATCH', body: { correo: correo } }).then(function (r) {
+            if (r.error) { aviso.textContent = r.error; return; }
+            aviso.textContent = correo ? 'Correo de ' + quien + ': ' + correo : 'Correo quitado.';
+            cargarTodo();
+          });
+        };
         fila.querySelector('.poner-clave').onclick = function () {
           var campo = fila.querySelector('.clave-nueva'), clave = campo.value;
           if (clave.length < 8) { aviso.textContent = 'La clave necesita al menos 8 caracteres.'; return; }
@@ -726,8 +750,13 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         '<div class="fila"><span class="nombre">' + esc(p.nombre) + '</span><span class="chip">' + esc(p.cliente) + '</span>' +
           (c.score != null ? '<span class="chip">' + esc(c.score) + (c.temperature ? ' · ' + esc(c.temperature) : ' de puntaje') + '</span>' : '') + aviso +
           '<span class="grow"></span><a class="btn" target="_blank" rel="noopener" href="' + esc(urlTablero(p.slug)) + '#c=' + encodeURIComponent(p.userId) + '">Abrir en su tablero</a></div>' +
+        '<div id="presentes" class="presentes" hidden></div>' +
         '<div class="chats">' + (msgs || '<div class="muted small">Sin mensajes.</div>') + '</div>' +
+        '<div class="fila firma"><label class="small muted" for="quien">Respondes como</label>' +
+          '<input id="quien" style="width:150px" value="' + esc(comoFirmo(p.slug)) + '" placeholder="tu nombre">' +
+          '<span class="small muted">así lo verá el cliente de ' + esc(p.cliente) + '</span></div>' +
         '<div id="msg2" class="small" role="status"></div>' + accion;
+      marcarPresencia(p);
       if ($('enviar')) $('enviar').onclick = function () { responder(p); };
       if ($('descartar')) $('descartar').onclick = function () {
         cli(p.slug + '/verifications/' + p.verificacionId + '/dismiss', { method: 'POST' }).then(cargarPendientes);
@@ -737,6 +766,52 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       };
     });
   }
+  // Varias personas pueden atender la misma conversación: esto hace que se vean entre ellas. No bloquea a nadie
+  // —a propósito—, solo avisa, que es lo que evita que dos contesten lo mismo. Se refresca mientras el panel
+  // esté abierto; quien cierra la pestaña no avisa, así que allá caduca solo.
+  var latido = null;
+  function marcarPresencia(p) {
+    var quien = comoFirmo(p.slug) || (yo ? yo.nombre : '');
+    if (!quien) return;
+    var avisar = function () {
+      cli(p.slug + '/contacts/' + encodeURIComponent(p.userId) + '/presencia', { method: 'POST', body: { by: quien } })
+        .then(function (r) { pintarPresencia((r && r.otros) || []); })
+        .catch(function () {});
+    };
+    avisar();
+    clearInterval(latido);
+    latido = setInterval(function () { if ($('dlg-atender').open) avisar(); else clearInterval(latido); }, 60000);
+  }
+
+  function pintarPresencia(otros) {
+    var caja = $('presentes');
+    if (!caja) return;
+    caja.hidden = !otros.length;
+    if (!otros.length) return;
+    caja.innerHTML = '<span class="punto"></span>' +
+      (otros.length === 1
+        ? '<b>' + esc(otros[0].nombre) + '</b> también está en esta conversación'
+        : '<b>' + otros.map(function (o) { return esc(o.nombre); }).join(', ') + '</b> también están aquí') +
+      ' · pónganse de acuerdo para no contestar lo mismo';
+  }
+
+  function salirDeLaConversacion(p) {
+    clearInterval(latido);
+    var quien = comoFirmo(p.slug) || (yo ? yo.nombre : '');
+    if (!quien) return;
+    cli(p.slug + '/contacts/' + encodeURIComponent(p.userId) + '/presencia', { method: 'POST', body: { by: quien, salir: true } }).catch(function () {});
+  }
+
+  // 🪤 Con quién firma uno es COSA DE CADA CLIENTE: "Arthur" puede ser de la boutique y no tiene nada que hacer
+  // en la financiera. Antes era un solo campo en la barra y el nombre se iba con uno de un cliente a otro.
+  function comoFirmo(slug) {
+    try {
+      var guardado = localStorage.getItem('aiva.consola.quien.' + slug);
+      if (guardado) return guardado;
+    } catch (e) { /* sin almacenamiento, se usa el nombre de uno */ }
+    return yo ? yo.nombre : '';
+  }
+
   function urlTablero(slug) {
     var f = (window.__clientes || []).find(function (x) { return x.cliente.slug === slug; });
     return f ? '/c/' + encodeURIComponent(f.cliente.slug) + '/admin' : '#';
@@ -744,8 +819,8 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   function responder(p) {
     var texto = $('resp').value.trim();
     if (!texto) { $('msg2').textContent = 'Escribe la respuesta.'; return; }
-    var quien = $('quien').value.trim() || 'equipo';
-    localStorage.setItem('aiva.consola.quien', quien);
+    var quien = $('quien').value.trim() || (yo ? yo.nombre : 'equipo');
+    try { localStorage.setItem('aiva.consola.quien.' + p.slug, quien); } catch (e) {}
     $('enviar').disabled = true;
     $('msg2').textContent = 'Enviando…';
     var envio = p.tipo === 'verificar'
@@ -881,7 +956,6 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       };
     });
   }
-  $('quien').value = localStorage.getItem('aiva.consola.quien') || '';
 
   $('refrescar').onclick = function () { cargarTodo(); cargarPendientes(); };
   $('nuevo').onclick = function () { $('msg').textContent = ''; pintarPlantillas(); $('dlg').showModal(); $('f-nombre').focus(); };

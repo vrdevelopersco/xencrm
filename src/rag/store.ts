@@ -186,6 +186,8 @@ function migrate(d: DatabaseSync) {
   addUser('unread', 'INTEGER NOT NULL DEFAULT 0');
   addUser('last_message_at', 'INTEGER');
   addUser('human_by', 'TEXT');
+  // Quiénes están metidos en la conversación ahora mismo (varias personas a la vez). Caduca sola: ver crm/presencia.ts.
+  addUser('presentes', "TEXT NOT NULL DEFAULT '[]'");
   addUser('human_since', 'INTEGER');
   addUser('archived', 'INTEGER NOT NULL DEFAULT 0'); // conversaciones guardadas: no salen en las listas
   // El número normalizado (con indicativo). Buscar "la misma persona" por aquí es una consulta indexada; antes
