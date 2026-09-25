@@ -49,6 +49,13 @@ export interface EstadoCliente {
   esperanRespuesta?: number;
   porVerificar?: number;
   citasSinResultado?: number;
+  /** Para el vistazo ampliado de cada cliente. */
+  mensajesHoy?: number;
+  puntajePromedio?: number;
+  /** Cuántas conversaciones llegaron a cita y cuántas se ganaron, sobre el total. */
+  llegaronACita?: number;
+  ganadas?: number;
+  efectividad?: number | null;
   publica?: string;
   whatsapp?: string;
   gastoMes?: number | null;
@@ -114,6 +121,14 @@ export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
   ]);
   if (!me) return { arriba: false };
   const lista = (x: unknown) => (Array.isArray(x) ? x.length : 0);
+  // Efectividad: de las conversaciones abiertas, cuántas llegaron a cita y cuántas se ganaron. Las etapas las
+  // nombra cada negocio, así que se buscan por su papel, que es lo único que significa lo mismo en todos.
+  const etapas = (stats?.stages ?? []) as { id: string; rol?: string }[];
+  const porEtapa = (stats?.byStage ?? {}) as Record<string, number>;
+  const cuantosCon = (rol: string) => etapas.filter((e) => e.rol === rol).reduce((a, e) => a + Number(porEtapa[e.id] ?? 0), 0);
+  const total = Number(stats?.total ?? 0);
+  const llegaronACita = cuantosCon('cita');
+  const ganadas = cuantosCon('ganado');
   const wa = Array.isArray(canales) ? (canales as { id: string; state: string; on: boolean }[]).find((c) => c.id === 'whatsapp') : undefined;
   return {
     arriba: true,
@@ -128,6 +143,11 @@ export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
     publica: (hoy?.public as { state?: string } | undefined)?.state ?? '',
     whatsapp: wa?.on ? wa.state : 'apagado',
     gastoMes: gasto ? Number(gasto.totalUsd ?? 0) : null,
+    mensajesHoy: Number(stats?.messagesToday ?? 0),
+    puntajePromedio: Number(stats?.avgScore ?? 0),
+    llegaronACita,
+    ganadas,
+    efectividad: total ? Math.round((100 * (llegaronACita + ganadas)) / total) : null,
   };
 }
 

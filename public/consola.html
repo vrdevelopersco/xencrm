@@ -78,6 +78,10 @@ header{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var
 header .marca{display:flex;align-items:center;gap:10px}
 header .marca img{height:22px;width:auto}
 header .marca span{font-weight:700;letter-spacing:-.01em}
+/* Con muchos botones la barra se parte en dos; lo prescindible desaparece antes que se rompa. */
+@media (max-width:1320px){header .como{display:none}}
+@media (max-width:1100px){header #resumen{display:none}}
+@media (max-width:860px){header .marca span{display:none}}
 h1{font-size:18px;margin:0}
 main{padding:18px 20px 60px;max-width:1180px;margin:0 auto}
 main.dos{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:14px;max-width:1320px;align-items:start}
@@ -187,9 +191,33 @@ dialog.panel #detalle{padding:16px 18px 24px;overflow:auto;flex:1}
 .dato.urge{background:var(--media-soft);border-color:#f2e3bd;color:var(--media)}
 .dato.urge b{color:var(--media)}
 .dato.calma{background:transparent;border-color:var(--line)}
+.cliente .detalle{margin:12px 0 4px 56px;padding-top:12px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:12px}
+.micro{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px}
+.celda{background:var(--baja-soft);border-radius:12px;padding:10px 12px}
+.celda b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em}
+.celda span{font-size:11.5px;color:var(--tenue)}
+.equipo-cliente{display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:12px 14px}
+.equipo-cliente .persona{padding:5px 0;border-top:1px solid var(--line)}
+.equipo-cliente .persona:first-of-type{border-top:none}
+.ok-msg{color:var(--ok);min-height:16px}
+@media (max-width:760px){.cliente .detalle{margin-left:0}}
+
 .cliente .acciones{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto}
 .cliente ul.tickets{margin-left:56px}
-@media (max-width:760px){.cliente .acciones{margin-left:0;width:100%}.cliente ul.tickets{margin-left:0}}
+@media (max-width:760px){.cliente .detalle{margin:12px 0 4px 56px;padding-top:12px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:12px}
+.micro{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px}
+.celda{background:var(--baja-soft);border-radius:12px;padding:10px 12px}
+.celda b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em}
+.celda span{font-size:11.5px;color:var(--tenue)}
+.equipo-cliente{display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:12px 14px}
+.equipo-cliente .persona{padding:5px 0;border-top:1px solid var(--line)}
+.equipo-cliente .persona:first-of-type{border-top:none}
+.ok-msg{color:var(--ok);min-height:16px}
+@media (max-width:760px){.cliente .detalle{margin-left:0}}
+
+.cliente .acciones{margin-left:0;width:100%}.cliente ul.tickets{margin-left:0}}
 
 dialog{border:none;border-radius:20px;padding:0;background:var(--panel);color:var(--tinta);box-shadow:var(--lift);
   max-width:560px;width:calc(100% - 32px)}
@@ -254,7 +282,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     </div>
     <span class="muted small" id="resumen">…</span>
     <span class="grow"></span>
-    <span class="muted small">Respondes como</span><input id="quien" placeholder="tu nombre" style="width:120px">
+    <span class="muted small como">Respondes como</span><input id="quien" placeholder="tu nombre" style="width:120px">
     <button class="btn" id="sonido" title="Avisarme cuando llegue algo">🔔</button>
     <button class="btn" id="refrescar">Actualizar</button>
     <button class="btn primary" id="nuevo">Nuevo cliente</button>
@@ -339,7 +367,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       $('nuevo').hidden = !esSuper;
       $('tab-equipo').hidden = !esSuper;
       if (!$('quien').value) $('quien').value = yo ? yo.nombre : '';
-      cargar(); cargarPendientes();
+      cargarTodo(); cargarPendientes();
       ver(localStorage.getItem('aiva.consola.vista') || 'atender');
     });
   }
@@ -420,6 +448,54 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     return ((p[0] || '?')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
   }
 
+  // Lo que se ve al estirar una fila: cómo va el cliente y quién lo atiende. Números, no gráficas: es para
+  // mirar de reojo y decidir, no para analizar (eso vive en el tablero del cliente).
+  function microTablero(e) {
+    if (!e.arriba) return '<div class="small muted">La instancia está apagada: no hay nada que contar.</div>';
+    var datos = [
+      [e.mensajesHoy, 'mensajes hoy'],
+      [e.contactos, 'conversaciones'],
+      [e.calientes, 'calientes'],
+      [e.puntajePromedio, 'puntaje promedio'],
+      [e.llegaronACita, 'llegaron a cita'],
+      [e.ganadas, 'ganadas'],
+      [e.efectividad == null ? '—' : e.efectividad + '%', 'efectividad'],
+      [e.gastoMes == null ? '—' : '$' + Number(e.gastoMes).toFixed(2), 'IA · 30 días']
+    ];
+    return '<div class="micro">' + datos.map(function (d) {
+      return '<div class="celda"><b>' + esc(d[0] == null ? '—' : d[0]) + '</b><span>' + d[1] + '</span></div>';
+    }).join('') + '</div>' +
+      '<div class="small muted">Efectividad: de las conversaciones abiertas, cuántas llegaron a cita o se ganaron.</div>';
+  }
+
+  function equipoDe(slug) {
+    if (!esSuper) return '';
+    var todos = window.__usuarios || [];
+    var suyos = todos.filter(function (u) { return u.rol === 'super' || (u.clientes || []).indexOf(slug) !== -1; });
+    var libres = todos.filter(function (u) { return u.rol !== 'super' && (u.clientes || []).indexOf(slug) === -1; });
+    return '<div class="equipo-cliente">' +
+      '<b class="small">Quién lo atiende</b>' +
+      (suyos.length
+        ? suyos.map(function (u) {
+            return '<div class="fila persona" data-usuario="' + esc(u.usuario) + '">' +
+              '<span>' + esc(u.nombre) + '</span><span class="chip">' + esc(u.usuario) + '</span>' +
+              (u.rol === 'super' ? '<span class="chip">super-admin</span>' : '') +
+              (u.correo ? '<span class="chip">' + esc(u.correo) + '</span>' : '') +
+              '<span class="grow"></span>' +
+              '<input class="clave-nueva" type="password" placeholder="clave nueva (8+)" style="width:150px">' +
+              '<button class="btn sm poner-clave">Cambiar clave</button>' +
+              (u.rol === 'super' ? '' : '<button class="btn sm quitar-de">Quitar de aquí</button>') +
+              '</div>';
+          }).join('')
+        : '<div class="small muted">Nadie más que tú. Crea usuarios en <b>Equipo</b>.</div>') +
+      (libres.length
+        ? '<div class="fila" style="margin-top:8px"><select class="asignar"><option value="">Asignar a alguien…</option>' +
+          libres.map(function (u) { return '<option value="' + esc(u.usuario) + '">' + esc(u.nombre) + ' (' + esc(u.usuario) + ')</option>'; }).join('') +
+          '</select><button class="btn sm hacer-asignar">Asignar</button></div>'
+        : '') +
+      '<div class="small ok-msg" role="status"></div></div>';
+  }
+
   function tarjeta(f) {
     var c = f.cliente, e = f.estado;
     var url = '/c/' + encodeURIComponent(c.slug) + '/admin';
@@ -453,10 +529,18 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
           '<select class="prio" aria-label="Prioridad de ' + esc(c.nombre) + '">' +
             Object.keys(PRIORIDADES).map(function (k) { return '<option value="' + k + '"' + (k === c.prioridad ? ' selected' : '') + '>' + PRIORIDADES[k] + '</option>'; }).join('') +
           '</select>' +
+          '<button class="btn sm ver-mas" aria-expanded="false">Ver más</button>' +
           '<a class="btn primary" href="' + esc(url) + '" target="_blank" rel="noopener">Abrir tablero</a>' +
           (esSuper ? '<button class="btn sm copiar" title="Copiar el token de su tablero">Token</button><button class="btn sm baja">Dar de baja</button>' : '') +
         '</div>' +
-      '</div>' + pendientes + '</div>';
+      '</div>' + pendientes +
+      '<div class="detalle" hidden>' + microTablero(e) + equipoDe(c.slug) + '</div></div>';
+  }
+
+  // Los clientes y, si soy super-admin, el equipo: el equipo se pinta dentro de cada fila.
+  function cargarTodo() {
+    if (!esSuper) return cargar();
+    return api('/usuarios').then(function (d) { window.__usuarios = d.usuarios || []; }).catch(function () {}).then(cargar);
   }
 
   function cargar() {
@@ -469,6 +553,44 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       $('lista').innerHTML = filas.length
         ? '<div class="lista-clientes">' + filas.map(tarjeta).join('') + '</div>'
         : '<div class="card"><div class="vacio">Todavía no hay clientes. <b>Nuevo cliente</b> crea el primero.</div></div>';
+      $('lista').querySelectorAll('.ver-mas').forEach(function (b) {
+        b.onclick = function () {
+          var fila = b.closest('[data-slug]'), caja = fila.querySelector('.detalle');
+          var abierto = !caja.hidden;
+          caja.hidden = abierto;
+          b.setAttribute('aria-expanded', String(!abierto));
+          b.textContent = abierto ? 'Ver más' : 'Ver menos';
+        };
+      });
+      // Cambiar la clave de alguien y asignarlo o quitarlo de este cliente, sin salir de su fila.
+      $('lista').querySelectorAll('.persona').forEach(function (fila) {
+        var quien = fila.getAttribute('data-usuario');
+        var aviso = fila.closest('.equipo-cliente').querySelector('.ok-msg');
+        fila.querySelector('.poner-clave').onclick = function () {
+          var campo = fila.querySelector('.clave-nueva'), clave = campo.value;
+          if (clave.length < 8) { aviso.textContent = 'La clave necesita al menos 8 caracteres.'; return; }
+          api('/usuarios/' + encodeURIComponent(quien), { method: 'PATCH', body: { clave: clave } }).then(function (r) {
+            campo.value = '';
+            aviso.textContent = r.error ? r.error : 'Clave cambiada para ' + quien + '.';
+          });
+        };
+        var quitar = fila.querySelector('.quitar-de');
+        if (quitar) quitar.onclick = function () {
+          var slug = fila.closest('[data-slug]').getAttribute('data-slug');
+          var u = (window.__usuarios || []).find(function (x) { return x.usuario === quien; });
+          var quedan = (u.clientes || []).filter(function (x) { return x !== slug; });
+          api('/usuarios/' + encodeURIComponent(quien), { method: 'PATCH', body: { clientes: quedan } }).then(cargarTodo);
+        };
+      });
+      $('lista').querySelectorAll('.hacer-asignar').forEach(function (b) {
+        b.onclick = function () {
+          var caja = b.closest('.equipo-cliente'), sel = caja.querySelector('.asignar');
+          var quien = sel.value; if (!quien) return;
+          var slug = b.closest('[data-slug]').getAttribute('data-slug');
+          var u = (window.__usuarios || []).find(function (x) { return x.usuario === quien; });
+          api('/usuarios/' + encodeURIComponent(quien), { method: 'PATCH', body: { clientes: (u.clientes || []).concat([slug]) } }).then(cargarTodo);
+        };
+      });
       $('lista').querySelectorAll('.prio').forEach(function (s) {
         s.onchange = function () {
           var slug = s.closest('[data-slug]').getAttribute('data-slug');
@@ -690,7 +812,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     localStorage.setItem('aiva.consola.vista', cual);
   }
   $('tab-atender').onclick = function () { ver('atender'); cargarPendientes(); };
-  $('tab-clientes').onclick = function () { ver('clientes'); cargar(); };
+  $('tab-clientes').onclick = function () { ver('clientes'); cargarTodo(); };
   $('tab-equipo').onclick = function () { ver('equipo'); cargarEquipo(); };
 
   // Quién entra a la consola y qué clientes atiende. Solo lo ve el super-admin.
@@ -761,7 +883,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   }
   $('quien').value = localStorage.getItem('aiva.consola.quien') || '';
 
-  $('refrescar').onclick = function () { cargar(); cargarPendientes(); };
+  $('refrescar').onclick = function () { cargarTodo(); cargarPendientes(); };
   $('nuevo').onclick = function () { $('msg').textContent = ''; pintarPlantillas(); $('dlg').showModal(); $('f-nombre').focus(); };
   $('cerrar').onclick = function () { $('dlg').close(); };
   $('crear').onclick = function () {
