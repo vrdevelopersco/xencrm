@@ -1,5 +1,6 @@
 import { business, env } from './config.js';
 import { probeEngines, roleLabel } from './llm/engines.js';
+import { embedModelo } from './llm/embeddings.js';
 import { startBusySync } from './crm/busy.js';
 import { startReminders } from './crm/reminders.js';
 import { startBackups } from './rag/backup.js';
@@ -7,7 +8,10 @@ import { apple } from './llm/apple.js';
 import { countDocs, getDb } from './rag/store.js';
 
 console.log(`\n🌱 ${business.agent.name} · asistente de ${business.business.name}`);
-console.log(`   modelo: ${env.chatModel} · embeddings: ${env.embedModel} · ollama: ${env.ollamaUrl}`);
+// El letrero dice lo que de verdad se está usando: con los roles en OpenAI, nombrar el modelo local y la URL de
+// Ollama hacía creer que hacía falta tener Ollama al lado, y en un hosting de apps no lo hay.
+const hayOllama = [env.lightEngine, env.heavyEngine, env.gateEngine, env.analysisEngine].includes('ollama') || env.embedEngine === 'ollama';
+console.log(`   modelo: ${env.chatModel} · embeddings: ${embedModelo()}${hayOllama ? ` · ollama: ${env.ollamaUrl}` : ''}`);
 
 getDb();
 const engines = await probeEngines();
