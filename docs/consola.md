@@ -112,6 +112,25 @@ quitarlo de ese cliente o asignarle a otra persona, sin ir hasta Equipo.
 
 La **prioridad** de cada cliente se cambia en su fila y es la que pesa en el orden de todo.
 
+### Respaldar y restaurar su configuración
+
+En la fila de cada cliente, **Respaldar** baja un archivo con lo que costó construir: su configuración, su
+perfil, su diccionario, su catálogo, lo que sabe y su marca. **Restaurar** sube uno y lo deja como estaba.
+
+Lo que **no** va dentro, a propósito:
+
+- **Las conversaciones y la base.** Esto no es copia de seguridad de los datos —para eso está el respaldo diario
+  de la base—, es la *configuración*, que es lo que uno quiere recuperar cuando algo se tocó mal o cuando el
+  mismo negocio se monta en otra parte.
+- **Los secretos.** Ni el token del tablero ni la clave de OpenAI: un archivo así se manda por correo y se
+  olvida en un Drive.
+- **Las rutas de la máquina.** De la marca solo viaja el nombre del archivo; al restaurar vuelve a apuntar a la
+  carpeta del cliente que lo recibe.
+
+🪤 Restaurar **pisa** lo que haya, así que antes deja una copia de lo que estaba en el servidor y pide
+confirmación. Y si el respaldo es de **otro cliente**, lo dice y pide confirmarlo aparte: dejarle a la
+financiera la configuración de la boutique sería un desastre silencioso. Después hay que reiniciar ese cliente.
+
 ### Abrir el tablero de un cliente
 
 **Abrir tablero** lo abre *dentro de la consola*, en `/c/<slug>/admin`: la consola le pone el token del cliente a

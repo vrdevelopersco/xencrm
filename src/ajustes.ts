@@ -59,7 +59,15 @@ export const AjustesSchema = z.object({
     greeting: z.string().trim().max(300),
     verifyPhrase: z.string().trim().min(1).max(200),
   }),
-  marca: z.object({ color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, 'el color va en formato #rrggbb'), logo: z.string().trim().max(300) }),
+  marca: z.object({
+    color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, 'el color va en formato #rrggbb'),
+    logo: z.string().trim().max(300),
+    /** El logo para fondo oscuro, si la marca tiene dos versiones. */
+    logoOscuro: z.string().trim().max(300),
+    /** La marca chica: la pestaña del navegador y donde no cabe el logo entero. */
+    favicon: z.string().trim().max(300),
+    fondo: z.enum(['claro', 'oscuro']),
+  }),
   timezone: z.string().trim().min(1).refine(zonaDeVerdad, 'esa zona horaria no existe (va como America/Bogota)'),
   citas: z.object({
     enabled: z.boolean(),
@@ -96,7 +104,13 @@ export function ajustesDe(cfg = business): Ajustes {
       greeting: cfg.agent.greeting ?? '',
       verifyPhrase: cfg.agent.verifyPhrase,
     },
-    marca: { color: cfg.brand?.color ?? '#276f45', logo: cfg.brand?.logo ?? '' },
+    marca: {
+      color: cfg.brand?.color ?? '#276f45',
+      logo: cfg.brand?.logo ?? '',
+      logoOscuro: cfg.brand?.logoOscuro ?? '',
+      favicon: cfg.brand?.favicon ?? '',
+      fondo: cfg.brand?.fondo ?? 'claro',
+    },
     timezone: cfg.timezone,
     citas: {
       enabled: c.enabled,

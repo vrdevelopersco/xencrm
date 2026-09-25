@@ -214,6 +214,7 @@ export function crearCliente(opts: {
   const env = [
     `# ${opts.nombre} · lo que es de este cliente. Lo compartido (claves de OpenAI, Ollama) está en el .env de la raíz.`,
     `PORT=${puerto}`,
+    `AIVA_SLUG=${slug}`,
     `DB_PATH=${resolve(r.db)}`,
     `WHATSAPP_AUTH_DIR=${resolve(r.auth)}`,
     `ADMIN_TOKEN=${token}`,

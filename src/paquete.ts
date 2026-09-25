@@ -19,7 +19,7 @@
 //   2. **Los datos viven fuera del despliegue**, que en estas plataformas estrena carpeta en cada actualización.
 //   3. **Va compilado a JavaScript**, no con tsx.
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { leerIndice, rutas, type ClienteRef } from './clientes.js';
 
@@ -39,7 +39,7 @@ const ARRANQUE = String.raw`// Generado por: pnpm paquete — no editar a mano.
 // ERR_REQUIRE_ASYNC_MODULE. Los hijos sí arrancan como se debe, con node, y siguen siendo ESM.
 const { spawn } = require('node:child_process');
 const http = require('node:http');
-const { existsSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
+const { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
 const { homedir, tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 
@@ -133,10 +133,22 @@ clientes.forEach((c, i) => {
   config.dictionaryFile = join(mio, 'dictionary.json');
   config.profileFile = join(mio, 'profile.json');
   config.sources = { ...(config.sources ?? {}), productsFile: join(mio, 'catalogo', 'productos.json'), knowledgeDir: join(mio, 'conocimiento') };
+  // La marca del cliente: se copia a sus datos la primera vez (ahí la pueden cambiar) y las rutas se reescriben
+  // a donde de verdad quedó.
+  const marcaDeFabrica = join(aqui, 'config', c.slug + '-marca');
+  const miMarca = join(mio, 'marca');
+  if (existsSync(marcaDeFabrica) && !existsSync(miMarca)) cpSync(marcaDeFabrica, miMarca, { recursive: true });
+  if (config.brand) {
+    for (const cual of ['logo', 'logoOscuro', 'favicon']) {
+      const v = config.brand[cual];
+      if (typeof v === 'string' && v && !/^https?:/.test(v)) config.brand[cual] = join(miMarca, v.split('/').pop());
+    }
+  }
   writeFileSync(configPath, JSON.stringify(config, null, 2));
   levantar(c.slug, 'dist/index.js', {
     ...porDefecto,
     AIVA_CONFIG: configPath,
+    AIVA_SLUG: c.slug,
     DB_PATH: join(mio, 'data', 'aiva.db'),
     WHATSAPP_AUTH_DIR: join(mio, 'auth'),
     ADMIN_TOKEN: tokenDe(c.slug),
@@ -260,7 +272,12 @@ mkdirSync(join(dir, 'config'), { recursive: true });
 console.log('→ compilando a JavaScript…');
 execFileSync('node_modules/.bin/tsc', ['--noEmit', 'false', '--outDir', join(dir, 'dist')], { stdio: 'inherit' });
 cpSync(resolve('public'), join(dir, 'public'), { recursive: true });
-for (const c of clientes) cpSync(rutas(c.slug).config, join(dir, 'config', `${c.slug}.json`));
+for (const c of clientes) {
+  cpSync(rutas(c.slug).config, join(dir, 'config', `${c.slug}.json`));
+  // Su marca (logos, favicon) viaja con él: sin esto, en el servidor apunta a archivos que no existen.
+  const marca = join(rutas(c.slug).dir, 'marca');
+  if (existsSync(marca)) cpSync(marca, join(dir, 'config', `${c.slug}-marca`), { recursive: true });
+}
 
 writeFileSync(
   join(dir, 'clientes.json'),

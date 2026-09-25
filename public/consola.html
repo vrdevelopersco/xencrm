@@ -648,6 +648,25 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     }).catch(function () {});
   }
 
+  // Restaurar pisa lo que haya, así que se confirma. Y si el respaldo es de OTRO cliente, se confirma aparte:
+  // dejar la configuración de la boutique sobre la financiera sería un desastre silencioso.
+  function mandarRestauracion(slug, respaldo, aunqueSeaDeOtro) {
+    var quien = (window.__clientes || []).find(function (x) { return x.cliente.slug === slug; });
+    var nombre = quien ? quien.cliente.nombre : slug;
+    if (!aunqueSeaDeOtro && !confirm('Restaurar sobre ' + nombre + ' pisa su configuración, su perfil, su diccionario y lo que sabe.\n\nSe guarda una copia de lo que hay ahora. ¿Sigo?')) return;
+    cli(slug + '/respaldo', { method: 'POST', body: { respaldo: respaldo, aunqueSeaDeOtro: aunqueSeaDeOtro } }).then(function (r) {
+      if (r && r.otroCliente && !aunqueSeaDeOtro) {
+        if (confirm('Ojo: ese respaldo es de «' + r.de + '», no de ' + nombre + '.\n\n¿De verdad quieres dejarle la configuración de otro negocio?')) {
+          mandarRestauracion(slug, respaldo, true);
+        }
+        return;
+      }
+      if (!r || r.error) { alert('No se pudo restaurar: ' + ((r && r.error) || 'sin respuesta')); return; }
+      alert('Restaurado en ' + nombre + ': ' + r.escrito.join(', ') + '.\n\nLa copia de lo anterior quedó en el servidor.\nHay que reiniciar ese cliente para que lo tome.');
+      cargarTodo();
+    }).catch(function () { alert('No se pudo restaurar.'); });
+  }
+
   function buscadorDeClientes() {
     return '<div class="fila buscador"><input id="buscar-cliente" placeholder="Buscar un cliente…" autocomplete="off">' +
       '<span class="small muted">' + (window.__clientes || []).length + ' en total</span></div>';
@@ -746,7 +765,9 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
           '</select>' +
           '<button class="btn sm ver-mas" aria-expanded="false">Ver más</button>' +
           '<a class="btn primary" href="' + esc(url) + '" target="_blank" rel="noopener">Abrir tablero</a>' +
-          (esSuper ? '<button class="btn sm copiar" title="Copiar el token de su tablero">Token</button><button class="btn sm baja">Dar de baja</button>' : '') +
+          (esSuper ? '<button class="btn sm respaldar" title="Bajar su configuración en un archivo">Respaldar</button>' +
+            '<button class="btn sm restaurar" title="Subir un respaldo y dejarlo como estaba">Restaurar</button>' +
+            '<button class="btn sm copiar" title="Copiar el token de su tablero">Token</button><button class="btn sm baja">Dar de baja</button>' : '') +
         '</div>' +
       '</div>' + pendientes +
       '<div class="detalle" hidden>' + microTablero(e) + equipoDe(c.slug) + '</div></div>';
@@ -776,6 +797,39 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
           fila.hidden = Boolean(q) && fila.textContent.toLowerCase().indexOf(q) === -1;
         });
       };
+      // Respaldo de la configuración: se baja un archivo y se vuelve a subir. No lleva la base ni los secretos.
+      $('lista').querySelectorAll('.respaldar').forEach(function (b) {
+        b.onclick = function () {
+          var slug = b.closest('[data-slug]').getAttribute('data-slug');
+          b.disabled = true;
+          cli(slug + '/respaldo').then(function (r) {
+            b.disabled = false;
+            if (!r || r.error) { alert('No se pudo respaldar: ' + ((r && r.error) || 'sin respuesta')); return; }
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(r, null, 2)], { type: 'application/json' }));
+            a.download = 'aiva-' + slug + '-' + r.fecha.slice(0, 10) + '.json';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
+          }).catch(function () { b.disabled = false; });
+        };
+      });
+      $('lista').querySelectorAll('.restaurar').forEach(function (b) {
+        b.onclick = function () {
+          var slug = b.closest('[data-slug]').getAttribute('data-slug');
+          var campo = document.createElement('input');
+          campo.type = 'file'; campo.accept = 'application/json,.json';
+          campo.onchange = function () {
+            var archivo = campo.files && campo.files[0];
+            if (!archivo) return;
+            archivo.text().then(function (texto) {
+              var respaldo;
+              try { respaldo = JSON.parse(texto); } catch (e) { alert('Ese archivo no es un respaldo de aiva.'); return; }
+              mandarRestauracion(slug, respaldo, false);
+            });
+          };
+          campo.click();
+        };
+      });
       $('lista').querySelectorAll('.ver-mas').forEach(function (b) {
         b.onclick = function () {
           var fila = b.closest('[data-slug]'), caja = fila.querySelector('.detalle');

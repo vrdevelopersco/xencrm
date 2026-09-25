@@ -1343,6 +1343,16 @@
       $('brand-name').firstChild.textContent = me.agent + ' ';
       $('brand-biz').textContent = me.business;
       state.bizName = me.business; state.agentName = me.agent;
+      // El logo del negocio en su propia barra: entrar a su tablero tiene que sentirse suyo, no de aiva.
+      if (me.logo) {
+        var img = document.createElement('img');
+        // 🪤 Con BASE delante: servido en /dunor/admin, un "/brand/logo" pelado apuntaría a la raíz del dominio.
+        img.src = /^https?:/.test(me.logo) ? me.logo : BASE + me.logo;
+        img.alt = me.business; img.className = 'logo-cliente';
+        img.onerror = function () { img.remove(); };
+        var marca = document.querySelector('.side .brand');
+        if (marca) marca.insertBefore(img, marca.firstChild);
+      }
       // Entrando por la consola nadie escribió un nombre, y ese nombre le llega al cliente delante del mensaje
       // por WhatsApp: el del asistente es el que sus clientes ya conocen.
       if (!state.name) { state.name = me.agent || 'equipo'; try { localStorage.setItem(LLAVE('name'), state.name); } catch (e) {} }
@@ -1406,7 +1416,13 @@
       '<div class="card"><h2 class="h">Marca y hora</h2>' +
         '<div class="fila-3">' +
           campo('n-color', 'Color', a.marca.color, { tipo: 'color' }) +
-          campo('n-logo', 'Logo (URL)', a.marca.logo) +
+          '<div class="prof-field"><div class="lbl"><label class="small" for="n-fondo"><b>Su marca va sobre</b></label></div>' +
+            '<select id="n-fondo"><option value="claro"' + (a.marca.fondo === 'claro' ? ' selected' : '') + '>Fondo claro</option>' +
+            '<option value="oscuro"' + (a.marca.fondo === 'oscuro' ? ' selected' : '') + '>Fondo oscuro</option></select>' +
+            '<div class="small muted">El chat del sitio y la página de la cita.</div></div>' +
+          campo('n-logo', 'Logo (URL o archivo)', a.marca.logo) +
+          campo('n-logo-oscuro', 'Logo para fondo oscuro', a.marca.logoOscuro, { pista: 'Si la marca tiene dos versiones.' }) +
+          campo('n-favicon', 'Marca chica (favicon)', a.marca.favicon, { pista: 'El escudo o la inicial.' }) +
           '<div class="prof-field"><div class="lbl"><label class="small" for="n-zona"><b>Zona horaria</b></label></div>' +
             '<select id="n-zona">' + zonas.map(function (z) { return '<option' + (z === a.timezone ? ' selected' : '') + '>' + esc(z) + '</option>'; }).join('') + '</select>' +
             '<div class="small muted">Con esto entiende «mañana a las 3».</div></div>' +
@@ -1464,7 +1480,10 @@
         phoneCountryCode: $('n-indicativo').value, phoneLocalDigits: num('n-digitos')
       },
       agente: { name: $('n-agente').value, style: $('n-estilo').value, goal: $('n-meta').value, greeting: $('n-saludo').value, verifyPhrase: $('n-verifico').value },
-      marca: { color: $('n-color').value, logo: $('n-logo').value },
+      marca: {
+        color: $('n-color').value, logo: $('n-logo').value,
+        logoOscuro: $('n-logo-oscuro').value, favicon: $('n-favicon').value, fondo: $('n-fondo').value
+      },
       timezone: $('n-zona').value,
       citas: {
         enabled: $('n-citas').checked,

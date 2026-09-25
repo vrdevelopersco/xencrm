@@ -231,6 +231,18 @@ export const BusinessConfigSchema = z.object({
       color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#2f7d4f'),
       /** Logo: URL https o archivo local (png, jpg, svg, webp) que aiva sirve en /brand/logo. */
       logo: z.string().optional(),
+      /**
+       * El logo para fondo oscuro. Muchas marcas tienen dos versiones —DUNOR es negro sobre claro y dorado
+       * sobre negro— y usar la que no es se ve como un error de imprenta.
+       */
+      logoOscuro: z.string().optional(),
+      /** La marca chica (el escudo, la inicial): para la pestaña del navegador y donde no cabe el logo entero. */
+      favicon: z.string().optional(),
+      /**
+       * Sobre qué fondo va su marca en lo que ve su gente: el chat del sitio y la página de la cita.
+       * 'claro' es lo normal; 'oscuro' es para marcas que viven en negro.
+       */
+      fondo: z.enum(['claro', 'oscuro']).default('claro'),
     })
     .prefault({}),
   /** Versiones anteriores lo traían aquí mismo; si el archivo no existe todavía, se usa esto. */

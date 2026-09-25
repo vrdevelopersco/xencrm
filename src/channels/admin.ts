@@ -20,6 +20,9 @@ import { listNotifications, startNotifications } from '../crm/notifications.js';
 import { usageSummary } from '../llm/usage.js';
 import { entrar as entrarALaConversacion, salir as salirDeLaConversacion, quienesEstan } from '../crm/presencia.js';
 import { actividadPorHora, nuevasPorDia, semanaContraSemana } from '../crm/series.js';
+import { logoUrl } from '../brand.js';
+import { armar as armarRespaldo, restaurar as restaurarRespaldo, revisar as revisarRespaldo } from '../crm/respaldo.js';
+import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
@@ -62,7 +65,16 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     await next();
   });
 
-  app.get('/admin/api/me', (c) => c.json({ ok: true, business: business.business.name, agent: business.agent.name }));
+  app.get('/admin/api/me', (c) =>
+    c.json({
+      ok: true,
+      business: business.business.name,
+      agent: business.agent.name,
+      // Para que el tablero se sienta del negocio: su logo y su color, no los de aiva.
+      logo: logoUrl(),
+      color: business.brand.color,
+    }),
+  );
 
   app.get('/admin/api/contacts', (c) => {
     const stage = c.req.query('stage') as Stage | undefined;
@@ -477,6 +489,38 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * Las dos gráficas: de dónde llega la gente (nuevas por día y canal) y a qué horas escribe. Se calculan al
    * vuelo desde lo que ya está guardado; con miles de mensajes son milisegundos y no hay nada que mantener.
    */
+  /**
+   * Respaldo de la configuración: lo que costó construir, en un archivo. No lleva la base ni los secretos —ver
+   * crm/respaldo.ts—, así que se puede guardar o mandar sin miedo.
+   */
+  const dondeVive = () => ({
+    slug: (process.env.AIVA_SLUG ?? business.business.name).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    nombre: business.business.name,
+    config: resolve(process.env.AIVA_CONFIG || 'aiva.config.json'),
+    perfil: business.profileFile,
+    diccionario: business.dictionaryFile,
+    catalogo: business.sources.productsFile,
+    conocimiento: business.sources.knowledgeDir,
+  });
+
+  app.get('/admin/api/respaldo', (c) => c.json(armarRespaldo(dondeVive())));
+
+  app.post('/admin/api/respaldo', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { respaldo?: unknown; aunqueSeaDeOtro?: boolean };
+    const donde = dondeVive();
+    const revisado = revisarRespaldo(body.respaldo, donde.slug);
+    if ('error' in revisado) return c.json({ error: revisado.error }, 400);
+    if (revisado.otroCliente && !body.aunqueSeaDeOtro) {
+      return c.json({ error: `ese respaldo es de "${revisado.respaldo.negocio}", no de este cliente`, otroCliente: true, de: revisado.respaldo.negocio }, 409);
+    }
+    try {
+      const hecho = restaurarRespaldo(donde, revisado.respaldo, { carpetaCopias: resolve(join(donde.config, '..', 'respaldos')) });
+      return c.json({ ok: true, ...hecho, hayQueReiniciar: true });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 500);
+    }
+  });
+
   app.get('/admin/api/series', (c) => {
     const dias = Math.min(60, Math.max(7, Number(c.req.query('dias') ?? 14) || 14));
     return c.json({

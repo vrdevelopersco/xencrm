@@ -46,6 +46,12 @@ export function accentOn(color: string, bg: string, min = 4.5): string {
 const LOGO_TYPES: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml', '.webp': 'image/webp' };
 
 /** El logo como archivo local (para servirlo) o null si es una URL o no hay. */
+/** Cuál de los dos logos va sobre el fondo que toca. */
+export function logoPara(fondo: 'claro' | 'oscuro' = business.brand.fondo): string | undefined {
+  const b = business.brand;
+  return fondo === 'oscuro' ? b.logoOscuro || b.logo : b.logo || b.logoOscuro;
+}
+
 export function localLogo(): { path: string; type: string } | null {
   const logo = business.brand.logo;
   if (!logo || /^https?:\/\//.test(logo)) return null;

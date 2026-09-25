@@ -209,7 +209,10 @@ La configuración del negocio, en la otra pestaña del mismo modal del Perfil. A
   y qué responde cuando piden una persona.
 - **El asistente**: cómo se llama, cómo habla, qué busca en cada conversación, cómo saluda y qué dice cuando no
   sabe algo.
-- **Marca y hora**: color, logo y zona horaria (con eso entiende «mañana a las 3»).
+- **Marca y hora**: el color, el **logo**, el **logo para fondo oscuro**, la **marca chica** (el favicon) y sobre
+  qué fondo va su marca en lo que ve su gente. Muchas marcas tienen dos versiones del logo —DUNOR es negro sobre
+  claro y dorado sobre negro— y usar la que no es se ve como un error de imprenta. Más la zona horaria, con la
+  que entiende «mañana a las 3».
 - **Citas**: si agenda, cómo se llama la cita, dónde, cuánto dura, cuántas a la vez, con cuánta anticipación,
   hasta cuántos días adelante, qué días y qué franjas.
 
