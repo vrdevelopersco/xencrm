@@ -94,6 +94,22 @@ para que optimicen.
 En cada ficha se ve por dónde llegó esa persona, con el titular del anuncio que leyó. Al atender cambia la
 conversación: no es lo mismo alguien que buscaba trajes de grado que alguien que vino de un anuncio de bodas.
 
+## Traer más historial sin desvincular
+
+`src/channels/whatsapp.ts` · `src/crm/wa-cursor.ts` · en el tablero: **Canales › Traer más historial**
+
+Al vincular, WhatsApp manda lo reciente de cada conversación y nada más. Durante un tiempo, la única forma de
+traer lo de antes era desvincular y volver a escanear — justo lo que nadie quiere hacer con el número de un
+negocio en marcha.
+
+Se puede pedir más apuntando al mensaje más antiguo que ya se tiene, así que se va guardando cuál es (tabla
+`wa_cursor`). 🪤 Ese cursor **solo retrocede**: si avanzara con cada mensaje nuevo acabaría apuntando al último,
+y pedir «más historial» traería una y otra vez lo que ya está.
+
+🪤 Lo pedido **no llega en la respuesta**: llega después, por el mismo camino que el historial del
+emparejamiento, y puede tardar minutos. Por eso el botón dice cuántas conversaciones se pidieron, no cuántos
+mensajes llegaron.
+
 ## Lo que todavía no hay
 
 - **Avisos por correo o push del navegador.** Hoy el aviso externo es solo por WhatsApp. El push real necesita
@@ -101,4 +117,6 @@ conversación: no es lo mismo alguien que buscaba trajes de grado que alguien qu
 - **Horarios propios de atención.** El horario se toma del de citas. Un negocio que atienda por WhatsApp en un
   horario distinto del de su agenda necesitaría el suyo.
 - **Festivos.** Un lunes festivo cuenta como día hábil.
+- **Traer más historial en el conector.** El botón funciona con la sesión en la propia máquina; el conector de
+  `src/conector.ts` todavía no lo expone.
 - **Devolver las conversiones a Google y a Meta.** El identificador del clic ya se guarda; falta mandarlo.

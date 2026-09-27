@@ -104,5 +104,20 @@ contesta('wa:cuatro', martes10 + MIN, 'human', 'Marcela');
 const e4 = esperas({ desde: martes10 - MIN, userId: 'wa:cuatro', ahora });
 check('🪤 escribir sin que pregunten no cuenta como respuesta', e4.length === 0, JSON.stringify(e4));
 
+// ---------- Por dónde va el historial de cada chat ----------
+// 🪤 El cursor solo puede retroceder. Si avanzara con cada mensaje nuevo, acabaría apuntando al último y pedir
+// «más historial» traería una y otra vez lo que ya se tiene, sin llegar nunca a lo viejo.
+const { anotarCursor, cursorDe, cursores } = await import('../crm/wa-cursor.js');
+const chat = '573001112233@s.whatsapp.net';
+anotarCursor({ chat, keyId: 'msj-de-marzo', fromMe: false, ts: new Date('2026-03-01T12:00:00Z').getTime() });
+check('anota por dónde va un chat', cursorDe(chat)?.keyId === 'msj-de-marzo', JSON.stringify(cursorDe(chat)));
+anotarCursor({ chat, keyId: 'msj-de-enero', fromMe: true, ts: new Date('2026-01-15T12:00:00Z').getTime() });
+check('uno más antiguo lo reemplaza', cursorDe(chat)?.keyId === 'msj-de-enero' && cursorDe(chat)?.fromMe === true, JSON.stringify(cursorDe(chat)));
+anotarCursor({ chat, keyId: 'msj-de-hoy', fromMe: false, ts: Date.now() });
+check('🪤 uno más nuevo NO lo mueve', cursorDe(chat)?.keyId === 'msj-de-enero', JSON.stringify(cursorDe(chat)));
+
+anotarCursor({ chat: 'otro@s.whatsapp.net', keyId: 'x', fromMe: false, ts: new Date('2026-02-01T12:00:00Z').getTime() });
+check('se piden primero los chats con lo más antiguo', cursores()[0]!.chat === chat, cursores().map((c) => c.chat.split('@')[0]).join(','));
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

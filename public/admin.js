@@ -1322,6 +1322,14 @@
       // WhatsApp. Desde fuera, un fallo del programa y una puerta cerrada en el alojamiento se ven igual.
       // Desvincular: la única forma de volver a recibir lo ya conversado (WhatsApp lo manda solo al emparejar)
       // y la salida del atasco si cierran la sesión desde el teléfono.
+      // Traer más historial: lo que llega al vincular es solo lo reciente, y esto pide más hacia atrás sin
+      // tocar la sesión. Solo tiene sentido con el número conectado.
+      var masHistorial = ch.id === 'whatsapp' && ch.state === 'conectado'
+        ? '<div class="fila" style="gap:10px;align-items:center;margin-top:10px">' +
+            '<button class="btn sm" id="wa-mas">Traer más historial</button>' +
+            '<span class="small muted">Pide conversaciones más antiguas. Llegan solas, en unos minutos.</span>' +
+          '</div><div id="wa-mas-r" class="small" role="status"></div>'
+        : '';
       var desvincular = ch.id === 'whatsapp' && (ch.state === 'conectado' || ch.state === 'sesion_cerrada')
         ? '<div class="fila" style="gap:10px;align-items:center;margin-top:10px">' +
             '<button class="btn sm" id="wa-desvincular">Desvincular y empezar de cero</button>' +
@@ -1341,7 +1349,7 @@
         (ch.detail ? '<div class="small">' + esc(ch.detail) + '</div>' : '') +
         (channelStats(ch) ? '<div class="ch-stats">' + esc(channelStats(ch)) + '</div>' : '') +
         (ch.qrSvg ? '<div class="ch-qr" role="img" aria-label="Código QR para vincular WhatsApp">' + ch.qrSvg + '</div>' : '') +
-        steps + warnings + copy + toggle + escucha + desvincular + salida + '<div class="ch-err" id="ch-err-' + ch.id + '" role="status"></div>' + (ch.id === 'meta' ? metaCredForm(ch) : '') + '</div>';
+        steps + warnings + copy + toggle + escucha + masHistorial + desvincular + salida + '<div class="ch-err" id="ch-err-' + ch.id + '" role="status"></div>' + (ch.id === 'meta' ? metaCredForm(ch) : '') + '</div>';
     }).join('');
     if (credDraft && $('meta-cred-form')) {
       $('meta-cred').open = credDraft.open; $('mc-token').value = credDraft.token; $('mc-phone').value = credDraft.phone; $('mc-secret').value = credDraft.secret;
@@ -1359,6 +1367,14 @@
       };
     });
     if (salidaHtml && $('wa-salida-r')) { $('wa-salida-r').innerHTML = salidaHtml; engancharOcultarSalida(); }
+    if ($('wa-mas')) $('wa-mas').onclick = function () {
+      var b = this; b.disabled = true; b.textContent = 'Pidiendo…';
+      api('/whatsapp/mas-historial', { method: 'POST', body: {} }).then(function (r) {
+        b.disabled = false; b.textContent = 'Traer más historial';
+        $('wa-mas-r').textContent = r && r.error ? r.error
+          : 'Pedido a ' + r.chats + ' conversaciones. Lo que llegue aparece solo en Perfil › Lo que aprendimos de sus chats.';
+      });
+    };
     if ($('wa-desvincular')) $('wa-desvincular').onclick = function () {
       if (!confirm('Se cierra la sesión de WhatsApp y hay que volver a escanear el código.\n\nLas conversaciones que ya están en el tablero NO se tocan. ¿Sigo?')) return;
       var b = this; b.disabled = true; b.textContent = 'Desvinculando…';

@@ -18,6 +18,7 @@ import { mkdirSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { env } from '../config.js';
 import { guardarImportados } from '../crm/historial.js';
+import { anotarCursor, cursores } from '../crm/wa-cursor.js';
 import { handleMessage } from '../agent/agent.js';
 import { registerSender } from '../crm/outbox.js';
 
@@ -79,6 +80,17 @@ export async function stopWhatsApp(): Promise<void> {
 }
 
 /**
+ * Pide a WhatsApp más historial hacia atrás, chat por chat, sin desvincular nada.
+ *
+ * Hace falta porque lo que WhatsApp manda al emparejar es solo lo reciente, y hasta ahora la única forma de
+ * traer más era desvincular y volver a escanear —justo lo que nadie quiere hacer con el número de un negocio en
+ * marcha—. Con esto, «traer más» es un botón.
+ *
+ * 🪤 Lo que se pide NO llega en la respuesta: llega después, por el mismo camino que el historial del
+ * emparejamiento, y puede tardar minutos. Por eso esto devuelve cuántos chats se pidieron, no cuántos mensajes
+ * llegaron.
+ */
+/**
  * Empezar de cero: cierra la sesión y borra las credenciales guardadas, para que la próxima vez salga un código
  * nuevo y se vincule como la primera vez.
  *
@@ -88,6 +100,24 @@ export async function stopWhatsApp(): Promise<void> {
  * tiene por qué entrar a ningún servidor—. Lo mismo cuando cierran la sesión desde el teléfono: sin esto, el
  * canal se quedaba atascado sin forma de arreglarlo desde aquí.
  */
+export async function traerMasHistorial(porChat = 50): Promise<{ chats: number; error?: string }> {
+  const sock = current;
+  if (!sock || status.state !== 'conectado') return { chats: 0, error: 'WhatsApp no está conectado ahora mismo.' };
+  const pendientes = cursores(200);
+  if (!pendientes.length) return { chats: 0, error: 'Todavía no hay chats de los que pedir más: llegan al vincular el número.' };
+  let pedidos = 0;
+  for (const c of pendientes) {
+    try {
+      await sock.fetchMessageHistory(porChat, { remoteJid: c.chat, id: c.keyId, fromMe: c.fromMe }, Math.floor(c.ts / 1000));
+      pedidos++;
+    } catch (err) {
+      console.error('[whatsapp] no pude pedir más historial de', c.chat.split('@')[0], (err as Error).message);
+    }
+  }
+  console.log(`[whatsapp] pedido más historial de ${pedidos} chats; llega solo en los próximos minutos`);
+  return { chats: pedidos };
+}
+
 export async function olvidarSesionWhatsApp(): Promise<void> {
   await stopWhatsApp();
   rmSync(env.whatsappAuthDir, { recursive: true, force: true });
@@ -183,6 +213,14 @@ export async function startWhatsApp(): Promise<WASocket> {
           ts,
         }];
       });
+      // Por dónde va cada chat: el mensaje más antiguo que tenemos. Es lo que hace falta para pedir más hacia
+      // atrás después, sin desvincular el número.
+      for (const m of messages ?? []) {
+        const jid = m.key?.remoteJid;
+        const ts = Number(m.messageTimestamp ?? 0) * 1000;
+        if (!jid || !m.key?.id || !ts || isJidStatusBroadcast(jid) || isJidNewsletter(jid) || isJidGroup(jid)) continue;
+        anotarCursor({ chat: jidNormalizedUser(jid), keyId: m.key.id, fromMe: Boolean(m.key.fromMe), ts });
+      }
       const nuevos = leidos.length ? guardarImportados(leidos, 'whatsapp') : 0;
       if (nuevos) console.log(`[whatsapp] historial: ${nuevos} mensajes guardados para aprender (Perfil › Lo que aprendimos de sus chats)`);
       if (isLatest) console.log('[whatsapp] historial: terminó de sincronizar');

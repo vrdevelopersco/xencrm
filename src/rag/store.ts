@@ -153,6 +153,14 @@ export function getDb(): DatabaseSync {
       titulo TEXT NOT NULL,
       ts INTEGER NOT NULL
     );
+    -- Por dónde va el historial de cada chat de WhatsApp: el mensaje más antiguo que tenemos. Sirve para pedir
+    -- «más hacia atrás» sin desvincular el número, que es lo único que WhatsApp deja hacer después de emparejar.
+    CREATE TABLE IF NOT EXISTS wa_cursor (
+      chat TEXT PRIMARY KEY,
+      key_id TEXT NOT NULL,
+      from_me INTEGER NOT NULL DEFAULT 0,
+      ts INTEGER NOT NULL
+    );
     -- De dónde salió cada conversación (campaña, anuncio, quién la mandó). Una fila por contacto y SOLO la
     -- primera vez: lo que trajo a alguien no cambia porque vuelva por otro lado. Ver crm/origen.ts.
     CREATE TABLE IF NOT EXISTS origen (

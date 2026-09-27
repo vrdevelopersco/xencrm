@@ -37,7 +37,7 @@ import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
 import { channelCards, toggleChannel } from './registry.js';
 import { diagnosticoDeSalida } from './salida.js';
-import { cierres, olvidarSesionWhatsApp } from './whatsapp.js';
+import { cierres, olvidarSesionWhatsApp, traerMasHistorial } from './whatsapp.js';
 import { anotarEstadoPuente, recogerSalida, sinEntregar, type EstadoPuente } from './puente.js';
 import { channelOn } from './switches.js';
 import { handleMessage } from '../agent/agent.js';
@@ -556,6 +556,16 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * Desvincular y empezar de cero. Es la única forma de volver a recibir lo ya conversado, porque WhatsApp lo
    * manda solo al emparejar; y es también cómo se sale del atasco cuando cierran la sesión desde el teléfono.
    */
+  /**
+   * Traer más historial hacia atrás sin desvincular. Lo pedido llega después, solo, por el mismo camino que el
+   * historial del emparejamiento.
+   */
+  app.post('/admin/api/whatsapp/mas-historial', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { porChat?: number };
+    const porChat = Math.min(200, Math.max(10, Number(body.porChat) || 50));
+    return c.json(await traerMasHistorial(porChat));
+  });
+
   app.post('/admin/api/whatsapp/desvincular', async (c) => {
     await olvidarSesionWhatsApp();
     const body = (await c.req.json().catch(() => ({}))) as { volverAEncender?: boolean };
