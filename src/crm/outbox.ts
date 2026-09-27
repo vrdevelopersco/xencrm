@@ -35,6 +35,24 @@ export function registerSender(channel: string, fn: Sender) {
   senders.set(channel, fn);
 }
 
+/**
+ * Manda un texto por un canal **sin pasar por el CRM**: no crea ficha, no guarda el mensaje, no analiza nada.
+ * Es para avisar al propio equipo (ver `crm/vigilante.ts`), no para hablar con clientes. Devuelve si salió.
+ *
+ * 🪤 Lo que se manda por aquí no queda en ninguna conversación, así que no se use para escribirle a un cliente:
+ * el equipo no vería lo que se le dijo y el CRM dejaría de ser el sitio donde está todo.
+ */
+export async function enviarSuelto(channel: string, destino: string, text: string): Promise<boolean> {
+  const fn = senders.get(channel);
+  if (!fn) return false;
+  try {
+    await fn(destino, text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** ¿Hay cómo entregarle un mensaje ahora? (WhatsApp apagado o sin conectar: no.) */
 export function canDeliver(userId: string): boolean {
   const c = getContact(userId);

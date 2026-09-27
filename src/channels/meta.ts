@@ -8,6 +8,7 @@ import type { HttpBindings } from '@hono/node-server';
 import { env } from '../config.js';
 import { handleMessage } from '../agent/agent.js';
 import { registerSender, registerTemplateSender, type Template } from '../crm/outbox.js';
+import { anotarOrigen, deMeta } from '../crm/origen.js';
 import { channelOn } from './switches.js';
 
 export interface MetaCredentials {
@@ -187,8 +188,11 @@ async function flush(waId: string) {
   }
 }
 
-function validSignature(raw: string, header: string | undefined): boolean {
-  if (!meta.appSecret) return true; // sin secreto no se valida (solo para pruebas)
+export function validSignature(raw: string, header: string | undefined): boolean {
+  // 🪤 Sin secreto NO se acepta nada. Antes esto devolvía `true` «solo para pruebas», y el tablero deja guardar
+  // las credenciales de Meta sin el secreto: cualquiera que supiera la dirección del webhook podía inventar
+  // conversaciones en el CRM y, peor, hacer que el número verificado del negocio le escribiera a terceros.
+  if (!meta.appSecret) return false;
   if (!header?.startsWith('sha256=')) return false;
   const expected = createHmac('sha256', meta.appSecret).update(raw).digest('hex');
   const got = header.slice(7);
@@ -232,6 +236,9 @@ export function mountMeta(app: Hono<{ Bindings: HttpBindings }>) {
             void sendMetaText(m.from, 'Por ahora solo puedo leer mensajes de texto 🙂 ¿Me lo escribes?').catch(() => undefined);
             continue;
           }
+          // Si llegó pulsando un anuncio de «enviar mensaje», el aviso trae cuál y con qué titular. Es lo único
+          // que permite decirle después al negocio qué anuncio le trajo clientes de verdad.
+          anotarOrigen(`meta:${m.from}`, deMeta((m as { referral?: Record<string, unknown> }).referral));
           enqueue(m.from, text, m.id, names.get(m.from));
         }
       }

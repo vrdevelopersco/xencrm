@@ -60,6 +60,13 @@ export const env = {
   whatsappAllowedNumbers: list(process.env.WHATSAPP_ALLOWED_NUMBERS),
   // Traer lo ya conversado al vincular el número: solo para aprender qué preguntan y cómo atiende el negocio.
   whatsappImportHistory: bool(process.env.WHATSAPP_IMPORT_HISTORY, false),
+  /** Arranca sin voz: recibe y guarda, pero no contesta. Se cambia desde el tablero (Canales). */
+  whatsappSoloEscucha: bool(process.env.WHATSAPP_SOLO_ESCUCHAR, false),
+  /**
+   * Quién tiene la sesión de WhatsApp. 'local' la abre este mismo proceso; 'puente' la tiene un conector en otra
+   * máquina, porque WhatsApp rechaza las conexiones que salen de un alojamiento compartido.
+   */
+  whatsappModo: (process.env.WHATSAPP_MODO === 'puente' ? 'puente' : 'local') as 'local' | 'puente',
   debounceMs: num(process.env.DEBOUNCE_MS, 1500),
 
   dbPath: process.env.DB_PATH || './data/aiva.db',

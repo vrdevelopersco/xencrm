@@ -48,6 +48,38 @@ Por eso: **el historial llena las preguntas, el negocio llena las respuestas.**
   mismo camino de *Por verificar* y *Enseñar*, que ya existe y ya está probado.
 - Si un texto de estilo trae una cifra, se descarta: el estilo se describe, no se cita.
 
+## Las credenciales se tapan antes de guardar
+
+Un grupo de soporte no solo trae conversación: trae accesos. «Usuario: … Clave: …», claves temporales, tokens,
+enlaces con la clave dentro. Eso no puede quedar guardado en un CRM ni salir en una pantalla, así que se tapa
+**antes de escribir en la base**, no como filtro de después (`src/crm/secretos.ts`). Pasa por ahí todo lo que
+entra: el chat que se trae como conversación y el mismo chat leído para aprender el estilo.
+
+Tapa de más antes que de menos. Una etiqueta que abre renglón y lleva dos puntos anuncia un valor, y el valor se
+va: si la etiqueta quedó sola («Clave temporal:»), se va el renglón siguiente completo. Lo que no se toca es la
+frase donde solo se *habla* de una clave («recuérdanos la clave de administrador»), que es justo de donde se
+aprende cómo atienden.
+
+## Dos caminos, no uno
+
+El mismo archivo exportado sirve para dos cosas distintas, y conviene no confundirlas:
+
+| | `crm/historial.ts` | `crm/importar.ts` |
+|---|---|---|
+| Para qué | Aprender **cómo atienden** y qué les preguntan | Tener la conversación **en el tablero** |
+| Dónde queda | Tabla `import_messages`, aparte | Como una ficha más, con prefijo `wa:hist-` |
+| Qué se ve | Propuestas que una persona confirma | La conversación con su historial y quién contestó |
+| Cómo se deshace | Borrar el historial importado | Quitar las traídas (no toca ninguna real) |
+
+Lo del equipo entra como respuesta **de una persona**, con su nombre —nunca como si lo hubiera dicho el
+asistente—, y la conversación cae en la columna que le corresponde por lo reciente que sea: un grupo que se
+apagó hace meses no es trabajo pendiente.
+
+🪤 WhatsApp exporta con el formato de fecha del teléfono que exportó: `11/08/26` es 11 de agosto en un archivo y
+8 de noviembre en otro. El orden se deduce del archivo entero antes de leer nada; adivinar mal manda la
+conversación al futuro. Y sus propios avisos (creó el grupo, añadió a alguien, multimedia omitido) vienen con un
+carácter invisible al inicio: por ahí se reconocen, no por las frases, que cambian con el idioma del teléfono.
+
 ## Antes de tocar un solo mensaje
 
 Son datos personales de terceros (Ley 1581, Habeas Data). El negocio es el responsable y aiva el encargado:

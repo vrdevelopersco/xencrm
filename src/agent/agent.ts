@@ -1,4 +1,5 @@
 import { business, env } from '../config.js';
+import { soloEscucha, type ChannelId } from '../channels/switches.js';
 import { businessSheet, retrieve, formatContext } from '../rag/retriever.js';
 import { getDocs, productsMentionedIn, type ScoredDoc } from '../rag/store.js';
 import { generate, estimateTokens, fallbackOrder, type Engine } from '../llm/engines.js';
@@ -110,6 +111,15 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     lastRole.delete(msg.userId);
     if (contact) purgeContact(msg.userId);
     return { ...base, text: 'Listo, empezamos de cero 🙂', intent: 'saludo', engine: 'template', ms: Date.now() - started };
+  }
+
+  // El canal está en «solo escuchar»: entra todo al CRM, contesta una persona. Se corta aquí, antes del
+  // modelo, así que además no cuesta nada.
+  if (soloEscucha(msg.channel as ChannelId)) {
+    recordCustomerMessage(msg.userId, text, 'humano');
+    scheduleAnalysis(msg.userId);
+    console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} canal en solo escuchar, sin respuesta automática`);
+    return { ...base, text: '', silent: true, intent: 'humano', engine: 'none', route: 'solo escuchar', ms: Date.now() - started };
   }
 
   // Una persona del equipo tiene la conversación: se registra y analiza, pero no se responde.

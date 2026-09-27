@@ -40,9 +40,22 @@ if (env.webEnabled) {
 }
 // WhatsApp por QR: lo decide el tablero (Canales) y, mientras nadie lo cambie, WHATSAPP_ENABLED.
 const { channelOn } = await import('./channels/switches.js');
-if (channelOn('whatsapp')) {
+if (channelOn('whatsapp') && env.whatsappModo === 'local') {
   const { startWhatsApp } = await import('./channels/whatsapp.js');
   await startWhatsApp();
+}
+// Avisa al equipo por su propio WhatsApp cuando alguien lleva esperando más de lo prometido. Apagado hasta que
+// alguien diga a quién avisar (Canales › Avisos).
+const { empezarAVigilar } = await import('./crm/vigilante.js');
+empezarAVigilar();
+
+if (env.whatsappModo === 'puente') {
+  // La sesión la tiene un conector en otra máquina (ver channels/puente.ts). Aquí solo se recibe lo que manda y
+  // se le deja en el buzón lo que haya que enviar.
+  const { registerSender } = await import('./crm/outbox.js');
+  const { encolarSalida } = await import('./channels/puente.js');
+  registerSender('whatsapp', async (userId, text) => encolarSalida(userId, text));
+  console.log('[whatsapp] modo conector: la sesión la abre otra máquina y esto le sirve de buzón.');
 }
 if (!env.webEnabled && !channelOn('whatsapp')) {
   console.log('Ningún canal habilitado (WEB_ENABLED / WHATSAPP_ENABLED). Usa `pnpm chat` para probar en terminal.');

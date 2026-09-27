@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-historial-')), 'aiva.db');
 const { guardarImportados, resumenImportado, temasFrecuentes, decidirTema, muestraDeEstilo, leerChatExportado, borrarImportado } = await import('../crm/historial.js');
-const { allDocs } = await import('../rag/store.js');
+const { allDocs, getDb } = await import('../rag/store.js');
 
 let fail = 0;
 const check = (name: string, ok: boolean, detail = '') => {
@@ -101,6 +101,15 @@ check('entiende la fecha y la hora', new Date(leidos[0]!.ts).getHours() === 9 &&
 const cuantos = resumenImportado().mensajes;
 check('se puede borrar todo lo importado', borrarImportado() === cuantos && resumenImportado().mensajes === 0, String(cuantos));
 check('y con eso se van las decisiones', temasFrecuentes().length === 0);
+
+// 🪤 Estos chats traen claves de los clientes: ni para aprender el estilo pueden quedar guardadas.
+const conClave = leerChatExportado(
+  '[11/08/26, 6:24:41 p. m.] Soporte: Usuario: admin@nomina-ejemplo.co\nPass: Clave-ejemplo-2026\n[11/08/26, 6:25:10 p. m.] Marta: gracias',
+  { delNegocio: ['Soporte'] },
+);
+guardarImportados(conClave, 'prueba');
+const guardado = JSON.stringify(getDb().prepare('SELECT content FROM import_messages').all());
+check('lo guardado para entrenar no trae credenciales', !guardado.includes('Clave-ejemplo-2026') && !guardado.includes('admin@nomina-ejemplo.co'), guardado.slice(0, 200));
 
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

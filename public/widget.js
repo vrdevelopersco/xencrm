@@ -169,7 +169,10 @@
     fetch(BASE + '/api/chat', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ sessionId: sessionId, message: text })
+      // De dónde viene: la dirección de la página (con los utm_ de la campaña) y quién lo mandó. Solo hace
+      // falta con el primer mensaje —después ya está anotado—, pero mandarlo siempre sale más barato que
+      // llevar la cuenta, y el servidor guarda únicamente el primero.
+      body: JSON.stringify({ sessionId: sessionId, message: text, origen: { url: location.href, referente: document.referrer || '' } })
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {

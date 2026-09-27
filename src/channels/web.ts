@@ -14,6 +14,7 @@ import { getMessages } from '../agent/memory.js';
 import { getContact } from '../crm/contacts.js';
 import { onEvent } from '../crm/events.js';
 import { registerSender } from '../crm/outbox.js';
+import { anotarOrigen, deLaUrl } from '../crm/origen.js';
 import { mountAdmin } from './admin.js';
 import { mountCalendar } from './calendar.js';
 import { channelOn } from './switches.js';
@@ -21,7 +22,7 @@ import { metaConfigured, mountMeta } from './meta.js';
 import { INSTANCE, startPublicCheck } from './public-check.js';
 import { createMcpServer } from '../mcp/server.js';
 
-const app = new Hono<{ Bindings: HttpBindings }>();
+export const app = new Hono<{ Bindings: HttpBindings }>();
 
 const originOpt = env.allowedOrigins.includes('*') ? '*' : env.allowedOrigins;
 app.use('/api/*', cors({ origin: originOpt }));
@@ -29,7 +30,9 @@ app.use('/mcp', cors({ origin: originOpt, allowHeaders: ['content-type', 'mcp-se
 
 // ---------- Rate limit simple en memoria (por IP) ----------
 const buckets = new Map<string, { n: number; reset: number }>();
-function rateLimited(key: string, limit = 30, windowMs = 60_000): boolean {
+// Exportada para poder probarla: es lo único que separa el chat público de que alguien gaste el dinero del
+// cliente llamando al modelo en bucle.
+export function rateLimited(key: string, limit = 30, windowMs = 60_000): boolean {
   const now = Date.now();
   const b = buckets.get(key);
   if (!b || b.reset < now) {
@@ -54,7 +57,12 @@ app.get('/health', (c) =>
 );
 
 app.post('/api/chat', async (c) => {
-  const body = (await c.req.json().catch(() => null)) as { sessionId?: string; message?: string; name?: string } | null;
+  const body = (await c.req.json().catch(() => null)) as {
+    sessionId?: string;
+    message?: string;
+    name?: string;
+    origen?: { url?: string; referente?: string };
+  } | null;
   const message = body?.message?.toString().trim();
   if (!message) return c.json({ error: 'message requerido' }, 400);
   if (!channelOn('web')) return c.json({ error: 'El chat está apagado por ahora.' }, 503);
@@ -64,6 +72,8 @@ app.post('/api/chat', async (c) => {
   if (rateLimited(`s:${sessionId}`, 20) || rateLimited(`ip:${clientIp(c)}`, 200)) {
     return c.json({ error: 'Demasiados mensajes, espera un momento.' }, 429);
   }
+  // De dónde vino, antes de atender: si la conversación es nueva queda anotado con su campaña.
+  if (body?.origen?.url) anotarOrigen(`web:${sessionId}`, deLaUrl(String(body.origen.url), String(body.origen.referente ?? '')));
   const reply = await handleMessage({
     userId: `web:${sessionId}`,
     channel: 'web',

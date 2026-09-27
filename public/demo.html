@@ -9,21 +9,13 @@
     main{max-width:720px;margin:0 auto;padding:64px 24px}
     h1{font-size:28px;margin:0 0 8px}
     p{color:#4b5563}
-    code{background:#eef0f2;padding:2px 6px;border-radius:4px;font-size:14px}
-    pre{background:#1f2937;color:#e5e7eb;padding:16px;border-radius:10px;overflow:auto;font-size:13px}
   </style>
 </head>
 <body>
   <main>
     <h1>__STORE_NAME__</h1>
-    <p>Esta es una página de demostración. El botón de chat de abajo a la derecha es el widget del asistente; funciona igual en cualquier sitio donde pegues este snippet:</p>
-    <pre id="snippet"></pre>
-    <p>Prueba preguntar por productos, envíos o pagos, y también algo fuera de tema (por ejemplo, una pregunta de programación) para ver el límite del asistente.</p>
+    <p>Escríbele al asistente en el botón de abajo a la derecha. Pregúntale por lo que ofrece el negocio, y también algo fuera de tema, para ver hasta dónde contesta.</p>
   </main>
-  <script>
-    var base = location.origin + location.pathname.replace(/\/(index\.html)?$/, '');
-    document.getElementById('snippet').textContent = '<script src="' + base + '/widget.js" async><\/script>';
-  </script>
   <script src="widget.js" async></script>
 </body>
 </html>

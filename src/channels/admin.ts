@@ -20,9 +20,15 @@ import { listNotifications, startNotifications } from '../crm/notifications.js';
 import { usageSummary } from '../llm/usage.js';
 import { entrar as entrarALaConversacion, salir as salirDeLaConversacion, quienesEstan } from '../crm/presencia.js';
 import { actividadPorHora, nuevasPorDia, semanaContraSemana } from '../crm/series.js';
+import { horarioDelNegocio, resumenTiempos } from '../crm/tiempos.js';
+import { origenDe, porCampana } from '../crm/origen.js';
+import { aQuienAvisar, loQueHayQueAvisar } from '../crm/vigilante.js';
+import { enviarSuelto } from '../crm/outbox.js';
+import { getSetting, setSetting } from '../crm/settings.js';
 import { accentOn, logoUrl } from '../brand.js';
 import { runIngest } from '../rag/ingest.js';
 import { archivoDemo, cargar as cargarDemo, cuantas as cuantasDemo, quitar as quitarDemo } from '../crm/demo.js';
+import { cuantas as cuantasImportadas, importarChat, importarMensajes, quitar as quitarImportadas } from '../crm/importar.js';
 import { armar as armarRespaldo, restaurar as restaurarRespaldo, revisar as revisarRespaldo } from '../crm/respaldo.js';
 import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
@@ -30,20 +36,26 @@ import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
 import { channelCards, toggleChannel } from './registry.js';
+import { diagnosticoDeSalida } from './salida.js';
+import { cierres, olvidarSesionWhatsApp } from './whatsapp.js';
+import { anotarEstadoPuente, recogerSalida, sinEntregar, type EstadoPuente } from './puente.js';
+import { channelOn } from './switches.js';
+import { handleMessage } from '../agent/agent.js';
 import { saveMetaCredentials } from './meta-credentials.js';
 import { checkPublicUrl, publicStatus } from './public-check.js';
 import { backupNow, backupStatus } from '../rag/backup.js';
 import { findDuplicates, keeperOf, mergeContacts } from '../crm/merge.js';
 import { getProfile, pendingFields, PROFILE_FIELDS, saveProfile } from '../profile.js';
-import { borrarImportado, decidirTema, expresionesCandidatas, guardarImportados, leerChatExportado, muestraDeEstilo, resumenImportado, temasFrecuentes, vocabularioDelNegocio } from '../crm/historial.js';
+import { chatsImportados, borrarImportado, decidirTema, expresionesCandidatas, guardarImportados, leerChatExportado, muestraDeEstilo, resumenImportado, temasFrecuentes, vocabularioDelNegocio } from '../crm/historial.js';
 import { ruleReading } from '../agent/teach.js';
 import { indexProfile } from '../rag/profile-index.js';
 import { exportDictionary, getDictionary, importDictionary } from '../agent/dictionary.js';
 import { teachExpression } from '../agent/teach.js';
 import { closeMisses, listMisses, noteMiss, MISS_KINDS, type MissKind } from '../crm/misses.js';
 import { answerVerification, dismissVerification, listVerifications } from '../crm/verifications.js';
-import type { ChannelId } from './switches.js';
+import { setSoloEscucha, soloEscucha as soloEscuchaDe, type ChannelId } from './switches.js';
 import type { Contact } from '../crm/contacts.js';
+import { cabecerasDeSiempre, soloDesdeAqui } from '../cabeceras.js';
 
 /** Temperatura y recap (hechos de la ficha + próxima cita) para cada contacto que ve el tablero. */
 function forBoard<T extends Contact>(list: T[]) {
@@ -56,13 +68,23 @@ export const ADMIN_TOKEN = env.adminToken || randomBytes(12).toString('hex');
 
 export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   startNotifications();
+  // Las mismas de la consola: el tablero también se puede meter en un marco ajeno, y sus descargas (los CSV)
+  // no deben interpretarse como otra cosa.
+  app.use('/admin', cabecerasDeSiempre);
+  app.use('/admin.js', cabecerasDeSiempre);
+  app.use('/admin/api/*', cabecerasDeSiempre);
+  app.use('/admin/api/*', soloDesdeAqui);
   app.get('/admin', (c) => c.html(readFileSync(new URL('../../public/admin.html', import.meta.url), 'utf8')));
   app.get('/admin.js', (c) =>
     c.body(readFileSync(new URL('../../public/admin.js', import.meta.url), 'utf8'), 200, { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'no-cache' }),
   );
 
   app.use('/admin/api/*', async (c, next) => {
-    const token = c.req.header('x-admin-token') ?? c.req.query('token');
+    // 🪤 El token por la dirección queda escrito en los registros de acceso del servidor, del túnel y de
+    // cualquier proxy por delante. Se acepta SOLO en el flujo en vivo, que es lo único que no puede mandar
+    // cabeceras (EventSource no las admite); todo lo demás va por cabecera o no entra.
+    const porLaUrl = c.req.path.endsWith('/admin/api/stream') ? c.req.query('token') : undefined;
+    const token = c.req.header('x-admin-token') ?? porLaUrl;
     if (token !== ADMIN_TOKEN) return c.json({ error: 'no autorizado' }, 401);
     await next();
   });
@@ -111,6 +133,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       replyWindow: replyWindow(id),
       number: contactNumber(contact), // para escribirle o llamarlo desde el tablero
       presentes: quienesEstan(id), // quién más está metido aquí ahora mismo
+      origen: origenDe(id), // por dónde llegó: sirve al atender y para saber qué anuncio trae clientes
     });
   });
 
@@ -382,6 +405,31 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     return c.json({ leidos: mensajes.length, nuevos, resumen: resumenImportado(), temas: temasFrecuentes() });
   });
 
+  /**
+   * Traer al tablero lo que se aprendió: cada chat del historial se vuelve una conversación con su ficha. Es
+   * distinto de aprender —eso ya pasó—: esto es para que el equipo vea a su gente y pueda seguirles la pista.
+   * Se puede deshacer: todo lo traído lleva el prefijo `wa:hist-` y se quita sin tocar nada real.
+   */
+  app.post('/admin/api/historial/al-tablero', (c) => {
+    const chats = chatsImportados();
+    if (!chats.length) return c.json({ error: 'todavía no hay historial que traer' }, 400);
+    let fichas = 0;
+    let mensajes = 0;
+    for (const { chat, mensajes: lote } of chats) {
+      // El nombre visible: cómo se llama quien escribe, y si no, su número.
+      const suyo = lote.find((m) => m.role === 'user' && m.autor && !/^\d+$/.test(m.autor))?.autor;
+      const nombre = suyo || chat.split('@')[0] || chat;
+      try {
+        const hecho = importarMensajes(lote, { nombre });
+        fichas++;
+        mensajes += hecho.mensajes;
+      } catch {
+        // Un chat sin nada legible no frena a los demás.
+      }
+    }
+    return c.json({ ok: true, fichas, mensajes, enElTablero: cuantasImportadas() });
+  });
+
   app.delete('/admin/api/historial', (c) => c.json({ borrados: borrarImportado() }));
 
   // Frases que no entendimos: se enseñan como expresiones del diccionario o se marcan como revisadas.
@@ -450,6 +498,108 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       return c.json({ error: (err as Error).message }, 400);
     }
     return c.json(channelCards());
+  });
+
+  /**
+   * «Solo escuchar» de un canal: entra todo al CRM y contesta una persona. Se usa al enchufar el WhatsApp de un
+   * negocio de verdad: primero se mira y se aprende, y se le da voz al asistente cuando el negocio lo diga.
+   */
+  app.post('/admin/api/channels/:id/escucha', async (c) => {
+    const id = c.req.param('id') as ChannelId;
+    if (!['web', 'whatsapp', 'meta', 'mcp'].includes(id)) return c.json({ error: 'canal desconocido' }, 404);
+    const body = (await c.req.json().catch(() => ({}))) as { soloEscucha?: boolean };
+    if (typeof body.soloEscucha !== 'boolean') return c.json({ error: 'soloEscucha requerido' }, 400);
+    setSoloEscucha(id, body.soloEscucha);
+    return c.json(channelCards());
+  });
+
+  /**
+   * El pulso de WhatsApp de un vistazo: sirve para acompañar a alguien mientras vincula el número sin tener que
+   * mirar cinco pantallas. Dice en qué punto va, si hay código esperando, cuántas conversaciones entraron y
+   * cuánto historial lleva sincronizado.
+   */
+  app.get('/admin/api/whatsapp/pulso', (c) => {
+    const wa = channelCards().find((x) => x.id === 'whatsapp');
+    const desde = Date.now() - 86400_000;
+    const db = getDb();
+    const hoy = db.prepare("SELECT COUNT(*) n FROM messages WHERE ts > ? AND user_id LIKE 'wa:%'").get(desde) as { n: number };
+    const gente = db.prepare("SELECT COUNT(DISTINCT user_id) n FROM messages WHERE ts > ? AND user_id LIKE 'wa:%'").get(desde) as { n: number };
+    const ultimos = (db.prepare(
+      "SELECT u.id, u.name, u.last_message_at, (SELECT content FROM messages WHERE user_id = u.id ORDER BY ts DESC LIMIT 1) ultimo FROM users u WHERE u.id LIKE 'wa:%' ORDER BY u.last_message_at DESC LIMIT 8",
+    ).all() as { id: string; name: string | null; last_message_at: number | null; ultimo: string | null }[]).map((r) => ({
+      quien: r.name || r.id.replace(/^wa:/, '').split('@')[0],
+      cuando: r.last_message_at,
+      ultimo: (r.ultimo ?? '').slice(0, 80),
+    }));
+    return c.json({
+      estado: wa?.state ?? 'desconocido',
+      detalle: wa?.detail ?? null,
+      encendido: Boolean(wa?.on),
+      soloEscucha: soloEscuchaDe('whatsapp'),
+      esperandoCodigo: wa?.state === 'esperando_qr',
+      conversaciones: (getDb().prepare("SELECT COUNT(*) n FROM users WHERE id LIKE 'wa:%'").get() as { n: number }).n,
+      mensajes24h: hoy.n,
+      personas24h: gente.n,
+      historial: resumenImportado(),
+      cierres,
+      ultimos,
+    });
+  });
+
+  /**
+   * ¿Puede este servidor hablar con WhatsApp? Cuando el código QR no aparece, desde fuera no se distingue un
+   * fallo del programa de una puerta cerrada en el alojamiento. Esto lo dice con datos.
+   */
+  app.get('/admin/api/whatsapp/salida', async (c) => c.json(await diagnosticoDeSalida()));
+
+  /**
+   * Desvincular y empezar de cero. Es la única forma de volver a recibir lo ya conversado, porque WhatsApp lo
+   * manda solo al emparejar; y es también cómo se sale del atasco cuando cierran la sesión desde el teléfono.
+   */
+  app.post('/admin/api/whatsapp/desvincular', async (c) => {
+    await olvidarSesionWhatsApp();
+    const body = (await c.req.json().catch(() => ({}))) as { volverAEncender?: boolean };
+    if (body.volverAEncender !== false) await toggleChannel('whatsapp', true);
+    return c.json(channelCards());
+  });
+
+  /**
+   * El buzón del conector de WhatsApp (ver `channels/puente.ts`). Son tres llamadas y las hace siempre él, que
+   * es quien puede: vive detrás del router de una casa y no tiene dirección a la que llamarle.
+   */
+  app.post('/admin/api/puente/estado', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { estado?: string; qr?: string; me?: string; error?: string };
+    const estados = ['apagado', 'conectando', 'esperando_qr', 'conectado', 'sesion_cerrada'];
+    if (!body.estado || !estados.includes(body.estado)) return c.json({ error: 'estado desconocido' }, 400);
+    anotarEstadoPuente({ estado: body.estado as EstadoPuente['estado'], qr: body.qr, me: body.me, error: body.error });
+    // De paso se le dice lo que necesita saber para actuar, y así el conector no consulta nada más.
+    return c.json({ ok: true, debeEstarEncendido: channelOn('whatsapp'), soloEscucha: soloEscuchaDe('whatsapp'), traerHistorial: business.crm.stages.length > 0 && env.whatsappImportHistory, porEnviar: sinEntregar() });
+  });
+
+  app.post('/admin/api/puente/entrante', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { jid?: string; texto?: string; nombre?: string };
+    const jid = String(body.jid ?? '').trim();
+    const texto = String(body.texto ?? '').trim();
+    if (!jid || !texto) return c.json({ error: 'falta el remitente o el texto' }, 400);
+    if (texto.length > 4000) return c.json({ error: 'mensaje demasiado largo' }, 413);
+    const respuesta = await handleMessage({
+      userId: `wa:${jid}`,
+      channel: 'whatsapp',
+      text: texto,
+      userName: body.nombre ? String(body.nombre).slice(0, 60) : null,
+    });
+    // Lo que el asistente conteste vuelve en la misma respuesta: el conector lo manda y se ahorra una vuelta.
+    return c.json({ ok: true, responder: respuesta.silent || !respuesta.text ? null : respuesta.text });
+  });
+
+  app.get('/admin/api/puente/salida', (c) => c.json({ mensajes: recogerSalida() }));
+
+  /** Lo que ya estaba conversado, que el conector manda en tandas para que el negocio no empiece de cero. */
+  app.post('/admin/api/puente/historial', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { mensajes?: { chat: string; autor: string; role: 'user' | 'assistant'; content: string; ts: number }[] };
+    const lote = Array.isArray(body.mensajes) ? body.mensajes.slice(0, 2000) : [];
+    if (!lote.length) return c.json({ nuevos: 0 });
+    return c.json({ nuevos: guardarImportados(lote, 'whatsapp'), resumen: resumenImportado() });
   });
 
   // Enlace de suscripción y estado de los calendarios del dueño que bloquean la agenda.
@@ -560,6 +710,33 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     }
   });
 
+  /**
+   * Traer un chat exportado de WhatsApp **como conversación** del tablero: el grupo de soporte de un cliente
+   * queda con su ficha y su historial, no como un archivo que nadie vuelve a abrir.
+   *
+   * 🪤 Lo importado tapa credenciales antes de guardar (ver `crm/importar.ts`) y lleva el prefijo `wa:hist-`,
+   * así que se quita exacto sin tocar una conversación real.
+   */
+  app.get('/admin/api/importar', (c) => c.json({ cuantas: cuantasImportadas() }));
+
+  app.post('/admin/api/importar', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { on?: boolean; texto?: string; nombre?: string; delNegocio?: string[]; etapa?: string };
+    if (body.on === false) return c.json({ ok: true, quitadas: quitarImportadas(), cuantas: cuantasImportadas() });
+    const texto = String(body.texto ?? '');
+    if (!texto.trim()) return c.json({ error: 'falta el archivo del chat' }, 400);
+    if (texto.length > 8_000_000) return c.json({ error: 'ese archivo es demasiado grande' }, 413);
+    try {
+      const hecho = importarChat(texto, {
+        nombre: String(body.nombre ?? '').trim() || 'Chat importado',
+        delNegocio: Array.isArray(body.delNegocio) ? body.delNegocio.map(String) : [],
+        etapa: body.etapa,
+      });
+      return c.json({ ok: true, ...hecho, cuantas: cuantasImportadas() });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  });
+
   app.post('/admin/api/reindexar', async (c) => {
     const que = c.req.query('que');
     const only = que === 'products' || que === 'knowledge' || que === 'site' ? que : undefined;
@@ -569,6 +746,67 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     } catch (err) {
       return c.json({ error: (err as Error).message }, 500);
     }
+  });
+
+  /**
+   * Cuánto se tarda en contestar, y quién. De aquí sale el acuerdo de servicio: el objetivo se guarda por
+   * cliente (no hay uno universal: una boutique y una financiera no prometen lo mismo) y se cambia en caliente,
+   * sin reiniciar nada.
+   */
+  app.get('/admin/api/tiempos', (c) => {
+    const dias = Math.min(90, Math.max(1, Number(c.req.query('dias') ?? 14) || 14));
+    const acuerdoMin = getSetting('sla.minutos', 15);
+    const r = resumenTiempos({ desde: Date.now() - dias * 86400_000, acuerdoMin });
+    // Quien espera se enseña con su nombre y su canal: una lista de números no sirve para ir a atender a nadie.
+    const esperando = r.esperando.map((e) => {
+      const ficha = getContact(e.userId);
+      return { ...e, nombre: ficha?.name || e.userId.replace(/^\w+:/, '').split('@')[0], canal: ficha?.channel ?? null };
+    });
+    return c.json({ dias, zona: business.timezone, horario: horarioDelNegocio(), ...r, esperando });
+  });
+
+  app.put('/admin/api/tiempos/acuerdo', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { minutos?: number };
+    const minutos = Number(body.minutos);
+    if (!Number.isFinite(minutos) || minutos < 1 || minutos > 10080) return c.json({ error: 'pon los minutos, entre 1 y una semana' }, 400);
+    setSetting('sla.minutos', Math.round(minutos));
+    return c.json({ ok: true, minutos: Math.round(minutos) });
+  });
+
+  /** De dónde salió cada conversación y en qué terminó: el embudo por campaña. */
+  app.get('/admin/api/origenes', (c) => {
+    const dias = Math.min(365, Math.max(1, Number(c.req.query('dias') ?? 30) || 30));
+    return c.json({ dias, ...porCampana({ desde: Date.now() - dias * 86400_000 }) });
+  });
+
+  /**
+   * A quién avisar cuando alguien lleva esperando de más. Es lo único que funciona con el navegador cerrado, y
+   * por eso va por WhatsApp: es lo que la gente mira.
+   */
+  app.get('/admin/api/avisos', (c) => c.json({ numeros: aQuienAvisar(), acuerdoMin: getSetting('sla.minutos', 15), pendientes: loQueHayQueAvisar().length }));
+
+  app.put('/admin/api/avisos', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { numeros?: unknown };
+    const numeros = (Array.isArray(body.numeros) ? body.numeros : [])
+      .map((n) => String(n).replace(/\D/g, ''))
+      .filter((n) => n.length >= 8 && n.length <= 15)
+      .slice(0, 5);
+    setSetting('avisos.whatsapp', numeros);
+    return c.json({ ok: true, numeros });
+  });
+
+  /** Mandar uno de prueba, para comprobar que llega antes de confiar en esto. */
+  app.post('/admin/api/avisos/probar', async (c) => {
+    const numeros = aQuienAvisar();
+    if (!numeros.length) return c.json({ error: 'primero pon a quién avisar' }, 400);
+    let entregados = 0;
+    for (const n of numeros) {
+      const ok =
+        (await enviarSuelto('whatsapp', `wa:${n}@s.whatsapp.net`, `✅ Prueba de avisos de ${business.business.name}. Si lees esto, los avisos funcionan.`)) ||
+        (await enviarSuelto('meta', `meta:${n}`, `✅ Prueba de avisos de ${business.business.name}. Si lees esto, los avisos funcionan.`));
+      if (ok) entregados++;
+    }
+    return c.json({ ok: entregados > 0, entregados, de: numeros.length });
   });
 
   app.get('/admin/api/series', (c) => {

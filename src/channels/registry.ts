@@ -3,8 +3,9 @@
 import { business, env } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { metaStatus } from './meta.js';
-import { channelOn, setChannelOn, type ChannelId } from './switches.js';
-import { startWhatsApp, stopWhatsApp, whatsappStatus } from './whatsapp.js';
+import { soloEscucha, channelOn, setChannelOn, type ChannelId } from './switches.js';
+import { startWhatsApp, stopWhatsApp, whatsappStatus, qrSvg } from './whatsapp.js';
+import { estadoPuente } from './puente.js';
 
 export type CardState = 'conectado' | 'conectando' | 'esperando_qr' | 'esperando' | 'sin_configurar' | 'apagado' | 'error' | 'no_disponible';
 
@@ -17,6 +18,8 @@ export interface ChannelCard {
   detail?: string;
   on: boolean;
   canToggle: boolean;
+  /** Recibe y guarda, pero el asistente no contesta: responde una persona desde el tablero. */
+  soloEscucha?: boolean;
   /** Mensajes de clientes en los últimos 7 días, cuántas personas y cuándo llegó el último (de siempre). */
   messages7d: number;
   people7d: number;
@@ -73,7 +76,9 @@ export function channelCards(): ChannelCard[] {
   });
 
   // WhatsApp por QR (Baileys)
-  const wa = whatsappStatus();
+  // Con un conector en otra máquina, el estado de verdad es el que él reporta: aquí no hay ninguna sesión.
+  const puente = env.whatsappModo === 'puente' ? estadoPuente() : null;
+  const wa = puente ? { state: puente.estado, qr: puente.qr, me: puente.me, error: puente.error, since: puente.visto, qrSvg: puente.qr ? qrSvg(puente.qr) : undefined } : whatsappStatus();
   const waOn = channelOn('whatsapp');
   const waState: CardState = !waOn ? 'apagado' : wa.state === 'sesion_cerrada' ? 'error' : wa.state === 'apagado' ? 'conectando' : wa.state;
   cards.push({
@@ -89,6 +94,7 @@ export function channelCards(): ChannelCard[] {
           : (wa.error ?? (waState === 'conectando' ? 'Conectando…' : undefined)),
     on: waOn,
     canToggle: true,
+    soloEscucha: soloEscucha('whatsapp'),
     ...stats('whatsapp'),
     copy: [],
     steps:
@@ -192,7 +198,10 @@ export async function toggleChannel(id: ChannelId, on: boolean): Promise<void> {
   if (id === 'meta' && !metaStatus().configured) throw new Error('Primero guarda las credenciales de Meta (abajo, en «Credenciales»).');
   setChannelOn(id, on);
   if (id === 'whatsapp') {
-    if (on && whatsappStatus().state === 'apagado') await startWhatsApp();
-    if (!on) await stopWhatsApp();
+    // Con conector, encender es solo dejarlo dicho: él lo consulta al dar su siguiente señal y actúa.
+    if (env.whatsappModo === 'local') {
+      if (on && whatsappStatus().state === 'apagado') await startWhatsApp();
+      if (!on) await stopWhatsApp();
+    }
   }
 }

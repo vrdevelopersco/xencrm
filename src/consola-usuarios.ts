@@ -6,7 +6,7 @@
 // de que exista un solo usuario, y la salida de emergencia si alguien pierde su clave.
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { CLIENTES_DIR, leerIndice } from './clientes.js';
 
 export type Rol = 'super' | 'agente';
@@ -186,7 +186,17 @@ export function verificar(usuario: string, clave: string): UsuarioPublico | null
 }
 
 // ---------- Sesiones (en memoria: si la consola se reinicia, se vuelve a entrar) ----------
-const sesiones = new Map<string, { usuario: UsuarioPublico; hasta: number; maestra: boolean }>();
+const sesiones = new Map<string, { usuario: UsuarioPublico; hasta: number; maestra: boolean; sello: string }>();
+
+/**
+ * 🪤 Un resumen de la clave guardada, para que cambiarla cierre las sesiones que ya estaban abiertas. Sin esto,
+ * a una cuenta que se filtró se le cambia la clave y el que entró **sigue adentro hasta doce horas**, que es
+ * justo lo contrario de lo que uno cree que hizo al cambiarla. No guarda la clave: guarda su huella.
+ */
+const selloDe = (quien: string): string => {
+  const u = leerUsuarios().find((x) => x.usuario === quien);
+  return u ? createHash('sha256').update(u.clave).digest('hex').slice(0, 16) : '';
+};
 const DURACION = 12 * 3600_000;
 
 /**
@@ -195,7 +205,7 @@ const DURACION = 12 * 3600_000;
  */
 export function abrirSesion(usuario: UsuarioPublico, now = Date.now(), maestra = false): string {
   const token = randomBytes(24).toString('hex');
-  sesiones.set(token, { usuario, hasta: now + DURACION, maestra });
+  sesiones.set(token, { usuario, hasta: now + DURACION, maestra, sello: maestra ? '' : selloDe(usuario.usuario) });
   return token;
 }
 
@@ -211,6 +221,11 @@ export function sesionDe(token: string | undefined, now = Date.now()): UsuarioPu
   // Se relee por si le cambiaron el rol o los clientes mientras estaba adentro.
   const fresco = leerUsuarios().find((u) => u.usuario === s.usuario.usuario);
   if (!fresco || !fresco.activo) {
+    sesiones.delete(token);
+    return null;
+  }
+  // Le cambiaron la clave mientras estaba adentro: esta sesión es de antes y ya no vale.
+  if (createHash('sha256').update(fresco.clave).digest('hex').slice(0, 16) !== s.sello) {
     sesiones.delete(token);
     return null;
   }

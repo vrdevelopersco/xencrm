@@ -153,6 +153,33 @@ export function getDb(): DatabaseSync {
       titulo TEXT NOT NULL,
       ts INTEGER NOT NULL
     );
+    -- De dónde salió cada conversación (campaña, anuncio, quién la mandó). Una fila por contacto y SOLO la
+    -- primera vez: lo que trajo a alguien no cambia porque vuelva por otro lado. Ver crm/origen.ts.
+    CREATE TABLE IF NOT EXISTS origen (
+      user_id TEXT PRIMARY KEY,
+      fuente TEXT NOT NULL DEFAULT '',
+      medio TEXT NOT NULL DEFAULT '',
+      campana TEXT NOT NULL DEFAULT '',
+      contenido TEXT NOT NULL DEFAULT '',
+      termino TEXT NOT NULL DEFAULT '',
+      anuncio TEXT NOT NULL DEFAULT '',
+      clic TEXT NOT NULL DEFAULT '',
+      titular TEXT NOT NULL DEFAULT '',
+      url TEXT NOT NULL DEFAULT '',
+      referente TEXT NOT NULL DEFAULT '',
+      ts INTEGER NOT NULL
+    );
+    -- Lo que el CRM quiere mandar por WhatsApp cuando quien tiene la sesión es un conector en otra máquina. El
+    -- conector no es alcanzable desde aquí (vive detrás de un router de casa), así que no se le empuja: viene él
+    -- a recoger. Se guarda en la base y no en memoria para que un reinicio no se trague una respuesta.
+    CREATE TABLE IF NOT EXISTS wa_salida (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      texto TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      entregado_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_wa_salida_pend ON wa_salida(entregado_at, id);
     -- Decisiones tomadas desde el tablero (p. ej. qué canales están encendidos); los secretos siguen en .env.
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,

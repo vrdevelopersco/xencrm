@@ -7,7 +7,14 @@ const BOM = '﻿';
 
 /** Una celda: comillas si trae separador, comillas o saltos de línea (y las comillas de adentro, dobles). */
 function cell(v: unknown): string {
-  const s = v === null || v === undefined ? '' : String(v);
+  const crudo = v === null || v === undefined ? '' : String(v);
+  // 🪤 Excel ejecuta lo que empieza por = + - @, y estos nombres los escribe el cliente desde WhatsApp: un
+  // prospecto que se ponga `=HYPERLINK(...)` de nombre se lleva la fila cuando el dueño abre el archivo. Un
+  // apóstrofo delante lo deja como texto sin cambiar lo que se lee.
+  // Ojo: un teléfono empieza por «+» y tiene que salir tal cual, así que solo se neutraliza lo que de verdad
+  // parece una fórmula y no un número.
+  const pareceFormula = /^[=@\t\r]/.test(crudo) || (/^[+\-]/.test(crudo) && !/^[+\-][\d\s().\-]*$/.test(crudo));
+  const s = pareceFormula ? `'${crudo}` : crudo;
   return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

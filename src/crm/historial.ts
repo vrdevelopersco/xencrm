@@ -6,6 +6,7 @@ import { business } from '../config.js';
 import { getDictionary } from '../agent/dictionary.js';
 import { profileText } from '../profile.js';
 import { allDocs, getDb } from '../rag/store.js';
+import { taparSecretos } from './secretos.js';
 
 export interface MensajeImportado {
   chat: string;
@@ -25,7 +26,8 @@ export function guardarImportados(mensajes: MensajeImportado[], origen = 'whatsa
   db.exec('BEGIN');
   try {
     for (const m of mensajes) {
-      const texto = m.content.trim();
+      // 🪤 Estos chats traen claves de los clientes. Ni siquiera para aprender el estilo pueden quedar guardadas.
+      const texto = taparSecretos(m.content).texto.trim();
       if (!texto) continue;
       if (existe.get(m.chat, m.ts, texto)) continue;
       insertar.run(m.chat, m.autor, m.role, texto, m.ts, origen);
@@ -57,6 +59,20 @@ export function resumenImportado(): { mensajes: number; chats: number; desde: nu
   };
   const negocio = db.prepare("SELECT COUNT(*) n FROM import_messages WHERE role = 'assistant'").get() as { n: number };
   return { mensajes: r.n, chats: r.c, desde: r.desde, hasta: r.hasta, delNegocio: negocio.n };
+}
+
+/** Las conversaciones que hay en el historial importado, con sus mensajes, para poder traerlas al tablero. */
+export function chatsImportados(): { chat: string; mensajes: MensajeImportado[] }[] {
+  const filas = getDb()
+    .prepare('SELECT chat, autor, role, content, ts FROM import_messages ORDER BY chat, ts')
+    .all() as unknown as MensajeImportado[];
+  const por = new Map<string, MensajeImportado[]>();
+  for (const f of filas) {
+    const lista = por.get(f.chat) ?? [];
+    lista.push(f);
+    por.set(f.chat, lista);
+  }
+  return [...por.entries()].map(([chat, mensajes]) => ({ chat, mensajes }));
 }
 
 // ---------- Qué le preguntan ----------
@@ -317,14 +333,39 @@ export function expresionesCandidatas(opts: { conocidas?: (texto: string) => boo
 //   3/12/24, 9:41 a. m. - Marta: buenos días
 const LINEA_RE =
   /^\[?(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s+(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap])\.?\s?m\.?\]?\s*(?:-\s*)?([^:]{1,60}):\s?([\s\S]*)$/i;
-const SISTEMA_RE = /cifrados de extremo a extremo|se uni[oó] usando|cambi[oó] el asunto|creaste el grupo|<multimedia omitido>|imagen omitida|audio omitido|video omitido|sticker omitido|documento omitido|elimin[oó] este mensaje/i;
+// 🪤 WhatsApp marca sus propios avisos (creó el grupo, añadió a alguien, multimedia omitido) con un carácter
+// invisible al inicio, U+200E. Es más confiable que perseguir las frases una por una, que además cambian con el
+// idioma del teléfono. Sin esto, «Fulana creó el grupo» entra al tablero como si fuera un mensaje del cliente.
+const SISTEMA_RE = /^\u200e|cifrados de extremo a extremo|se uni[oó] usando|cambi[oó] el asunto|creaste el grupo|<multimedia omitido>|imagen omitida|audio omitido|video omitido|sticker omitido|documento omitido|elimin[oó] este mensaje/i;
+
+/**
+ * 🪤 WhatsApp exporta con el formato de fecha del teléfono que exportó: `11/08/26` puede ser 11 de agosto o 8 de
+ * noviembre, y el mismo negocio recibe archivos de las dos formas. Adivinar mal manda la conversación al futuro
+ * (lo vimos: chats que terminaban en 2028), así que el orden se deduce del archivo entero antes de leer nada:
+ * si en alguna línea el primer número pasa de 12, es el día; si es el segundo, es el mes. Sin pistas, día
+ * primero, que es como se escribe acá.
+ */
+export function ordenDeFechas(texto: string): 'dm' | 'md' {
+  let dia = 0;
+  let mes = 0;
+  for (const linea of texto.split(/\r?\n/)) {
+    const m = LINEA_RE.exec(linea.trim());
+    if (!m) continue;
+    if (Number(m[1]) > 12) dia++;
+    if (Number(m[2]) > 12) mes++;
+  }
+  if (dia && !mes) return 'dm';
+  if (mes && !dia) return 'md';
+  return 'dm';
+}
 
 /**
  * Convierte un chat exportado en mensajes. `delNegocio` son los nombres con los que aparece el negocio en el
  * archivo (lo que escriba cualquier otro se toma como del cliente).
  */
-export function leerChatExportado(texto: string, opts: { delNegocio: string[]; chat?: string }): MensajeImportado[] {
+export function leerChatExportado(texto: string, opts: { delNegocio: string[]; chat?: string; orden?: 'dm' | 'md' }): MensajeImportado[] {
   const negocio = new Set(opts.delNegocio.map((n) => fold(n.trim())));
+  const orden = opts.orden ?? ordenDeFechas(texto);
   const out: MensajeImportado[] = [];
   let actual: MensajeImportado | null = null;
   for (const linea of texto.split(/\r?\n/)) {
@@ -333,15 +374,17 @@ export function leerChatExportado(texto: string, opts: { delNegocio: string[]; c
       if (actual && linea.trim()) actual.content += `\n${linea.trim()}`; // mensaje de varias líneas
       continue;
     }
-    const [, d, mes, anio, hh, mm, ampm, autor, contenido] = m as unknown as string[];
+    const [, uno, dos, anio, hh, mm, ampm, autor, contenido] = m as unknown as string[];
     if (SISTEMA_RE.test(contenido ?? '')) {
       actual = null;
       continue;
     }
+    const d = orden === 'dm' ? Number(uno) : Number(dos);
+    const mes = orden === 'dm' ? Number(dos) : Number(uno);
     const y = Number(anio) < 100 ? 2000 + Number(anio) : Number(anio);
     let hora = Number(hh) % 12;
     if (ampm!.toLowerCase() === 'p') hora += 12;
-    const ts = new Date(y, Number(mes) - 1, Number(d), hora, Number(mm)).getTime();
+    const ts = new Date(y, mes - 1, d, hora, Number(mm)).getTime();
     actual = {
       chat: opts.chat ?? autor!.trim(),
       autor: autor!.trim(),

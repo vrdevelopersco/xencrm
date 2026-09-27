@@ -263,6 +263,8 @@ dialog.panel #detalle{padding:16px 18px 24px;overflow:auto;flex:1}
 .cliente .cabeza{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .sigla{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:var(--oro-papel);
   border:1px solid #f0e4b0;color:var(--oro);font-weight:700;font-size:15px;flex:none;letter-spacing:-.02em}
+.sigla.con-logo{background:#fff;border-color:var(--vidrio-borde);padding:5px}
+.sigla.con-logo img{width:100%;height:100%;object-fit:contain;display:block}
 .cliente .quien{min-width:180px;flex:1}
 .vistazo{display:flex;gap:8px;flex-wrap:wrap}
 .dato{display:inline-flex;align-items:baseline;gap:5px;background:var(--baja-soft);border-radius:10px;
@@ -471,7 +473,18 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   var token = localStorage.getItem('aiva.consola.token') || '';
   var sesion = localStorage.getItem('aiva.consola.sesion') || '';
   var yo = null, esSuper = false;
+  // Si algo se rompe dentro de una promesa y nadie lo atrapa, que al menos quede dicho. Sin esto, la pantalla se
+  // queda a medias y no hay ni un rastro de qué pasó.
+  addEventListener('unhandledrejection', function (e) {
+    if (e.reason && e.reason.sesion) return; // la sesión vencida ya se avisa en su sitio
+    console.error('[aiva] error sin atrapar:', e.reason);
+  });
 
+  // 🪤 Lo único que puede sacar a alguien de la consola es que su sesión ya no valga (401). Nada más: ni un 404
+  // de un servidor a medio actualizar, ni una respuesta que no sea JSON, ni un error al pintar. Antes cualquiera
+  // de esas reventaba la promesa y terminaba en el `catch` de cargar(), que cerraba la sesión —el resultado era
+  // «entro y me saca», sin mensaje y sin pista de qué falló—. Ahora un fallo así vuelve como `{ error }`, que es
+  // lo que el resto del código ya sabe mostrar.
   function api(path, opts) {
     opts = opts || {};
     var headers = {};
@@ -479,7 +492,22 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     if (token) headers['x-consola-token'] = token;
     if (opts.body) headers['content-type'] = 'application/json';
     return fetch('/api' + path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined })
-      .then(function (r) { if (r.status === 401) { entrar(false, 'Vuelve a entrar'); throw new Error('401'); } return r.json(); });
+      .then(function (r) {
+        if (r.status === 401) {
+          entrar(false, 'Vuelve a entrar');
+          var fin = new Error('sesión vencida');
+          fin.sesion = true;
+          throw fin;
+        }
+        return r.text().then(function (t) {
+          try {
+            return t ? JSON.parse(t) : {};
+          } catch (e) {
+            console.error('[aiva] ' + path + ' contestó ' + r.status + ' y no es JSON:', t.slice(0, 200));
+            return { error: 'El servidor contestó ' + r.status + ' en ' + path + '. Puede estar a medio actualizar.' };
+          }
+        });
+      });
   }
   // 🪤 Entrar y salir tienen que BORRAR lo que había pintado. Sin esto, al salir de super-admin y entrar como
   // alguien que atiende un solo cliente, esa persona alcanzaba a ver —unos segundos, hasta que llegaba /yo— la
@@ -504,6 +532,40 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     $('login').hidden = ok; $('app').hidden = !ok;
     if (msg) $('login-msg').textContent = msg;
   }
+  // Entrar es la única petición que se hace sin sesión, así que no pasa por api(). Igual tiene que aguantar que
+  // el servidor conteste cualquier cosa: si revienta aquí, el mensaje se queda en «Entrando…» y no hay forma de
+  // saber qué pasó.
+  function pedirEntrar(cuerpo) {
+    return fetch('/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo) })
+      .then(function (r) {
+        return r.text().then(function (t) {
+          try {
+            return t ? JSON.parse(t) : {};
+          } catch (e) {
+            console.error('[aiva] /api/entrar contestó ' + r.status + ':', t.slice(0, 200));
+            // 502/503 al entrar casi siempre es que acaban de subir una versión y todavía está levantando. Se
+            // dice así, que es lo que pasa, en vez de enseñar un número que no significa nada para quien entra.
+            return { error: r.status === 502 || r.status === 503
+              ? 'El servidor todavía está arrancando. Vuelve a intentar en unos segundos.'
+              : 'El servidor contestó ' + r.status + ' al entrar.' };
+          }
+        });
+      })
+      .catch(function (e) {
+        console.error('[aiva] no se pudo hablar con el servidor al entrar:', e);
+        return { error: 'No se pudo hablar con el servidor.' };
+      });
+  }
+
+  // Lo que se arma después de entrar. Si algo de esto falla, se dice y se queda uno adentro: la sesión es válida.
+  function armarLaPantalla() {
+    return sesionLista().catch(function (e) {
+      if (e && e.sesion) return;
+      console.error('[aiva] entré pero no pude armar la pantalla:', e);
+      $('resumen').textContent = 'Entraste, pero algo falló al armar la pantalla. ' + ((e && e.message) || 'Mira la consola del navegador.');
+    });
+  }
+
   function sesionLista() {
     return api('/yo').then(function (d) {
       yo = d.usuario; esSuper = d.super; COLORES = d.colores || COLORES;
@@ -525,16 +587,15 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   }
   $('entrar').onclick = function () {
     $('login-msg').textContent = 'Entrando…';
-    fetch('/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ usuario: $('u').value.trim(), clave: $('p').value }) })
-      .then(function (r) { return r.json(); })
+    pedirEntrar({ usuario: $('u').value.trim(), clave: $('p').value })
       .then(function (d) {
-        if (d.error) { $('login-msg').textContent = d.error; return; }
+        if (d.error || !d.sesion) { $('login-msg').textContent = d.error || 'No se pudo entrar.'; return; }
         olvidarLoAnterior(); // nada de la sesión anterior puede quedar en pantalla
         sesion = d.sesion; token = '';
         localStorage.setItem('aiva.consola.sesion', sesion);
         localStorage.removeItem('aiva.consola.token');
         $('p').value = '';
-        entrar(true); sesionLista();
+        entrar(true); armarLaPantalla();
       });
   };
   $('ver-clave').onclick = function () {
@@ -551,16 +612,17 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   $('entrar-maestra').onclick = function () {
     var llave = $('t').value.trim();
     $('login-msg').textContent = 'Entrando…';
-    fetch('/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ maestra: llave }) })
-      .then(function (r) { return r.json(); })
+    pedirEntrar({ maestra: llave })
       .then(function (d) {
-        if (d.error) { $('login-msg').textContent = d.error; return; }
+        if (d.error || !d.sesion) { $('login-msg').textContent = d.error || 'No se pudo entrar.'; return; }
         olvidarLoAnterior();
-        sesion = d.sesion; token = llave;
+        // 🪤 La llave maestra NO se guarda: abre todos los clientes y el almacenamiento del navegador lo lee
+        // cualquier script de este origen. La sesión que acaba de abrir alcanza para todo.
+        sesion = d.sesion; token = '';
         localStorage.setItem('aiva.consola.sesion', sesion);
-        localStorage.setItem('aiva.consola.token', llave);
+        localStorage.removeItem('aiva.consola.token');
         $('t').value = '';
-        entrar(true); sesionLista();
+        entrar(true); armarLaPantalla();
       });
   };
   // Mi cuenta: cada quien se cambia lo suyo sin pedirle nada al super-admin. Con la llave maestra no hay cuenta
@@ -718,7 +780,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   // Lo que se ve al estirar una fila: cómo va el cliente y quién lo atiende. Números, no gráficas: es para
   // mirar de reojo y decidir, no para analizar (eso vive en el tablero del cliente).
   function microTablero(e) {
-    if (!e.arriba) return '<div class="small muted">La instancia está apagada: no hay nada que contar.</div>';
+    if (!e.arriba) return '<div class="small muted">Sin conexión con este cliente ahora mismo: no hay nada que contar hasta que vuelva.</div>';
     var datos = [
       [e.mensajesHoy, 'mensajes hoy'],
       [e.contactos, 'conversaciones'],
@@ -727,6 +789,9 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       [e.llegaronACita, 'llegaron a cita'],
       [e.ganadas, 'ganadas'],
       [e.efectividad == null ? '—' : e.efectividad + '%', 'efectividad'],
+      // Lo prometido y lo cumplido: es lo que un cliente pregunta primero cuando hay un acuerdo de atención.
+      [e.cumplimiento == null ? '—' : e.cumplimiento + '%', 'contestado a tiempo'],
+      [e.esperandoAhora || 0, 'esperando ahora'],
       [e.gastoMes == null ? '—' : '$' + Number(e.gastoMes).toFixed(2), 'IA · 30 días']
     ];
     return '<div class="micro">' + datos.map(function (d) {
@@ -744,6 +809,53 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       '<button class="btn sm demo-toggle">…</button></div>' +
       '<div class="small demo-estado muted">…</div>' +
       '<div class="small demo-aviso" hidden></div></div>';
+  }
+
+  // Traer un chat exportado de WhatsApp como conversación del tablero: un cliente que llega con dos años de
+  // grupo de soporte no empieza en blanco. Lo importado se tapa (credenciales) y se quita exacto.
+  function zonaImportar(slug) {
+    if (!esSuper) return '';
+    return '<div class="zona-demo" data-importar="' + esc(slug) + '">' +
+      '<div class="fila"><b class="small">Chats de WhatsApp</b><span class="grow"></span>' +
+      '<button class="btn sm imp-elegir">Traer un chat…</button>' +
+      '<button class="btn sm imp-quitar" hidden>Quitar los traídos</button></div>' +
+      '<div class="small imp-estado muted">…</div>' +
+      '<div class="imp-paso" hidden>' +
+        '<div class="fila"><input class="imp-nombre" placeholder="nombre de la conversación" style="width:220px">' +
+        '<span class="grow"></span><button class="btn sm primary imp-subir">Traer</button>' +
+        '<button class="btn sm imp-cancelar">Cancelar</button></div>' +
+        '<div class="small muted" style="margin-top:6px">Marca quién contesta <b>del negocio</b>. Lo demás entra como mensajes del cliente.</div>' +
+        '<div class="fila imp-quienes" style="flex-wrap:wrap;gap:6px;margin-top:6px"></div></div>' +
+      '<input type="file" class="imp-archivo" accept=".txt,text/plain" hidden></div>';
+  }
+
+  function estadoImportar(slug, caja) {
+    var estado = caja.querySelector('.imp-estado');
+    var quitar = caja.querySelector('.imp-quitar');
+    cli(slug + '/importar').then(function (r) {
+      if (!r || r.error) { estado.textContent = 'No se pudo consultar.'; return; }
+      var n = r.cuantas || 0;
+      quitar.hidden = !n;
+      caja.classList.toggle('encendido', n > 0);
+      estado.textContent = n
+        ? n + ' conversación(es) traídas de WhatsApp · se quitan exactas, sin tocar las de verdad'
+        : 'Exporta el chat desde WhatsApp (sin archivos) y tráelo acá: queda como una conversación más, con su historial.';
+      estado.className = 'small imp-estado ' + (n ? 'v-si' : 'muted');
+    }).catch(function () { estado.textContent = 'No se pudo consultar.'; });
+  }
+
+  // Quiénes escriben en ese archivo. Se lee acá mismo para poder preguntar cuáles son del negocio antes de
+  // mandar nada: si eso se adivina mal, las respuestas del equipo quedan como si las hubiera dicho el cliente.
+  function quienesEscriben(texto) {
+    var re = /^\[?\d{1,2}\/\d{1,2}\/\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?\s*[ap]\.?\s?m\.?\]?\s*(?:-\s*)?([^:]{1,60}):/i;
+    var cuenta = {};
+    texto.split(/\r?\n/).forEach(function (l) {
+      var m = re.exec(l.trim());
+      if (!m) return;
+      var a = m[1].trim();
+      cuenta[a] = (cuenta[a] || 0) + 1;
+    });
+    return Object.keys(cuenta).sort(function (a, b) { return cuenta[b] - cuenta[a]; }).map(function (a) { return { nombre: a, veces: cuenta[a] }; });
   }
 
   // El estado del demo y, de paso, el aviso que de verdad importa antes de mostrarle esto a alguien: si el
@@ -814,14 +926,15 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   function tarjeta(f) {
     var c = f.cliente, e = f.estado;
     var url = '/c/' + encodeURIComponent(c.slug) + '/admin';
-    var estado = e.arriba ? '<span class="chip ok">Arriba</span>' : '<span class="chip alta">Apagado</span>';
+    var estado = e.arriba ? '<span class="chip ok">Arriba</span>' : '<span class="chip media">Sin conexión</span>';
     var prio = '<span class="chip ' + (c.prioridad === 'alta' ? 'alta' : c.prioridad === 'media' ? 'media' : '') + '">' + esc(PRIORIDADES[c.prioridad] || c.prioridad) + '</span>';
 
     // Lo que importa mirar de reojo. Lo que está en cero no se pinta: el ruido esconde lo que sí pasa.
     var vistazo = e.arriba
-      ? [[e.sinLeer, 'sin leer', 'urge'], [e.esperanRespuesta, 'esperan', 'urge'], [e.porVerificar, 'por verificar', 'urge'],
+      ? [[e.acuerdoMin && e.peorEsperaMin > e.acuerdoMin ? e.peorEsperaMin + ' min' : 0, 'esperando de más', 'urge'],
+         [e.sinLeer, 'sin leer', 'urge'], [e.esperanRespuesta, 'esperan', 'urge'], [e.porVerificar, 'por verificar', 'urge'],
          [e.citas, 'citas', ''], [e.calientes, 'calientes', ''], [e.contactos, 'contactos', 'calma']]
-          .filter(function (d) { return Number(d[0]) > 0; })
+          .filter(function (d) { return typeof d[0] === 'string' ? d[0] !== '0' && d[0] !== '' : Number(d[0]) > 0; })
           .map(function (d) { return '<span class="dato ' + d[2] + '"><b>' + esc(d[0]) + '</b>' + d[1] + '</span>'; }).join('')
       : '<span class="dato calma">sin responder</span>';
 
@@ -833,7 +946,11 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
 
     return '<div class="cliente" data-slug="' + esc(c.slug) + '">' +
       '<div class="cabeza">' +
-        '<span class="sigla">' + esc(sigla(c.nombre)) + '</span>' +
+        // Con su logo, la lista se lee por la marca y no por dos letras. Si no carga, quedan las iniciales.
+        (e.logo
+          ? '<span class="sigla con-logo"><img src="/api/marca/' + encodeURIComponent(c.slug) + '" alt="" ' +
+            'onerror="this.parentNode.classList.remove(\'con-logo\');this.parentNode.textContent=' + JSON.stringify(sigla(c.nombre)) + '"></span>'
+          : '<span class="sigla">' + esc(sigla(c.nombre)) + '</span>') +
         '<div class="quien">' +
           '<div class="fila"><span class="nombre">' + esc(c.nombre) + '</span>' + estado + prio + '</div>' +
           '<div class="small muted">' + esc(c.slug) + (c.host ? ' · ' + esc(c.host) : '') +
@@ -851,7 +968,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
             '<button class="btn sm copiar" title="Copiar el token de su tablero">Token</button><button class="btn sm baja">Dar de baja</button>' : '') +
         '</div>' +
       '</div>' + pendientes +
-      '<div class="detalle" hidden>' + microTablero(e) + equipoDe(c.slug) + zonaDemo(c.slug) + '</div></div>';
+      '<div class="detalle" hidden>' + microTablero(e) + equipoDe(c.slug) + zonaDemo(c.slug) + zonaImportar(c.slug) + '</div></div>';
   }
 
   // Los clientes y, si soy super-admin, el equipo: el equipo se pinta dentro de cada fila.
@@ -865,7 +982,10 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       entrar(true);
       var filas = d.clientes || [];
       var pendientes = filas.reduce(function (a, f) { return a + f.tickets.length; }, 0);
-      $('resumen').textContent = filas.length + (filas.length === 1 ? ' cliente' : ' clientes') + ' · ' + pendientes + (pendientes === 1 ? ' cosa por atender' : ' cosas por atender');
+      var esperando = filas.reduce(function (a, f) { return a + (f.estado.esperandoAhora || 0); }, 0);
+      $('resumen').textContent = filas.length + (filas.length === 1 ? ' cliente' : ' clientes') + ' · ' + pendientes +
+        (pendientes === 1 ? ' cosa por atender' : ' cosas por atender') +
+        (esperando ? ' · ' + esperando + (esperando === 1 ? ' persona esperando respuesta' : ' personas esperando respuesta') : '');
       window.__clientes = filas;
       $('lista').innerHTML = (filas.length ? resumenDeTodos(filas) + buscadorDeClientes() : '') +
         (filas.length
@@ -911,7 +1031,9 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
           campo.click();
         };
       });
-      $('lista').querySelectorAll('.zona-demo').forEach(function (caja) {
+      // Por `data-demo`, no por la clase: la zona de importar comparte el mismo estilo `zona-demo` y entraba
+      // aquí, donde no existe ningún `.demo-toggle`.
+      $('lista').querySelectorAll('[data-demo]').forEach(function (caja) {
         var slug = caja.getAttribute('data-demo');
         estadoDemo(slug, caja);
         caja.querySelector('.demo-toggle').onclick = function () {
@@ -921,6 +1043,62 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
           cli(slug + '/demo', { method: 'POST', body: { on: encender } }).then(function (r) {
             if (r && r.error) alert('No se pudo: ' + r.error);
             estadoDemo(slug, caja); cargarTodo();
+          });
+        };
+      });
+      $('lista').querySelectorAll('[data-importar]').forEach(function (caja) {
+        var slug = caja.getAttribute('data-importar');
+        var archivo = caja.querySelector('.imp-archivo');
+        var paso = caja.querySelector('.imp-paso');
+        var quienes = caja.querySelector('.imp-quienes');
+        var nombre = caja.querySelector('.imp-nombre');
+        var pendiente = null;
+        estadoImportar(slug, caja);
+
+        caja.querySelector('.imp-elegir').onclick = function () { archivo.value = ''; archivo.click(); };
+        caja.querySelector('.imp-cancelar').onclick = function () { paso.hidden = true; pendiente = null; };
+
+        archivo.onchange = function () {
+          var f = archivo.files && archivo.files[0];
+          if (!f) return;
+          f.text().then(function (texto) {
+            var gente = quienesEscriben(texto);
+            if (!gente.length) { alert('Ese archivo no parece un chat exportado de WhatsApp.'); return; }
+            pendiente = texto;
+            nombre.value = f.name.replace(/\.txt$/i, '').replace(/^Chat de WhatsApp con /i, '').replace(/^_chat\s*/i, '').trim() || 'Chat importado';
+            quienes.innerHTML = gente.map(function (g) {
+              return '<button type="button" class="btn sm imp-quien" data-quien="' + esc(g.nombre) + '">' +
+                esc(g.nombre) + ' <span class="muted">' + g.veces + '</span></button>';
+            }).join('');
+            quienes.querySelectorAll('.imp-quien').forEach(function (b) {
+              b.onclick = function () { b.classList.toggle('primary'); };
+            });
+            paso.hidden = false;
+            nombre.focus();
+          });
+        };
+
+        caja.querySelector('.imp-subir').onclick = function () {
+          if (!pendiente) return;
+          var delNegocio = [].slice.call(quienes.querySelectorAll('.imp-quien.primary')).map(function (b) { return b.getAttribute('data-quien'); });
+          if (!delNegocio.length && !confirm('No marcaste a nadie del negocio: todo el chat va a entrar como mensajes del cliente. ¿Sigo?')) return;
+          var boton = this;
+          boton.disabled = true; boton.textContent = 'Trayendo…';
+          cli(slug + '/importar', { method: 'POST', body: { texto: pendiente, nombre: nombre.value.trim(), delNegocio: delNegocio } }).then(function (r) {
+            boton.disabled = false; boton.textContent = 'Traer';
+            if (!r || r.error) { alert('No se pudo: ' + ((r && r.error) || 'sin respuesta')); return; }
+            paso.hidden = true; pendiente = null;
+            alert('Listo: ' + r.mensajes + ' mensajes (' + r.delNegocio + ' del equipo)' +
+              (r.tapados ? '.\nSe taparon ' + r.tapados + ' credenciales que venían en el chat.' : '.'));
+            estadoImportar(slug, caja); cargarTodo();
+          });
+        };
+
+        caja.querySelector('.imp-quitar').onclick = function () {
+          if (!confirm('Esto quita SOLO las conversaciones traídas de WhatsApp. Las de verdad no se tocan. ¿Sigo?')) return;
+          cli(slug + '/importar', { method: 'POST', body: { on: false } }).then(function (r) {
+            if (r && r.error) alert('No se pudo: ' + r.error);
+            estadoImportar(slug, caja); cargarTodo();
           });
         };
       });
@@ -1011,7 +1189,14 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         };
       });
       $('f-plantilla').dataset.puerto = d.puertoSugerido;
-    }).catch(function () { entrar(false); });
+    }).catch(function (e) {
+      // 🪤 Un error pintando la lista NO es una sesión caída. Sacar a alguien por eso fue un bug feo de
+      // diagnosticar: entrabas, se caía cualquier cosa aquí adentro y volvías al login sin saber por qué.
+      // La sesión solo la cierra api() con un 401; lo demás se dice y se queda uno adentro.
+      if (e && e.sesion) return;
+      console.error('[aiva] no se pudo pintar la lista de clientes:', e);
+      $('resumen').textContent = 'No se pudo cargar la lista de clientes. ' + ((e && e.message) || 'Mira la consola del navegador.');
+    });
   }
 
   var PLANTILLAS = [];
@@ -1347,7 +1532,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       .catch(function () { $('crear').disabled = false; $('msg').textContent = 'No se pudo crear.'; });
   };
 
-  if (sesion || token) { entrar(true); sesionLista(); } else entrar(false);
+  if (sesion || token) { entrar(true); armarLaPantalla(); } else entrar(false);
   if (window.Notification && Notification.permission === 'default') Notification.requestPermission();
   // La bandeja se mira seguido (es lo que hay que atender); el estado de los clientes, más espaciado.
   setInterval(function () {

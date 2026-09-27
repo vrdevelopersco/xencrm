@@ -42,6 +42,8 @@ a{color:var(--brand)}
 .score.stale b{color:var(--muted)}
 .bar.stale i{background:repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)}
 .chip.who{background:var(--human);border-color:transparent}
+/* De qué canal llegó la conversación. Discreto: es una etiqueta de origen, no un estado. */
+.chip.canal{background:var(--glass);color:var(--muted);font-weight:500}
 .nav .group{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 10px 4px}
 .bell{position:relative;margin-left:auto}
 .bell .badge{position:absolute;top:-6px;right:-6px;background:var(--bad);color:#fff;border-radius:10px;font-size:10px;padding:0 5px;min-width:16px;text-align:center}
@@ -151,6 +153,18 @@ textarea{resize:vertical;min-height:70px}
 .appt.cancelada{color:var(--muted);text-decoration:line-through}
 .panel{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
 /* Análisis */
+.tiempos-cifras{display:flex;gap:18px;flex-wrap:wrap;margin:10px 0}
+.tiempos-cifras .cifra{min-width:120px}
+.tiempos-cifras .cifra b{display:block;font-size:22px;line-height:1.2}
+.tiempos-cifras .cifra span{color:var(--muted);font-size:12px}
+.tiempos-quien{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 10px}
+.espera-larga{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px solid var(--vidrio-borde)}
+.espera-larga:last-child{border-bottom:0}
+.tabla-origen{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+.tabla-origen th{text-align:left;color:var(--muted);font-weight:500;padding:4px 8px 4px 0;border-bottom:1px solid var(--vidrio-borde)}
+.tabla-origen td{padding:6px 8px 6px 0;border-bottom:1px solid var(--vidrio-borde)}
+.tabla-origen td.num{text-align:right;font-variant-numeric:tabular-nums}
+.tabla-origen tr:last-child td{border-bottom:0}
 .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;padding:16px 16px 0}
 .tile{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow);border-radius:16px;padding:12px 14px;cursor:pointer;text-align:left}
 .tile:hover{border-color:var(--brand)}.tile b{font-size:24px;display:block}.tile span{color:var(--muted);font-size:12px}
@@ -812,6 +826,8 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
         <div class="charts">
           <div class="panel ancho"><b>De dónde llega la gente</b><div class="small muted">Conversaciones nuevas por día, por canal</div><div id="g-nuevas"></div></div>
           <div class="panel ancho"><b>A qué horas te escriben</b><div class="small muted">Mensajes de clientes, por hora y día</div><div id="g-horas"></div></div>
+          <div class="panel ancho" id="panel-tiempos"><b>Cuánto se tarda en contestar</b><div class="small muted">Solo cuenta el tiempo dentro del horario de atención: lo que entra de noche o en domingo no corre hasta que abren.</div><div id="tiempos"></div></div>
+          <div class="panel ancho" id="panel-origenes"><b>Qué trae clientes</b><div class="small muted">De dónde salió cada conversación y en qué terminó. Lo que trajo a alguien no cambia porque vuelva por otro lado.</div><div id="origenes"></div></div>
           <div class="panel funnel"><b>Embudo por etapa</b><div id="funnel"></div></div>
           <div class="panel"><b>Ánimo de los clientes</b><div id="sentiments" class="small"></div><div class="small muted" style="margin-top:8px">Los prospectos calientes se atienden desde <b>Hoy</b> (sin seguimiento) o con el filtro «Prospectos» en Conversaciones.</div></div>
         </div>
@@ -838,7 +854,9 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
     <!-- Canales -->
     <section class="view" id="view-channels">
       <div class="topbar"><h1>Canales</h1></div>
-      <div class="pad"><div class="panel" id="public-status" role="status"></div><div class="channels" id="channels"></div></div>
+      <div class="pad"><div class="panel" id="public-status" role="status"></div><div class="channels" id="channels"></div>
+        <div class="panel" style="margin-top:12px"><b>Avisarme cuando nadie conteste</b><div id="avisos"></div></div>
+      </div>
     </section>
     <!-- Conocimiento -->
     <section class="view" id="view-knowledge">

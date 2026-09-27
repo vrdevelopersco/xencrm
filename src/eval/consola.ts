@@ -21,8 +21,18 @@ const ref = (slug: string, prioridad: 'alta' | 'media' | 'baja') => ({ slug, nom
 
 // --- los tickets salen del estado ---
 const caido = ticketsDe(ref('uno', 'alta'), { arriba: false });
-check('una instancia apagada es lo más urgente', caido.length === 1 && caido[0]!.urgencia === 'alta' && /no responde/.test(caido[0]!.titulo), JSON.stringify(caido));
+// El aviso es urgente, pero dice lo que se sabe (no la alcanzamos) y no lo que se teme (se cayó, se perdió
+// todo): quien lo lee tiene que saber que las conversaciones siguen ahí.
+check('un cliente que no contesta es lo más urgente', caido.length === 1 && caido[0]!.urgencia === 'alta' && /sin conexión/i.test(caido[0]!.titulo), JSON.stringify(caido));
+check('y el aviso no suena a catástrofe', /guardad/i.test(caido[0]?.detalle ?? '') && !/no responde|apagada/i.test(caido[0]?.titulo ?? ''), caido[0]?.detalle ?? '');
 check('y no inventa lo que no puede saber', caido.length === 1);
+
+// Lo prometido y lo cumplido: si alguien lleva esperando más de lo que el negocio prometió, eso va arriba del
+// todo. Es lo único de esta pantalla que se arregla ahora mismo, contestando.
+const tarde = ticketsDe(ref('lento', 'alta'), { arriba: true, acuerdoMin: 15, peorEsperaMin: 48, esperandoAhora: 2 });
+check('alguien esperando más de lo prometido es urgente', tarde.some((t) => t.urgencia === 'alta' && /48 min esperando/.test(t.titulo)), JSON.stringify(tarde.map((t) => t.titulo)));
+check('y el aviso dice qué se prometió', /15/.test(tarde.find((t) => /esperando/.test(t.titulo))?.detalle ?? ''), JSON.stringify(tarde));
+check('dentro de lo prometido, no molesta', ticketsDe(ref('ok', 'alta'), { arriba: true, acuerdoMin: 15, peorEsperaMin: 9, esperandoAhora: 1 }).length === 0);
 
 const vivo = ticketsDe(ref('dos', 'media'), { arriba: true, publica: 'caida', whatsapp: 'esperando_qr', porVerificar: 2, esperanRespuesta: 3, citasSinResultado: 1 });
 check('la dirección pública caída es urgente', vivo.some((t) => t.urgencia === 'alta' && /pública/.test(t.titulo)), JSON.stringify(vivo.map((t) => t.titulo)));

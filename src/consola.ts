@@ -12,6 +12,7 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { readFileSync, existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { actualizarCliente, crearCliente, darDeBajaCliente, leerIndice, PLANTILLAS, puertoLibre, tokenDe, urlDe, type ClienteRef } from './clientes.js';
+import { cabecerasDeSiempre, soloDesdeAqui } from './cabeceras.js';
 import { abrirSesion, actualizarUsuario, alcanza, borrarUsuario, cambiarLoMio, COLORES, colorDe, cerrarSesion, crearUsuario, leerUsuarios, quitarClienteDeUsuarios, sesionDe, sinClave, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
 
 // El .env de la raíz, sin pasar por la configuración de un cliente (la consola no es de ningún cliente).
@@ -44,6 +45,16 @@ export interface EstadoCliente {
   negocio?: string;
   /** Cómo se llama su asistente: es el nombre que sus clientes ya conocen. */
   agente?: string;
+  /** Si tiene logo propio: la lista lo muestra en vez de las iniciales. */
+  logo?: boolean;
+  /** Cuánta gente lleva esperando respuesta ahora mismo. */
+  esperandoAhora?: number;
+  /** Cuánto lleva esperando el que más lleva, en minutos de horario de atención. */
+  peorEsperaMin?: number;
+  /** Qué parte de lo respondido cumplió lo prometido, en porcentaje. */
+  cumplimiento?: number | null;
+  /** Lo que el negocio prometió: primera respuesta en estos minutos. */
+  acuerdoMin?: number;
   contactos?: number;
   calientes?: number;
   sinLeer?: number;
@@ -73,17 +84,27 @@ const pesoPrioridad = { alta: 3, media: 2, baja: 1 } as const;
 export function ticketsDe(cliente: ClienteRef, e: EstadoCliente): Ticket[] {
   const t: Ticket[] = [];
   if (!e.arriba) {
-    t.push({ urgencia: 'alta', titulo: 'La instancia no responde', detalle: `Nadie está atendiendo a ${cliente.nombre}. Revisar con pm2 logs aiva-${cliente.slug}.` });
+    // El aviso dice lo que se sabe (no contesta) y no lo que se teme (se cayó, se perdió todo). Casi siempre es
+    // la red o un reinicio, y las conversaciones siguen en su sitio: alarmar de más hace que se deje de leer.
+    t.push({ urgencia: 'alta', titulo: 'Sin conexión con este cliente', detalle: `No estamos alcanzando a ${cliente.nombre} ahora mismo; sus conversaciones están guardadas. Suele ser la red o un reinicio. Si sigue así, revisar con pm2 logs aiva-${cliente.slug}.` });
     return t; // si está caída, lo demás no se sabe
   }
   if (e.publica && e.publica !== 'ok') {
-    t.push({ urgencia: 'alta', titulo: 'La dirección pública no responde', detalle: 'Sin ella no entran el chat del sitio ni WhatsApp oficial.' });
+    t.push({ urgencia: 'alta', titulo: 'Su dirección pública no contesta', detalle: 'Mientras tanto no entran el chat del sitio ni WhatsApp oficial. Suele ser la red o el túnel.' });
   }
   if (e.whatsapp && !['conectado', 'apagado', 'no_disponible', 'sin_configurar'].includes(e.whatsapp)) {
     t.push({ urgencia: 'media', titulo: `WhatsApp en "${e.whatsapp}"`, detalle: 'Puede que haya que volver a escanear el código.' });
   }
   if (e.porVerificar) {
     t.push({ urgencia: 'media', titulo: `${e.porVerificar} pregunta${e.porVerificar === 1 ? '' : 's'} sin responder`, detalle: 'El asistente no supo y el cliente está esperando la respuesta del equipo.' });
+  }
+  if (e.acuerdoMin && e.peorEsperaMin && e.peorEsperaMin > e.acuerdoMin) {
+    const cuantos = e.esperandoAhora ?? 1;
+    t.push({
+      urgencia: 'alta',
+      titulo: `${cuantos === 1 ? 'Alguien lleva' : `${cuantos} llevan`} ${e.peorEsperaMin} min esperando`,
+      detalle: `Prometieron contestar en ${e.acuerdoMin}. Esto se arregla contestando ahora, desde su tablero.`,
+    });
   }
   if (e.esperanRespuesta) {
     t.push({ urgencia: 'media', titulo: `${e.esperanRespuesta} esperan respuesta`, detalle: 'La última palabra la tiene el cliente.' });
@@ -114,12 +135,13 @@ const pedir = async (cliente: Pick<ClienteRef, 'base' | 'puerto'>, ruta: string,
 export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
   const token = tokenDe(cliente.slug);
   if (!token) return { arriba: false };
-  const [me, stats, hoy, canales, gasto] = await Promise.all([
+  const [me, stats, hoy, canales, gasto, tiempos] = await Promise.all([
     pedir(cliente, '/admin/api/me', token, 1500),
     pedir(cliente, '/admin/api/stats', token),
     pedir(cliente, '/admin/api/today', token),
     pedir(cliente, '/admin/api/channels', token),
     pedir(cliente, '/admin/api/usage?days=30', token),
+    pedir(cliente, '/admin/api/tiempos?dias=7', token),
   ]);
   if (!me) return { arriba: false };
   const lista = (x: unknown) => (Array.isArray(x) ? x.length : 0);
@@ -136,11 +158,23 @@ export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
     arriba: true,
     negocio: String(me.business ?? cliente.nombre),
     agente: String(me.agent ?? ''),
+    logo: Boolean(me.logo),
     contactos: Number(stats?.total ?? 0),
     calientes: Number(stats?.hot ?? 0),
     sinLeer: Number(stats?.unread ?? 0),
     citas: Number(stats?.upcomingAppointments ?? 0),
     esperanRespuesta: lista(hoy?.unanswered),
+    ...(() => {
+      const esperando = (tiempos?.esperando ?? []) as { msHabiles: number }[];
+      const respondidas = Number(tiempos?.respondidas ?? 0);
+      const fuera = Number(tiempos?.fueraDeAcuerdo ?? 0);
+      return {
+        esperandoAhora: esperando.length,
+        peorEsperaMin: esperando.length ? Math.round(Math.max(...esperando.map((x) => x.msHabiles)) / 60_000) : 0,
+        cumplimiento: respondidas ? Math.round(((respondidas - fuera) / respondidas) * 100) : null,
+        acuerdoMin: Number(tiempos?.acuerdoMin ?? 0) || undefined,
+      };
+    })(),
     porVerificar: lista(hoy?.verifications),
     citasSinResultado: lista(hoy?.past),
     publica: (hoy?.public as { state?: string } | undefined)?.state ?? '',
@@ -246,7 +280,50 @@ function quienEs(c: Context): { usuario: UsuarioPublico | null; esSuper: boolean
   return usuario ? { usuario, esSuper: usuario.rol === 'super' } : null;
 }
 
+/**
+ * 🪤 Freno para quien prueba claves a ciegas. Esta puerta abre la consola, y la consola alcanza el tablero de
+ * TODOS los clientes: sin freno, la única defensa sería la longitud de la clave, y en un rato se prueban miles.
+ *
+ * Se cuenta por quien lo intenta (su dirección) y por la cuenta que intenta abrir, para que ni cambiar de
+ * dirección ni cambiar de usuario den intentos nuevos. Un acierto borra la cuenta: a quien sabe su clave no se
+ * le estorba.
+ */
+// 🪤 Lo que NO se reenvía a la instancia de un cliente. La llave maestra se acepta por `?token=`, y el proxy
+// copiaba la dirección entera: bastaba abrir `/c/<cliente>/admin?token=<llave>` para que la llave de TODOS los
+// clientes quedara escrita en el registro de acceso de la instancia de uno solo.
+const CREDENCIAL = new Set(['token', 'sesion', 'maestra', 'clave']);
+
+const fallos = new Map<string, { n: number; hasta: number }>();
+const VENTANA_FRENO = 15 * 60_000;
+const MAXIMO_FALLOS = 10;
+
+const frenado = (llaves: string[], now = Date.now()) =>
+  llaves.some((k) => {
+    const f = fallos.get(k);
+    return Boolean(f) && f!.hasta > now && f!.n >= MAXIMO_FALLOS;
+  });
+
+function anotarFallo(llaves: string[], now = Date.now()) {
+  for (const k of llaves) {
+    const f = fallos.get(k);
+    if (!f || f.hasta < now) fallos.set(k, { n: 1, hasta: now + VENTANA_FRENO });
+    else f.n++;
+  }
+}
+const olvidarFallos = (llaves: string[]) => llaves.forEach((k) => fallos.delete(k));
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, f] of fallos) if (f.hasta < now) fallos.delete(k);
+}, 60_000).unref();
+
+/** De dónde viene quien pide. Detrás del servidor del hosting, la de verdad llega en una cabecera. */
+const deDonde = (c: Context): string =>
+  c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'sin-direccion';
+
 export function mountConsola(app: Hono) {
+  app.use('*', cabecerasDeSiempre);
+  app.use('*', soloDesdeAqui);
+
   app.get('/', (c) => c.html(readFileSync(new URL('../public/consola.html', import.meta.url), 'utf8')));
 
   // El logo de la casa. En el despliegue lo sirve el enrutador, pero la consola también corre sola (pnpm consola)
@@ -265,9 +342,16 @@ export function mountConsola(app: Hono) {
   // y un EventSource no pueden poner cabeceras, pero la galleta viaja sola.
   app.post('/api/entrar', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { usuario?: string; clave?: string; maestra?: string };
+    const quien = String(body.usuario ?? (body.maestra ? 'maestra' : '')).toLowerCase().slice(0, 64);
+    const llaves = [`d:${deDonde(c)}`, `u:${quien}`];
+    if (frenado(llaves)) return c.json({ error: 'Demasiados intentos. Espera unos minutos.' }, 429);
     const conMaestra = Boolean(body.maestra) && body.maestra === CONSOLA_TOKEN;
     const u = conMaestra ? SUPER_DE_EMERGENCIA : body.usuario && body.clave ? verificar(body.usuario, body.clave) : null;
-    if (!u) return c.json({ error: conMaestra ? 'Llave maestra incorrecta' : 'Usuario o clave incorrectos' }, 401);
+    if (!u) {
+      anotarFallo(llaves);
+      return c.json({ error: conMaestra ? 'Llave maestra incorrecta' : 'Usuario o clave incorrectos' }, 401);
+    }
+    olvidarFallos(llaves);
     const sesion = abrirSesion(u, Date.now(), conMaestra);
     ponerGalleta(c, sesion);
     return c.json({ sesion, usuario: u });
@@ -309,7 +393,7 @@ export function mountConsola(app: Hono) {
     if (!ruta) return c.text('No encontrado', 404);
 
     const url = new URL(urlDe(cliente) + ruta);
-    for (const [k, v] of Object.entries(c.req.query())) url.searchParams.set(k, v);
+    for (const [k, v] of Object.entries(c.req.query())) if (!CREDENCIAL.has(k)) url.searchParams.set(k, v);
     const metodo = c.req.method;
     const cuerpo = metodo === 'GET' || metodo === 'HEAD' ? undefined : await c.req.text();
     // El flujo en vivo (SSE) no puede llevar reloj: se queda abierto a propósito.
@@ -337,7 +421,7 @@ export function mountConsola(app: Hono) {
         },
       });
     } catch {
-      return c.text('La instancia de ese cliente no responde.', 502);
+      return c.text('No estamos alcanzando a ese cliente ahora mismo. Suele ser la red; vuelve a intentar en un momento.', 502);
     }
   });
 
@@ -437,6 +521,33 @@ export function mountConsola(app: Hono) {
 
   app.get('/api/clientes', async (c) => c.json({ clientes: await tablero(c.get('usuario' as never) as UsuarioPublico | null), puertoSugerido: puertoLibre() }));
 
+  /**
+   * El logo de un cliente, para que la lista se lea de un vistazo por su marca y no por dos iniciales. Pasa por
+   * aquí y no directo porque las instancias viven en puertos internos: el navegador no las alcanza. Sirve con la
+   * galleta de sesión, que es lo que una etiqueta `img` puede mandar.
+   */
+  app.get('/api/marca/:slug', async (c) => {
+    const slug = c.req.param('slug');
+    if (!alcanza(c.get('usuario' as never) as UsuarioPublico | null, slug)) return c.text('Ese cliente no es tuyo.', 403);
+    const cliente = leerIndice().find((x) => x.slug === slug);
+    if (!cliente) return c.text('No existe.', 404);
+    try {
+      const r = await fetch(`${urlDe(cliente)}/brand/logo`, { signal: AbortSignal.timeout(2500) });
+      if (!r.ok) return c.text('Sin logo.', 404);
+      // 🪤 Esto es un archivo de otro: la instancia del cliente lo sirve con su propia CSP y aquí hay que
+      // repetirla. Un logo puede ser un SVG, y un SVG abierto como página ejecuta JavaScript —en el origen de
+      // la consola, que es donde vive la sesión que alcanza a todos los clientes—.
+      return c.body(await r.arrayBuffer(), 200, {
+        'content-type': r.headers.get('content-type') ?? 'image/png',
+        'cache-control': 'private, max-age=300',
+        'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'",
+        'content-disposition': 'inline',
+      });
+    } catch {
+      return c.text('No contestó.', 404);
+    }
+  });
+
   // Cómo atiende el negocio: de aquí salen su embudo y si agenda citas.
   app.get('/api/plantillas', (c) => c.json({ plantillas: PLANTILLAS }));
 
@@ -485,7 +596,7 @@ export function mountConsola(app: Hono) {
     const token = cliente ? tokenDe(slug) : '';
     if (!cliente || !token) return c.json({ error: 'ese cliente no existe' }, 404);
     const url = new URL(`${urlDe(cliente)}/admin/api/${c.req.param('ruta')}`);
-    for (const [k, v] of Object.entries(c.req.query())) url.searchParams.set(k, v);
+    for (const [k, v] of Object.entries(c.req.query())) if (!CREDENCIAL.has(k)) url.searchParams.set(k, v);
     const method = c.req.method;
     const body = method === 'GET' || method === 'HEAD' ? undefined : await c.req.text();
     try {
@@ -497,7 +608,7 @@ export function mountConsola(app: Hono) {
       });
       return new Response(r.body, { status: r.status, headers: { 'content-type': r.headers.get('content-type') ?? 'application/json' } });
     } catch {
-      return c.json({ error: 'la instancia de ese cliente no responde' }, 502);
+      return c.json({ error: 'no estamos alcanzando a ese cliente ahora mismo; suele ser la red' }, 502);
     }
   });
 

@@ -283,7 +283,10 @@
   }
   function bubble(msg) {
     var who = msg.role === 'user' ? 'customer' : (msg.author === 'human' ? 'human' : 'bot');
-    var label = who === 'customer' ? 'Cliente' : who === 'human' ? (msg.by ? msg.by + ' (equipo)' : 'Equipo') : 'Aiva';
+    // 🪤 `by` es el nombre de quien contestó, y NO siempre lo escribe alguien de la casa: de un chat de WhatsApp
+    // importado sale tal cual del archivo. Sin escapar, quien mandó ese chat ejecuta JavaScript en la pantalla
+    // de quien atiende —y de ahí se lleva el token del tablero—. Comprobado: se ejecutaba.
+    var label = who === 'customer' ? 'Cliente' : who === 'human' ? (msg.by ? esc(msg.by) + ' (equipo)' : 'Equipo') : 'Aiva';
     return '<div class="bubble ' + who + '"><span class="who">' + label + '</span>' + esc(msg.content) + '<span class="ts">' + hhmm(msg.ts) + '</span></div>';
   }
   function setMode(human) {
@@ -394,6 +397,14 @@
           ? '<div class="feed-row"><a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/' + esc(d.number) + '">Escribirle por WhatsApp</a>' +
             '<a class="btn sm" href="tel:+' + esc(d.number) + '">Llamar</a></div>'
           : '<div class="small muted">Sin número: no dejó teléfono todavía.</div>') +
+        // Por dónde llegó. Al atender cambia la conversación: no es lo mismo alguien que venía buscando trajes
+        // de grado que alguien que pulsó un anuncio de alquiler para una boda.
+        (d.origen
+          ? '<div class="small muted" style="margin-top:6px">Llegó por <b>' + esc(d.origen.fuente || 'un origen desconocido') + '</b>' +
+            (d.origen.campana ? ' · ' + esc(d.origen.campana) : '') +
+            (d.origen.titular ? '<div class="small">«' + esc(d.origen.titular) + '»</div>' : '') +
+            (d.origen.url ? '<div class="small muted">' + esc(d.origen.url) + '</div>' : '') + '</div>'
+          : '') +
         '<select id="f-stage">' + stages + '</select>' +
         '<input type="text" id="f-tags" placeholder="Etiquetas separadas por coma" value="' + esc((c.tags || []).join(', ')) + '">' +
         '<textarea id="f-notes" placeholder="Notas internas">' + esc(c.notes || '') + '</textarea>' +
@@ -436,7 +447,7 @@
       '. Si quieres, te aparto una cita y lo vemos con calma; dime qué día te sirve.';
   }
   function contactRow(c, extra, actions) {
-    return '<div class="row" data-id="' + esc(c.id) + '"><div class="name"><span class="n">' + esc(nameOf(c)) + '</span>' + (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div><div class="time">' + rel(c.lastMessageAt) + '</div><div class="snip">' + esc(extra || c.recap || c.summary || '') + '</div><div class="meta"><span class="chip stage-' + (rol(c.stage) || c.stage) + '">' + esc(state.stageLabels[c.stage] || c.stage) + '</span>' + scoreChip(c) + (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '') + '</div>' + (actions ? '<div class="acts">' + actions + '</div>' : '') + '</div>';
+    return '<div class="row" data-id="' + esc(c.id) + '"><div class="name"><span class="n">' + esc(nameOf(c)) + '</span>' + (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div><div class="time">' + rel(c.lastMessageAt) + '</div><div class="snip">' + esc(extra || c.recap || c.summary || '') + '</div><div class="meta"><span class="chip canal">' + esc(channelIcon(c.channel)) + '</span><span class="chip stage-' + (rol(c.stage) || c.stage) + '">' + esc(state.stageLabels[c.stage] || c.stage) + '</span>' + scoreChip(c) + (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '') + '</div>' + (actions ? '<div class="acts">' + actions + '</div>' : '') + '</div>';
   }
   function loadToday() {
     api('/today').then(function (t) {
@@ -958,7 +969,9 @@
           ? '<div style="margin-top:12px"><b>Así contestan ustedes</b><div class="small muted">Ejemplos sin cifras, para afinar el tono del asistente. Los precios y plazos nunca salen de aquí.</div>' +
             '<ul class="timeline">' + h.estilo.slice(0, 4).map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul></div>'
           : '') +
-        '<div class="feed-row" style="margin-top:10px"><button class="btn sm" id="hist-borrar">Borrar el historial importado</button></div>' +
+        '<div class="feed-row" style="margin-top:10px"><button class="btn sm primary" id="hist-tablero">Traer estas conversaciones al tablero</button>' +
+        '<button class="btn sm" id="hist-borrar">Borrar el historial importado</button></div>' +
+        '<div class="small muted">Traerlas crea una ficha por conversación en <b>Conversaciones</b>, para verles la pista. Se quitan igual de fácil.</div>' +
         '<div class="small" id="hist-msg" role="status"></div></div>';
     }
     if ($('hist-subir')) $('hist-subir').onclick = subirChat;
@@ -966,6 +979,15 @@
       $('hist-expr').disabled = true;
       api('/historial/expresiones', { method: 'POST' }).then(function (r) {
         $('hist-msg').textContent = r.llevadas + ' frases quedaron en Agente › Frases que no entendimos, para enseñarlas.';
+      });
+    };
+    if ($('hist-tablero')) $('hist-tablero').onclick = function () {
+      var b = this; b.disabled = true; b.textContent = 'Trayendo…';
+      api('/historial/al-tablero', { method: 'POST' }).then(function (r) {
+        b.disabled = false; b.textContent = 'Traer estas conversaciones al tablero';
+        $('hist-msg').textContent = r && r.error
+          ? r.error
+          : r.fichas + ' conversaciones y ' + r.mensajes + ' mensajes están ya en Conversaciones.';
       });
     };
     if ($('hist-borrar')) $('hist-borrar').onclick = function () {
@@ -1003,7 +1025,7 @@
       sections.map(function (s) { return '<div class="panel prof"><b>' + esc(s.name) + '</b>' + s.html + '</div>'; }).join('') +
       '<div class="panel prof"><b>Otros datos</b><div class="small muted">Lo propio de este negocio: tallas, tiempos de entrega, lo que venden o no.</div><div id="pf-extras">' +
       d.profile.extras.map(function (x, i) { return profExtra(x, i, d.profile.notes); }).join('') + '</div><div class="feed-row"><button class="btn" type="button" id="pf-add">Agregar dato</button></div></div>' +
-      '<div class="panel"><div class="feed-row"><button class="btn primary" id="pf-save">Guardar perfil</button></div><div id="pf-msg" class="small" role="status">' + (msg || '') + '</div><div class="small muted">Se guarda en <code>' + esc(d.file) + '</code> (con copia del anterior) y el bot lo usa al instante.</div></div>';
+      '<div class="panel"><div class="feed-row"><button class="btn primary" id="pf-save">Guardar perfil</button></div><div id="pf-msg" class="small" role="status">' + (msg || '') + '</div><div class="small muted">Se guarda al instante, con copia de lo anterior.</div></div>';
     $('pf-add').onclick = function () {
       var box = $('pf-extras'), i = box.children.length;
       box.insertAdjacentHTML('beforeend', profExtra({ title: '', text: '' }, i, null));
@@ -1106,7 +1128,7 @@
         return '<li><b>' + esc(t.query) + '</b><div class="dict-chips">' + t.keywords.map(function (k) { return '<span class="chip">' + esc(k) + '</span>'; }).join('') + '</div></li>';
       }).join('');
       $('dict-panel').innerHTML = '<b>Diccionario del negocio</b>' +
-        '<div class="small muted">Lo que ' + esc(a.business.name) + ' le enseña a ' + esc(a.agent.name) + ' sin tocar código: temas que se responden con su información, cómo pregunta su gente por lo que ofrece y las expresiones propias de sus clientes. Se guarda en <code>' + esc(d.file) + '</code> y se aplica al instante.</div>' +
+        '<div class="small muted">Lo que ' + esc(a.business.name) + ' le enseña a ' + esc(a.agent.name) + ' sin tocar código: temas que se responden con su información, cómo pregunta su gente por lo que ofrece y las expresiones propias de sus clientes. Se aplica al instante.</div>' +
         '<div class="small">Temas (' + d.topics.length + ')</div>' + (topics ? '<ul class="dict-list">' + topics + '</ul>' : '<div class="small muted">Todavía ninguno. Lo genérico (dónde quedan, horario, pagos, envíos) ya viene incluido.</div>') +
         '<div class="small">Verbos para preguntar por lo que ofrece (' + d.offerVerbs.length + ')</div>' + (d.offerVerbs.length ? '<div class="dict-chips">' + d.offerVerbs.map(function (v) { return '<span class="chip">' + esc(v) + '</span>'; }).join('') + '</div>' : '<div class="small muted">Solo los genéricos: tienen, venden, manejan, hacen, trabajan.</div>') +
         '<div class="small">Expresiones (' + (d.expressions || []).length + ')</div>' + ((d.expressions || []).length ? '<ul class="dict-list">' + d.expressions.map(function (x) { return '<li>«' + esc(x.says) + '» quiere decir «' + esc(x.means) + '»</li>'; }).join('') + '</ul>' : '<div class="small muted">Todavía ninguna. Se enseñan desde «Frases que no entendimos».</div>') +
@@ -1242,6 +1264,38 @@
     };
   }
   var credDraft = null; // lo escrito en el formulario sobrevive a los redibujos automáticos
+  // ---------- A quién avisar cuando nadie está mirando ----------
+  // Todo lo demás del tablero necesita la pestaña abierta. Esto es lo único que funciona con el portátil
+  // cerrado, y por eso va por WhatsApp: es lo que la gente mira.
+  function pintarAvisos(d) {
+    if (!d || d.error) { $('avisos').innerHTML = '<div class="small muted">No se pudo cargar.</div>'; return; }
+    $('avisos').innerHTML =
+      '<div class="small muted">Si alguien lleva más de <b>' + d.acuerdoMin + ' min</b> esperando respuesta, le llega un WhatsApp a estos números. ' +
+      'Sin números, no se avisa a nadie.</div>' +
+      '<div class="feed-row" style="margin-top:8px"><input type="text" id="av-nums" placeholder="573001112233, 573009998877" value="' + esc(d.numeros.join(', ')) + '" style="min-width:260px">' +
+      '<button class="btn sm primary" id="av-guardar">Guardar</button>' +
+      (d.numeros.length ? '<button class="btn sm" id="av-probar">Mandar uno de prueba</button>' : '') +
+      '</div><div class="small" id="av-msg" role="status"></div>';
+    $('av-guardar').onclick = function () {
+      var nums = $('av-nums').value.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+      api('/avisos', { method: 'PUT', body: { numeros: nums } }).then(function (r) {
+        if (r && r.error) { $('av-msg').textContent = r.error; return; }
+        $('av-msg').textContent = r.numeros.length ? 'Guardado: se avisará a ' + r.numeros.length + '.' : 'Guardado: no se avisará a nadie.';
+        cargarAvisos();
+      });
+    };
+    if ($('av-probar')) $('av-probar').onclick = function () {
+      var b = this; b.disabled = true; b.textContent = 'Mandando…';
+      api('/avisos/probar', { method: 'POST', body: {} }).then(function (r) {
+        b.disabled = false; b.textContent = 'Mandar uno de prueba';
+        $('av-msg').textContent = r && r.error ? r.error
+          : (r.entregados ? 'Mandado a ' + r.entregados + ' de ' + r.de + '. Mira el teléfono.' : 'No salió: ¿está WhatsApp conectado?');
+      });
+    };
+  }
+
+  function cargarAvisos() { api('/avisos').then(pintarAvisos).catch(function () {}); }
+
   function renderChannels(list, opts) {
     credDraft = null;
     if ($('meta-cred-form') && !(opts && opts.fresh)) credDraft = { open: $('meta-cred').open, token: $('mc-token').value, phone: $('mc-phone').value, secret: $('mc-secret').value, verify: $('mc-verify').value, version: $('mc-version').value, msg: $('mc-msg').innerHTML };
@@ -1254,6 +1308,32 @@
         return '<label class="small muted">' + esc(x.label) + '</label><div class="feed-row"><input readonly type="' + (x.secret ? 'password' : 'text') + '" value="' + esc(x.value) + '" id="cp-' + ch.id + '-' + i + '" aria-label="' + esc(x.label) + '">' +
           '<button class="btn sm" data-copy="cp-' + ch.id + '-' + i + '">Copiar</button>' + (x.secret ? '<button class="btn sm" data-show="cp-' + ch.id + '-' + i + '" aria-pressed="false">Mostrar</button>' : '') + '</div>';
       }).join('');
+      // Solo escuchar: entra todo al CRM y contesta una persona. Es lo que se usa al enchufar el WhatsApp de un
+      // negocio de verdad, para mirar antes de darle voz al asistente.
+      var escucha = ch.soloEscucha === undefined ? '' :
+        '<div class="fila" style="gap:10px;align-items:center;margin-top:10px">' +
+          '<div class="seg" role="group" aria-label="Quién contesta en ' + esc(ch.name) + '" data-on="' + (ch.soloEscucha ? 'off' : 'on') + '">' +
+            '<button data-esc="' + ch.id + '" data-set="0" aria-pressed="' + !ch.soloEscucha + '"' + (ch.soloEscucha ? '' : ' class="on"') + '>Contesta Aiva</button>' +
+            '<button data-esc="' + ch.id + '" data-set="1" aria-pressed="' + ch.soloEscucha + '"' + (ch.soloEscucha ? ' class="on"' : '') + '>Solo escuchar</button>' +
+          '</div>' +
+          '<span class="small muted">' + (ch.soloEscucha ? 'Entra todo al tablero y contestas tú. Aiva no dice nada.' : 'Aiva responde sola a quien escriba.') + '</span>' +
+        '</div>';
+      // Cuando WhatsApp no levanta, lo primero que hay que saber es si este servidor puede siquiera hablar con
+      // WhatsApp. Desde fuera, un fallo del programa y una puerta cerrada en el alojamiento se ven igual.
+      // Desvincular: la única forma de volver a recibir lo ya conversado (WhatsApp lo manda solo al emparejar)
+      // y la salida del atasco si cierran la sesión desde el teléfono.
+      var desvincular = ch.id === 'whatsapp' && (ch.state === 'conectado' || ch.state === 'sesion_cerrada')
+        ? '<div class="fila" style="gap:10px;align-items:center;margin-top:10px">' +
+            '<button class="btn sm" id="wa-desvincular">Desvincular y empezar de cero</button>' +
+            '<span class="small muted">Pide un código nuevo. Al vincular otra vez vuelve a llegar lo ya conversado.</span>' +
+          '</div>'
+        : '';
+      var salida = ch.id === 'whatsapp' && ch.state !== 'conectado'
+        ? '<div class="fila" style="gap:10px;align-items:center;margin-top:10px">' +
+            '<button class="btn sm" id="wa-salida">Probar la salida</button>' +
+            '<span class="small muted">¿Este servidor puede hablar con WhatsApp?</span>' +
+          '</div><div id="wa-salida-r" class="small" role="status"></div>'
+        : '';
       var steps = ch.steps.length ? (ch.steps.length > 1 ? '<ol class="ch-steps">' + ch.steps.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol>' : '<div class="small">' + esc(ch.steps[0]) + '</div>') : '';
       var warnings = ch.warnings.map(function (w) { return '<div class="ch-warn">' + esc(w) + '</div>'; }).join('');
       return '<div class="panel" id="ch-' + ch.id + '"><div class="ch-head"><h2>' + esc(ch.name) + '</h2><span class="chip ' + st[1] + '">' + esc(st[0]) + '</span></div>' +
@@ -1261,18 +1341,51 @@
         (ch.detail ? '<div class="small">' + esc(ch.detail) + '</div>' : '') +
         (channelStats(ch) ? '<div class="ch-stats">' + esc(channelStats(ch)) + '</div>' : '') +
         (ch.qrSvg ? '<div class="ch-qr" role="img" aria-label="Código QR para vincular WhatsApp">' + ch.qrSvg + '</div>' : '') +
-        steps + warnings + copy + toggle + '<div class="ch-err" id="ch-err-' + ch.id + '" role="status"></div>' + (ch.id === 'meta' ? metaCredForm(ch) : '') + '</div>';
+        steps + warnings + copy + toggle + escucha + desvincular + salida + '<div class="ch-err" id="ch-err-' + ch.id + '" role="status"></div>' + (ch.id === 'meta' ? metaCredForm(ch) : '') + '</div>';
     }).join('');
     if (credDraft && $('meta-cred-form')) {
       $('meta-cred').open = credDraft.open; $('mc-token').value = credDraft.token; $('mc-phone').value = credDraft.phone; $('mc-secret').value = credDraft.secret;
       $('mc-verify').value = credDraft.verify; $('mc-version').value = credDraft.version; $('mc-msg').innerHTML = credDraft.msg;
     }
     bindMetaCred();
+    cargarAvisos();
     $('channels').querySelectorAll('[data-set]').forEach(function (b) {
       b.onclick = function () {
         var id = b.getAttribute('data-ch'), on = b.getAttribute('data-set') === '1';
         $('channels').querySelectorAll('[data-ch="' + id + '"]').forEach(function (x) { x.disabled = true; });
         api('/channels/' + id, { method: 'POST', body: { on: on } }).then(function (r) {
+          if (r && r.error) { $('ch-err-' + id).textContent = r.error; loadChannels(); } else renderChannels(r);
+        });
+      };
+    });
+    if (salidaHtml && $('wa-salida-r')) { $('wa-salida-r').innerHTML = salidaHtml; engancharOcultarSalida(); }
+    if ($('wa-desvincular')) $('wa-desvincular').onclick = function () {
+      if (!confirm('Se cierra la sesión de WhatsApp y hay que volver a escanear el código.\n\nLas conversaciones que ya están en el tablero NO se tocan. ¿Sigo?')) return;
+      var b = this; b.disabled = true; b.textContent = 'Desvinculando…';
+      api('/whatsapp/desvincular', { method: 'POST', body: {} }).then(function (r) {
+        b.disabled = false; b.textContent = 'Desvincular y empezar de cero';
+        if (r && r.error) { $('ch-err-whatsapp').textContent = r.error; loadChannels(); } else renderChannels(r);
+      });
+    };
+    if ($('wa-salida')) $('wa-salida').onclick = function () {
+      var b = this; b.disabled = true; b.textContent = 'Probando…';
+      $('wa-salida-r').textContent = '';
+      api('/whatsapp/salida').then(function (d) {
+        b.disabled = false; b.textContent = 'Probar la salida';
+        if (!d || d.error) { salidaHtml = ''; $('wa-salida-r').textContent = 'No se pudo probar.'; return; }
+        salidaHtml = '<ul class="ch-steps">' + d.pruebas.map(function (p) {
+          return '<li>' + (p.ok ? '✓ ' : '✗ ') + esc(p.que) + ' — <span class="muted">' + esc(p.detalle) + '</span></li>';
+        }).join('') + '</ul><div class="ch-warn">' + esc(d.veredicto) + '</div>' +
+          '<div class="feed-row"><button class="btn sm" id="wa-salida-x">Ocultar</button></div>';
+        $('wa-salida-r').innerHTML = salidaHtml;
+        engancharOcultarSalida();
+      });
+    };
+    $('channels').querySelectorAll('[data-esc]').forEach(function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-esc'), solo = b.getAttribute('data-set') === '1';
+        $('channels').querySelectorAll('[data-esc="' + id + '"]').forEach(function (x) { x.disabled = true; });
+        api('/channels/' + id + '/escucha', { method: 'POST', body: { soloEscucha: solo } }).then(function (r) {
           if (r && r.error) { $('ch-err-' + id).textContent = r.error; loadChannels(); } else renderChannels(r);
         });
       };
@@ -1296,6 +1409,12 @@
       if (document.activeElement && document.activeElement.closest && document.activeElement.closest('#meta-cred')) { renderChannelsLater(); return; }
       loadChannels();
     }, busy ? 4000 : 30000);
+  }
+  // Lo que el diagnóstico dejó en pantalla. Se guarda aparte porque la vista se repinta sola —cada 4 segundos
+  // mientras hay un código QR esperando— y si no, lo que acabas de leer desaparece antes de terminar de leerlo.
+  var salidaHtml = '';
+  function engancharOcultarSalida() {
+    if ($('wa-salida-x')) $('wa-salida-x').onclick = function () { salidaHtml = ''; $('wa-salida-r').innerHTML = ''; };
   }
   function renderChannelsLater() {
     clearTimeout(chTimer);
@@ -1670,6 +1789,100 @@
       pintarDeltas(d.semana);
       pintarNuevas(d.nuevas);
       pintarHoras(d.actividad);
+    }).catch(function () {});
+    cargarTiempos();
+    cargarOrigenes();
+  }
+
+  // ---------- Qué trae clientes ----------
+  // La tabla que decide dónde se pone el dinero de la publicidad. Se enseña también cuántos llegaron sin que se
+  // sepa de dónde: sin ese número, el resto se lee como si fuera el total y las campañas parecen mejores.
+  function cargarOrigenes() {
+    api('/origenes?dias=30').then(function (d) {
+      if (!d || d.error) { $('origenes').innerHTML = '<div class="small muted">No se pudo calcular.</div>'; return; }
+      if (!d.campanas.length) {
+        $('origenes').innerHTML = '<div class="small muted">Todavía no hay conversaciones con origen conocido. ' +
+          'Llega solo cuando alguien entra por el chat del sitio con una campaña, o por un anuncio de WhatsApp.' +
+          (d.sinOrigen ? ' Por ahora, ' + d.sinOrigen + ' conversaciones sin origen.' : '') + '</div>';
+        return;
+      }
+      $('origenes').innerHTML = '<table class="tabla-origen"><thead><tr>' +
+          '<th>De dónde</th><th>Campaña</th><th class="num">Conversaciones</th><th class="num">Citas</th><th class="num">Ganadas</th><th class="num">Conversión</th>' +
+        '</tr></thead><tbody>' +
+        d.campanas.map(function (c) {
+          return '<tr><td>' + esc(c.fuente) + (c.medio ? ' <span class="muted">· ' + esc(c.medio) + '</span>' : '') + '</td>' +
+            '<td>' + esc(c.campana || '—') + (c.titular ? '<div class="small muted">' + esc(c.titular) + '</div>' : '') + '</td>' +
+            '<td class="num">' + c.conversaciones + '</td><td class="num">' + c.citas + '</td><td class="num">' + c.ganadas + '</td>' +
+            '<td class="num">' + c.conversion + ' %</td></tr>';
+        }).join('') +
+        '</tbody></table>' +
+        (d.sinOrigen ? '<div class="small muted" style="margin-top:8px">Y ' + d.sinOrigen + ' conversaciones más sin origen conocido: ' +
+          'quien escribe al WhatsApp directo no trae de dónde viene.</div>' : '');
+    }).catch(function () {});
+  }
+
+  // ---------- Cuánto se tarda en contestar ----------
+  // El número con el que se juzga a gente, así que se enseña con lo que hace falta para leerlo bien: el acuerdo
+  // con el que se midió, quién contestó, y sobre todo quién está esperando AHORA, que es lo único accionable.
+  function duracion(ms) {
+    var m = Math.round(ms / 60000);
+    if (m < 1) return 'menos de un minuto';
+    if (m < 60) return m + ' min';
+    var h = Math.floor(m / 60);
+    return h < 24 ? h + ' h ' + (m % 60) + ' min' : Math.floor(h / 24) + ' d ' + (h % 24) + ' h';
+  }
+
+  function cargarTiempos() {
+    api('/tiempos?dias=14').then(function (d) {
+      if (!d || d.error) { $('tiempos').innerHTML = '<div class="small muted">No se pudo calcular.</div>'; return; }
+      var cumple = d.respondidas ? Math.round(((d.respondidas - d.fueraDeAcuerdo) / d.respondidas) * 100) : null;
+      var html = '<div class="tiempos-cifras">' +
+        '<div class="cifra"><b>' + (d.respondidas ? duracion(d.medianaMs) : '—') + '</b><span>la mitad, en menos de</span></div>' +
+        '<div class="cifra"><b>' + (d.respondidas ? duracion(d.p90Ms) : '—') + '</b><span>nueve de cada diez</span></div>' +
+        '<div class="cifra"><b>' + (cumple === null ? '—' : cumple + ' %') + '</b><span>dentro de los ' + d.acuerdoMin + ' min acordados</span></div>' +
+        '<div class="cifra"><b>' + d.esperando.length + '</b><span>esperando ahora mismo</span></div>' +
+        '</div>';
+      if (d.respondidas) {
+        html += '<div class="tiempos-quien">' +
+          '<span class="chip">Aiva: ' + d.porQuien.aiva.n + ' · ' + duracion(d.porQuien.aiva.medianaMs) + '</span>' +
+          '<span class="chip">Personas: ' + d.porQuien.persona.n + ' · ' + duracion(d.porQuien.persona.medianaMs) + '</span>' +
+          d.personas.map(function (p) { return '<span class="chip who">' + esc(p.nombre) + ': ' + duracion(p.medianaMs) + ' (' + p.n + ')</span>'; }).join('') +
+          '</div>';
+      }
+      if (d.esperando.length) {
+        html += '<div style="margin-top:6px"><b class="small">Sin respuesta ahora</b>' +
+          d.esperando.slice(0, 6).map(function (e) {
+            // 🪤 Aquí manda el tiempo CORRIDO, que es el que siente quien espera. El hábil va al lado cuando
+            // difiere: decirle a alguien que lleva «menos de un minuto» a las nueve de la noche, porque el
+            // negocio está cerrado, es cierto y no sirve para nada.
+            var corrido = duracion(e.ms);
+            var habil = duracion(e.msHabiles);
+            return '<div class="espera-larga"><a href="#" data-espera="' + esc(e.userId) + '">' + esc(e.nombre || short(e.userId)) + '</a>' +
+              '<span class="muted small">lleva ' + corrido +
+              (e.msHabiles < 60000 ? ' · llegó fuera de horario' : (habil !== corrido ? ' (' + habil + ' en horario)' : '')) +
+              (e.mensajes > 1 ? ' · escribió ' + e.mensajes + ' veces' : '') + '</span></div>';
+          }).join('') + '</div>';
+      } else if (d.respondidas) {
+        html += '<div class="small v-si">Nadie esperando respuesta.</div>';
+      }
+      if (!d.respondidas && !d.esperando.length) {
+        html += '<div class="small muted">Todavía no hay conversaciones suficientes para medir.</div>';
+      }
+      html += '<div class="feed-row" style="margin-top:10px"><label class="small muted" for="sla-min">Nos comprometemos a contestar en</label>' +
+        '<input type="number" id="sla-min" min="1" max="10080" value="' + d.acuerdoMin + '" style="width:80px"><span class="small muted">minutos</span>' +
+        '<button class="btn sm" id="sla-guardar">Guardar</button><span class="small" id="sla-msg" role="status"></span></div>';
+      $('tiempos').innerHTML = html;
+
+      $('tiempos').querySelectorAll('[data-espera]').forEach(function (a) {
+        a.onclick = function (ev) { ev.preventDefault(); go('inbox'); openContact(a.getAttribute('data-espera')); };
+      });
+      $('sla-guardar').onclick = function () {
+        var minutos = Number($('sla-min').value);
+        api('/tiempos/acuerdo', { method: 'PUT', body: { minutos: minutos } }).then(function (r) {
+          $('sla-msg').textContent = r && r.error ? r.error : 'Guardado.';
+          if (!r.error) cargarTiempos();
+        });
+      };
     }).catch(function () {});
   }
 

@@ -12,6 +12,7 @@
 // 🪤 Restaurar **pisa** lo que haya. Por eso deja primero una copia de lo que estaba, con la fecha, y por eso el
 // archivo dice de qué cliente salió: restaurar el respaldo de la boutique sobre la financiera sería un desastre
 // silencioso, así que hay que confirmarlo a propósito.
+import { BusinessConfigSchema } from '../config.js';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -129,6 +130,15 @@ export function restaurar(
       const carpeta = typeof antes === 'string' && antes.includes('/') ? antes.slice(0, antes.lastIndexOf('/')) : join(donde.config, '..', 'marca');
       marcaNueva[cual] = join(carpeta, v);
     }
+  }
+  // 🪤 Esta es la configuración de la que el cliente arranca. Si queda rota, el proceso no vuelve a levantar —y
+  // con un supervisor detrás, se reinicia para siempre—. Se comprueba ya compuesta (con las rutas de esta
+  // máquina puestas) y ANTES de escribirla: es la única oportunidad de decir «este respaldo no sirve» en vez de
+  // dejar al cliente abajo. La copia de lo que había ya quedó guardada más arriba.
+  const comoQuedaria = BusinessConfigSchema.safeParse(nueva);
+  if (!comoQuedaria.success) {
+    const donde1 = comoQuedaria.error.issues[0];
+    throw new Error(`no restauré nada: la configuración quedaría rota (${donde1?.path.join('.') || 'configuración'}: ${donde1?.message ?? 'no se pudo leer'})`);
   }
   writeFileSync(donde.config, `${JSON.stringify(nueva, null, 2)}\n`);
   escrito.push('configuración');

@@ -14,6 +14,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import qrcode from 'qrcode-terminal';
+import { mkdirSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { env } from '../config.js';
 import { guardarImportados } from '../crm/historial.js';
@@ -41,13 +42,16 @@ function setStatus(state: WhatsAppState, extra: { qr?: string; me?: string; erro
   Object.assign(status, { state, qr: undefined, error: undefined, ...extra, since: Date.now() });
 }
 
+/** Los últimos cortes, para ver el patrón: cuánto aguantó cada intento y con qué razón se cayó. */
+export const cierres: { cuando: number; code: number | null; razon: string; duroSegundos: number }[] = [];
+
 export function whatsappStatus() {
   return { ...status, qrSvg: status.qr ? qrSvg(status.qr) : undefined };
 }
 
 // El codificador QR que ya trae qrcode-terminal, dibujado como SVG para escanearlo desde el tablero.
 const require = createRequire(import.meta.url);
-function qrSvg(text: string): string {
+export function qrSvg(text: string): string {
   const QRCode = require('qrcode-terminal/vendor/QRCode') as new (type: number, level: number) => {
     addData(d: string): void;
     make(): void;
@@ -74,6 +78,23 @@ export async function stopWhatsApp(): Promise<void> {
   setStatus('apagado');
 }
 
+/**
+ * Empezar de cero: cierra la sesión y borra las credenciales guardadas, para que la próxima vez salga un código
+ * nuevo y se vincule como la primera vez.
+ *
+ * Hace falta de verdad y no es un capricho: al vincular, WhatsApp manda **una sola vez** lo que ya estaba
+ * conversado, y eso es de donde el negocio aprende cómo atiende. Si se quiere volver a traer, hay que vincular
+ * otra vez. Sin este botón habría que entrar al servidor a borrar una carpeta a mano —y quien usa el tablero no
+ * tiene por qué entrar a ningún servidor—. Lo mismo cuando cierran la sesión desde el teléfono: sin esto, el
+ * canal se quedaba atascado sin forma de arreglarlo desde aquí.
+ */
+export async function olvidarSesionWhatsApp(): Promise<void> {
+  await stopWhatsApp();
+  rmSync(env.whatsappAuthDir, { recursive: true, force: true });
+  mkdirSync(env.whatsappAuthDir, { recursive: true });
+  setStatus('apagado');
+}
+
 export async function startWhatsApp(): Promise<WASocket> {
   wanted = true;
   setStatus('conectando');
@@ -85,6 +106,9 @@ export async function startWhatsApp(): Promise<WASocket> {
     markOnlineOnConnect: false, // así el teléfono sigue recibiendo notificaciones
     // Traer lo ya conversado se pide a propósito (WHATSAPP_IMPORT_HISTORY): de ahí salen las preguntas que le
     // hacen al negocio y cómo atiende, nunca precios ni políticas (docs/aprender-del-historial.md).
+    // 🪤 En `true` esto impide vincular: WhatsApp cierra la conexión con 428 antes de entregar el código, una y
+    // otra vez. Comprobado a los dos lados —con la opción apagada el código sale en dos segundos, con ella
+    // encendida no sale nunca—. Se deja porque hay cuentas donde sí funciona, pero nunca encendido de fábrica.
     syncFullHistory: env.whatsappImportHistory,
     generateHighQualityLinkPreview: false,
   });
@@ -115,8 +139,15 @@ export async function startWhatsApp(): Promise<WASocket> {
         return;
       }
       if (!wanted) return;
-      console.log(`[whatsapp] conexión cerrada (${code ?? 'sin código'}), reconectando en 3s...`);
-      setStatus('conectando', { error: `Conexión cerrada (${code ?? 'sin código'}); reconectando.` });
+      // 🪤 El número del cierre no basta para saber qué pasó: 428 sale igual si el camino está cortado, si el
+      // proceso se duerme o si WhatsApp rechaza la sesión de esta máquina. Lo que lo distingue es el mensaje y,
+      // sobre todo, **cuánto aguantó abierta**: un rechazo corta a los pocos segundos, siempre igual.
+      const razon = (u.lastDisconnect?.error as Error | undefined)?.message ?? '';
+      const duro = Math.round((Date.now() - status.since) / 1000);
+      cierres.unshift({ cuando: Date.now(), code: code ?? null, razon, duroSegundos: duro });
+      cierres.splice(8);
+      console.log(`[whatsapp] conexión cerrada (${code ?? 'sin código'}${razon ? `: ${razon}` : ''}) tras ${duro}s, reconectando en 3s...`);
+      setStatus('conectando', { error: `Conexión cerrada (${code ?? 'sin código'}${razon ? `: ${razon}` : ''}) tras ${duro} s; reconectando.` });
       setTimeout(() => {
         if (wanted && sock === current) void startWhatsApp();
       }, 3000);
@@ -130,7 +161,12 @@ export async function startWhatsApp(): Promise<WASocket> {
 
   // Lo que ya estaba conversado cuando vincularon el número. Solo se lee y se guarda aparte: no se responde nada,
   // no entra a las conversaciones del CRM ni a lo que el asistente sabe.
-  if (env.whatsappImportHistory) {
+  //
+  // 🪤 Esto se escucha SIEMPRE, sin condición. Son dos cosas distintas que estuvieron atadas a la misma variable
+  // y no lo están: `syncFullHistory` **pide** todo el historial —y eso impide vincular—, mientras que esto solo
+  // **recoge** lo que WhatsApp manda por su cuenta al vincular, que es gratis y llega igual. Al apagar lo
+  // primero se apagaba lo segundo, así que se vinculaba bien y no se aprendía nada: cero mensajes, sin un aviso.
+  {
     sock.ev.on('messaging-history.set', ({ messages, isLatest }) => {
       const leidos = (messages ?? []).flatMap((m) => {
         const jid = m.key?.remoteJid;

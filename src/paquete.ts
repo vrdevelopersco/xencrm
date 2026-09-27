@@ -39,7 +39,7 @@ const ARRANQUE = String.raw`// Generado por: pnpm paquete — no editar a mano.
 // ERR_REQUIRE_ASYNC_MODULE. Los hijos sí arrancan como se debe, con node, y siguen siendo ESM.
 const { spawn } = require('node:child_process');
 const http = require('node:http');
-const { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
+const { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = require('node:fs');
 const { homedir, tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 
@@ -117,6 +117,14 @@ const porDefecto = {
   // WhatsApp arranca apagado: se enciende desde el tablero de cada cliente, en Canales, cuando vayan a escanear
   // el código. Esto es solo el arranque de fábrica; una vez lo prenden, queda prendido en su base.
   WHATSAPP_ENABLED: process.env.WHATSAPP_ENABLED || 'false',
+  // Al vincular el WhatsApp de un negocio de verdad, lo prudente es mirar antes de hablar: entra todo al CRM, se
+  // lee lo que ya estaba conversado para aprender cómo atienden, y el asistente se queda callado hasta que el
+  // negocio le dé voz desde el tablero (Canales › Contesta Aiva).
+  WHATSAPP_SOLO_ESCUCHAR: process.env.WHATSAPP_SOLO_ESCUCHAR || 'true',
+  // 🪤 Pedir TODO el historial al vincular tumba la vinculación: WhatsApp cierra con 428 antes de enseñar el
+  // código, en bucle, sin decir por qué. Costó medio día de diagnóstico creyendo que era el alojamiento. Se
+  // queda apagado; lo ya conversado se trae aparte, exportando el chat (Perfil › Lo que aprendimos de sus chats).
+  WHATSAPP_IMPORT_HISTORY: process.env.WHATSAPP_IMPORT_HISTORY || 'false',
 };
 
 clientes.forEach((c, i) => {
@@ -143,6 +151,30 @@ clientes.forEach((c, i) => {
       const v = config.brand[cual];
       if (typeof v === 'string' && v && !/^https?:/.test(v)) config.brand[cual] = join(miMarca, v.split('/').pop());
     }
+  }
+  // 🪤 Y si el cliente TIENE marca pero su configuración no la nombra, se toma lo que haya en su carpeta. Pasa
+  // al restaurar un respaldo que se armó antes de que ese cliente tuviera logos: la configuración vuelve sin
+  // marca, el tablero sale sin logo y /brand/logo contesta 404 sin que nadie entienda por qué.
+  if (existsSync(miMarca)) {
+    config.brand = config.brand || {};
+    const hay = readdirSync(miMarca);
+    const buscar = (re) => hay.find((f) => re.test(f));
+    const poner = (cual, re) => {
+      if (config.brand[cual]) return;
+      const f = buscar(re);
+      if (f) config.brand[cual] = join(miMarca, f);
+    };
+    poner('logoOscuro', /oscuro|dark/i);
+    poner('favicon', /favicon|icono?\b/i);
+    poner('logo', /logo/i);
+  }
+  // Los ejemplos del modo demo viajan con el paquete: sin esto, en el servidor el botón dice "este cliente no
+  // trae ejemplos" aunque sí los tenga en el repositorio. Son de fábrica, así que se refrescan en cada subida.
+  const semillaDeFabrica = join(aqui, 'config', c.slug + '-seed.json');
+  if (existsSync(semillaDeFabrica)) {
+    const miSemilla = join(mio, 'seed.json');
+    cpSync(semillaDeFabrica, miSemilla);
+    config.seedFile = miSemilla;
   }
   writeFileSync(configPath, JSON.stringify(config, null, 2));
   levantar(c.slug, 'dist/index.js', {
@@ -213,8 +245,48 @@ function haciaDonde(url) {
   return { puerto: destino.puerto, ruta: resto.startsWith('/') ? resto : '/' + resto, prefijo: '/' + m[1] };
 }
 
-http
-  .createServer((pide, responde) => {
+/**
+ * 🪤 No abrir la puerta hasta que los de adentro contesten.
+ *
+ * Al subir una versión nueva, este enrutador arranca en un segundo y los procesos de cada cliente tardan diez o
+ * quince. En ese hueco, quien entrara se llevaba un 502 —le pasó a alguien justo al ir a iniciar sesión, y el
+ * mensaje que veía era «el servidor contestó 502», que no dice nada y parece que todo está roto—. Así que se
+ * espera a que respondan, con un tope: si alguno no levanta, igual se abre, porque es mejor un cliente caído
+ * que todos.
+ */
+const listo = (puerto) =>
+  new Promise((res) => {
+    const r = http.request({ host: '127.0.0.1', port: puerto, path: '/health', timeout: 1500 }, (x) => {
+      x.resume();
+      res(true);
+    });
+    r.on('error', () => res(false));
+    r.on('timeout', () => {
+      r.destroy();
+      res(false);
+    });
+    r.end();
+  });
+
+async function esperarALosDeAdentro(maxMs = 30000) {
+  const puertos = [puertoConsola, ...[...hijos.values()].map((h) => h.puerto)];
+  const hasta = Date.now() + maxMs;
+  for (;;) {
+    const estados = await Promise.all(puertos.map(listo));
+    const faltan = estados.filter((x) => !x).length;
+    if (!faltan) {
+      console.log('[aiva] todos adentro listos');
+      return;
+    }
+    if (Date.now() > hasta) {
+      console.log('[aiva] abro igual: ' + faltan + ' de ' + puertos.length + ' no contestaron a tiempo');
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+}
+
+const servidor = http.createServer((pide, responde) => {
     const camino = (pide.url || '/').split('?')[0];
     if (PORTADA && (camino === '/' || camino === '/index.html')) {
       responde.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' });
@@ -241,17 +313,22 @@ http
       },
     );
     salida.on('error', () => {
-      responde.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' });
-      responde.end('Ese cliente está arrancando o no responde. Intenta en unos segundos.');
+      responde.writeHead(503, { 'content-type': 'text/plain; charset=utf-8', 'retry-after': '5' });
+      responde.end('Todavía está arrancando. Vuelve a intentar en unos segundos.');
     });
     pide.pipe(salida);
-  })
-  .listen(PUERTO, () => {
+});
+
+// 🪤 El await de nivel superior no existe aquí: este lanzador es CommonJS porque el servidor del alojamiento lo
+// carga con require. Por eso se encadena en vez de esperar.
+void esperarALosDeAdentro().then(() =>
+  servidor.listen(PUERTO, () => {
     console.log('[aiva] escuchando en ' + PUERTO);
     console.log('[aiva]   https://' + dominio + '/            → qué es aiva');
     console.log('[aiva]   https://' + dominio + '/consola     → la consola (tu pantalla)');
     for (const c of clientes) console.log('[aiva]   https://' + dominio + '/' + c.slug + '/  → ' + c.nombre);
-  });
+  }),
+);
 `;
 
 // ---------- Armar ----------
@@ -277,6 +354,10 @@ for (const c of clientes) {
   // Su marca (logos, favicon) viaja con él: sin esto, en el servidor apunta a archivos que no existen.
   const marca = join(rutas(c.slug).dir, 'marca');
   if (existsSync(marca)) cpSync(marca, join(dir, 'config', `${c.slug}-marca`), { recursive: true });
+  // Y sus ejemplos de demostración, que viven fuera de la carpeta del cliente (`seedFile` en su configuración).
+  const suConfig = JSON.parse(readFileSync(rutas(c.slug).config, 'utf8')) as { seedFile?: string };
+  const semilla = suConfig.seedFile ? resolve(suConfig.seedFile) : '';
+  if (semilla && existsSync(semilla)) cpSync(semilla, join(dir, 'config', `${c.slug}-seed.json`));
 }
 
 writeFileSync(

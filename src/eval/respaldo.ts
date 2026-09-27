@@ -27,7 +27,7 @@ const donde = {
   conocimiento: join(dir, 'conocimiento'),
 };
 writeFileSync(donde.config, JSON.stringify({
-  business: { name: 'Boutique de prueba' },
+  business: { name: 'Boutique de prueba', description: 'Alquiler de trajes', siteUrl: 'https://ejemplo.co', humanContact: 'escríbenos' },
   agent: { name: 'Aiva', style: 'cálido' },
   brand: { color: '#C5A47E', logo: '/Users/alguien/su-maquina/marca/logo.png', favicon: 'https://ejemplo.co/fav.png' },
   dictionaryFile: '/Users/alguien/su-maquina/dictionary.json',
@@ -64,7 +64,7 @@ const destino = {
   conocimiento: join(otroDir, 'conocimiento'),
 };
 writeFileSync(destino.config, JSON.stringify({
-  business: { name: 'Otra cosa' },
+  business: { name: 'Otra cosa', description: 'Otra cosa distinta', siteUrl: 'https://otra.co', humanContact: 'escríbenos' },
   agent: { name: 'Otra' },
   dictionaryFile: join(otroDir, 'dictionary.json'),
   profileFile: join(otroDir, 'profile.json'),
@@ -93,6 +93,19 @@ const travieso = { ...r, conocimiento: [{ nombre: '../../fuera.md', texto: 'no d
 restaurar(destino, travieso as typeof r, { carpetaCopias: join(otroDir, 'respaldos') });
 check('un nombre con ../ no escribe fuera de la carpeta', !existsSync(join(otroDir, '..', 'fuera.md')) && readdirSync(destino.conocimiento).some((f) => f.includes('fuera.md')),
   readdirSync(destino.conocimiento).join(','));
+
+// 🪤 Un respaldo con la configuración rota dejaría al cliente sin arrancar (y reiniciándose en bucle si hay un
+// supervisor detrás). Tiene que rebotar ANTES de escribir nada.
+const roto = { ...r, config: { ...r.config, business: { nombre: 'sin el campo que toca' } } };
+let reboto = '';
+try {
+  restaurar(destino, roto as typeof r, { carpetaCopias: join(otroDir, 'respaldos') });
+} catch (e) {
+  reboto = (e as Error).message;
+}
+check('un respaldo que dejaría la configuración rota no se escribe', reboto.includes('no restauré nada'), reboto || 'no rebotó: lo escribió');
+check('y lo que había sigue en su sitio', JSON.parse(readFileSync(destino.config, 'utf8')).business.name === 'Boutique de prueba',
+  JSON.parse(readFileSync(destino.config, 'utf8')).business.name);
 
 check('la versión del formato va dentro', VERSION === 1 && r.version === 1);
 
