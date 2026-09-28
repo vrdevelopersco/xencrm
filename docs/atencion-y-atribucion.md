@@ -125,6 +125,44 @@ del equipo. Así que todo lo que sale va firmado con **el papel**, no con la per
 nombre que para él no significa nada y que de paso expone a quien atiende. El nombre de la persona sigue
 guardándose, pero solo para adentro: en el tablero se ve quién contestó cada mensaje.
 
+## Los tres nombres
+
+Esto es lo que más confunde de aiva, y conviene decirlo entero: **hay tres nombres distintos** y cada uno se
+cambia en un sitio.
+
+| Cuál | Qué es | Dónde se cambia | Quién lo ve |
+|---|---|---|---|
+| **El asistente** (p. ej. «Aiva») | Cómo se llama el asistente de ese negocio | *El negocio* | El cliente final, firmando lo que contesta el asistente |
+| **Tu nombre** | El de tu cuenta, el mismo en toda la consola | Tu perfil | El equipo, en la consola y como punto de partida en cada tablero |
+| **Cómo firmas aquí** | Con qué nombre atiendes en **ese** cliente | La ficha de perfil del tablero de ese cliente | El equipo, en cada mensaje que contestes ahí |
+
+Y dos reglas, en este orden:
+
+1. **Lo que se haya puesto para un cliente manda.** Puedes firmar «Camila» en la boutique y «Soporte» en la
+   financiera: son negocios distintos y no se contagian.
+2. **Tu nombre de cuenta es el punto de partida**, el que se usa mientras ese cliente no tenga uno propio.
+
+Al cambiarlo desde un tablero se pregunta **dónde vale**: solo en ese cliente o en todos. No se decide por ti.
+
+🪤 **Lo que el cliente final ve no es ninguno de estos tres.** Por WhatsApp va el papel —el asistente con su
+nombre, una persona como «Operador»—, nunca el nombre de quien atiende (ver *Con quién cree el cliente que está
+hablando*). El nombre de la persona es para adentro: para que el equipo sepa quién contestó.
+
+### Por qué está escrito con tanto detalle
+
+Este modelo costó cuatro entregas. Los dos errores, para que nadie los repita:
+
+- 🪤 **El tablero rellenaba el nombre de quien atiende con el del ASISTENTE** cuando estaba vacío, y lo dejaba
+  guardado. Como casi todos los clientes llaman igual al suyo, el operador acababa llamándose «Aiva» en todos y
+  parecía que los perfiles se cruzaban entre clientes. No se cruzaba nada: se inventaba el nombre equivocado, y
+  al quedar guardado volvía a aparecer aunque se quitara el apaño.
+- 🪤 **El arreglo siguiente se pasó al otro extremo**: unificarlo en la cuenta hizo que el nombre del
+  super-admin pisara el de todos los clientes a la vez. En un CRM multicliente eso no es un detalle de
+  interfaz — es el aislamiento entre negocios roto.
+
+Hay dos pruebas en `pnpm test:seguridad` que leen el propio tablero y fallan si alguien vuelve a meter
+cualquiera de los dos.
+
 ## El segundo clic sobre una conversación
 
 `public/admin.js` (menú contextual) · `GET /admin/api/contacts/:id/vistazo`
@@ -139,13 +177,14 @@ Lo que se quiere hacer sobre una conversación sin entrar en ella:
   puede usar.
 - **Que siga el asistente**: devuelve la conversación al bot.
 
-## Quién atiende, y por qué dejó de perderse
+### Dónde vive cada uno
 
-El nombre de quien atiende sale de **su cuenta** cuando se entra por la consola, no del navegador. Antes vivía en
-el almacenamiento local, así que se perdía al cambiar de equipo o de navegador y había que volver a escribirlo.
+Tu nombre de cuenta vive en el servidor, en tu perfil: por eso te sigue en cualquier equipo y no se pierde al
+cambiar de navegador. La consola se lo dice al tablero al servirle la página —el tablero habla con un token, no
+con cuentas, así que por su cuenta no puede saberlo—.
 
-Para quien entra directo al tablero con el token (sin consola) se sigue guardando en el navegador, separado por
-cliente, porque ahí no hay cuenta de la que sacarlo.
+Lo que firmas en un cliente concreto vive en el navegador, separado por cliente. Quien entra directo al tablero
+con el token, sin pasar por la consola, solo tiene esto: ahí no hay cuenta de la que partir.
 
 ## El sonido del aviso
 
@@ -171,3 +210,6 @@ hospital.
 - **Traer más historial en el conector.** El botón funciona con la sesión en la propia máquina; el conector de
   `src/conector.ts` todavía no lo expone.
 - **Devolver las conversiones a Google y a Meta.** El identificador del clic ya se guarda; falta mandarlo.
+- **Enseñar los tres nombres juntos.** Hoy se editan en tres sitios distintos y nada en pantalla dice cuál es
+  cuál; al cambiar el de un cliente se pregunta con un diálogo del navegador. Debería ser una sola ficha que los
+  muestre los tres y dos botones explícitos: «guardar solo aquí» y «guardar en todos mis clientes».
