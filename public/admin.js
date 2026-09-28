@@ -78,9 +78,40 @@
   function nameOf(c) { return c.name || short(c.id); }
   function toast(text, onclick) { var t = document.createElement('div'); t.className = 'toast'; t.textContent = text; t.onclick = function () { t.remove(); if (onclick) onclick(); }; $('toasts').appendChild(t); setTimeout(function () { t.remove(); }, 6000); }
   var audio = null;
-  // Dos notas de piano, una cayendo sobre la otra. Antes era un pitido plano de 880 Hz que sonaba a monitor de
-  // hospital: para algo que suena veinte veces al día, importa que no ponga nervioso a quien atiende. Sigue
-  // siendo corto y discreto —avisa, no interrumpe— y se apaga desde el mismo sitio de siempre.
+  // El aviso de que entró algo. Es un acorde, no un pitido: suena una vez, cae solo y no deja a nadie en
+  // tensión. Antes era un tono plano de 880 Hz que parecía un monitor de hospital.
+  //
+  // Está sintetizado a propósito y no es un archivo: así no pesa nada, no hay nada que descargar, y no metemos
+  // en el producto un sonido que es de otro. Las cuatro notas son un acorde mayor, entrando casi a la vez, con
+  // un filtro que le quita el filo y una caída larga.
+  function beep() {
+    if (!state.sound) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      var t0 = audio.currentTime;
+      var suave = audio.createBiquadFilter();
+      suave.type = 'lowpass';
+      suave.frequency.value = 2600; // sin esto suena a plástico
+      var salida = audio.createGain();
+      salida.gain.value = 0.9;
+      suave.connect(salida);
+      salida.connect(audio.destination);
+      // Do, Mi, Sol y Do de la octava de arriba: entran escalonadas por milésimas, como una mano en un piano.
+      [523.25, 659.25, 783.99, 1046.5].forEach(function (hz, i) {
+        var o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'triangle';
+        o.frequency.value = hz;
+        var t = t0 + i * 0.018;
+        var fuerza = 0.05 - i * 0.008; // las agudas, más bajitas: si no, chillan
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(fuerza, t + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+        o.connect(g); g.connect(suave);
+        o.start(t); o.stop(t + 0.95);
+      });
+    } catch (e) {}
+  }
+
   function beep() {
     if (!state.sound) return;
     try {
@@ -158,7 +189,13 @@
   // El botón rota entre los tres; la ficha de perfil los tiene con su nombre.
   $('theme-btn').onclick = function () { ponerTema(state.theme === 'light' ? 'dark' : state.theme === 'dark' ? 'auto' : 'light'); };
   function applySound() { $('sound-btn').classList.toggle('on', state.sound); $('sound-btn').textContent = state.sound ? '🔔' : '🔕'; }
-  $('sound-btn').onclick = function () { state.sound = !state.sound; try { localStorage.setItem(LLAVE('sound'), state.sound ? '1' : '0'); } catch (e) {} applySound(); };
+  $('sound-btn').onclick = function () {
+    state.sound = !state.sound;
+    try { localStorage.setItem(LLAVE('sound'), state.sound ? '1' : '0'); } catch (e) {}
+    applySound();
+    // Al encenderlo suena una vez: así se sabe qué se acaba de activar sin tener que esperar a que entre algo.
+    if (state.sound) beep();
+  };
   applyTheme(); applySound();
 
   // ---------- navegación ----------

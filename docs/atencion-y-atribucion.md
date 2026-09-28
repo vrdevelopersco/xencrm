@@ -147,6 +147,20 @@ el almacenamiento local, así que se perdía al cambiar de equipo o de navegador
 Para quien entra directo al tablero con el token (sin consola) se sigue guardando en el navegador, separado por
 cliente, porque ahí no hay cuenta de la que sacarlo.
 
+## El sonido del aviso
+
+`public/admin.js` (`beep`)
+
+Un acorde mayor de cuatro notas entrando escalonadas por milésimas, con un filtro que le quita el filo y una
+caída de casi un segundo. Suena una vez, cae solo y no deja a nadie en tensión.
+
+Está **sintetizado, no es un archivo**: no pesa nada, no hay nada que descargar y no mete en el producto un
+sonido que es de otro. Al encender el aviso suena una vez, para saber qué se acaba de activar sin esperar a que
+entre un mensaje.
+
+Antes era un tono plano de 880 Hz, y para algo que suena veinte veces al día eso importa: parecía un monitor de
+hospital.
+
 ## Lo que todavía no hay
 
 - **Avisos por correo o push del navegador.** Hoy el aviso externo es solo por WhatsApp. El push real necesita
