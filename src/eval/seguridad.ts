@@ -309,6 +309,12 @@ const fuenteTablero = readFileSync('public/admin.js', 'utf8');
 check('🪤 el nombre de quien atiende no se rellena con el del asistente', !/state\.name\s*=\s*me\.agent/.test(fuenteTablero) && !/state\.name\s*=.*state\.agentName/.test(fuenteTablero),
   (fuenteTablero.match(/state\.name\s*=.*/g) ?? []).join(' | ').slice(0, 200));
 check('y al pintarlo tampoco se cae al del asistente', !/var nombre = state\.name \|\| state\.agentName/.test(fuenteTablero));
+// 🪤 Y el nombre de la cuenta NO pisa lo que se haya puesto para un cliente concreto: cada negocio es un
+// tenant aparte, y que el nombre del super-admin se propague a los tres tableros a la vez es justo lo que no
+// debe pasar. Primero lo del cliente, y solo si no hay, el de la cuenta.
+check('🪤 lo puesto para un cliente manda sobre el nombre de la cuenta',
+  /state\.name = localStorage\.getItem\(LLAVE\('name'\)\) \|\|/.test(fuenteTablero),
+  (fuenteTablero.match(/state\.name = localStorage[^;]*/) ?? ['no encontré la línea'])[0]);
 
 // ---------- 🪤 Probar claves a ciegas ----------
 // Va de ÚLTIMO a propósito: el freno deja bloqueado quince minutos a quien lo dispara, así que cualquier prueba

@@ -27,7 +27,9 @@
   var state = { token: '', name: '', view: 'today', filter: 'all', q: '', contacts: [], current: null, detail: null, kind: 'knowledge', theme: 'light', sound: true, stageLabels: {}, stages: [], es: null, notifs: [], notifSeen: 0, detailOpen: false };
   // 🪤 Si se entró por la consola, el nombre de quien atiende sale de SU CUENTA y no del navegador: así se
   // mantiene al cambiar de equipo y no hay forma de que se cruce con el de otro cliente.
-  try { state.token = localStorage.getItem(LLAVE('token')) || ''; state.name = (typeof window.AIVA_QUIEN === 'string' && window.AIVA_QUIEN) || localStorage.getItem(LLAVE('name')) || ''; state.theme = localStorage.getItem(LLAVE('theme')) || 'light'; state.sound = localStorage.getItem(LLAVE('sound')) !== '0'; state.notifSeen = Number(localStorage.getItem(LLAVE('notifSeen')) || 0); } catch (e) {}
+  // 🪤 Primero lo que se haya puesto PARA ESTE CLIENTE, y solo si no hay, el nombre de la cuenta. Al revés, el
+  // nombre del super-admin se propagaría a todos los clientes a la vez.
+  try { state.token = localStorage.getItem(LLAVE('token')) || ''; state.name = localStorage.getItem(LLAVE('name')) || (typeof window.AIVA_QUIEN === 'string' && window.AIVA_QUIEN) || ''; state.theme = localStorage.getItem(LLAVE('theme')) || 'light'; state.sound = localStorage.getItem(LLAVE('sound')) !== '0'; state.notifSeen = Number(localStorage.getItem(LLAVE('notifSeen')) || 0); } catch (e) {}
 
   // ---------- íconos (monocromos, el color de estado queda para los chips) ----------
   var ICONS = {
@@ -1712,11 +1714,11 @@
         state.name = '';
         try { localStorage.removeItem(LLAVE('name')); } catch (e) {}
       }
-      // Y si hay cuenta, manda la cuenta: en el navegador no se guarda nada que la contradiga.
-      if (state.quienSoyPorCuenta) {
-        state.name = window.AIVA_QUIEN;
-        try { localStorage.removeItem(LLAVE('name')); } catch (e) {}
-      }
+      // 🪤 Y si NO hay nada puesto para este cliente, se usa el nombre de la cuenta como punto de partida — pero
+      // sin pisarlo. Cada cliente es un negocio aparte: quien atiende puede firmar distinto en una boutique que
+      // en una financiera, y que el nombre del super-admin se propague a los tres de golpe es exactamente lo
+      // que no debe pasar.
+      if (!state.name && state.quienSoyPorCuenta) state.name = window.AIVA_QUIEN;
       pintarQuienSoy();
       document.title = me.agent + ' · Tablero';
       return api('/stats');
@@ -2002,18 +2004,27 @@
   $('yo-guardar').onclick = function () {
     var puesto = $('yo-nombre').value.trim();
     if (!puesto) { $('yo-msg').textContent = 'Pon tu nombre: es el que verá tu equipo en cada mensaje que contestes.'; return; }
+    // 🪤 Con cuenta hay que preguntar DÓNDE. Cada cliente es un negocio aparte y quien atiende puede firmar
+    // distinto en cada uno; dar por hecho que vale para todos fue el error que hizo que un nombre puesto en la
+    // consola apareciera en los tres tableros.
+    var enTodos = false;
+    if (state.quienSoyPorCuenta || PORLACONSOLA) {
+      enTodos = confirm('¿Lo pongo en todos los clientes (es tu nombre de cuenta)?\n\nAceptar: en todos.\nCancelar: solo en ' + (state.bizName || 'este cliente') + '.');
+    }
     state.name = puesto;
     // 🪤 Con cuenta, el nombre es de LA PERSONA y se guarda en su perfil: así la sigue en cualquier cliente y en
     // cualquier equipo. En el navegador solo se guarda cuando no hay cuenta de la que colgarlo (entrada directa
     // con token), que es el único caso en que no hay otro sitio.
-    if (state.quienSoyPorCuenta || PORLACONSOLA) {
+    if (enTodos) {
+      // Cambia tu cuenta, y este cliente deja de tener uno propio para que siga al de la cuenta.
+      try { localStorage.removeItem(LLAVE('name')); } catch (e) {}
       fetch('/api/yo', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ nombre: puesto }) })
         .then(function (r) { return r.json(); })
-        .then(function (d) { $('yo-msg').textContent = d && d.error ? d.error : 'Listo ✓ · queda en tu perfil'; })
+        .then(function (d) { $('yo-msg').textContent = d && d.error ? d.error : 'Listo ✓ · en todos tus clientes'; })
         .catch(function () { $('yo-msg').textContent = 'Guardado aquí, pero no pude actualizarlo en tu perfil.'; });
     } else {
       try { localStorage.setItem(LLAVE('name'), puesto); } catch (e) {}
-      $('yo-msg').textContent = 'Listo ✓';
+      $('yo-msg').textContent = 'Listo ✓ · solo en ' + (state.bizName || 'este cliente');
     }
     pintarQuienSoy();
     setTimeout(function () { $('dlg-yo').close(); }, 900);

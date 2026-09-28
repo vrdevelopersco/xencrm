@@ -1294,7 +1294,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         '<div id="presentes" class="presentes" hidden></div>' +
         '<div class="chats">' + (msgs || '<div class="muted small">Sin mensajes.</div>') + '</div>' +
         '<div class="fila firma"><label class="small muted" for="quien">Respondes como</label>' +
-          '<input id="quien" style="width:150px" value="' + esc(comoFirmo()) + '" placeholder="tu nombre" title="Tu nombre, el de tu cuenta: se ve igual en todos los clientes">' +
+          '<input id="quien" style="width:150px" value="' + esc(comoFirmo(p.slug)) + '" placeholder="tu nombre" title="Con qué nombre firmas en este cliente. Si lo dejas como tu nombre de cuenta, vale para todos.">' +
           '<span class="small muted">así lo verá el cliente de ' + esc(p.cliente) + ' (por WhatsApp va delante del mensaje)</span></div>' +
         '<div id="msg2" class="small" role="status"></div>' + accion;
       marcarPresencia(p);
@@ -1312,7 +1312,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   // esté abierto; quien cierra la pestaña no avisa, así que allá caduca solo.
   var latido = null;
   function marcarPresencia(p) {
-    var quien = comoFirmo() || (yo ? yo.nombre : '');
+    var quien = comoFirmo(p.slug) || (yo ? yo.nombre : '');
     if (!quien) return;
     var avisar = function () {
       cli(p.slug + '/contacts/' + encodeURIComponent(p.userId) + '/presencia', { method: 'POST', body: { by: quien } })
@@ -1338,7 +1338,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
 
   function salirDeLaConversacion(p) {
     clearInterval(latido);
-    var quien = comoFirmo() || (yo ? yo.nombre : '');
+    var quien = comoFirmo(p.slug) || (yo ? yo.nombre : '');
     if (!quien) return;
     cli(p.slug + '/contacts/' + encodeURIComponent(p.userId) + '/presencia', { method: 'POST', body: { by: quien, salir: true } }).catch(function () {});
   }
@@ -1346,10 +1346,20 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   // 🪤 Con quién firma uno es COSA DE CADA CLIENTE, y no es un adorno: por WhatsApp ese nombre se le antepone al
   // mensaje que recibe el cliente (*Camila:* ...). Por eso arranca con el nombre del asistente de ESE negocio,
   // que es el que sus clientes ya conocen, y no con el de uno, que allá no le dice nada a nadie.
-  // 🪤 Quién eres NO depende del cliente que estés mirando: es tu cuenta. Esto guardaba un nombre por cliente
-  // en el navegador y, si no había, caía al nombre del ASISTENTE de ese cliente. Resultado: en la consola veías
-  // un nombre y en el tablero otro, cada uno de su padre y de su madre. Una sola fuente: tu perfil.
-  function comoFirmo() {
+  /**
+   * Con qué nombre firmas en un cliente.
+   *
+   * Tu cuenta es el punto de partida, pero cada cliente es un negocio aparte y puedes querer firmar distinto en
+   * cada uno: lo que pongas para uno manda sobre tu nombre de cuenta y no se contagia a los demás.
+   *
+   * 🪤 Lo que NO se hace es caer al nombre del ASISTENTE de ese cliente cuando no hay nada puesto. Eso hacía que
+   * quien atiende se llamara «Aiva» en todos los clientes a la vez y parecía que los perfiles se cruzaban.
+   */
+  function comoFirmo(slug) {
+    try {
+      var propio = slug && localStorage.getItem('aiva.consola.quien.' + slug);
+      if (propio) return propio;
+    } catch (e) { /* sin almacenamiento, se usa la cuenta */ }
     return yo ? yo.nombre : 'Llave maestra';
   }
 
@@ -1360,13 +1370,12 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   function responder(p) {
     var texto = $('resp').value.trim();
     if (!texto) { $('msg2').textContent = 'Escribe la respuesta.'; return; }
-    // Quien firma eres tú, y eso ya no se guarda por cliente en este navegador: si lo cambias, cambia tu
-    // perfil, que es de donde lo toman todas las pantallas.
-    var quien = $('quien').value.trim() || comoFirmo();
-    if (yo && quien && quien !== yo.nombre) {
-      api('/yo', { method: 'PATCH', body: { nombre: quien } }).then(function (d) { if (d && d.usuario) yo = d.usuario; }).catch(function () {});
-    }
-    try { localStorage.removeItem('aiva.consola.quien.' + p.slug); } catch (e) {}
+    // Si firmas distinto de tu nombre de cuenta, queda anotado PARA ESTE CLIENTE y no toca a los demás.
+    var quien = $('quien').value.trim() || comoFirmo(p.slug);
+    try {
+      if (yo && quien === yo.nombre) localStorage.removeItem('aiva.consola.quien.' + p.slug);
+      else localStorage.setItem('aiva.consola.quien.' + p.slug, quien);
+    } catch (e) { /* sin almacenamiento, se firma igual */ }
     $('enviar').disabled = true;
     $('msg2').textContent = 'Enviando…';
     var envio = p.tipo === 'verificar'
