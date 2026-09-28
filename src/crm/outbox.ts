@@ -1,5 +1,6 @@
 // Envío de mensajes hacia el cliente desde fuera del agente (respuestas humanas, confirmaciones, recordatorios).
 import { business } from '../config.js';
+import { aprenderDeLaRespuesta } from './historial.js';
 import { appendMessage, type Author } from '../agent/memory.js';
 import { getContact, updateContact } from './contacts.js';
 import { emitEvent } from './events.js';
@@ -112,6 +113,15 @@ export async function sendToContact(userId: string, text: string, author: Author
   const id = appendMessage(userId, 'assistant', text, undefined, author, by);
   emitEvent('message', userId, { id, role: 'assistant', author, by: by ?? null, content: text, ts: Date.now() });
   updateContact(userId, { unread: 0 }, { silent: true });
+  // Lo que contesta una persona enseña cómo atiende este negocio: entra al material de aprendizaje. Del propio
+  // asistente no se aprende nada (ver crm/historial.ts).
+  if (author === 'human') {
+    try {
+      aprenderDeLaRespuesta(userId, text, by ?? '');
+    } catch (err) {
+      console.error('[outbox] no pude guardar lo aprendido:', (err as Error).message);
+    }
+  }
   if (!send) {
     console.warn(`[outbox] el canal ${c.channel} no tiene emisor registrado; el mensaje quedó guardado`);
     return;

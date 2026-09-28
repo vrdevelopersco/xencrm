@@ -320,11 +320,42 @@ setInterval(() => {
 const deDonde = (c: Context): string =>
   c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'sin-direccion';
 
+/**
+ * La página de la consola, leída una sola vez al arrancar.
+ *
+ * 🪤 Antes se leía del disco en CADA petición. Cuando algo falla ahí —el archivo no está donde se espera, no se
+ * puede leer, lo que sea— la consola entera devuelve un 500 mudo: no entra nadie y desde fuera no hay forma de
+ * saber por qué. Leyéndola al arrancar, el problema se ve una vez en el registro y la página se sirve de memoria.
+ */
+let laPagina: string | null = null;
+let porQueNo = '';
+function paginaConsola(): string | null {
+  if (laPagina !== null) return laPagina;
+  try {
+    laPagina = readFileSync(new URL('../public/consola.html', import.meta.url), 'utf8');
+  } catch (err) {
+    porQueNo = (err as Error).message;
+    console.error('[consola] no pude leer public/consola.html:', porQueNo);
+  }
+  return laPagina;
+}
+
 export function mountConsola(app: Hono) {
   app.use('*', cabecerasDeSiempre);
   app.use('*', soloDesdeAqui);
+  // Un error dentro de la consola tiene que decir qué pasó. Un «Internal Server Error» a secas deja a quien lo
+  // sufre sin nada que contar y a quien lo arregla adivinando.
+  app.onError((err, c) => {
+    console.error('[consola]', c.req.method, c.req.path, '→', err);
+    return c.text(`Falló ${c.req.path}: ${err.message}`, 500);
+  });
 
-  app.get('/', (c) => c.html(readFileSync(new URL('../public/consola.html', import.meta.url), 'utf8')));
+  app.get('/', (c) => {
+    const html = paginaConsola();
+    return html
+      ? c.html(html)
+      : c.text(`No pude leer la página de la consola: ${porQueNo}\n\nEl archivo debería estar en public/consola.html, junto a dist/.`, 500);
+  });
 
   // El logo de la casa. En el despliegue lo sirve el enrutador, pero la consola también corre sola (pnpm consola)
   // y ahí nadie más lo serviría.

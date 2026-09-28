@@ -111,5 +111,30 @@ guardarImportados(conClave, 'prueba');
 const guardado = JSON.stringify(getDb().prepare('SELECT content FROM import_messages').all());
 check('lo guardado para entrenar no trae credenciales', !guardado.includes('Clave-ejemplo-2026') && !guardado.includes('admin@nomina-ejemplo.co'), guardado.slice(0, 200));
 
+// ---------- Aprender de lo que contesta el equipo, en vivo ----------
+// Es lo que le da sentido al modo «solo escuchar»: mientras el equipo atiende como siempre, se va juntando su
+// forma de contestar. Cuando el asistente tome la palabra, ya no arranca de cero.
+const { aprenderDeLaRespuesta } = await import('../crm/historial.js');
+const { touchUser: tocar } = await import('../agent/memory.js');
+const bd = getDb();
+const T0 = new Date('2026-09-22T15:00:00Z').getTime();
+tocar('wa:573001112233@s.whatsapp.net', 'whatsapp', 'Marcela Ríos');
+bd.prepare("INSERT INTO messages (user_id, role, content, ts, author) VALUES (?, 'user', '¿tienen esmoquin para grado?', ?, 'customer')").run('wa:573001112233@s.whatsapp.net', T0);
+bd.prepare("INSERT INTO messages (user_id, role, content, ts, author) VALUES (?, 'user', 'es para el viernes', ?, 'customer')").run('wa:573001112233@s.whatsapp.net', T0 + 60_000);
+const n = aprenderDeLaRespuesta('wa:573001112233@s.whatsapp.net', 'Claro que sí, con gusto. ¿Para qué talla sería?', 'Camila', T0 + 120_000);
+check('lo que contesta una persona entra al aprendizaje', n === 3, `guardó ${n}`);
+check('con la pregunta que lo provocó', resumenImportado().mensajes >= 3 && /esmoquin/.test(JSON.stringify(bd.prepare("SELECT content FROM import_messages WHERE origen = 'en vivo'").all())));
+check('y queda dicho que contestó una persona', (bd.prepare("SELECT COUNT(*) n FROM import_messages WHERE origen = 'en vivo' AND role = 'assistant' AND autor = 'Camila'").get() as { n: number }).n === 1);
+
+// 🪤 Una respuesta que nadie pidió (un seguimiento, un recordatorio) no enseña a atender a nadie.
+tocar('wa:573009998877@s.whatsapp.net', 'whatsapp', 'Nadie preguntó');
+const sinPregunta = aprenderDeLaRespuesta('wa:573009998877@s.whatsapp.net', 'Hola, te recuerdo tu cita', 'Camila', T0);
+check('🪤 una respuesta sin pregunta no se aprende', sinPregunta === 0, String(sinPregunta));
+
+// 🪤 Y las credenciales se tapan también aquí.
+bd.prepare("INSERT INTO messages (user_id, role, content, ts, author) VALUES (?, 'user', '¿cómo entro?', ?, 'customer')").run('wa:573001112233@s.whatsapp.net', T0 + 200_000);
+aprenderDeLaRespuesta('wa:573001112233@s.whatsapp.net', 'Usuario: admin@dunor.co\nClave: secreta-de-verdad', 'Camila', T0 + 260_000);
+check('🪤 lo aprendido no guarda credenciales', !JSON.stringify(bd.prepare('SELECT content FROM import_messages').all()).includes('secreta-de-verdad'));
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

@@ -41,6 +41,39 @@ export function guardarImportados(mensajes: MensajeImportado[], origen = 'whatsa
   return n;
 }
 
+/**
+ * Aprender de lo que acaba de pasar: cuando una persona del equipo contesta, esa respuesta y la pregunta que la
+ * provocó entran al material del que sale **cómo atiende este negocio**.
+ *
+ * Es lo que le da sentido al modo «solo escuchar»: mientras el equipo atiende como siempre, el asistente va
+ * juntando su forma de contestar sin decir una palabra. Cuando le den voz, ya no arranca de cero.
+ *
+ * 🪤 Solo se aprende de lo que escriben **personas**. De las respuestas del propio asistente no se aprende nada:
+ * sería copiarse a sí mismo, y cualquier manía suya se reforzaría sola hasta volverse su estilo.
+ *
+ * Y sigue valiendo la regla de siempre: de aquí sale la forma de contestar, nunca los precios ni las políticas,
+ * que cambian (ver docs/aprender-del-historial.md). Las credenciales se tapan antes de guardar.
+ */
+export function aprenderDeLaRespuesta(userId: string, respuesta: string, quien: string, ahora = Date.now()): number {
+  const db = getDb();
+  const contacto = db.prepare('SELECT name FROM users WHERE id = ?').get(userId) as { name: string | null } | undefined;
+  const chat = contacto?.name || userId;
+  // Lo que preguntó y quedó sin responder: desde la última vez que contestó alguien (o el principio).
+  const desde = (db.prepare("SELECT MAX(ts) t FROM messages WHERE user_id = ? AND role = 'assistant' AND ts < ?").get(userId, ahora) as { t: number | null }).t ?? 0;
+  const preguntas = db
+    .prepare("SELECT content, ts FROM messages WHERE user_id = ? AND role = 'user' AND ts > ? ORDER BY ts")
+    .all(userId, desde) as { content: string; ts: number }[];
+  if (!preguntas.length) return 0; // una respuesta que nadie pidió no enseña a atender a nadie
+
+  return guardarImportados(
+    [
+      ...preguntas.map((p) => ({ chat, autor: chat, role: 'user' as const, content: p.content, ts: p.ts })),
+      { chat, autor: quien || 'el equipo', role: 'assistant' as const, content: respuesta, ts: ahora },
+    ],
+    'en vivo',
+  );
+}
+
 export function borrarImportado(): number {
   const db = getDb();
   const n = Number(db.prepare('DELETE FROM import_messages').run().changes);
