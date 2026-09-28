@@ -449,7 +449,13 @@ export function mountConsola(app: Hono) {
         // 🪤 Y quién está atendiendo. Antes el tablero guardaba ese nombre en el navegador, así que se perdía al
         // cambiar de equipo o de navegador y había que volver a escribirlo. Quien entra por la consola ya dijo
         // quién es al iniciar sesión: el nombre sale de su cuenta y deja de depender de la máquina.
-        const soy = (c.get('usuario' as never) as UsuarioPublico | null)?.nombre ?? '';
+        // 🪤 Con la llave maestra no hay cuenta en el archivo, así que esto llegaba VACÍO y el tablero se
+        // quedaba sin saber quién atiende. Se dice igual: quien entró por la puerta de emergencia también tiene
+        // un nombre que enseñar, y es mejor «Llave maestra» que nada.
+        // 🪤 De `quien`, que es de esta ruta, y NO de `c.get('usuario')`: ese lo pone el middleware de /api/* y
+        // aquí nunca se escribió, así que leerlo daba vacío siempre y el tablero se quedaba sin saber quién
+        // atiende — que es justo el fallo que se estaba persiguiendo.
+        const soy = quien.usuario?.nombre || (quien.esSuper ? 'Llave maestra' : '');
         const html = (await r.text()).replace(
           '</head>',
           `<script>window.AIVA_CONSOLA=${JSON.stringify(slug)};window.AIVA_EQUIPO=${JSON.stringify(equipo)};window.AIVA_QUIEN=${JSON.stringify(soy)}</script></head>`,

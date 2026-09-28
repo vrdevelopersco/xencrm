@@ -1705,6 +1705,19 @@
       // persona que toma el teclado. Si no se sabe quién es, se deja en blanco y se pide; inventarlo es peor,
       // porque queda guardado y nadie vuelve a mirarlo.
       state.quienSoyPorCuenta = typeof window.AIVA_QUIEN === 'string' && Boolean(window.AIVA_QUIEN);
+      // 🪤 Limpieza de lo que dejó el apaño viejo: si lo guardado es el nombre del ASISTENTE, no lo escribió
+      // nadie —lo puso el propio tablero— y hay que quitarlo, o se arrastra para siempre y parece que el perfil
+      // se cruza entre clientes.
+      if (state.name && me.agent && state.name === me.agent) {
+        state.name = '';
+        try { localStorage.removeItem(LLAVE('name')); } catch (e) {}
+      }
+      // Y si hay cuenta, manda la cuenta: en el navegador no se guarda nada que la contradiga.
+      if (state.quienSoyPorCuenta) {
+        state.name = window.AIVA_QUIEN;
+        try { localStorage.removeItem(LLAVE('name')); } catch (e) {}
+      }
+      pintarQuienSoy();
       document.title = me.agent + ' · Tablero';
       return api('/stats');
     }).then(function (s) {
