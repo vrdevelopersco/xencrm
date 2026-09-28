@@ -160,7 +160,7 @@
     if (PORLACONSOLA) { location.href = '/'; return; }
     $('login').hidden = false; $('login-err').textContent = err || ''; $('login-name').value = state.name; ($('login-name').value ? $('login-token') : $('login-name')).focus(); }
   $('login-btn').onclick = function () {
-    state.name = $('login-name').value.trim() || 'asesor'; state.token = $('login-token').value.trim();
+    state.name = $('login-name').value.trim(); state.token = $('login-token').value.trim();
     try { localStorage.setItem(LLAVE('token'), state.token); localStorage.setItem(LLAVE('name'), state.name); } catch (e) {}
     boot();
   };
@@ -1487,7 +1487,8 @@
       api('/whatsapp/mas-historial', { method: 'POST', body: {} }).then(function (r) {
         b.disabled = false; b.textContent = 'Traer más historial';
         $('wa-mas-r').textContent = r && r.error ? r.error
-          : 'Pedido a ' + r.chats + ' conversaciones. Lo que llegue aparece solo en Perfil › Lo que aprendimos de sus chats.';
+          : 'Pedido a ' + r.chats + ' conversaciones' + (r.quedan ? ' · quedan ' + r.quedan + ', dale otra vez cuando estas hayan llegado' : '') +
+            '. Lo que llegue aparece solo en Perfil › Lo que aprendimos de sus chats.';
       });
     };
     if ($('wa-desvincular')) $('wa-desvincular').onclick = function () {
@@ -1696,9 +1697,14 @@
         var marca = document.querySelector('.side .brand');
         if (marca) marca.insertBefore(img, marca.firstChild);
       }
-      // Entrando por la consola nadie escribió un nombre, y ese nombre le llega al cliente delante del mensaje
-      // por WhatsApp: el del asistente es el que sus clientes ya conocen.
-      if (!state.name) { state.name = me.agent || 'equipo'; try { localStorage.setItem(LLAVE('name'), state.name); } catch (e) {} }
+      // 🪤 Aquí se rellenaba el nombre de quien atiende con el del ASISTENTE, y quedaba guardado. Como todos los
+      // clientes suelen llamar igual a su asistente, el operador acababa llamándose «Aiva» en todos: parecía que
+      // el perfil se cruzaba entre clientes y lo que pasaba es que se inventaba el nombre equivocado.
+      //
+      // Son dos cosas distintas y no se mezclan: el asistente es quien contesta solo, y el operador es la
+      // persona que toma el teclado. Si no se sabe quién es, se deja en blanco y se pide; inventarlo es peor,
+      // porque queda guardado y nadie vuelve a mirarlo.
+      state.quienSoyPorCuenta = typeof window.AIVA_QUIEN === 'string' && Boolean(window.AIVA_QUIEN);
       document.title = me.agent + ' · Tablero';
       return api('/stats');
     }).then(function (s) {
@@ -1912,7 +1918,9 @@
     return ((p[0] || 'A')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
   }
   function pintarQuienSoy() {
-    var nombre = state.name || state.agentName || 'asesor';
+    // 🪤 Sin nombre NO se cae al del asistente: son dos cosas distintas y confundirlas fue el origen del lío.
+    // «Sin nombre» se ve como tal, y eso es lo que empuja a ponerlo.
+    var nombre = state.name || 'sin nombre';
     $('foot-nombre').textContent = nombre;
     $('foot-ini').textContent = inicialesDe(nombre);
     $('foot-ini').style.background = miColor();
@@ -1964,8 +1972,9 @@
   }
 
   $('foot-user').onclick = function () {
-    $('yo-nombre').value = state.name || state.agentName || '';
-    $('yo-ejemplo').textContent = state.name || state.agentName || 'Aiva';
+    // Ni aquí ni en ningún otro sitio se cae al nombre del asistente: el operador es una persona.
+    $('yo-nombre').value = state.name || '';
+    $('yo-ejemplo').textContent = state.name || 'tu nombre';
     $('yo-msg').textContent = '';
     $('yo-cuenta').hidden = !PORLACONSOLA;
     pintarPaletaPerfil(); pintarTema(); pintarAvisos();
@@ -1975,14 +1984,26 @@
   document.querySelectorAll('#yo-tema [data-tema]').forEach(function (b) {
     b.onclick = function () { ponerTema(b.getAttribute('data-tema')); pintarTema(); };
   });
-  $('yo-nombre').oninput = function () { $('yo-ejemplo').textContent = this.value.trim() || (state.agentName || 'Aiva'); };
+  $('yo-nombre').oninput = function () { $('yo-ejemplo').textContent = this.value.trim() || 'tu nombre'; };
   $('yo-cerrar').onclick = function () { $('dlg-yo').close(); };
   $('yo-guardar').onclick = function () {
-    state.name = $('yo-nombre').value.trim() || state.agentName || 'asesor';
-    try { localStorage.setItem(LLAVE('name'), state.name); } catch (e) {}
+    var puesto = $('yo-nombre').value.trim();
+    if (!puesto) { $('yo-msg').textContent = 'Pon tu nombre: es el que verá tu equipo en cada mensaje que contestes.'; return; }
+    state.name = puesto;
+    // 🪤 Con cuenta, el nombre es de LA PERSONA y se guarda en su perfil: así la sigue en cualquier cliente y en
+    // cualquier equipo. En el navegador solo se guarda cuando no hay cuenta de la que colgarlo (entrada directa
+    // con token), que es el único caso en que no hay otro sitio.
+    if (state.quienSoyPorCuenta || PORLACONSOLA) {
+      fetch('/api/yo', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ nombre: puesto }) })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { $('yo-msg').textContent = d && d.error ? d.error : 'Listo ✓ · queda en tu perfil'; })
+        .catch(function () { $('yo-msg').textContent = 'Guardado aquí, pero no pude actualizarlo en tu perfil.'; });
+    } else {
+      try { localStorage.setItem(LLAVE('name'), puesto); } catch (e) {}
+      $('yo-msg').textContent = 'Listo ✓';
+    }
     pintarQuienSoy();
-    $('yo-msg').textContent = 'Listo ✓';
-    setTimeout(function () { $('dlg-yo').close(); }, 500);
+    setTimeout(function () { $('dlg-yo').close(); }, 900);
   };
 
 

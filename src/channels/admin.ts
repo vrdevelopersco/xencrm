@@ -610,9 +610,10 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * historial del emparejamiento.
    */
   app.post('/admin/api/whatsapp/mas-historial', async (c) => {
-    const body = (await c.req.json().catch(() => ({}))) as { porChat?: number };
+    const body = (await c.req.json().catch(() => ({}))) as { porChat?: number; chats?: number };
     const porChat = Math.min(200, Math.max(10, Number(body.porChat) || 50));
-    return c.json(await traerMasHistorial(porChat));
+    const cuantos = Math.min(100, Math.max(1, Number(body.chats) || 25));
+    return c.json(await traerMasHistorial(porChat, cuantos));
   });
 
   app.post('/admin/api/whatsapp/desvincular', async (c) => {

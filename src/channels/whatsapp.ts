@@ -100,11 +100,15 @@ export async function stopWhatsApp(): Promise<void> {
  * tiene por qué entrar a ningún servidor—. Lo mismo cuando cierran la sesión desde el teléfono: sin esto, el
  * canal se quedaba atascado sin forma de arreglarlo desde aquí.
  */
-export async function traerMasHistorial(porChat = 50): Promise<{ chats: number; error?: string }> {
+export async function traerMasHistorial(porChat = 50, cuantosChats = 25): Promise<{ chats: number; quedan: number; error?: string }> {
   const sock = current;
-  if (!sock || status.state !== 'conectado') return { chats: 0, error: 'WhatsApp no está conectado ahora mismo.' };
-  const pendientes = cursores(200);
-  if (!pendientes.length) return { chats: 0, error: 'Todavía no hay chats de los que pedir más: llegan al vincular el número.' };
+  if (!sock || status.state !== 'conectado') return { chats: 0, quedan: 0, error: 'WhatsApp no está conectado ahora mismo.' };
+  // 🪤 Por tandas y no todo de un tajo: pedir cien conversaciones a la vez es pedirle a WhatsApp que vuelque
+  // media cuenta de golpe, y eso ni llega entero ni se sabe por dónde iba. Se piden unas cuantas, empezando por
+  // las que tienen lo más antiguo, y se dice cuántas quedan para poder seguir.
+  const todos = cursores(500);
+  const pendientes = todos.slice(0, Math.max(1, cuantosChats));
+  if (!pendientes.length) return { chats: 0, quedan: 0, error: 'Todavía no hay chats de los que pedir más: llegan al vincular el número.' };
   let pedidos = 0;
   for (const c of pendientes) {
     try {
@@ -115,7 +119,7 @@ export async function traerMasHistorial(porChat = 50): Promise<{ chats: number; 
     }
   }
   console.log(`[whatsapp] pedido más historial de ${pedidos} chats; llega solo en los próximos minutos`);
-  return { chats: pedidos };
+  return { chats: pedidos, quedan: Math.max(0, todos.length - pendientes.length) };
 }
 
 export async function olvidarSesionWhatsApp(): Promise<void> {

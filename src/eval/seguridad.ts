@@ -301,6 +301,15 @@ check('y lo del asistente, con su nombre', conFirma('claro que sí', 'bot', 'wha
 check('🪤 el nombre de quien atiende no sale nunca', !/Arthur|arthur/.test(conFirma('hola', 'human', 'whatsapp')));
 check('en el chat del sitio no se firma: ahí ya se ve quién habla', conFirma('hola', 'human', 'web') === 'hola');
 
+// ---------- 🪤 El operador es una persona, no el asistente ----------
+// Esto salió tres veces como «el perfil se cruza entre clientes»: el tablero rellenaba el nombre de quien
+// atiende con el del ASISTENTE cuando estaba vacío, y como todos los clientes llaman igual al suyo, el operador
+// acababa llamándose «Aiva» en todos. La prueba mira el código: que no quede ningún camino que lo rellene solo.
+const fuenteTablero = readFileSync('public/admin.js', 'utf8');
+check('🪤 el nombre de quien atiende no se rellena con el del asistente', !/state\.name\s*=\s*me\.agent/.test(fuenteTablero) && !/state\.name\s*=.*state\.agentName/.test(fuenteTablero),
+  (fuenteTablero.match(/state\.name\s*=.*/g) ?? []).join(' | ').slice(0, 200));
+check('y al pintarlo tampoco se cae al del asistente', !/var nombre = state\.name \|\| state\.agentName/.test(fuenteTablero));
+
 // ---------- 🪤 Probar claves a ciegas ----------
 // Va de ÚLTIMO a propósito: el freno deja bloqueado quince minutos a quien lo dispara, así que cualquier prueba
 // que necesite entrar después de esto fallaría sin tener nada roto.
