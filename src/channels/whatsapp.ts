@@ -20,7 +20,7 @@ import { env } from '../config.js';
 import { guardarImportados } from '../crm/historial.js';
 import { anotarCursor, cursores } from '../crm/wa-cursor.js';
 import { handleMessage } from '../agent/agent.js';
-import { registerSender } from '../crm/outbox.js';
+import { conFirma, registerSender } from '../crm/outbox.js';
 
 const logger = pino({ level: 'silent' });
 
@@ -280,7 +280,9 @@ async function flush(sock: WASocket, jid: string) {
     });
     await sock.sendPresenceUpdate('paused', jid);
     if (reply.silent || !reply.text) return; // una persona del equipo responderá desde el tablero
-    await sock.sendMessage(jid, { text: reply.text });
+    // Firmado igual que lo que manda una persona desde el tablero: por este número contestan los dos, y el
+    // cliente tiene derecho a saber con quién está hablando.
+    await sock.sendMessage(jid, { text: conFirma(reply.text, 'bot', 'whatsapp') });
   } catch (err) {
     console.error('[whatsapp] error respondiendo:', err);
   }

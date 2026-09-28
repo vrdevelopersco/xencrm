@@ -110,6 +110,43 @@ y pedir «más historial» traería una y otra vez lo que ya está.
 emparejamiento, y puede tardar minutos. Por eso el botón dice cuántas conversaciones se pidieron, no cuántos
 mensajes llegaron.
 
+## Con quién cree el cliente que está hablando
+
+`src/crm/outbox.ts` (`conFirma`)
+
+Por WhatsApp el cliente ve siempre el mismo número, y por ese número contestan dos: el asistente y las personas
+del equipo. Así que todo lo que sale va firmado con **el papel**, no con la persona:
+
+- El asistente firma con su nombre, el que el negocio le puso (`agent.name`): `*Aiva:* …`
+- Una persona firma como el equipo (`crm.firmaHumano`, por defecto «Operador»): `*Operador:* …`
+- En el chat del sitio **no se firma**: ahí ya se ve en pantalla quién habla.
+
+🪤 Antes iba el **nombre de quien escribía desde el tablero**, así que al cliente le llegaba «*Arthur:*» — un
+nombre que para él no significa nada y que de paso expone a quien atiende. El nombre de la persona sigue
+guardándose, pero solo para adentro: en el tablero se ve quién contestó cada mensaje.
+
+## El segundo clic sobre una conversación
+
+`public/admin.js` (menú contextual) · `GET /admin/api/contacts/:id/vistazo`
+
+Lo que se quiere hacer sobre una conversación sin entrar en ella:
+
+- **Ver sin abrir**: los últimos mensajes en una ventana. 🪤 No la marca como leída — mirar para decidir si urge
+  no es atender, y si el vistazo borrara el «sin leer», la lista dejaría de decir la verdad.
+- **Entregar a**: pasársela a alguien por su nombre. La lista sale de quién atiende a ese cliente, que la consola
+  le dice al tablero al servir la página (el tablero habla con un token, no con cuentas, así que por su cuenta no
+  puede saberlo). Sin nadie más asignado, la opción se ve **en gris**: así se entiende que existe y por qué no se
+  puede usar.
+- **Que siga el asistente**: devuelve la conversación al bot.
+
+## Quién atiende, y por qué dejó de perderse
+
+El nombre de quien atiende sale de **su cuenta** cuando se entra por la consola, no del navegador. Antes vivía en
+el almacenamiento local, así que se perdía al cambiar de equipo o de navegador y había que volver a escribirlo.
+
+Para quien entra directo al tablero con el token (sin consola) se sigue guardando en el navegador, separado por
+cliente, porque ahí no hay cuenta de la que sacarlo.
+
 ## Lo que todavía no hay
 
 - **Avisos por correo o push del navegador.** Hoy el aviso externo es solo por WhatsApp. El push real necesita

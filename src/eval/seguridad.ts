@@ -290,6 +290,17 @@ const sinCabeceras = await consola.request('/api/entrar', {
 });
 check('y sin Origin (curl, una app) también', sinCabeceras.status === 200, `dio ${sinCabeceras.status}`);
 
+// ---------- Con quién cree el cliente que está hablando ----------
+// Por WhatsApp el cliente ve siempre el mismo número y contestan dos: el asistente y las personas del equipo.
+// 🪤 Antes salía el NOMBRE de quien escribía desde el tablero —«*Arthur:*»—, que al cliente no le dice nada y
+// de paso expone a quien atiende. Va el papel, no la persona.
+const { conFirma } = await import('../crm/outbox.js');
+const { business: negocio } = await import('../config.js');
+check('lo que escribe una persona sale firmado como el equipo', conFirma('ya te ayudo', 'human', 'whatsapp') === `*${negocio.crm.firmaHumano}:* ya te ayudo`, conFirma('ya te ayudo', 'human', 'whatsapp'));
+check('y lo del asistente, con su nombre', conFirma('claro que sí', 'bot', 'whatsapp') === `*${negocio.agent.name}:* claro que sí`, conFirma('claro que sí', 'bot', 'whatsapp'));
+check('🪤 el nombre de quien atiende no sale nunca', !/Arthur|arthur/.test(conFirma('hola', 'human', 'whatsapp')));
+check('en el chat del sitio no se firma: ahí ya se ve quién habla', conFirma('hola', 'human', 'web') === 'hola');
+
 // ---------- 🪤 Probar claves a ciegas ----------
 // Va de ÚLTIMO a propósito: el freno deja bloqueado quince minutos a quien lo dispara, así que cualquier prueba
 // que necesite entrar después de esto fallaría sin tener nada roto.

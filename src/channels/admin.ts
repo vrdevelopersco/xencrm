@@ -23,7 +23,7 @@ import { actividadPorHora, nuevasPorDia, semanaContraSemana } from '../crm/serie
 import { horarioDelNegocio, resumenTiempos } from '../crm/tiempos.js';
 import { origenDe, porCampana } from '../crm/origen.js';
 import { aQuienAvisar, loQueHayQueAvisar } from '../crm/vigilante.js';
-import { enviarSuelto } from '../crm/outbox.js';
+import { conFirma, enviarSuelto } from '../crm/outbox.js';
 import { getSetting, setSetting } from '../crm/settings.js';
 import { accentOn, logoUrl } from '../brand.js';
 import { runIngest } from '../rag/ingest.js';
@@ -137,6 +137,18 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     });
   });
 
+  /**
+   * Una mirada rápida a una conversación sin entrar en ella. Es igual que abrirla salvo en una cosa, y esa cosa
+   * es todo el punto: **no la marca como leída**. Mirar para decidir si urge no es atender, y si el vistazo
+   * borrara el «sin leer», la lista dejaría de decir la verdad sobre lo que falta por atender.
+   */
+  app.get('/admin/api/contacts/:id/vistazo', (c) => {
+    const id = c.req.param('id');
+    const contact = getContact(id);
+    if (!contact) return c.json({ error: 'no existe' }, 404);
+    return c.json({ contact: forBoard([contact])[0], messages: getMessages(id, 25) });
+  });
+
   // Archivar (sale de las listas, vuelve si el cliente escribe) y borrar (no se deshace).
   app.post('/admin/api/contacts/:id/archive', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { on?: boolean };
@@ -199,9 +211,12 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   app.post('/admin/api/contacts/:id/human', async (c) => {
     const id = c.req.param('id');
-    const body = (await c.req.json().catch(() => ({}))) as { on?: boolean };
+    const body = (await c.req.json().catch(() => ({}))) as { on?: boolean; a?: string };
     if (!getContact(id)) return c.json({ error: 'no existe' }, 404);
-    const contact = setHumanMode(id, Boolean(body.on), 'admin');
+    // `a` es a quién se le entrega. Sin nombre queda «del equipo», que es lo que pasaba antes siempre y deja a
+    // todos mirándose: una conversación entregada a nadie no la recoge nadie.
+    const aQuien = String(body.a ?? '').trim().slice(0, 40) || 'admin';
+    const contact = setHumanMode(id, Boolean(body.on), aQuien);
     return c.json({ contact });
   });
 
@@ -599,7 +614,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       userName: body.nombre ? String(body.nombre).slice(0, 60) : null,
     });
     // Lo que el asistente conteste vuelve en la misma respuesta: el conector lo manda y se ahorra una vuelta.
-    return c.json({ ok: true, responder: respuesta.silent || !respuesta.text ? null : respuesta.text });
+    return c.json({ ok: true, responder: respuesta.silent || !respuesta.text ? null : conFirma(respuesta.text, 'bot', 'whatsapp') });
   });
 
   app.get('/admin/api/puente/salida', (c) => c.json({ mensajes: recogerSalida() }));

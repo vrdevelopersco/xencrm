@@ -60,7 +60,10 @@ const sent: { userId: string; text: string }[] = [];
 registerSender('whatsapp', async (userId, text) => void sent.push({ userId, text }));
 const r = await runReminders(remindAt + 5 * 60_000);
 const toLaura = sent.find((s) => s.userId === 'wa:573001112233@s.whatsapp.net');
-check('por WhatsApp: le llega el recordatorio con su nombre y "mañana"', Boolean(toLaura && /^Hola, Laura 🙂 Te recordamos tu cita de prueba de mañana/.test(toLaura.text) && /¿Nos confirmas que vienes\?/.test(toLaura.text)), toLaura?.text);
+check('por WhatsApp: le llega el recordatorio con su nombre y "mañana"', Boolean(toLaura && /Hola, Laura 🙂 Te recordamos tu cita de prueba de mañana/.test(toLaura.text) && /¿Nos confirmas que vienes\?/.test(toLaura.text)), toLaura?.text);
+// Por WhatsApp el cliente ve siempre el mismo número y contestan el asistente y las personas del equipo, así
+// que todo lo que sale va firmado con quién lo manda. Aquí lo manda el asistente.
+check('y firmado por el asistente, no por una persona', Boolean(toLaura && toLaura.text.startsWith('*Aiva:*')), toLaura?.text);
 check('queda marcado como enviado', getAppointment(wa)!.reminder?.status === 'enviado');
 check('chat del sitio con número: a mano, con el número para WhatsApp', getAppointment(webPhone)!.reminder?.status === 'a_mano' && /por WhatsApp/.test(getAppointment(webPhone)!.reminder?.note ?? ''));
 check('chat del sitio sin número: a mano y dice por qué', /no dejó número/.test(getAppointment(webNoPhone)!.reminder?.note ?? ''));

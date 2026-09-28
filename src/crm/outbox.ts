@@ -1,4 +1,5 @@
 // Envío de mensajes hacia el cliente desde fuera del agente (respuestas humanas, confirmaciones, recordatorios).
+import { business } from '../config.js';
 import { appendMessage, type Author } from '../agent/memory.js';
 import { getContact, updateContact } from './contacts.js';
 import { emitEvent } from './events.js';
@@ -85,6 +86,22 @@ export async function sendTemplateToContact(userId: string, template: Template, 
   emitEvent('message', userId, { id, role: 'assistant', author: 'bot', by: null, content: text, ts: Date.now() });
 }
 
+/**
+ * Cómo sale firmado un mensaje hacia el cliente.
+ *
+ * Por WhatsApp el cliente ve siempre el mismo número, así que hay que decirle con quién está hablando: si le
+ * contesta el asistente o si le contestó una persona. Antes iba el **nombre** de quien escribía desde el tablero
+ * —y al cliente le llegaba «*Arthur:*», que para él no significa nada y encima expone a quien atiende—. Ahora va
+ * el papel: el asistente firma con su nombre (el que el negocio le puso) y una persona firma como el equipo.
+ *
+ * En el chat del sitio no se firma: ahí ya se ve en pantalla quién habla.
+ */
+export function conFirma(text: string, author: Author, canal: string): string {
+  if (canal === 'web') return text;
+  const quien = author === 'human' ? business.crm.firmaHumano : business.agent.name;
+  return quien ? `*${quien}:* ${text}` : text;
+}
+
 export async function sendToContact(userId: string, text: string, author: Author = 'human', opts: { by?: string } = {}): Promise<void> {
   const c = getContact(userId);
   if (!c) throw new Error(`contacto ${userId} no existe`);
@@ -99,7 +116,5 @@ export async function sendToContact(userId: string, text: string, author: Author
     console.warn(`[outbox] el canal ${c.channel} no tiene emisor registrado; el mensaje quedó guardado`);
     return;
   }
-  // En WhatsApp el cliente ve siempre el mismo número: el nombre del asesor aclara quién le escribe.
-  const outgoing = by && author === 'human' && c.channel !== 'web' ? `*${by}:* ${text}` : text;
-  await send(userId, outgoing);
+  await send(userId, conFirma(text, author, c.channel));
 }

@@ -185,6 +185,7 @@ async function entrante(s: WASocket, m: WAMessage): Promise<void> {
     /* si no se pudo marcar como leído, da igual */
   }
   const r = await alCrm('entrante', { jid: jidNormalizedUser(jid), texto, nombre: m.pushName ?? null });
+  // El CRM manda el texto ya firmado: aquí no se decide nada sobre cómo se ve.
   const responder = r?.responder;
   if (typeof responder === 'string' && responder.trim()) {
     await s.sendMessage(jidNormalizedUser(jid), { text: responder });

@@ -25,7 +25,9 @@
     } catch (e) { /* sin almacenamiento, se entra como la primera vez */ }
   })();
   var state = { token: '', name: '', view: 'today', filter: 'all', q: '', contacts: [], current: null, detail: null, kind: 'knowledge', theme: 'light', sound: true, stageLabels: {}, stages: [], es: null, notifs: [], notifSeen: 0, detailOpen: false };
-  try { state.token = localStorage.getItem(LLAVE('token')) || ''; state.name = localStorage.getItem(LLAVE('name')) || ''; state.theme = localStorage.getItem(LLAVE('theme')) || 'light'; state.sound = localStorage.getItem(LLAVE('sound')) !== '0'; state.notifSeen = Number(localStorage.getItem(LLAVE('notifSeen')) || 0); } catch (e) {}
+  // 🪤 Si se entró por la consola, el nombre de quien atiende sale de SU CUENTA y no del navegador: así se
+  // mantiene al cambiar de equipo y no hay forma de que se cruce con el de otro cliente.
+  try { state.token = localStorage.getItem(LLAVE('token')) || ''; state.name = (typeof window.AIVA_QUIEN === 'string' && window.AIVA_QUIEN) || localStorage.getItem(LLAVE('name')) || ''; state.theme = localStorage.getItem(LLAVE('theme')) || 'light'; state.sound = localStorage.getItem(LLAVE('sound')) !== '0'; state.notifSeen = Number(localStorage.getItem(LLAVE('notifSeen')) || 0); } catch (e) {}
 
   // ---------- íconos (monocromos, el color de estado queda para los chips) ----------
   var ICONS = {
@@ -76,7 +78,29 @@
   function nameOf(c) { return c.name || short(c.id); }
   function toast(text, onclick) { var t = document.createElement('div'); t.className = 'toast'; t.textContent = text; t.onclick = function () { t.remove(); if (onclick) onclick(); }; $('toasts').appendChild(t); setTimeout(function () { t.remove(); }, 6000); }
   var audio = null;
-  function beep() { if (!state.sound) return; try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); var o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = 880; g.gain.value = 0.05; o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.12); } catch (e) {} }
+  // Dos notas de piano, una cayendo sobre la otra. Antes era un pitido plano de 880 Hz que sonaba a monitor de
+  // hospital: para algo que suena veinte veces al día, importa que no ponga nervioso a quien atiende. Sigue
+  // siendo corto y discreto —avisa, no interrumpe— y se apaga desde el mismo sitio de siempre.
+  function beep() {
+    if (!state.sound) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      var t0 = audio.currentTime;
+      // Sol5 y Do6: una quinta descendente, que es el gesto de «atiende un momento» sin sonar a alarma.
+      [[784, 0], [1046.5, 0.09]].forEach(function (nota) {
+        var o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'triangle'; // más suave que la onda por defecto, más cerca de una cuerda que de un pitido
+        o.frequency.value = nota[0];
+        var t = t0 + nota[1];
+        // Un ataque corto y una caída larga: así suena a nota pulsada y no a tono encendido y apagado.
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.09, t + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+        o.connect(g); g.connect(audio.destination);
+        o.start(t); o.stop(t + 0.45);
+      });
+    } catch (e) {}
+  }
 
   function api(path, opts) {
     opts = opts || {};
@@ -209,7 +233,10 @@
         '<div class="meta">' + verdictChip(c) + (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '') + '</div>' +
         '</div>';
     }).join('');
-    el.querySelectorAll('.row').forEach(function (r) { r.onclick = function () { openContact(r.getAttribute('data-id')); }; });
+    el.querySelectorAll('.row').forEach(function (r) {
+      r.onclick = function () { openContact(r.getAttribute('data-id')); };
+      r.oncontextmenu = function (e) { e.preventDefault(); abrirMenu(e.clientX, e.clientY, r.getAttribute('data-id')); };
+    });
   }
   // Veredicto práctico: ¿es un prospecto o no? El detalle (factores, ánimo, urgencia) queda detrás de "Ver detalle".
   function verdict(c) {
@@ -476,7 +503,10 @@
         return '<div class="panel" data-tono="' + (TONOS[i] || '') + '"><h3>' + esc(s.t) + '<span class="chip">' + s.n + '</span></h3>' +
           (s.html || '<div class="ok">' + esc(s.empty) + '</div>') + '</div>';
       }).join('');
-      $('today').querySelectorAll('.row').forEach(function (r) { r.onclick = function () { go('inbox'); openContact(r.getAttribute('data-id')); }; });
+      $('today').querySelectorAll('.row').forEach(function (r) {
+        r.onclick = function () { go('inbox'); openContact(r.getAttribute('data-id')); };
+        r.oncontextmenu = function (e) { e.preventDefault(); abrirMenu(e.clientX, e.clientY, r.getAttribute('data-id')); };
+      });
       $('today').querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-open')); }; });
       $('today').querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
       if ($('help-hide')) $('help-hide').onclick = function () { helpSet('aiva.help.seen', true); loadToday(); };
@@ -1435,6 +1465,80 @@
   function renderChannelsLater() {
     clearTimeout(chTimer);
     chTimer = setTimeout(function () { if (state.view === 'channels') loadChannels(); }, 30000);
+  }
+
+
+  // ---------- Menú del segundo clic ----------
+  // Lo que se quiere hacer sobre una conversación sin entrar en ella: echarle un ojo para decidir si urge, o
+  // pasársela a quien le toca. Entrar a cada una para eso hace perder el hilo de la lista.
+  var menuAbierto = null;
+  function cerrarMenu() { if (menuAbierto) { menuAbierto.remove(); menuAbierto = null; } }
+  document.addEventListener('click', cerrarMenu);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { cerrarMenu(); if ($('dlg-vistazo') && $('dlg-vistazo').open) $('dlg-vistazo').close(); } });
+
+  function equipoDisponible() {
+    var eq = Array.isArray(window.AIVA_EQUIPO) ? window.AIVA_EQUIPO : [];
+    // Sin nadie más, la opción se enseña igual pero apagada: así se entiende que existe y por qué no se puede.
+    return eq.filter(function (u) { return u && u.nombre; });
+  }
+
+  function abrirMenu(x, y, id) {
+    cerrarMenu();
+    var c = state.contacts.find(function (z) { return z.id === id; }) || { id: id };
+    var eq = equipoDisponible();
+    var m = document.createElement('div');
+    m.className = 'menu-ctx';
+    m.innerHTML =
+      '<button data-acc="ver">Ver sin abrir</button>' +
+      '<button data-acc="abrir">Abrir la conversación</button>' +
+      '<div class="sep"></div>' +
+      (eq.length
+        ? '<div class="titulo">Entregar a</div>' + eq.map(function (u) {
+            return '<button data-acc="dar" data-a="' + esc(u.nombre) + '">' + esc(u.nombre) + '</button>';
+          }).join('')
+        : '<button disabled title="No hay nadie más asignado a este cliente">Entregar a otra persona</button>') +
+      '<div class="sep"></div>' +
+      '<button data-acc="bot">Que siga ' + esc(state.agentName || 'el asistente') + '</button>';
+    document.body.appendChild(m);
+    m.style.left = Math.min(x, window.innerWidth - m.offsetWidth - 8) + 'px';
+    m.style.top = Math.min(y, window.innerHeight - m.offsetHeight - 8) + 'px';
+    menuAbierto = m;
+    m.onclick = function (ev) { ev.stopPropagation(); };
+    m.querySelectorAll('[data-acc]').forEach(function (b) {
+      b.onclick = function () {
+        var acc = b.getAttribute('data-acc');
+        cerrarMenu();
+        if (acc === 'abrir') { go('inbox'); openContact(id); return; }
+        if (acc === 'ver') return vistazo(id);
+        if (acc === 'dar') return entregar(id, b.getAttribute('data-a'));
+        if (acc === 'bot') return entregar(id, null);
+      };
+    });
+    void c;
+  }
+
+  function entregar(id, aQuien) {
+    api('/contacts/' + encodeURIComponent(id) + '/human', { method: 'POST', body: { on: Boolean(aQuien), a: aQuien || undefined } })
+      .then(function (r) {
+        if (r && r.error) { toast('No se pudo: ' + r.error); return; }
+        toast(aQuien ? 'Entregada a ' + aQuien : 'Vuelve a contestar ' + (state.agentName || 'el asistente'));
+        loadContacts();
+        if (state.current === id) openContact(id);
+      });
+  }
+
+  // Una mirada rápida sin marcarla como leída ni entrar: lo justo para decidir si urge.
+  function vistazo(id) {
+    api('/contacts/' + encodeURIComponent(id) + '/vistazo').then(function (d) {
+      if (!d || d.error) { toast('No se pudo abrir el vistazo'); return; }
+      var c = d.contact || {};
+      $('vistazo-quien').textContent = c.name || short(id);
+      $('vistazo-meta').textContent = [channelIcon(c.channel), state.stageLabels[c.stage] || c.stage, c.recap || c.summary || ''].filter(Boolean).join(' · ');
+      $('vistazo-msjs').innerHTML = (d.messages || []).map(bubble).join('') || '<div class="small muted">Sin mensajes.</div>';
+      $('vistazo-abrir').onclick = function () { $('dlg-vistazo').close(); go('inbox'); openContact(id); };
+      $('dlg-vistazo').showModal();
+      var m = $('vistazo-msjs'); m.scrollTop = m.scrollHeight;
+    });
   }
 
   // ---------- conocimiento ----------

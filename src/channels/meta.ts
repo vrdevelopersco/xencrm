@@ -7,7 +7,7 @@ import type { Hono } from 'hono';
 import type { HttpBindings } from '@hono/node-server';
 import { env } from '../config.js';
 import { handleMessage } from '../agent/agent.js';
-import { registerSender, registerTemplateSender, type Template } from '../crm/outbox.js';
+import { conFirma, registerSender, registerTemplateSender, type Template } from '../crm/outbox.js';
 import { anotarOrigen, deMeta } from '../crm/origen.js';
 import { channelOn } from './switches.js';
 
@@ -181,7 +181,8 @@ async function flush(waId: string) {
     await markReadAndTyping(p.lastId);
     const reply = await handleMessage({ userId: `meta:${waId}`, channel: 'meta', text: p.texts.join('\n'), userName: p.name ?? null });
     if (reply.silent || !reply.text) return;
-    await sendMetaText(waId, reply.text);
+    // Igual que en WhatsApp por QR: por el mismo número contestan el asistente y las personas, así que se firma.
+    await sendMetaText(waId, conFirma(reply.text, 'bot', 'meta'));
   } catch (err) {
     failed(err);
     console.error('[meta] error respondiendo:', (err as Error).message);

@@ -410,7 +410,19 @@ export function mountConsola(app: Hono) {
       // entrando por aquí no hace falta ninguno —la consola se lo pone a cada petición—, así que se le avisa con
       // una marca en la página. Sin esto, un super-admin entraba a un cliente y le volvían a pedir el token.
       if (esLaPagina && r.ok) {
-        const html = (await r.text()).replace('</head>', `<script>window.AIVA_CONSOLA=${JSON.stringify(slug)}</script></head>`);
+        // Además del cliente, quiénes lo atienden: el tablero no tiene forma de saberlo por su cuenta (habla con
+        // un token, no con cuentas) y sin eso no se le puede entregar una conversación a nadie por su nombre.
+        const equipo = leerUsuarios()
+          .filter((u) => u.activo && (u.rol === 'super' || u.clientes.includes(slug)))
+          .map((u) => ({ usuario: u.usuario, nombre: u.nombre }));
+        // 🪤 Y quién está atendiendo. Antes el tablero guardaba ese nombre en el navegador, así que se perdía al
+        // cambiar de equipo o de navegador y había que volver a escribirlo. Quien entra por la consola ya dijo
+        // quién es al iniciar sesión: el nombre sale de su cuenta y deja de depender de la máquina.
+        const soy = (c.get('usuario' as never) as UsuarioPublico | null)?.nombre ?? '';
+        const html = (await r.text()).replace(
+          '</head>',
+          `<script>window.AIVA_CONSOLA=${JSON.stringify(slug)};window.AIVA_EQUIPO=${JSON.stringify(equipo)};window.AIVA_QUIEN=${JSON.stringify(soy)}</script></head>`,
+        );
         return c.html(html);
       }
       return new Response(r.body, {

@@ -193,6 +193,11 @@ export const BusinessConfigSchema = z.object({
        * entregado". El código no conoce los nombres: conoce los roles (dónde empieza, cuál es interés, cuál es
        * tener cita, cuál es ganado y cuál perdido), así que cada negocio los llama como los llama.
        */
+      /**
+       * Cómo se firma ante el cliente un mensaje escrito por una persona del equipo. El asistente firma con su
+       * propio nombre; esto es para el otro caso. Vacío = sin firma.
+       */
+      firmaHumano: z.string().default('Operador'),
       stages: z
         .array(
           z.object({

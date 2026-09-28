@@ -44,6 +44,17 @@ a{color:var(--brand)}
 .chip.who{background:var(--human);border-color:transparent}
 /* De qué canal llegó la conversación. Discreto: es una etiqueta de origen, no un estado. */
 .chip.canal{background:var(--glass);color:var(--muted);font-weight:500}
+/* Menú del segundo clic sobre una conversación */
+.menu-ctx{position:fixed;z-index:60;min-width:200px;padding:6px;border-radius:12px;background:var(--glass-strong);
+  border:1px solid var(--vidrio-borde);box-shadow:0 12px 32px rgba(0,0,0,.18);backdrop-filter:blur(22px) saturate(180%)}
+.menu-ctx button{display:block;width:100%;text-align:left;padding:7px 10px;border:0;background:none;border-radius:8px;
+  font:inherit;color:inherit;cursor:pointer}
+.menu-ctx button:hover:not([disabled]){background:var(--glass)}
+.menu-ctx button[disabled]{opacity:.45;cursor:default}
+.menu-ctx .sep{height:1px;background:var(--vidrio-borde);margin:5px 2px}
+.menu-ctx .titulo{padding:4px 10px 2px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+#dlg-vistazo{max-width:640px;width:92vw}
+#vistazo-msjs{max-height:52vh;overflow:auto;margin-top:10px}
 .nav .group{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 10px 4px}
 .bell{position:relative;margin-left:auto}
 .bell .badge{position:absolute;top:-6px;right:-6px;background:var(--bad);color:#fff;border-radius:10px;font-size:10px;padding:0 5px;min-width:16px;text-align:center}
@@ -869,6 +880,19 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
   </main>
 </div>
 <div class="toasts" id="toasts"></div>
+<!-- Vistazo: mirar una conversación sin entrar y sin marcarla como leída. Va ANTES del script, como el resto
+     de los diálogos: uno declarado después revienta al engancharlo y se lleva por delante todo el tablero. -->
+<dialog id="dlg-vistazo">
+  <div class="fila" style="gap:10px;align-items:baseline">
+    <b id="vistazo-quien"></b><span class="grow"></span>
+    <button class="btn sm primary" id="vistazo-abrir">Abrir la conversación</button>
+    <button class="btn sm" onclick="document.getElementById('dlg-vistazo').close()">Cerrar</button>
+  </div>
+  <div class="small muted" id="vistazo-meta"></div>
+  <div id="vistazo-msjs" class="msgs"></div>
+  <div class="small muted" style="margin-top:6px">Mirar no es atender: esto no la marca como leída.</div>
+</dialog>
+
 <dialog id="dlg-config" class="modal-config">
   <div class="modal-cabeza">
     <div>
