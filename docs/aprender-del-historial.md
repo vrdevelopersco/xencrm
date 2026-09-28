@@ -80,6 +80,30 @@ apagó hace meses no es trabajo pendiente.
 conversación al futuro. Y sus propios avisos (creó el grupo, añadió a alguien, multimedia omitido) vienen con un
 carácter invisible al inicio: por ahí se reconocen, no por las frases, que cambian con el idioma del teléfono.
 
+## Llevárselo a otra instancia
+
+`src/crm/aprendizaje.ts` · pruebas: `pnpm test:aprendizaje` · en el tablero: **Perfil › Lo que aprendimos de sus chats**
+
+Un negocio que lleva meses atendiendo ha ido dejando algo que no está en su configuración ni en su catálogo:
+**cómo atiende**. Las preguntas que le hacen de verdad, las palabras con las que contesta, y los temas que
+alguien ya miró uno por uno y decidió. Eso no se vuelve a escribir a mano, y hasta ahora se quedaba atrás cada
+vez que la instancia cambiaba de sitio. Con el respaldo de configuración (`crm/respaldo.ts`), los dos juntos
+hacen que un cliente sea de verdad portátil.
+
+Se exporta de dos formas, y la diferencia importa:
+
+- **Todo**: incluye las conversaciones en bruto. Es lo que hace falta para mudar un cliente de servidor.
+- 🪤 **Sin conversaciones**: solo los temas y lo decidido. El material en bruto son charlas reales de clientes
+  finales con sus nombres dentro; moverlo de servidor es mover datos de personas. Cuando lo único que hace falta
+  es lo aprendido, esta es la que se usa, y el archivo dice que va sin ellas.
+
+🪤 **Lo de un negocio no entra en otro sin que alguien lo decida.** Al traerlo se avisa si viene de otro cliente
+y hay que confirmar: mezclar el aprendizaje de una boutique con el de una financiera no da un asistente mejor,
+da uno que no suena a ninguno de los dos.
+
+Al restaurar se **suma, no se reemplaza**, y lo repetido no se duplica: traer dos veces el mismo archivo deja lo
+mismo que traerlo una.
+
 ## Antes de tocar un solo mensaje
 
 Son datos personales de terceros (Ley 1581, Habeas Data). El negocio es el responsable y aiva el encargado:

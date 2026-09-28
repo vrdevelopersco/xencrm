@@ -46,6 +46,7 @@ import { checkPublicUrl, publicStatus } from './public-check.js';
 import { backupNow, backupStatus } from '../rag/backup.js';
 import { findDuplicates, keeperOf, mergeContacts } from '../crm/merge.js';
 import { getProfile, pendingFields, PROFILE_FIELDS, saveProfile } from '../profile.js';
+import { exportarAprendizaje, restaurarAprendizaje, revisarAprendizaje } from '../crm/aprendizaje.js';
 import { chatsImportados, borrarImportado, decidirTema, expresionesCandidatas, guardarImportados, leerChatExportado, muestraDeEstilo, resumenImportado, temasFrecuentes, vocabularioDelNegocio } from '../crm/historial.js';
 import { ruleReading } from '../agent/teach.js';
 import { indexProfile } from '../rag/profile-index.js';
@@ -65,6 +66,9 @@ function forBoard<T extends Contact>(list: T[]) {
 }
 
 export const ADMIN_TOKEN = env.adminToken || randomBytes(12).toString('hex');
+
+/** El nombre corto de este cliente, el mismo que usa el respaldo. */
+const soyElCliente = (): string => (process.env.AIVA_SLUG ?? business.business.name).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   startNotifications();
@@ -443,6 +447,36 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       }
     }
     return c.json({ ok: true, fichas, mensajes, enElTablero: cuantasImportadas() });
+  });
+
+  /**
+   * Llevarse lo aprendido a otra instancia. Con `conversaciones=no` va solo lo decidido, que no lleva datos de
+   * ningún cliente final: eso es lo que se puede mover sin pensárselo dos veces.
+   */
+  app.get('/admin/api/historial/exportar', (c) => {
+    const conConversaciones = c.req.query('conversaciones') !== 'no';
+    const datos = exportarAprendizaje({ slug: soyElCliente(), negocio: business.business.name, conConversaciones });
+    const nombre = `aprendizaje-${soyElCliente()}-${new Date().toISOString().slice(0, 10)}${conConversaciones ? '' : '-sin-conversaciones'}.json`;
+    return c.body(JSON.stringify(datos, null, 2), 200, {
+      'content-type': 'application/json; charset=utf-8',
+      'content-disposition': `attachment; filename="${nombre}"`,
+    });
+  });
+
+  app.post('/admin/api/historial/importar-aprendizaje', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { aprendizaje?: unknown; deOtroCliente?: boolean };
+    const revisado = revisarAprendizaje(body.aprendizaje, soyElCliente());
+    if ('error' in revisado) return c.json(revisado, 400);
+    // 🪤 Lo de un negocio no entra en otro por descuido: hay que decir que sí a propósito.
+    if (revisado.otroCliente && !body.deOtroCliente) {
+      return c.json({
+        error: `Ese aprendizaje es de «${revisado.aprendizaje.negocio}», no de este cliente. Cada negocio atiende como atiende; mezclarlos no da un asistente mejor. Si aun así lo quieres, vuelve a intentarlo confirmando.`,
+        otroCliente: true,
+        de: revisado.aprendizaje.negocio,
+      }, 409);
+    }
+    const hecho = restaurarAprendizaje(revisado.aprendizaje);
+    return c.json({ ok: true, ...hecho, resumen: resumenImportado() });
   });
 
   app.delete('/admin/api/historial', (c) => c.json({ borrados: borrarImportado() }));

@@ -1036,6 +1036,13 @@
           ? '<div style="margin-top:12px"><b>Así contestan ustedes</b><div class="small muted">Ejemplos sin cifras, para afinar el tono del asistente. Los precios y plazos nunca salen de aquí.</div>' +
             '<ul class="timeline">' + h.estilo.slice(0, 4).map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul></div>'
           : '') +
+        // Llevarse lo aprendido: es lo único de aiva que no se puede volver a escribir a mano.
+        '<div class="feed-row" style="margin-top:12px"><b class="small">Llevárselo a otra instancia</b></div>' +
+        '<div class="feed-row"><button class="btn sm" id="ap-bajar">Exportar todo</button>' +
+        '<button class="btn sm" id="ap-bajar-limpio">Exportar sin conversaciones</button>' +
+        '<button class="btn sm" id="ap-subir">Traer de otra instancia…</button></div>' +
+        '<div class="small muted">«Sin conversaciones» lleva solo los temas y lo que ya decidieron: no salen datos de ningún cliente final.</div>' +
+        '<div class="small" id="ap-msg" role="status"></div>' +
         '<div class="feed-row" style="margin-top:10px"><button class="btn sm primary" id="hist-tablero">Traer estas conversaciones al tablero</button>' +
         '<button class="btn sm" id="hist-borrar">Borrar el historial importado</button></div>' +
         '<div class="small muted">Traerlas crea una ficha por conversación en <b>Conversaciones</b>, para verles la pista. Se quitan igual de fácil.</div>' +
@@ -1047,6 +1054,47 @@
       api('/historial/expresiones', { method: 'POST' }).then(function (r) {
         $('hist-msg').textContent = r.llevadas + ' frases quedaron en Agente › Frases que no entendimos, para enseñarlas.';
       });
+    };
+    var bajarAprendizaje = function (conConversaciones) {
+      // Se descarga por fetch y no por enlace: así el token va en la cabecera y no en la dirección.
+      fetch(BASE + '/admin/api/historial/exportar' + (conConversaciones ? '' : '?conversaciones=no'), { headers: { 'x-admin-token': state.token } })
+        .then(function (r) { return r.blob(); })
+        .then(function (b) {
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(b);
+          a.download = 'aprendizaje' + (conConversaciones ? '' : '-sin-conversaciones') + '.json';
+          a.click();
+          setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+          $('ap-msg').textContent = 'Descargado.';
+        })
+        .catch(function () { $('ap-msg').textContent = 'No se pudo exportar.'; });
+    };
+    if ($('ap-bajar')) $('ap-bajar').onclick = function () { bajarAprendizaje(true); };
+    if ($('ap-bajar-limpio')) $('ap-bajar-limpio').onclick = function () { bajarAprendizaje(false); };
+    if ($('ap-subir')) $('ap-subir').onclick = function () {
+      var campo = document.createElement('input');
+      campo.type = 'file'; campo.accept = '.json,application/json';
+      campo.onchange = function () {
+        var f = campo.files && campo.files[0];
+        if (!f) return;
+        f.text().then(function (txt) {
+          var datos;
+          try { datos = JSON.parse(txt); } catch (e) { $('ap-msg').textContent = 'Ese archivo no es un aprendizaje de aiva.'; return; }
+          var mandar = function (deOtroCliente) {
+            api('/historial/importar-aprendizaje', { method: 'POST', body: { aprendizaje: datos, deOtroCliente: deOtroCliente } }).then(function (r) {
+              if (r && r.otroCliente && !deOtroCliente) {
+                if (confirm(r.error + '\n\n¿Lo traigo de todos modos?')) mandar(true);
+                return;
+              }
+              if (r && r.error) { $('ap-msg').textContent = r.error; return; }
+              $('ap-msg').textContent = 'Traído: ' + r.conversaciones + ' mensajes y ' + r.temas + ' temas decididos.';
+              loadHistorial();
+            });
+          };
+          mandar(false);
+        });
+      };
+      campo.click();
     };
     if ($('hist-tablero')) $('hist-tablero').onclick = function () {
       var b = this; b.disabled = true; b.textContent = 'Trayendo…';
