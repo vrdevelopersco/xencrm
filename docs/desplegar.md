@@ -134,19 +134,122 @@ salió la última vez y cuándo. Y una línea de **veredicto** que dice qué mir
 
 - *«Ninguno de adentro está vivo»* → mirar `ultimoCodigo`: si es 1, revienta al arrancar.
 - *«Hay procesos reiniciándose en bucle»* → memoria o error de arranque.
+- *«Este lanzador no manda»* → hay dos arrancados y este solo reparte. Es lo correcto; ver la sección de abajo.
 - *«Todo arriba»* → el problema está en otra parte.
 
-Va protegido con el `CONSOLA_TOKEN` porque enseña puertos y pids.
+Dos campos que existen por lo que costó no tenerlos:
 
-## Los puertos de dentro se mueven solos
+- **`papel`**, lo primero que se lee: «con el mando» o «espejo del lanzador N». Sin esto, dos lanzadores decían
+  los dos «Todo arriba» mientras entre ambos había ocho procesos peleándose el WhatsApp del cliente.
+- **`sondeo`**, el motivo por el que un puerto de dentro no contesta, puerto por puerto. Antes el registro solo
+  decía «5 de 5 no contestaron a tiempo», que no distingue un proceso que aún no abrió el puerto
+  (`ECONNREFUSED`) de uno que abrió y está tan ahogado que no alcanza a responder. Son dos problemas distintos y
+  no se arreglan igual.
 
-🪤 Cuando el servidor del alojamiento mata el proceso principal sin dejarle despedirse, sus hijos quedan vivos
-agarrando sus puertos. La versión nueva arranca, no puede abrirlos y sus hijos mueren en bucle: el sitio queda
-respondiendo «todavía está arrancando» para siempre, y en el código nuevo no hay nada roto que encontrar.
+Los pids y los puertos internos piden `CONSOLA_TOKEN`; el estado y el veredicto no, porque esto se mira justo
+cuando nada funciona y pedir una credencial en ese momento es poner una puerta delante del extintor.
 
-Así que el lanzador ya no pelea por un puerto: busca un **tramo libre** y lo usa, avisando en el registro. Los
-huérfanos siguen ahí hasta que alguien los mate, pero ya no impiden que el sitio vuelva. El índice que usa la
-consola para hablar con cada cliente se escribe **después**, con los puertos de verdad.
+## 🪤 El alojamiento puede arrancar la aplicación dos veces a la vez
+
+Esto costó una mañana entera y no se parecía en nada a su causa.
+
+El 29 de septiembre de 2026 el registro del panel mostraba **dos arranques con 1,4 segundos de diferencia**: dos
+lanzadores, cada uno con sus tres clientes y su consola. Ocho procesos donde iban cuatro. El sitio respondía, así
+que nadie miraba por ahí. Lo que no respondía era WhatsApp:
+
+```
+[whatsapp] conectado como 573008263714:4@s.whatsapp.net
+[whatsapp] conexión cerrada (440: Stream Errored (conflict)) tras 3s, reconectando en 3s...
+```
+
+…en bucle, para siempre. Dos procesos abriendo el mismo número: cada uno echaba al otro y el echado volvía.
+Y `/_salud` decía **«Todo arriba»**, porque cada lanzador solo sabe de sus hijos y sus hijos estaban perfectos.
+
+Tres cosas lo sostienen ahora, y las tres hacen falta:
+
+1. **Un cerrojo: el puerto 4099.** El lanzador que lo abre, manda y levanta a los clientes. El que no puede
+   abrirlo sabe que hay otro y se limita a **repartir** hacia los puertos del primero, que lee del índice. Un
+   puerto y no un archivo, porque el sistema lo suelta solo al morir el proceso: no quedan cerrojos trabados.
+   Si el que mandaba desaparece, el otro lo nota en cuatro segundos y toma el relevo.
+2. **Ningún hijo sobrevive a su padre.** Cada proceso de cliente —y la consola— vigila su `ppid`; cuando lo
+   adopta `init`, se va solo. Es lo que impide que un SIGKILL al lanzador deje cuatro procesos agarrando
+   puertos y sesiones de WhatsApp. La consola necesita `AIVA_SUPERVISADO=1` para esto, igual que los clientes:
+   sin esa variable se quedaba viva ella sola y obligaba al siguiente lanzador a correrse de tramo.
+3. **Correrse de puerto es el último recurso.** Antes se echa a los procesos de la versión anterior (se
+   reconocen porque cuelgan de la carpeta de este dominio y son uno de nuestros dos guiones) y se espera doce
+   segundos a que suelten. Solo si después de eso siguen ahí se busca otro tramo, avisando fuerte — porque un
+   tramo distinto significa dos copias vivas, que es justo lo que hay que evitar.
+
+`/_salud` ahora dice en su primera línea `papel`: «con el mando» o «espejo del lanzador N». Si dos peticiones
+seguidas dan lanzadores distintos, eso es lo normal con dos arrancados; lo que no puede pasar es que los dos
+digan «con el mando».
+
+Se prueba con `pnpm test:lanzador`, que además mata un proceso de verdad para comprobar que su hijo se va solo.
+
+## 🪤 No dar por hecho por dónde se llega a los de adentro
+
+El 29 de septiembre de 2026, con el sitio entero devolviendo «todavía está arrancando», `/_salud` dijo esto:
+
+```
+sondeo:  4103 ECONNREFUSED · 4100 ECONNREFUSED · 4101 ECONNREFUSED · 4102 ECONNREFUSED
+adentro: los cuatro vivos, arranques 1, caídas 0
+```
+
+Los cuatro procesos vivos, cada uno anunciando en su registro que escuchaba su puerto, y el enrutador —su propio
+padre— sin poder conectarse a ninguno. La causa no estaba en el código nuevo: estaba en una suposición de una
+línea que llevaba meses ahí, `host: '127.0.0.1'`, escrita cuando eso era obviamente cierto.
+
+Ahora no se supone. Para cada proceso de adentro se prueban tres puertas en orden y se recuerda cuál abrió:
+
+1. `127.0.0.1` — la de siempre.
+2. `::1` — la misma máquina por IPv6. Un proceso que abre el puerto sin decir en qué dirección puede acabar solo
+   en IPv6, y entonces quien llame por IPv4 recibe ECONNREFUSED como si no hubiera nadie.
+3. **Un socket de archivo**, que no pasa por la red. Si los dos procesos ven la misma carpeta, se hablan: da
+   igual qué pase con direcciones, familias o reglas de red.
+
+Cada cliente y la consola abren su socket en `<datos>/_sockets/<slug>.sock` (o en la carpeta temporal si esa
+ruta pasa de 100 caracteres, que es el límite del sistema y falla con un `EINVAL` que no explica nada). El
+enrutador lo usa solo si las otras dos fallan, y `/_salud` dice por cuál va cada uno.
+
+Dos detalles que costaron su propio error:
+
+- **El socket se abre ANTES que el puerto**, no dentro de su callback. Estaba dentro, que es el único sitio
+  donde no sirve: si el puerto no abre, ese callback no se llama nunca, así que la puerta pensada justo para
+  cuando el puerto falla solo existía cuando el puerto funcionaba.
+- **No abrir el puerto ya no tumba al proceso.** Con el socket abierto se sigue atendiendo; antes moría y el
+  lanzador lo reintentaba cada cinco segundos, en bucle, sin que nadie viera por qué.
+
+Y `/_salud` trae ahora **`escuchando`**, que es lo que dice el sistema (`/proc/net/tcp`), no lo que dice cada
+proceso de sí mismo: en qué dirección quedó abierto cada puerto de verdad. Cuando esos dos datos no coinciden,
+la respuesta está justo ahí. Es el dato que faltó aquella mañana.
+
+**La consola también.** Le pregunta a cada cliente por su cuenta, no a través del enrutador, así que tenía el
+mismo problema y por eso enseñaba los tres clientes como «sin conexión» mientras los tres atendían. Ahora usa
+`llamarACliente`, que prueba por red y cae al socket igual, y recuerda cuál funcionó.
+
+**Lo que se vio en el servidor**, y es el motivo de todo esto:
+
+```
+escuchando:  4100 → 127.0.0.1   4101 → 127.0.0.1   4102 → 127.0.0.1   4103 → 127.0.0.1
+por:         confia=socket  dunor=socket  hrc=socket  consola=socket
+```
+
+El sistema confirmando que los cuatro escuchan en `127.0.0.1`, y los cuatro alcanzables **solo** por socket. Ahí
+las conexiones TCP entre nuestros propios procesos no pasan. No hace falta saber por qué para dejar de depender
+de ellas.
+
+Se prueba con `pnpm test:lanzador`, que levanta el paquete con la red entre procesos inutilizada y comprueba que
+el sitio sigue en pie y que la consola sigue viendo a sus clientes.
+
+## Y si WhatsApp entra en conflicto
+
+Cuando el mismo número está abierto en dos sitios, el canal queda en estado **`conflicto`** y **deja de
+reintentar**: reintentar es lo que alimenta la pelea, y machacar la reconexión con el número de un negocio real
+es la mejor forma de que Meta lo bloquee. El tablero lo muestra como «Abierto en otro sitio» y dice qué hacer;
+la consola lo saca como ticket de urgencia alta. Se sale de ahí dejando el número en un solo sitio y apagando y
+encendiendo el canal.
+
+Los cortes que no son conflicto tampoco se reintentan cada tres segundos: la espera sube 3 · 3 · 6 · 12 · 30 · 60.
 
 ## 🪤 Tres segundos para escuchar
 
