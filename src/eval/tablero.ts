@@ -100,5 +100,18 @@ check('🪤 el reloj se para si pasas el ratón por encima', /vida\.finished\.th
 check('y hay salida para quien no quiere animaciones', /prefers-reduced-motion/.test(js) && /if \(!t\.animate \|\| quieto\)/.test(js));
 check('sin andamios de prueba colgando', !/__toast|ANDAMIO/.test(js), 'el gancho de las fotos no se sube');
 
+// 🪤 El tablero lo abre el NEGOCIO, no quien lo monta. Un texto que dice «ejecuta pnpm ingest» o «pega esto en
+// CALENDAR_BUSY_ICS» le pide a un cliente algo que no puede hacer y que además no tiene por qué saber: le
+// enseña las tripas y lo deja sin salida. Lo que sí puede hacer se le dice; lo que no, se le dice a quién
+// pedírselo. (Se miran solo los textos: los comentarios del código sí pueden nombrar variables.)
+const textos = js
+  .split('\n')
+  .filter((l) => !l.trim().startsWith('//'))
+  .join('\n');
+for (const jerga of ['pnpm ', 'CALENDAR_BUSY_ICS', 'PUBLIC_URL', 'ADMIN_TOKEN', 'ALLOWED_ORIGINS', 'OPENAI_API_KEY']) {
+  check(`🪤 el tablero del cliente no nombra «${jerga.trim()}»`, !textos.includes(jerga) && !html.includes(jerga),
+    'eso lo sabe quien monta el sistema, no quien atiende a sus clientes');
+}
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

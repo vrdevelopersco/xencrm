@@ -1110,18 +1110,18 @@
     return '<div class="panel"><b>Consumo de IA · 7 días</b>' +
       '<div>' + usd(u.totalUsd) + ' en total' + (u.usdPerConversation !== null ? ' · ' + usd(u.usdPerConversation) + ' por conversación · ' + usd(u.usdPerMessage) + ' por mensaje del cliente' : '') + '</div>' +
       '<table class="usage"><thead><tr><th>Tarea</th><th>Modelo</th><th class="n">Llamadas</th><th class="n">Tokens por llamada (entrada / salida)</th><th class="n">Costo</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<div class="small muted">Costo estimado con la tarifa estándar de OpenAI' + (u.unpriced ? ' (hay modelos sin precio conocido: el total se queda corto)' : '') + '. Los modelos locales no cuestan. Detalle por consola: <code>pnpm usage</code>.</div></div>';
+      '<div class="small muted">Costo estimado con la tarifa estándar de OpenAI' + (u.unpriced ? ' (hay modelos sin precio conocido: el total se queda corto)' : '') + '. Los modelos locales no cuestan.</div></div>';
   }
   function calendarPanel(cfg) {
     var f = cfg.feed;
     var busy = cfg.busy.length
       ? '<ul>' + cfg.busy.map(function (s) { return '<li>' + (s.ok ? '✓ ' : '✗ ') + esc(s.label) + ' · ' + (s.ok ? s.intervals + ' eventos próximos' + (s.syncedAt ? ', leído ' + new Date(s.syncedAt).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }) : '') : esc(s.error || 'sin leer todavía')) + '</li>'; }).join('') + '</ul><div class="small muted">Sus eventos ocupan la agenda: el bot no ofrece esas horas. Se leen cada 5 minutos.</div>'
-      : '<div class="small muted">Para que el bot no ofrezca horas en las que estás ocupado, pega en <code>CALENDAR_BUSY_ICS</code> (.env) la dirección secreta de tu calendario. En Google Calendar: Configuración → tu calendario → Integrar el calendario → Dirección secreta en formato iCal.</div>';
+      : '<div class="small muted">' + esc(state.agentName || 'El asistente') + ' todavía no ve tu calendario, así que puede ofrecer horas en las que ya estás ocupado. Se conecta una vez y queda: pídelo y lo dejamos listo.</div>';
     return '<div class="panel"><b>Calendario</b>' +
       '<div class="small">Suscríbete desde Google Calendar, Outlook o Apple Calendar para ver las citas. El enlace es secreto: quien lo tenga ve nombres y teléfonos.</div>' +
       // Secreto de larga vida: enmascarado por defecto; "Copiar" es la acción principal y rara vez hay que verlo.
       '<div class="feed-row"><input id="feed-url" type="password" readonly value="' + esc(f.https) + '" aria-label="Enlace secreto de suscripción"><button class="btn primary" id="feed-copy">Copiar enlace</button><button class="btn sm" id="feed-show" aria-pressed="false">Mostrar</button><a class="btn sm" href="' + esc(f.webcal) + '">Abrir en Apple Calendar</a></div>' +
-      (f.public ? '' : '<div class="small muted">Sin <code>PUBLIC_URL</code> el enlace solo funciona en este Mac. Google y Outlook necesitan la URL pública del túnel.</div>') +
+      (f.public ? '' : '<div class="small muted">Este enlace solo funciona dentro de este equipo. Para verlo en Google o en Outlook hace falta la dirección pública: avísanos y la dejamos lista.</div>') +
       '<b class="small">Calendarios que bloquean la agenda</b>' + busy + '</div>';
   }
 
@@ -1378,7 +1378,7 @@
       if (r.errors) { $('pf-msg').innerHTML = '<span class="ch-err">No se guardó:</span><ul class="ch-steps">' + r.errors.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>'; return; }
       state.profile.profile = r.profile; state.profile.pending = r.pending;
       state.bizName = r.profile.identity.name || state.bizName;
-      renderProfile('Guardado: ' + esc(state.profile.agentName) + ' ya lo usa.' + (r.indexed ? '' : ' (La búsqueda lo incluye con pnpm ingest; con OpenAI ya va completo en cada respuesta.)'));
+      renderProfile('Guardado: ' + esc(state.profile.agentName) + ' ya lo usa.' + (r.indexed ? '' : ''));
       $('pf-msg').scrollIntoView({ block: 'nearest' });
     }).finally(function () { if ($('pf-save')) $('pf-save').disabled = false; });
   }
@@ -1509,7 +1509,7 @@
         '<div class="panel"><b>Motores</b><ul>' + eng + '</ul><div class="small muted">Modo: ' + esc(a.roles.mode) + ' · liviano: ' + esc(a.roles.light) + ' · pesado: ' + esc(a.roles.heavy) + ' · gate: ' + esc(a.roles.gate) + ' · análisis: ' + esc(a.roles.analysis) + '</div><div class="small muted">Modelos: ' + esc(a.models.chat) + ' · embeddings ' + esc(a.models.embed) + ' · nube ' + esc(a.models.openai) + '</div></div>' +
         '<div class="panel"><b>Citas</b>' + (ap.enabled ? '<div class="small">' + esc(ap.service) + (ap.location ? ' en ' + esc(ap.location) : '') + ' · ' + ap.durationMin + ' min · días ' + ap.days.join(',') + ' · ' + ap.hours.map(function (h) { return h[0] + '–' + h[1]; }).join(', ') + ' · zona ' + esc(a.timezone) + '</div>' : '<div class="muted small">Desactivadas (appointments.enabled en aiva.config.json)</div>') + '</div>' +
         '<div class="panel"><b>Análisis comercial</b><div class="small">Campos capturados además de los básicos: ' + a.crmFields.map(function (f) { return '<code>' + esc(f.name) + '</code>'; }).join(' ') + '</div></div>' +
-        '<div class="panel"><b>Conocimiento indexado</b><div class="small">' + (a.docs.product || 0) + ' productos · ' + (a.docs.knowledge || 0) + ' fragmentos de información. Se actualiza con <code>pnpm ingest</code>.</div></div>' +
+        '<div class="panel"><b>Conocimiento indexado</b><div class="small">' + (a.docs.product || 0) + ' productos · ' + (a.docs.knowledge || 0) + ' fragmentos de información.</div></div>' +
         backupPanel(bk) + usagePanel(usage) + calendarPanel(calCfg) + '<div class="panel" id="miss-panel"></div><div class="panel" id="dict-panel"></div>';
       bindBackup();
       loadMissesPanel(a);
@@ -1545,9 +1545,9 @@
   function publicDetail(p) {
     if (p.state === 'ok') return 'Responde · revisada hace ' + rel(p.checkedAt) + '.';
     if (p.state === 'fallando') return 'La última revisión falló: ' + p.error + '. Si sigue fallando, se avisa en unos minutos.';
-    if (p.state === 'caida') return 'No responde desde hace ' + rel(p.failingSince) + ': ' + p.error + '. Mientras tanto no funcionan el chat del sitio, WhatsApp oficial, el calendario en Google u Outlook ni el tablero desde el celular. Reinicia el túnel; si es uno rápido (trycloudflare.com), su dirección cambia: actualiza PUBLIC_URL y el código del chat en el sitio.';
+    if (p.state === 'caida') return 'No responde desde hace ' + rel(p.failingSince) + ': ' + p.error + '. Mientras tanto no funcionan el chat del sitio, WhatsApp oficial, el calendario en Google u Outlook ni el tablero desde el celular. Suele resolverse solo; si sigue así en unos minutos, avísanos.';
     if (p.state === 'otro_servidor') return 'La dirección responde, pero no desde este servidor. Revisa a dónde apunta el túnel.';
-    if (p.state === 'sin_url') return 'Sin PUBLIC_URL, el chat del sitio, WhatsApp oficial y el calendario en Google u Outlook solo funcionan en este computador.';
+    if (p.state === 'sin_url') return 'Todavía no hay dirección pública: el chat del sitio, WhatsApp oficial y el calendario en Google u Outlook solo funcionan dentro de este equipo. Avísanos y la dejamos lista.';
     return 'Se revisa unos segundos después de arrancar y luego cada 5 minutos.';
   }
   function renderPublic(p) {
@@ -1577,7 +1577,7 @@
       '<label class="small" for="mc-secret">Clave secreta de la app</label><input type="password" id="mc-secret" autocomplete="off" spellcheck="false" placeholder="' + esc(saved(k.appSecretTail) || 'Configuración de la app › Básica') + '">' +
       '<label class="small" for="mc-verify">Token de verificación del webhook</label><div class="cred-row"><input type="text" id="mc-verify" spellcheck="false" value="' + esc(k.verifyToken || '') + '" placeholder="Se genera solo si lo dejas vacío"><button type="button" class="btn" id="mc-gen">Generar</button></div>' +
       '<label class="small" for="mc-version">Versión de la API</label><input type="text" id="mc-version" spellcheck="false" value="' + esc(k.version || 'v26.0') + '">' +
-      '<div class="small muted">Antes de guardar se verifican con Meta. Quedan en el archivo .env de este equipo, no en la base ni en el repositorio, y el tablero no vuelve a mostrar el token completo.</div>' +
+      '<div class="small muted">Antes de guardar se verifican con Meta. Quedan guardadas en el servidor, fuera de la base de datos, y el tablero no vuelve a mostrarlas completas.</div>' +
       '<div class="feed-row"><button type="submit" class="btn primary">Guardar y verificar</button></div>' +
       '<div class="small" id="mc-msg" role="status"></div></form></details>';
   }
