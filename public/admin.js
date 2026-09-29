@@ -45,9 +45,17 @@
     grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     help: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
     store: '<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/>',
-    sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h10M18 18h2"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'
+    sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h10M18 18h2"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    salir: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>'
   };
-  document.querySelectorAll('.ic').forEach(function (el) { el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[el.getAttribute('data-ic')] || '') + '</svg>'; });
+  // Dibuja los iconos de un trozo de página. Se llama también sobre lo que se crea después, que si no, sale vacío.
+  function iconos(raiz) {
+    (raiz || document).querySelectorAll('.ic').forEach(function (el) {
+      el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[el.getAttribute('data-ic')] || '') + '</svg>';
+    });
+  }
+  iconos();
 
   // ---------- utilidades ----------
   // El embudo lo pone cada negocio (una boutique agenda citas; una financiera estudia solicitudes). El tablero
@@ -201,15 +209,102 @@
   applyTheme(); applySound();
 
   // ---------- navegación ----------
-  document.querySelectorAll('.nav button').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-view')); }; });
-  // ---------- celular: «Más» (Análisis, Configuración, tema, sonido y salir) ----------
-  document.querySelectorAll('.nav .nav-2').forEach(function (b) {
-    var item = document.createElement('button');
-    item.setAttribute('data-view', b.getAttribute('data-view'));
-    item.innerHTML = b.innerHTML;
-    item.onclick = function () { go(item.getAttribute('data-view')); };
-    $('more-grid').appendChild(item);
+  document.querySelectorAll('.rail .nav button').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-view')); }; });
+  if ($('marca-btn')) $('marca-btn').onclick = function () { go('today'); };
+
+  // ---------- la configuración, agrupada por de quién es ----------
+  // 🪤 Estos ajustes estaban sueltos en el menú principal, seis de once botones, compitiendo por atención con
+  // lo que se usa cada minuto. Pero el lío de verdad no era el sitio: era que no se veía DE QUIÉN es cada cosa.
+  // El nombre del asistente es del cliente; el tuyo es tuyo; la consola es de aiva. Confundir esos tres niveles
+  // costó cuatro entregas persiguiendo un nombre que se «cruzaba entre clientes». Aquí se dice en voz alta.
+  var CFG_CLIENTE = [
+    { view: 'profile', ic: 'store', lbl: 'Perfil del negocio' },
+    { view: 'negocio', ic: 'sliders', lbl: 'El negocio' },
+    { view: 'agent', ic: 'bot', lbl: 'El asistente' },
+    { view: 'channels', ic: 'plug', lbl: 'Canales' },
+    { view: 'knowledge', ic: 'book', lbl: 'Lo que sabe' }
+  ];
+  var CFG_TUYO = [
+    { proxy: 'foot-user', ic: 'user', lbl: 'Con qué nombre respondes' },
+    { proxy: 'theme-btn', ic: 'sun', lbl: 'Tema claro u oscuro' },
+    { proxy: 'sound-btn', ic: 'bell', lbl: 'Sonido de avisos' },
+    { proxy: 'logout-btn', ic: 'salir', lbl: 'Salir' }
+  ];
+  function itemCfg(d, clase) {
+    var b = document.createElement('button');
+    b.className = clase;
+    b.innerHTML = '<i class="ic" data-ic="' + d.ic + '"></i>' + esc(d.lbl);
+    if (d.view) { b.setAttribute('data-view', d.view); b.onclick = function () { cerrarCfg(); go(d.view); }; }
+    else b.onclick = function () { cerrarCfg(); closeMore(); $(d.proxy).click(); };
+    return b;
+  }
+  (function armarCfg() {
+    var pop = $('cfg-pop');
+    if (!pop) return;
+    // 🪤 El nombre va SIEMPRE, aunque todavía no se sepa: es lo que convierte «Este cliente» en «DUNOR
+    // Boutique» y lo que evita que alguien cambie el nombre del asistente creyendo que cambia el suyo.
+    var grupo = function (titulo, marca) {
+      var d = document.createElement('div');
+      d.className = 'group';
+      d.innerHTML = esc(titulo) + (marca ? '<b id="' + marca + '"></b>' : '');
+      return d;
+    };
+    // De aiva: solo tiene sentido si entró por la consola, que es de quien la maneja.
+    if (window.AIVA_CONSOLA) {
+      pop.appendChild(grupo('Organización', 'aiva'));
+      var consola = document.createElement('button');
+      consola.className = 'item';
+      consola.innerHTML = '<i class="ic" data-ic="grid"></i>Volver a la consola';
+      consola.onclick = function () { location.href = '/consola'; };
+      pop.appendChild(consola);
+      pop.appendChild(document.createElement('hr'));
+    }
+    pop.appendChild(grupo('Este cliente', 'cfg-biz'));
+    CFG_CLIENTE.forEach(function (d) { pop.appendChild(itemCfg(d, 'item')); });
+    pop.appendChild(document.createElement('hr'));
+    pop.appendChild(grupo('Tú', 'cfg-yo'));
+    CFG_TUYO.forEach(function (d) { pop.appendChild(itemCfg(d, 'item')); });
+    pop.appendChild(document.createElement('hr'));
+    var ayuda = itemCfg({ view: 'help', ic: 'help', lbl: 'Ayuda' }, 'item');
+    pop.appendChild(ayuda);
+    // El estado de la conexión ya no cabe a la vista en el riel, pero no se tira: quien sospeche que algo no
+    // llega lo mira aquí, que es donde se viene a mirar cuando algo no va.
+    var pie = document.createElement('div');
+    pie.className = 'group';
+    pie.style.paddingTop = '8px';
+    var conn = $('conn');
+    if (conn) { conn.hidden = false; pie.appendChild(conn); }
+    pop.appendChild(pie);
+    // El mismo contenido sirve en el celular, donde el popover se abre abajo.
+    CFG_CLIENTE.concat([{ view: 'help', ic: 'help', lbl: 'Ayuda' }]).forEach(function (d) {
+      $('more-grid').appendChild(itemCfg(d, ''));
+    });
+  })();
+  function cerrarCfg(devolverFoco) {
+    var pop = $('cfg-pop');
+    if (!pop || pop.hidden) return;
+    pop.hidden = true;
+    $('cfg-btn').setAttribute('aria-expanded', 'false');
+    if (devolverFoco) $('cfg-btn').focus();
+  }
+  $('cfg-btn').onclick = function (e) {
+    e.stopPropagation();
+    var pop = $('cfg-pop');
+    if (pop.hidden) {
+      // Los dos nombres pueden llegar después del primer pintado.
+      if ($('cfg-biz')) $('cfg-biz').textContent = state.bizName || 'este cliente';
+      if ($('cfg-yo')) $('cfg-yo').textContent = state.name || 'sin nombre';
+      pop.hidden = false;
+      $('cfg-btn').setAttribute('aria-expanded', 'true');
+      iconos(pop);
+      var primero = pop.querySelector('.item');
+      if (primero) primero.focus();
+    } else cerrarCfg(true);
+  };
+  document.addEventListener('click', function (e) {
+    if (!$('cfg-pop').hidden && !$('cfg-pop').contains(e.target) && !$('cfg-btn').contains(e.target)) cerrarCfg();
   });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('cfg-pop').hidden) cerrarCfg(true); });
   function openMore() { $('more-sheet').hidden = false; $('nav-more').setAttribute('aria-expanded', 'true'); var first = $('more-grid').querySelector('button'); if (first) first.focus(); }
   function closeMore(returnFocus) {
     if ($('more-sheet').hidden) return;
@@ -220,14 +315,37 @@
   document.addEventListener('click', function (e) { if (!$('more-sheet').hidden && !$('more-sheet').contains(e.target) && !$('nav-more').contains(e.target)) closeMore(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('more-sheet').hidden) closeMore(true); });
   $('more-sheet').querySelectorAll('[data-proxy]').forEach(function (b) { b.onclick = function () { closeMore(); $(b.getAttribute('data-proxy')).click(); }; });
+  // ---------- el panel de la sección ----------
+  // 🪤 Solo aparece donde tiene algo que decir. Un panel vacío a la izquierda «para que se vea simétrico» es
+  // espacio robado a lo único que importa en esta pantalla, que es la conversación.
+  var CFG_VIEWS = { agent: 1, channels: 1, knowledge: 1, help: 1 };
+  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Prospectos', analysis: 'Análisis', agent: 'El asistente', channels: 'Canales', knowledge: 'Lo que sabe', help: 'Ayuda' };
+  function pintarPanel(view) {
+    var panel = $('subnav');
+    if (!panel) return;
+    var conPanel = view === 'inbox' || CFG_VIEWS[view];
+    document.querySelector('.app').setAttribute('data-subnav', conPanel ? 'si' : 'no');
+    if (!conPanel) return;
+    $('subnav-titulo').textContent = TITULOS[view] || '';
+    $('filters').hidden = view !== 'inbox';
+    var cfg = $('subnav-cfg');
+    cfg.hidden = !CFG_VIEWS[view];
+    if (CFG_VIEWS[view] && !cfg.childElementCount) {
+      CFG_CLIENTE.concat([{ view: 'help', ic: 'help', lbl: 'Ayuda' }]).forEach(function (d) { cfg.appendChild(itemCfg(d, 'item')); });
+      iconos(cfg);
+    }
+    cfg.querySelectorAll('[data-view]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
+  }
+
   function go(view, opts) {
     // Perfil y El negocio no son pantallas: son configuración, y se abren en un modal encima de lo que estabas
     // haciendo. Así no se pierde de vista la conversación ni hay que volver a navegar.
     if (view === 'profile' || view === 'negocio') { abrirConfig(view); return; }
     state.view = view;
-    document.querySelectorAll('.nav button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
+    document.querySelectorAll('.rail .nav button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
+    pintarPanel(view);
     // Celular: «Más» se ve activo cuando la sección está dentro de él.
-    $('nav-more').classList.toggle('active', Boolean(document.querySelector('.nav .nav-2[data-view="' + view + '"]')));
+    $('nav-more').classList.toggle('active', Boolean(CFG_VIEWS[view]));
     $('more-grid').querySelectorAll('[data-view]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
     closeMore();
     document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('active', v.id === 'view-' + view); });
@@ -343,9 +461,25 @@
     who.hidden = !c.humanMode; who.textContent = c.humanMode ? 'La lleva ' + whoHas(c) + (c.humanSince ? ' · desde hace ' + rel(c.humanSince) : '') : '';
     setMode(c.humanMode);
     var m = $('msgs');
-    m.innerHTML = d.messages.map(bubble).join('');
+    // 🪤 Primero lo que ya estaba conversado antes de que aiva entrara. Sin esto, el tablero enseñaba media
+    // conversación —lo que escribió el cliente y ninguna respuesta— mientras el asistente sí tenía el contexto
+    // entero y contestaba con él. Ver una sola voz da la sensación de que el producto perdió lo que el negocio
+    // ya había escrito, que es lo contrario de lo que pasa.
+    var antes = d.antes || [];
+    m.innerHTML = (antes.length
+      ? '<div class="sysline">Lo que ya estaba conversado antes de aiva · ' + antes.length + ' mensaje' + (antes.length === 1 ? '' : 's') + '</div>'
+        + antes.map(burbujaDeAntes).join('')
+        + '<div class="sysline">Desde aquí lo lleva aiva</div>'
+      : '') + d.messages.map(bubble).join('');
     if (c.humanMode) m.insertAdjacentHTML('beforeend', '<div class="sysline">Aiva está en pausa: esta conversación la lleva ' + esc(whoHas(c)) + (c.humanSince ? ' desde hace ' + rel(c.humanSince) : '') + '.</div>');
     m.scrollTop = m.scrollHeight;
+  }
+  // Lo traído del historial se pinta igual pero apagado: es conversación de verdad, pero no pasó por aquí y no
+  // se puede responder a ella. Que se vea distinto evita que alguien crea que aiva contestó eso.
+  function burbujaDeAntes(msg) {
+    var mio = msg.role === 'assistant';
+    var quien = mio ? (msg.autor && msg.autor !== 'negocio' ? esc(msg.autor) : 'El negocio') : (msg.autor ? esc(msg.autor) : 'Cliente');
+    return '<div class="bubble ' + (mio ? 'human' : 'customer') + ' de-antes"><span class="who">' + quien + '</span>' + esc(msg.content) + '<span class="ts">' + hhmm(msg.ts) + '</span></div>';
   }
   function bubble(msg) {
     var who = msg.role === 'user' ? 'customer' : (msg.author === 'human' ? 'human' : 'bot');
@@ -359,9 +493,33 @@
     $('seg-bot').classList.toggle('on', !human); $('seg-human').classList.toggle('on', human);
     $('seg').dataset.on = human ? 'human' : 'bot';
     $('seg-bot').setAttribute('aria-pressed', String(!human)); $('seg-human').setAttribute('aria-pressed', String(human));
-    $('composer-hint').hidden = human; $('reply').hidden = !human; $('send').hidden = !human;
+    // 🪤 El cajón de escribir ya no se esconde cuando contesta aiva. Estaba escondido, así que para tomar una
+    // conversación había que acordarse de mover un interruptor ANTES de tener nada que decir — y lo natural es
+    // al revés: uno empieza a escribir. Ahora escribir es la señal, como contestar desde el teléfono.
+    $('composer-hint').hidden = human;
+    $('composer-hint').innerHTML = 'Contesta Aiva. <b>Si escribes aquí, se queda callada</b> en esta conversación.';
+    $('reply').hidden = false; $('send').hidden = !human;
+    $('reply').placeholder = human ? 'Escribe tu respuesta… (Enter envía, Shift+Enter salto)' : 'Escribe para tomar esta conversación…';
     if (human) $('reply').focus();
   }
+  // En cuanto se escribe la primera letra, aiva se hace a un lado. No al enviar: mientras uno piensa la
+  // respuesta, ella podría contestar primero y el cliente recibiría dos versiones de lo mismo.
+  var tomando = false;
+  $('reply').addEventListener('input', function () {
+    if (tomando || !state.current || !$('reply').value.trim()) return;
+    if ($('seg').dataset.on === 'human') return;
+    tomando = true;
+    var loEscrito = $('reply').value;
+    api('/contacts/' + encodeURIComponent(state.current) + '/human', { method: 'POST', body: { on: true } })
+      .then(function () { return openContact(state.current); })
+      .then(function () {
+        // 🪤 Lo que ya había escrito NO se pierde al recargar la conversación: es trabajo suyo.
+        $('reply').value = loEscrito;
+        $('reply').focus();
+        toast('Tomaste esta conversación: Aiva se queda callada aquí');
+      })
+      .finally(function () { tomando = false; });
+  });
   $('seg-bot').onclick = function () { toggleHuman(false); };
   $('seg-human').onclick = function () { toggleHuman(true); };
   function toggleHuman(on) {
@@ -1686,7 +1844,9 @@
       // color de la marca, ya ajustado para que se lea.
       if (me.colorClaro) document.documentElement.style.setProperty('--marca-clara', me.colorClaro);
       if (me.colorOscuro) document.documentElement.style.setProperty('--marca-oscura', me.colorOscuro);
-      $('brand-biz').textContent = me.business;
+      if ($('subnav-biz')) $('subnav-biz').textContent = me.business;
+      if ($('marca-ini')) $('marca-ini').textContent = (me.business || 'A').trim().charAt(0).toUpperCase();
+      if ($('marca-btn')) $('marca-btn').title = me.business || 'Inicio';
       pintarQuienSoy();
       state.bizName = me.business; state.agentName = me.agent;
       // El logo del negocio en su propia barra: entrar a su tablero tiene que sentirse suyo, no de aiva.
@@ -1696,8 +1856,8 @@
         img.src = /^https?:/.test(me.logo) ? me.logo : BASE + me.logo;
         img.alt = me.business; img.className = 'logo-cliente';
         img.onerror = function () { img.remove(); };
-        var marca = document.querySelector('.side .brand');
-        if (marca) marca.insertBefore(img, marca.firstChild);
+        var marca = $('marca-btn');
+        if (marca) { marca.innerHTML = ''; marca.appendChild(img); }
       }
       // 🪤 Aquí se rellenaba el nombre de quien atiende con el del ASISTENTE, y quedaba guardado. Como todos los
       // clientes suelen llamar igual a su asistente, el operador acababa llamándose «Aiva» en todos: parecía que
@@ -1942,9 +2102,7 @@
     $('foot-ini').style.color = '#fff';
     $('foot-ini').style.borderColor = 'transparent';
     $('foot-user').title = 'Respondes como ' + nombre;
-    // La cabecera dice quién responde ahora mismo: si alguien toma el turno, ahí se ve.
-    var arriba = $('brand-name');
-    if (arriba && arriba.firstChild) arriba.firstChild.textContent = nombre + ' ';
+    // Quién responde ahora mismo se ve en el avatar del riel (sus iniciales y su color) y al pasar por encima.
   }
   var COLORES_PERFIL = ['#7b660f', '#2b5ea8', '#2c6b3f', '#a4231b', '#6b3fa0', '#0f6b73', '#8a5a08', '#4a4740'];
   function miColor() {

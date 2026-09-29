@@ -68,7 +68,8 @@
     "test:vigilante": "tsx src/eval/vigilante.ts",
     "test:aprendizaje": "tsx src/eval/aprendizaje.ts",
     "test:embeddings": "tsx src/eval/embeddings.ts",
-    "test:lanzador": "tsx src/eval/lanzador.ts"
+    "test:lanzador": "tsx src/eval/lanzador.ts",
+    "test:tablero": "tsx src/eval/tablero.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
