@@ -6,6 +6,7 @@ import { business } from '../config.js';
 import { getDictionary } from '../agent/dictionary.js';
 import { profileText } from '../profile.js';
 import { allDocs, getDb } from '../rag/store.js';
+import { touchUser } from '../agent/memory.js';
 import { taparSecretos } from './secretos.js';
 
 export interface MensajeImportado {
@@ -95,6 +96,62 @@ export function resumenImportado(): { mensajes: number; chats: number; desde: nu
 }
 
 /** Las conversaciones que hay en el historial importado, con sus mensajes, para poder traerlas al tablero. */
+/**
+ * Lo que ya estaba conversado en ese chat, para poder ENSEÑARLO en el tablero.
+ *
+ * 🪤 Vivía solo en la tabla de aprendizaje, así que el asistente tenía todo el contexto de la conversación
+ * —y se notaba en cómo contestaba— mientras que quien abría el tablero veía media conversación: los mensajes
+ * del cliente y ninguna de las respuestas. Saber que el contexto está y no poder leerlo es peor que no tenerlo:
+ * parece que el producto perdió lo que el negocio ya había escrito.
+ *
+ * El chat se guarda con el número normalizado (sin la parte del dispositivo), y el contacto puede traer una u
+ * otra forma: se buscan las dos.
+ */
+export function mensajesDeChat(userId: string, tope = 300): MensajeImportado[] {
+  const jid = userId.replace(/^wa:/, '');
+  const normal = jid.replace(/:\d+@/, '@');
+  return getDb()
+    .prepare('SELECT chat, autor, role, content, ts FROM import_messages WHERE chat IN (?, ?) ORDER BY ts LIMIT ?')
+    .all(jid, normal, tope) as unknown as MensajeImportado[];
+}
+
+/**
+ * Da de alta como conversación los chats que SOLO existen en el historial.
+ *
+ * 🪤 Sin esto, lo traído al vincular se quedaba en un limbo: los mensajes guardados, el asistente aprendiendo
+ * de ellos, y ninguna forma de abrirlos. Si alguien escribió antes de vincular y no ha vuelto a escribir, no
+ * había contacto que abrir — o sea que el negocio no podía ver ni retomar conversaciones suyas.
+ *
+ * El nombre sale del propio historial, que es como WhatsApp identifica a cada quien; si no hay, queda el
+ * número. Y las fechas son las del chat, no las de ahora: dar de alta una conversación de hace tres meses como
+ * si acabara de llegar la pondría primera en la lista y por delante de quien sí está esperando.
+ */
+export function contactosDelHistorial(tope = 200): number {
+  const db = getDb();
+  const chats = db
+    .prepare(
+      `SELECT chat, MIN(ts) desde, MAX(ts) hasta,
+              (SELECT autor FROM import_messages b WHERE b.chat = a.chat AND b.role = 'user' AND b.autor <> '' ORDER BY b.ts LIMIT 1) nombre
+       FROM import_messages a GROUP BY chat ORDER BY hasta DESC LIMIT ?`,
+    )
+    .all(tope) as { chat: string; desde: number; hasta: number; nombre: string | null }[];
+  const existe = db.prepare('SELECT 1 FROM users WHERE id = ?');
+  const fechas = db.prepare('UPDATE users SET first_seen = ?, last_seen = ? WHERE id = ?');
+  let nuevos = 0;
+  for (const c of chats) {
+    // Solo chats de WhatsApp de verdad: lo traído de un archivo exportado va por su propio camino.
+    if (!c.chat.includes('@')) continue;
+    const id = `wa:${c.chat}`;
+    if (existe.get(id)) continue;
+    const numero = c.chat.split('@')[0] ?? '';
+    const nombre = c.nombre && c.nombre !== 'negocio' ? c.nombre : numero;
+    touchUser(id, 'whatsapp', nombre);
+    fechas.run(c.desde, c.hasta, id);
+    nuevos++;
+  }
+  return nuevos;
+}
+
 export function chatsImportados(): { chat: string; mensajes: MensajeImportado[] }[] {
   const filas = getDb()
     .prepare('SELECT chat, autor, role, content, ts FROM import_messages ORDER BY chat, ts')

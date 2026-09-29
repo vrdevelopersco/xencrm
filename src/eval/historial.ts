@@ -136,5 +136,45 @@ bd.prepare("INSERT INTO messages (user_id, role, content, ts, author) VALUES (?,
 aprenderDeLaRespuesta('wa:573001112233@s.whatsapp.net', 'Usuario: admin@dunor.co\nClave: secreta-de-verdad', 'Camila', T0 + 260_000);
 check('🪤 lo aprendido no guarda credenciales', !JSON.stringify(bd.prepare('SELECT content FROM import_messages').all()).includes('secreta-de-verdad'));
 
+// ---------- Que el tablero pueda ENSEÑAR lo que ya estaba conversado ----------
+// 🪤 Esto vivía solo en la tabla de aprendizaje: el asistente tenía el contexto entero de la conversación y
+// quien abría el tablero veía media —los mensajes del cliente y ninguna respuesta—. Saber que el contexto está
+// y no poder leerlo parece que el producto perdió lo que el negocio ya había escrito.
+const { mensajesDeChat } = await import('../crm/historial.js');
+const CH = '573007776655@s.whatsapp.net';
+const T2 = new Date('2026-09-01T14:00:00Z').getTime();
+guardarImportados(
+  [
+    { chat: CH, autor: 'Marcela', role: 'user', content: '¿tienen esmoquin para grado?', ts: T2 },
+    { chat: CH, autor: 'negocio', role: 'assistant', content: 'Claro que sí, con mucho gusto.', ts: T2 + 60_000 },
+    { chat: CH, autor: 'Marcela', role: 'user', content: 'perfecto, ¿de qué talla?', ts: T2 + 120_000 },
+  ],
+  'whatsapp',
+);
+const traido = mensajesDeChat('wa:' + CH);
+check('🪤 se puede leer la conversación ENTERA, no solo un lado', traido.length === 3 && traido.some((m) => m.role === 'assistant') && traido.some((m) => m.role === 'user'),
+  JSON.stringify(traido.map((m) => m.role)));
+check('y en orden, del más viejo al más nuevo', traido[0]!.ts < traido[2]!.ts);
+// El contacto puede traer el número con la parte del dispositivo y el historial sin ella: tienen que encontrarse.
+check('🪤 encuentra el chat aunque el contacto traiga el dispositivo', mensajesDeChat('wa:573007776655:4@s.whatsapp.net').length === 3,
+  'si no, el tablero de un número vinculado desde varios aparatos sale vacío');
+check('y de otro chat no se trae nada', mensajesDeChat('wa:573001234567@s.whatsapp.net').length === 0);
+
+// ---------- Que lo traído se pueda ABRIR, no solo aprender ----------
+// 🪤 Un chat que solo existe en el historial no tenía contacto, así que no había forma de abrirlo: los
+// mensajes guardados, el asistente aprendiendo de ellos, y el negocio sin poder ver ni retomar conversaciones
+// suyas. Existir en la base y no poder abrirse es, para quien atiende, no existir.
+const { contactosDelHistorial } = await import('../crm/historial.js');
+const bd2 = getDb();
+const altas = contactosDelHistorial();
+check('🪤 los chats del historial se pueden abrir como conversación', altas >= 1, `dio de alta ${altas}`);
+const alta = bd2.prepare("SELECT id, name, first_seen, last_seen FROM users WHERE id = ?").get('wa:' + CH) as
+  { id: string; name: string; first_seen: number; last_seen: number } | undefined;
+check('y se llaman como los identifica WhatsApp, no por el número', alta?.name === 'Marcela', JSON.stringify(alta));
+// 🪤 Con la hora de ahora, una conversación de hace meses se colaría por delante de quien sí está esperando.
+check('🪤 con la fecha del chat, no la de ahora', Boolean(alta) && alta!.last_seen === T2 + 120_000 && alta!.first_seen === T2,
+  JSON.stringify(alta));
+check('darlas de alta dos veces no duplica nada', contactosDelHistorial() === 0);
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

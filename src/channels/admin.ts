@@ -48,7 +48,7 @@ import { backupNow, backupStatus } from '../rag/backup.js';
 import { findDuplicates, keeperOf, mergeContacts } from '../crm/merge.js';
 import { getProfile, pendingFields, PROFILE_FIELDS, saveProfile } from '../profile.js';
 import { exportarAprendizaje, restaurarAprendizaje, revisarAprendizaje } from '../crm/aprendizaje.js';
-import { chatsImportados, borrarImportado, decidirTema, expresionesCandidatas, guardarImportados, leerChatExportado, muestraDeEstilo, resumenImportado, temasFrecuentes, vocabularioDelNegocio } from '../crm/historial.js';
+import { chatsImportados, borrarImportado, decidirTema, expresionesCandidatas, guardarImportados, leerChatExportado, muestraDeEstilo, resumenImportado, temasFrecuentes, vocabularioDelNegocio, mensajesDeChat } from '../crm/historial.js';
 import { ruleReading } from '../agent/teach.js';
 import { indexProfile } from '../rag/profile-index.js';
 import { exportDictionary, getDictionary, importDictionary } from '../agent/dictionary.js';
@@ -132,6 +132,13 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     return c.json({
       contact: { ...forBoard([contact])[0], unread: 0 },
       messages: getMessages(id, 300),
+      // Lo que ya estaba conversado antes de que aiva entrara. Solo lo anterior al primer mensaje que tenemos
+      // en la conversación: en el empalme, lo de en medio saldría dos veces.
+      antes: (() => {
+        const vivos = getMessages(id, 300);
+        const desde = vivos.length ? vivos[0]!.ts : Infinity;
+        return mensajesDeChat(id).filter((m) => m.ts < desde);
+      })(),
       analyses: listAnalyses(id, 10),
       events: listEvents(id, 50),
       appointments: listAppointments({ userId: id, limit: 20 }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })),
