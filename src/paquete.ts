@@ -38,6 +38,7 @@ const ARRANQUE = String.raw`// Generado por: pnpm paquete — no editar a mano.
 // de inicio dentro de su propio proceso. Un require() de un módulo ESM con await arriba revienta con
 // ERR_REQUIRE_ASYNC_MODULE. Los hijos sí arrancan como se debe, con node, y siguen siendo ESM.
 const { spawn } = require('node:child_process');
+const net = require('node:net');
 const http = require('node:http');
 const { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = require('node:fs');
 const { homedir, tmpdir } = require('node:os');
@@ -45,7 +46,39 @@ const { join, resolve } = require('node:path');
 
 const aqui = __dirname;
 const PUERTO = Number(process.env.PORT || 3000);
-const { dominio, puertoInterno, clientes } = JSON.parse(readFileSync(join(aqui, 'clientes.json'), 'utf8'));
+const { dominio, puertoInterno: puertoBase, clientes } = JSON.parse(readFileSync(join(aqui, 'clientes.json'), 'utf8'));
+
+/**
+ * 🪤 Buscar un tramo de puertos libre antes de arrancar.
+ *
+ * Cuando el servidor del alojamiento mata este proceso sin darle tiempo a despedirse, los hijos quedan vivos
+ * agarrando sus puertos. La versión nueva arranca, no puede abrirlos, y sus hijos mueren en bucle: el sitio
+ * responde «todavía está arrancando» para siempre y en el código nuevo no hay nada roto que encontrar. Pasó, y
+ * costó media mañana.
+ *
+ * Así que no se pelea por un puerto: se busca un tramo libre y se usa. Los huérfanos se quedarán ahí hasta que
+ * alguien los mate, pero ya no impiden que el sitio vuelva.
+ */
+function libre(puerto) {
+  return new Promise((res) => {
+    const probar = net.createServer();
+    probar.once('error', () => res(false));
+    probar.once('listening', () => probar.close(() => res(true)));
+    probar.listen(puerto, '127.0.0.1');
+  });
+}
+
+async function tramoLibre(base, cuantos) {
+  for (let inicio = base; inicio < base + 200; inicio += cuantos) {
+    const estados = await Promise.all(Array.from({ length: cuantos }, (_, i) => libre(inicio + i)));
+    if (estados.every(Boolean)) {
+      if (inicio !== base) console.log('[aiva] los puertos ' + base + '+ estaban ocupados (¿versión anterior sin cerrar?); uso ' + inicio + '+');
+      return inicio;
+    }
+  }
+  console.error('[aiva] no encontré puertos libres; lo intento en ' + base + ' de todos modos');
+  return base;
+}
 
 // ── Dónde guardar ───────────────────────────────────────────────────────────
 // Estas plataformas despliegan en una carpeta nueva cada vez, así que lo que se escriba al lado del código se
@@ -74,16 +107,32 @@ const hijos = new Map();
 let cerrando = false;
 function levantar(slug, guion, env, puerto) {
   if (cerrando) return;
+  const antes = hijos.get(slug);
   const hijo = spawn(process.execPath, [join(aqui, guion)], {
     env: { ...process.env, ...env, PORT: String(puerto) },
     stdio: ['ignore', 'inherit', 'inherit'],
   });
   hijo.on('exit', (code) => {
     if (cerrando) return;
+    const h = hijos.get(slug);
+    if (h) {
+      h.caidas = (h.caidas || 0) + 1;
+      h.ultimoCodigo = code;
+      h.ultimaCaida = Date.now();
+    }
     console.error('[aiva] ' + slug + ' se cayó (' + code + '); lo levanto en 5 s');
     setTimeout(() => levantar(slug, guion, env, puerto), 5000);
   });
-  hijos.set(slug, { puerto, hijo });
+  hijos.set(slug, {
+    puerto,
+    hijo,
+    pid: hijo.pid,
+    desde: Date.now(),
+    arranques: (antes && antes.arranques ? antes.arranques : 0) + 1,
+    caidas: (antes && antes.caidas) || 0,
+    ultimoCodigo: antes && antes.ultimoCodigo,
+    ultimaCaida: antes && antes.ultimaCaida,
+  });
 }
 
 // Si se van sin nosotros, los hijos quedan agarrando sus puertos y la siguiente versión no puede arrancar: da
@@ -126,6 +175,10 @@ const porDefecto = {
   // queda apagado; lo ya conversado se trae aparte, exportando el chat (Perfil › Lo que aprendimos de sus chats).
   WHATSAPP_IMPORT_HISTORY: process.env.WHATSAPP_IMPORT_HISTORY || 'false',
 };
+
+const paraLevantar = [];
+let puertoInterno = puertoBase;
+let puertoConsola = puertoBase + clientes.length;
 
 clientes.forEach((c, i) => {
   const mio = join(datos, c.slug);
@@ -177,7 +230,7 @@ clientes.forEach((c, i) => {
     config.seedFile = miSemilla;
   }
   writeFileSync(configPath, JSON.stringify(config, null, 2));
-  levantar(c.slug, 'dist/index.js', {
+  paraLevantar.push({ slug: c.slug, guion: 'dist/index.js', env: {
     ...porDefecto,
     AIVA_CONFIG: configPath,
     AIVA_SLUG: c.slug,
@@ -185,30 +238,38 @@ clientes.forEach((c, i) => {
     WHATSAPP_AUTH_DIR: join(mio, 'auth'),
     ADMIN_TOKEN: tokenDe(c.slug),
     PUBLIC_URL: 'https://' + dominio + '/' + c.slug,
-  }, puertoInterno + i);
+  } });
 });
 
 // ── La consola ──────────────────────────────────────────────────────────────
 // Se le arma su índice apuntando a los puertos de adentro: ella les habla por ahí, no por internet.
 const dirClientes = join(datos, '_consola');
 mkdirSync(dirClientes, { recursive: true });
-writeFileSync(
-  join(dirClientes, 'index.json'),
-  JSON.stringify(
-    {
-      clientes: clientes.map((c, i) => ({
-        ...c,
-        puerto: puertoInterno + i,
-        base: 'http://127.0.0.1:' + (puertoInterno + i),
-        host: dominio + '/' + c.slug, // para el enlace "Abrir tablero"
-      })),
-    },
-    null,
-    2,
-  ),
-);
-const puertoConsola = puertoInterno + clientes.length;
-levantar('consola', 'dist/consola.js', { AIVA_CLIENTES_DIR: dirClientes, CONSOLA_HOST: '127.0.0.1', CONSOLA_PORT: String(puertoConsola) }, puertoConsola);
+// Se escribe cuando ya se sabe en qué puertos quedaron: si se escribiera antes, la consola hablaría a los de
+// la versión anterior y todo diría «no estamos alcanzando a este cliente».
+function escribirIndiceDeClientes() {
+  writeFileSync(
+    join(dirClientes, 'index.json'),
+    JSON.stringify(
+      {
+        clientes: clientes.map((c, i) => ({
+          ...c,
+          puerto: puertoInterno + i,
+          base: 'http://127.0.0.1:' + (puertoInterno + i),
+          host: dominio + '/' + c.slug, // para el enlace "Abrir tablero"
+        })),
+      },
+      null,
+      2,
+    ),
+  );
+}
+paraLevantar.push({
+  slug: 'consola',
+  guion: 'dist/consola.js',
+  env: { AIVA_CLIENTES_DIR: dirClientes, CONSOLA_HOST: '127.0.0.1' },
+  esLaConsola: true,
+});
 
 // ── El enrutador ────────────────────────────────────────────────────────────
 // La portada: una página que explica qué es aiva. La sirve el enrutador mismo, sin molestar a nadie, porque es
@@ -299,6 +360,53 @@ const servidor = http.createServer((pide, responde) => {
       responde.end(pide.method === 'HEAD' ? undefined : suelto.cuerpo);
       return;
     }
+    // ── Un sitio donde mirar cuando algo no arranca ──────────────────────────
+    // 🪤 Lo sirve el ENRUTADOR, no los hijos: cuando ninguno levanta, todo lo demás contesta 503 y desde fuera
+    // no hay forma de saber si es memoria, un puerto pillado o un error del código. Esto lo dice en una
+    // llamada, sin entrar al servidor ni mirar registros a ciegas.
+    if (camino === '/_salud') {
+      const token = (pide.headers['x-consola-token'] || '').toString() || new URL(pide.url, 'http://x').searchParams.get('token') || '';
+      if (!process.env.CONSOLA_TOKEN || token !== process.env.CONSOLA_TOKEN) {
+        responde.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
+        responde.end('Pon el CONSOLA_TOKEN (cabecera x-consola-token o ?token=).');
+        return;
+      }
+      const mem = process.memoryUsage();
+      const cuerpo = {
+        arrancado: new Date(Date.now() - Math.round(process.uptime() * 1000)).toISOString(),
+        enPieDesdeHaceMin: Math.round(process.uptime() / 60),
+        node: process.version,
+        enrutador: { puerto: PUERTO, memoriaMB: Math.round(mem.rss / 1048576) },
+        puertos: { pedidos: puertoBase, usados: puertoInterno, consola: puertoConsola, semovio: puertoInterno !== puertoBase },
+        adentro: [...hijos.entries()].map(([slug, h]) => ({
+          slug,
+          puerto: h.puerto,
+          pid: h.pid,
+          vivo: Boolean(h.hijo && h.hijo.exitCode === null),
+          enPieDesdeHaceMin: Math.round((Date.now() - h.desde) / 60000),
+          arranques: h.arranques,
+          caidas: h.caidas,
+          ultimoCodigo: h.ultimoCodigo === undefined ? null : h.ultimoCodigo,
+          ultimaCaida: h.ultimaCaida ? new Date(h.ultimaCaida).toISOString() : null,
+        })),
+      };
+      // Una línea que diga qué mirar primero, para no tener que interpretar el resto.
+      const muertos = cuerpo.adentro.filter((x) => !x.vivo);
+      const reinician = cuerpo.adentro.filter((x) => x.caidas > 2);
+      cuerpo.veredicto = !cuerpo.adentro.length
+        ? 'Todavía no se ha levantado nada: el enrutador acaba de arrancar.'
+        : muertos.length === cuerpo.adentro.length
+          ? 'Ninguno de adentro está vivo. Mira ultimoCodigo: si es 1, revienta al arrancar; si los puertos se movieron, la versión anterior sigue agarrándolos.'
+          : reinician.length
+            ? 'Hay procesos reiniciándose en bucle (' + reinician.map((x) => x.slug).join(', ') + '). Suele ser memoria o un error al arrancar.'
+            : muertos.length
+              ? 'Falta ' + muertos.map((x) => x.slug).join(', ') + '.'
+              : 'Todo arriba.';
+      responde.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+      responde.end(JSON.stringify(cuerpo, null, 2));
+      return;
+    }
+
     const { puerto, ruta, prefijo } = haciaDonde(pide.url || '/');
     const salida = http.request(
       { host: '127.0.0.1', port: puerto, path: ruta, method: pide.method, headers: { ...pide.headers, host: '127.0.0.1:' + puerto } },
@@ -321,14 +429,27 @@ const servidor = http.createServer((pide, responde) => {
 
 // 🪤 El await de nivel superior no existe aquí: este lanzador es CommonJS porque el servidor del alojamiento lo
 // carga con require. Por eso se encadena en vez de esperar.
-void esperarALosDeAdentro().then(() =>
+/** Primero se buscan puertos libres, luego se levanta a los de adentro, y solo entonces se abre la puerta. */
+async function arrancar() {
+  puertoInterno = await tramoLibre(puertoBase, paraLevantar.length);
+  puertoConsola = puertoInterno + clientes.length;
+  paraLevantar.forEach((h, i) => {
+    const puerto = h.esLaConsola ? puertoConsola : puertoInterno + i;
+    const env = h.esLaConsola ? { ...h.env, CONSOLA_PORT: String(puerto) } : h.env;
+    levantar(h.slug, h.guion, env, puerto);
+  });
+  // El índice que usa la consola para hablarles tiene que apuntar a los puertos de verdad, no a los de ayer.
+  escribirIndiceDeClientes();
+  await esperarALosDeAdentro();
   servidor.listen(PUERTO, () => {
     console.log('[aiva] escuchando en ' + PUERTO);
     console.log('[aiva]   https://' + dominio + '/            → qué es aiva');
     console.log('[aiva]   https://' + dominio + '/consola     → la consola (tu pantalla)');
     for (const c of clientes) console.log('[aiva]   https://' + dominio + '/' + c.slug + '/  → ' + c.nombre);
-  }),
-);
+  });
+}
+
+void arrancar();
 `;
 
 // ---------- Armar ----------

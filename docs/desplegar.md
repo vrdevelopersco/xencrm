@@ -115,3 +115,35 @@ Y del otro lado: `/` y `/consola` dan 200, y `/<cliente>/health` responde con el
 🪤 Si una prueba anterior quedó viva, el puerto sigue ocupado y las peticiones le llegan **a la vieja**: da 404
 en el cliente nuevo y uno se vuelve loco buscando el error en el paquete. Antes de arrancar:
 `lsof -ti :3500 | xargs -r kill -9`.
+
+## Cuando algo no arranca: `/_salud`
+
+🪤 Cuando ninguno de los procesos de dentro levanta, **todo** responde «todavía está arrancando» y desde fuera no
+hay forma de saber si es memoria, un puerto pillado o un error del código. Pasó, y se fue media mañana
+adivinando.
+
+Por eso el enrutador —que sigue vivo aunque sus hijos no— sirve un sitio donde mirar:
+
+```
+curl -H "x-consola-token: <CONSOLA_TOKEN>" https://<dominio>/_salud
+```
+
+Dice, en una llamada: cuánto lleva en pie, qué versión de Node, qué puertos pidió y cuáles usa de verdad, y por
+cada proceso de dentro si está vivo, su pid, cuántas veces se ha levantado, cuántas se ha caído, con qué código
+salió la última vez y cuándo. Y una línea de **veredicto** que dice qué mirar primero:
+
+- *«Ninguno de adentro está vivo»* → mirar `ultimoCodigo`: si es 1, revienta al arrancar.
+- *«Hay procesos reiniciándose en bucle»* → memoria o error de arranque.
+- *«Todo arriba»* → el problema está en otra parte.
+
+Va protegido con el `CONSOLA_TOKEN` porque enseña puertos y pids.
+
+## Los puertos de dentro se mueven solos
+
+🪤 Cuando el servidor del alojamiento mata el proceso principal sin dejarle despedirse, sus hijos quedan vivos
+agarrando sus puertos. La versión nueva arranca, no puede abrirlos y sus hijos mueren en bucle: el sitio queda
+respondiendo «todavía está arrancando» para siempre, y en el código nuevo no hay nada roto que encontrar.
+
+Así que el lanzador ya no pelea por un puerto: busca un **tramo libre** y lo usa, avisando en el registro. Los
+huérfanos siguen ahí hasta que alguien los mate, pero ya no impiden que el sitio vuelva. El índice que usa la
+consola para hablar con cada cliente se escribe **después**, con los puertos de verdad.
