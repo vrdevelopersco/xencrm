@@ -365,23 +365,27 @@ const servidor = http.createServer((pide, responde) => {
     // no hay forma de saber si es memoria, un puerto pillado o un error del código. Esto lo dice en una
     // llamada, sin entrar al servidor ni mirar registros a ciegas.
     if (camino === '/_salud') {
+      // 🪤 Sin token. Esto se mira JUSTO cuando nada funciona, y en ese momento pedir una credencial que hay
+      // que ir a buscar al panel es poner una puerta delante del extintor. Lo que se enseña no abre nada: si
+      // este sitio está vivo y un cliente está caído, eso ya se ve desde fuera pidiéndole su página.
+      //
+      // Los pids y los puertos internos sí se guardan para quien traiga el token: no porque sean un secreto,
+      // sino porque no le sirven a nadie más.
       const token = (pide.headers['x-consola-token'] || '').toString() || new URL(pide.url, 'http://x').searchParams.get('token') || '';
-      if (!process.env.CONSOLA_TOKEN || token !== process.env.CONSOLA_TOKEN) {
-        responde.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
-        responde.end('Pon el CONSOLA_TOKEN (cabecera x-consola-token o ?token=).');
-        return;
-      }
+      const conToken = Boolean(process.env.CONSOLA_TOKEN) && token === process.env.CONSOLA_TOKEN;
       const mem = process.memoryUsage();
       const cuerpo = {
         arrancado: new Date(Date.now() - Math.round(process.uptime() * 1000)).toISOString(),
         enPieDesdeHaceMin: Math.round(process.uptime() / 60),
         node: process.version,
         enrutador: { puerto: PUERTO, memoriaMB: Math.round(mem.rss / 1048576) },
-        puertos: { pedidos: puertoBase, usados: puertoInterno, consola: puertoConsola, semovio: puertoInterno !== puertoBase },
+        puertos: conToken
+          ? { pedidos: puertoBase, usados: puertoInterno, consola: puertoConsola, semovio: puertoInterno !== puertoBase }
+          : { semovio: puertoInterno !== puertoBase },
         adentro: [...hijos.entries()].map(([slug, h]) => ({
           slug,
-          puerto: h.puerto,
-          pid: h.pid,
+          puerto: conToken ? h.puerto : undefined,
+          pid: conToken ? h.pid : undefined,
           vivo: Boolean(h.hijo && h.hijo.exitCode === null),
           enPieDesdeHaceMin: Math.round((Date.now() - h.desde) / 60000),
           arranques: h.arranques,
@@ -429,7 +433,21 @@ const servidor = http.createServer((pide, responde) => {
 
 // 🪤 El await de nivel superior no existe aquí: este lanzador es CommonJS porque el servidor del alojamiento lo
 // carga con require. Por eso se encadena en vez de esperar.
-/** Primero se buscan puertos libres, luego se levanta a los de adentro, y solo entonces se abre la puerta. */
+/**
+ * 🪤 Se ESCUCHA YA, antes de levantar a nadie.
+ *
+ * El servidor del alojamiento da la aplicación por colgada si no llama a listen() en tres segundos: la mata y la
+ * rearranca. Y cada intento deja hijos huérfanos agarrando los puertos, así que el siguiente arranque tampoco
+ * puede, y entra en un bucle del que no sale. Pasó exactamente eso por retrasar ese listen() para esperar a los
+ * de adentro —una idea razonable que aquí es letal—.
+ *
+ * Mientras los de adentro no estén, el enrutador contesta «todavía está arrancando», que es la verdad y dura
+ * unos segundos. Eso es mucho mejor que no contestar.
+ */
+servidor.listen(PUERTO, () => {
+  console.log('[aiva] escuchando en ' + PUERTO);
+});
+
 async function arrancar() {
   puertoInterno = await tramoLibre(puertoBase, paraLevantar.length);
   puertoConsola = puertoInterno + clientes.length;
@@ -441,12 +459,11 @@ async function arrancar() {
   // El índice que usa la consola para hablarles tiene que apuntar a los puertos de verdad, no a los de ayer.
   escribirIndiceDeClientes();
   await esperarALosDeAdentro();
-  servidor.listen(PUERTO, () => {
-    console.log('[aiva] escuchando en ' + PUERTO);
+  (() => {
     console.log('[aiva]   https://' + dominio + '/            → qué es aiva');
     console.log('[aiva]   https://' + dominio + '/consola     → la consola (tu pantalla)');
     for (const c of clientes) console.log('[aiva]   https://' + dominio + '/' + c.slug + '/  → ' + c.nombre);
-  });
+  })();
 }
 
 void arrancar();

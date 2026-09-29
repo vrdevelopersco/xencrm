@@ -147,3 +147,27 @@ respondiendo «todavía está arrancando» para siempre, y en el código nuevo n
 Así que el lanzador ya no pelea por un puerto: busca un **tramo libre** y lo usa, avisando en el registro. Los
 huérfanos siguen ahí hasta que alguien los mate, pero ya no impiden que el sitio vuelva. El índice que usa la
 consola para hablar con cada cliente se escribe **después**, con los puertos de verdad.
+
+## 🪤 Tres segundos para escuchar
+
+El servidor de Hostinger da la aplicación por colgada si no llama a `listen()` en **tres segundos**: la mata y la
+rearranca. Y como cada intento deja hijos huérfanos agarrando los puertos, el siguiente arranque tampoco puede
+abrirlos y entra en un bucle del que no sale solo. En el registro se ve así:
+
+```
+App did not call listen() within 3 seconds… App is hanging at startup
+[aiva] los puertos 4100+ estaban ocupados (¿versión anterior sin cerrar?); uso 4104+
+```
+
+Por eso el enrutador **escucha antes de levantar a nadie** (arranca en menos de medio segundo) y los procesos de
+cada cliente se levantan después. Mientras no estén, contesta «todavía está arrancando», que es la verdad y dura
+unos segundos.
+
+Nada que se haga en el arranque puede ir antes de ese `listen()`: ni esperar a los hijos, ni leer archivos
+grandes, ni comprobar puertos. Si hace falta hacerlo, se hace después.
+
+## Nada de acentos graves en el código del lanzador
+
+`src/paquete.ts` genera `app.js` dentro de una plantilla de texto. Un acento grave en un comentario —escribir el
+nombre de una función entre ellos, por ejemplo— **cierra la plantilla** y rompe la compilación con errores que
+no señalan al sitio. Ha pasado tres veces. En ese bloque, comillas normales.
