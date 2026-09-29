@@ -6,14 +6,15 @@
 // de todos los tableros. Para entrar desde afuera, un túnel con autenticación por delante, nunca abierta.
 //
 //   pnpm consola          arranca en http://localhost:3900
-import { serve } from '@hono/node-server';
+import { createAdaptorServer, serve } from '@hono/node-server';
 import { Hono, type Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, rmSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
-import { actualizarCliente, crearCliente, darDeBajaCliente, leerIndice, PLANTILLAS, puertoLibre, tokenDe, urlDe, type ClienteRef } from './clientes.js';
+import { actualizarCliente, crearCliente, darDeBajaCliente, leerIndice, llamarACliente, PLANTILLAS, puertoLibre, tokenDe, urlDe, type ClienteRef } from './clientes.js';
 import { cabecerasDeSiempre, soloDesdeAqui } from './cabeceras.js';
 import { abrirSesion, actualizarUsuario, alcanza, borrarUsuario, cambiarLoMio, COLORES, colorDe, cerrarSesion, crearUsuario, leerUsuarios, quitarClienteDeUsuarios, sesionDe, sinClave, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
+import { irseSiQuedaHuerfano } from './huerfano.js';
 
 // El .env de la raíz, sin pasar por la configuración de un cliente (la consola no es de ningún cliente).
 function envRaiz(clave: string): string {
@@ -92,7 +93,15 @@ export function ticketsDe(cliente: ClienteRef, e: EstadoCliente): Ticket[] {
   if (e.publica && e.publica !== 'ok') {
     t.push({ urgencia: 'alta', titulo: 'Su dirección pública no contesta', detalle: 'Mientras tanto no entran el chat del sitio ni WhatsApp oficial. Suele ser la red o el túnel.' });
   }
-  if (e.whatsapp && !['conectado', 'apagado', 'no_disponible', 'sin_configurar'].includes(e.whatsapp)) {
+  // El conflicto va aparte y va arriba: es el único estado de WhatsApp en el que el canal no se recupera solo,
+  // y mientras dure, el negocio no recibe ni contesta nada por ahí.
+  if (e.whatsapp === 'conflicto') {
+    t.push({
+      urgencia: 'alta',
+      titulo: 'Su WhatsApp está abierto en dos sitios',
+      detalle: 'Cada sesión echa a la otra y no entra ningún mensaje. Hay que dejarlo en un solo sitio (teléfono › Dispositivos vinculados, u otra máquina con aiva) y volver a encender el canal en su tablero.',
+    });
+  } else if (e.whatsapp && !['conectado', 'apagado', 'no_disponible', 'sin_configurar'].includes(e.whatsapp)) {
     t.push({ urgencia: 'media', titulo: `WhatsApp en "${e.whatsapp}"`, detalle: 'Puede que haya que volver a escanear el código.' });
   }
   if (e.porVerificar) {
@@ -122,9 +131,9 @@ export function ordenar(filas: { cliente: ClienteRef; tickets: Ticket[] }[]) {
   return [...filas].sort((a, b) => peso(b) - peso(a) || a.cliente.nombre.localeCompare(b.cliente.nombre));
 }
 
-const pedir = async (cliente: Pick<ClienteRef, 'base' | 'puerto'>, ruta: string, token: string, ms = 2500): Promise<Record<string, unknown> | null> => {
+const pedir = async (cliente: ClienteRef, ruta: string, token: string, ms = 2500): Promise<Record<string, unknown> | null> => {
   try {
-    const r = await fetch(`${urlDe(cliente)}${ruta}`, { headers: { 'x-admin-token': token }, signal: AbortSignal.timeout(ms) });
+    const r = await llamarACliente(cliente, ruta, { headers: { 'x-admin-token': token }, esperaMs: ms });
     return r.ok ? ((await r.json()) as Record<string, unknown>) : null;
   } catch {
     return null;
@@ -431,11 +440,11 @@ export function mountConsola(app: Hono) {
     const esFlujo = resto.endsWith('admin/api/stream');
     const esLaPagina = resto === 'admin';
     try {
-      const r = await fetch(url, {
+      const r = await llamarACliente(cliente, url.pathname + url.search, {
         method: metodo,
         headers: { 'x-admin-token': token, ...(cuerpo ? { 'content-type': 'application/json' } : {}) },
         body: cuerpo,
-        ...(esFlujo ? {} : { signal: AbortSignal.timeout(15000) }),
+        ...(esFlujo ? {} : { esperaMs: 15000 }),
       });
       // 🪤 El tablero, si no encuentra un token en el navegador, ni lo intenta: enseña su pantalla de token. Pero
       // entrando por aquí no hace falta ninguno —la consola se lo pone a cada petición—, así que se le avisa con
@@ -581,7 +590,7 @@ export function mountConsola(app: Hono) {
     const cliente = leerIndice().find((x) => x.slug === slug);
     if (!cliente) return c.text('No existe.', 404);
     try {
-      const r = await fetch(`${urlDe(cliente)}/brand/logo`, { signal: AbortSignal.timeout(2500) });
+      const r = await llamarACliente(cliente, '/brand/logo', { esperaMs: 2500 });
       if (!r.ok) return c.text('Sin logo.', 404);
       // 🪤 Esto es un archivo de otro: la instancia del cliente lo sirve con su propia CSP y aquí hay que
       // repetirla. Un logo puede ser un SVG, y un SVG abierto como página ejecuta JavaScript —en el origen de
@@ -649,11 +658,11 @@ export function mountConsola(app: Hono) {
     const method = c.req.method;
     const body = method === 'GET' || method === 'HEAD' ? undefined : await c.req.text();
     try {
-      const r = await fetch(url, {
+      const r = await llamarACliente(cliente, url.pathname + url.search, {
         method,
         headers: { 'x-admin-token': token, ...(body ? { 'content-type': 'application/json' } : {}) },
         body,
-        signal: AbortSignal.timeout(8000),
+        esperaMs: 8000,
       });
       return new Response(r.body, { status: r.status, headers: { 'content-type': r.headers.get('content-type') ?? 'application/json' } });
     } catch {
@@ -687,10 +696,26 @@ export function mountConsola(app: Hono) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const app = new Hono();
   mountConsola(app);
-  serve({ fetch: app.fetch, port: PUERTO, hostname: HOST }, () => {
+  irseSiQuedaHuerfano(); // si el lanzador se muere, esta consola se va con él y no deja el puerto agarrado
+  // La misma puerta de servicio que los clientes: un socket de archivo por si al enrutador no le llega por red.
+  // Ver el porqué en channels/web.ts; aquí duele más, porque sin consola no se ve ningún cliente.
+  if (process.env.AIVA_SOCK) {
+    const ruta = process.env.AIVA_SOCK;
+    try {
+      rmSync(ruta, { force: true });
+    } catch {
+      /* el listen dirá por qué */
+    }
+    const puerta = createAdaptorServer({ fetch: app.fetch });
+    puerta.on('error', (e: Error) => console.error(`   no pude abrir el socket ${ruta}: ${e.message}`));
+    puerta.listen(ruta, () => console.log(`   y también por ${ruta}`));
+  }
+  const servidor = serve({ fetch: app.fetch, port: PUERTO, hostname: HOST }, () => {
     console.log(`\n🛠  Consola de aiva · http://localhost:${PUERTO}`);
     console.log(`   clientes: ${leerIndice().length}`);
     console.log(`   token: el de CONSOLA_TOKEN en .env${envRaiz('CONSOLA_TOKEN') ? ` (termina en …${CONSOLA_TOKEN.slice(-4)})` : `; no estaba, esta vez es ${CONSOLA_TOKEN}`}`);
     console.log(`   escucha solo en ${HOST}: quien entre aquí ve todos los clientes.\n`);
   });
+  // Que no abra el puerto no es motivo para morirse si el socket quedó abierto: el enrutador entra por ahí.
+  servidor.on('error', (e: Error) => console.error(`   no pude abrir el puerto ${PUERTO}: ${e.message}`));
 }

@@ -10,6 +10,8 @@ import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { request as peticionHttp } from 'node:http';
+import { Readable } from 'node:stream';
 import { randomBytes } from 'node:crypto';
 
 export interface ClienteRef {
@@ -24,6 +26,12 @@ export interface ClienteRef {
    * plataforma de apps, cada uno con su dominio, y seguir operándose desde una sola pantalla.
    */
   base?: string;
+  /**
+   * Un socket de archivo por el que también se le puede hablar, cuando lo hay. Lo escribe el lanzador del
+   * paquete. Existe porque en el alojamiento las conexiones por red entre nuestros propios procesos resultaron
+   * estar bloqueadas: escuchaban en 127.0.0.1 —lo confirmó el sistema— y aun así conectarse daba ECONNREFUSED.
+   */
+  sock?: string;
   /** Para la consola: qué tan pendiente hay que estar de este cliente. */
   prioridad: 'alta' | 'media' | 'baja';
   desde: string;
@@ -155,6 +163,62 @@ export function tokenDe(slug: string): string {
 
 /** A dónde le habla la consola: su URL si está en otra parte, o su puerto en esta máquina. */
 export const urlDe = (c: Pick<ClienteRef, 'base' | 'puerto'>): string => (c.base ? c.base.replace(/\/$/, '') : `http://localhost:${c.puerto}`);
+
+// ── Cómo hablarle a la instancia de un cliente ──────────────────────────────
+// 🪤 No por una dirección fija, sino por la que funcione.
+//
+// La consola le pregunta a cada cliente cómo va. Durante meses eso fue un fetch a 127.0.0.1:<puerto> y nunca dio
+// problema. El 2026-09-29, en el alojamiento, empezó a fallar de una forma que no dejaba pista: los procesos
+// vivos, el sistema confirmando que escuchaban en 127.0.0.1, y las conexiones rechazadas igual. La consola
+// enseñaba los tres clientes como «sin conexión» mientras los tres atendían perfectamente.
+//
+// Así que se prueba por red y, si no se llega, por el socket de archivo del cliente, que no pasa por la red. Se
+// recuerda cuál funcionó para no pagar el intento fallido en cada llamada.
+const porDondeVa = new Map<string, 'red' | 'socket'>();
+
+export interface LlamadaOpts {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  /** Milisegundos sin respuesta antes de rendirse. Sin esto se espera indefinidamente: el flujo en vivo no lleva reloj. */
+  esperaMs?: number;
+}
+
+function unaLlamada(c: ClienteRef, camino: string, o: LlamadaOpts, puerta: 'red' | 'socket'): Promise<Response> {
+  return new Promise((listo, falla) => {
+    const url = new URL(urlDe(c));
+    const destino = puerta === 'socket' ? { socketPath: c.sock, path: camino } : { host: url.hostname, port: Number(url.port || 80), path: camino };
+    const pet = peticionHttp({ ...destino, method: o.method ?? 'GET', headers: { host: url.host, ...(o.headers ?? {}) } }, (r) => {
+      const cabeceras = new Headers();
+      for (const [k, v] of Object.entries(r.headers)) if (typeof v === 'string') cabeceras.set(k, v);
+      const sinCuerpo = r.statusCode === 204 || r.statusCode === 304 || o.method === 'HEAD';
+      listo(new Response(sinCuerpo ? null : (Readable.toWeb(r) as unknown as ReadableStream), { status: r.statusCode ?? 502, headers: cabeceras }));
+    });
+    if (o.esperaMs) pet.setTimeout(o.esperaMs, () => pet.destroy(new Error('no contestó a tiempo')));
+    pet.on('error', falla);
+    if (o.body) pet.write(o.body);
+    pet.end();
+  });
+}
+
+/** Le habla a un cliente por donde se pueda. Devuelve la respuesta tal cual, con su cuerpo sin bufferizar. */
+export async function llamarACliente(c: ClienteRef, camino: string, o: LlamadaOpts = {}): Promise<Response> {
+  const puertas: ('red' | 'socket')[] = c.sock ? (porDondeVa.get(c.slug) === 'socket' ? ['socket', 'red'] : ['red', 'socket']) : ['red'];
+  let ultimo: unknown;
+  for (const puerta of puertas) {
+    try {
+      const r = await unaLlamada(c, camino, o, puerta);
+      porDondeVa.set(c.slug, puerta);
+      return r;
+    } catch (e) {
+      ultimo = e;
+    }
+  }
+  throw ultimo instanceof Error ? ultimo : new Error('no estamos alcanzando a ' + c.slug);
+}
+
+/** Por dónde se le está llegando a cada cliente ahora mismo, para poder decirlo en pantalla. */
+export const porDondeSeLlega = (slug: string): string => porDondeVa.get(slug) ?? 'todavía no se sabe';
 
 /** Cambia lo que el super-admin puede ajustar de un cliente: prioridad, dominio, notas y dónde vive. */
 export function actualizarCliente(slug: string, cambios: Partial<Pick<ClienteRef, 'prioridad' | 'host' | 'notas' | 'nombre' | 'base'>>): ClienteRef {

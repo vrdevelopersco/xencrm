@@ -1,9 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import { logoUrl, readLogo } from '../brand.js';
 import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { serve, type HttpBindings } from '@hono/node-server';
+import { createAdaptorServer, serve, type HttpBindings } from '@hono/node-server';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { env, business } from '../config.js';
 import { handleMessage } from '../agent/agent.js';
@@ -18,6 +18,7 @@ import { anotarOrigen, deLaUrl } from '../crm/origen.js';
 import { mountAdmin } from './admin.js';
 import { mountCalendar } from './calendar.js';
 import { channelOn } from './switches.js';
+import { irseSiQuedaHuerfano } from '../huerfano.js';
 import { metaConfigured, mountMeta } from './meta.js';
 import { INSTANCE, startPublicCheck } from './public-check.js';
 import { createMcpServer } from '../mcp/server.js';
@@ -165,17 +166,65 @@ app.get('/', (c) => {
   });
 }
 
+/**
+ * 🪤 Una segunda puerta, de archivo, que no pasa por la red.
+ *
+ * El enrutador del paquete le habla a este proceso por 127.0.0.1. En el servidor eso dejó de funcionar sin que
+ * nada lo anunciara: el proceso vivo, escuchando su puerto según su propio registro, y el padre recibiendo
+ * ECONNREFUSED. El sitio entero devolviendo «todavía está arrancando» y ni un error donde agarrarse.
+ *
+ * Un socket de archivo no depende de direcciones, ni de IPv4 contra IPv6, ni de reglas de red: si los dos
+ * procesos ven la misma carpeta, se hablan. Solo se abre cuando el lanzador dice por dónde (AIVA_SOCK); a mano
+ * no sobra nada. Si falla, se avisa y se sigue: el puerto es la puerta principal, esta es la de servicio.
+ */
+function abrirPuertaDeServicio(): void {
+  const ruta = process.env.AIVA_SOCK;
+  if (!ruta) return;
+  try {
+    rmSync(ruta, { force: true }); // el del arranque anterior, que si no, no deja abrir
+  } catch {
+    /* si no se puede borrar, el listen dirá por qué */
+  }
+  const puerta = createAdaptorServer({ fetch: app.fetch });
+  puerta.on('error', (e: Error) => console.error(`[web] no pude abrir el socket ${ruta}: ${e.message}`));
+  puerta.listen(ruta, () => console.log(`[web] y también por ${ruta}`));
+}
+
 export function startWeb() {
   return new Promise<void>((resolve) => {
-    serve({ fetch: app.fetch, port: env.port }, (info) => {
+    // 🪤 La puerta de servicio se abre ANTES que el puerto, y no dentro de su callback. Parece un detalle de
+    // orden y no lo es: si el puerto no abre, ese callback no se llama nunca — o sea que la puerta pensada
+    // justo para cuando el puerto falla solo existía cuando el puerto funcionaba. Lo encontró un simulacro.
+    abrirPuertaDeServicio();
+    let anunciado = false;
+    const enPie = () => {
+      if (anunciado) return;
+      anunciado = true;
+      startPublicCheck();
+      // Si el lanzador se muere, este proceso se va con él: si no, se queda agarrando el puerto y —lo caro—
+      // la sesión de WhatsApp del cliente, y la versión siguiente levanta una segunda copia que se pelea con
+      // esta por el mismo número. Sin despedida: cerrar WhatsApp bonito costaría importar la librería aquí, que
+      // son 77 MB por proceso. Al irse, el socket se cae solo y WhatsApp se entera igual.
+      irseSiQuedaHuerfano();
+      resolve();
+    };
+    // AIVA_BIND lo pone el lanzador (127.0.0.1): así este proceso no queda expuesto y, sobre todo, queda en una
+    // dirección conocida en vez de en la que el sistema decida por su cuenta.
+    const servidor = serve({ fetch: app.fetch, port: env.port, hostname: process.env.AIVA_BIND || undefined }, (info) => {
       const base = env.publicUrl || `http://localhost:${info.port}`;
       console.log(`[web] escuchando en http://localhost:${info.port}`);
       console.log(`[web] demo: ${base}/   widget: <script src="${base}/widget.js" async></script>`);
       if (channelOn('mcp')) console.log(`[web] MCP remoto: ${base}/mcp`);
       console.log(`[web] tablero: ${base}/admin`);
       if (metaConfigured()) console.log(`[meta] webhook de WhatsApp Cloud API: ${base}/webhooks/meta`);
-      startPublicCheck();
-      resolve();
+      enPie();
+    });
+    // Que no abra el puerto ya no es motivo para morirse: con la puerta de servicio abierta se sigue
+    // atendiendo, y el enrutador entra por ahí. Antes esto tumbaba el proceso y el lanzador lo reintentaba
+    // cada cinco segundos, en bucle, sin que nadie viera por qué.
+    servidor.on('error', (e: Error) => {
+      console.error(`[web] no pude abrir el puerto ${env.port}: ${e.message}`);
+      enPie();
     });
   });
 }
