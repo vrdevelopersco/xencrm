@@ -104,7 +104,10 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     return { ...base, text: reply, intent, engine, ms, ...extra };
   };
 
-  if (text === '/reset') {
+  // 🪤 Solo desde la consola de pruebas (`pnpm chat`), NUNCA desde un canal por donde escribe gente. Esto
+  // borraba historial, ficha y citas a quien lo escribiera, y estaba abierto a cualquier cliente que copiara
+  // el comando de algún sitio. Un cliente travieso se borraba a sí mismo y nadie se enteraba de por qué.
+  if (text === '/reset' && msg.channel === 'cli') {
     // Borra todo lo del contacto (historial, ficha, citas): es un comando de pruebas.
     clearHistory(msg.userId);
     lastEngine.delete(msg.userId);

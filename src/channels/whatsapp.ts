@@ -16,11 +16,15 @@ import pino from 'pino';
 import qrcode from 'qrcode-terminal';
 import { mkdirSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { env } from '../config.js';
-import { guardarImportados } from '../crm/historial.js';
+import { business, env } from '../config.js';
+import { aprenderDeLaRespuesta, contactosDelHistorial, guardarImportados } from '../crm/historial.js';
+import { appendMessage, touchUser } from '../agent/memory.js';
+import { getContact, setHumanMode, updateContact } from '../crm/contacts.js';
+import { emitEvent } from '../crm/events.js';
 import { anotarCursor, cursores } from '../crm/wa-cursor.js';
 import { handleMessage } from '../agent/agent.js';
 import { conFirma, registerSender } from '../crm/outbox.js';
+import { soloEscucha } from './switches.js';
 import { cierres, setStatus, status, whatsappStatus, type WhatsAppState } from './whatsapp-estado.js';
 
 export { cierres, whatsappStatus, qrSvg } from './whatsapp-estado.js';
@@ -42,6 +46,17 @@ const pending = new Map<string, Pending>();
 // el estado que mira el tablero está en whatsapp-estado.ts, que no carga nada pesado.
 let current: WASocket | null = null;
 let wanted = false;
+// Los mensajes que salieron de aiva por este socket: WhatsApp los devuelve marcados como propios y, sin esta
+// lista, se guardarían otra vez como si los hubiera escrito una persona.
+const enviadosPorAiva = new Set<string>();
+async function mandar(sock: WASocket, jid: string, texto: string): Promise<void> {
+  const enviado = await sock.sendMessage(jid, { text: texto });
+  const id = enviado?.key?.id;
+  if (id) {
+    enviadosPorAiva.add(id);
+    if (enviadosPorAiva.size > 300) enviadosPorAiva.delete(enviadosPorAiva.values().next().value as string);
+  }
+}
 // Cortes seguidos sin haber llegado a aguantar abierta. Sirve para dos cosas: esperar cada vez un poco más en
 // vez de golpear cada tres segundos, y darse cuenta de cuándo no tiene sentido seguir.
 let seguidas = 0;
@@ -126,8 +141,7 @@ export async function startWhatsApp(): Promise<WASocket> {
 
   sock.ev.on('creds.update', saveCreds);
   registerSender('whatsapp', async (userId, text) => {
-    const jid = userId.replace(/^wa:/, '');
-    await sock.sendMessage(jid, { text });
+    await mandar(sock, userId.replace(/^wa:/, ''), text);
   });
 
   sock.ev.on('connection.update', (u) => {
@@ -222,6 +236,11 @@ export async function startWhatsApp(): Promise<WASocket> {
         anotarCursor({ chat: jidNormalizedUser(jid), keyId: m.key.id, fromMe: Boolean(m.key.fromMe), ts });
       }
       const nuevos = leidos.length ? guardarImportados(leidos, 'whatsapp') : 0;
+      // Lo traído no se queda en un limbo: cada chat se puede abrir y leer entero desde Conversaciones.
+      if (nuevos) {
+        const altas = contactosDelHistorial();
+        if (altas) console.log(`[whatsapp] historial: ${altas} conversaciones nuevas para abrir en el tablero`);
+      }
       if (nuevos) console.log(`[whatsapp] historial: ${nuevos} mensajes guardados para aprender (Perfil › Lo que aprendimos de sus chats)`);
       if (isLatest) console.log('[whatsapp] historial: terminó de sincronizar');
     });
@@ -230,8 +249,50 @@ export async function startWhatsApp(): Promise<WASocket> {
   return sock;
 }
 
+/**
+ * Lo que el negocio contesta desde SU PROPIO teléfono.
+ *
+ * 🪤 Esto se descartaba en la primera línea (`if (m.key.fromMe) return`), y era razonable mientras aiva fuera
+ * la única que contestaba. Con el canal en «solo escuchar» deja de serlo: el negocio sigue atendiendo desde su
+ * teléfono y el tablero enseñaba **media conversación** —lo que escribía el cliente y ninguna respuesta—.
+ * Quien miraba creía que se había perdido lo que ya había escrito.
+ *
+ * Así que se guarda, como lo que es: una persona del negocio respondiendo. Y entra al aprendizaje igual que lo
+ * que se contesta desde el tablero, porque es exactamente lo mismo: su forma de atender.
+ */
+function anotarLoDelNegocio(m: WAMessage, jid: string, texto: string): void {
+  // Lo que mandó aiva por este mismo socket también vuelve marcado como propio: ya está guardado, no se duplica.
+  if (m.key.id && enviadosPorAiva.has(m.key.id)) return;
+  const userId = `wa:${jid}`;
+  try {
+    touchUser(userId, 'whatsapp', null);
+    const quien = business.crm.firmaHumano || 'desde el teléfono';
+    const id = appendMessage(userId, 'assistant', texto, undefined, 'human', quien);
+    emitEvent('message', userId, { id, role: 'assistant', author: 'human', by: quien, content: texto, ts: Date.now() });
+    // Contestaron: ya no está esperando a nadie.
+    updateContact(userId, { unread: 0 }, { silent: true });
+    // 🪤 Y aiva se calla en esta conversación, igual que cuando se contesta desde el tablero: contestar A MANO
+    // toma el control, venga del tablero o del teléfono. Si no, los dos responden a la vez al mismo cliente —y
+    // el cliente recibe dos versiones de lo mismo, que es peor que no recibir ninguna.
+    // Se devuelve cuando alguien mueva el interruptor a «Aiva» en el tablero: esa decisión es de una persona.
+    const c = getContact(userId);
+    if (c && !c.humanMode) setHumanMode(userId, true, quien);
+    aprenderDeLaRespuesta(userId, texto, quien);
+  } catch (err) {
+    console.error('[whatsapp] no pude guardar lo que contestó el negocio:', (err as Error).message);
+  }
+}
+
 function onMessage(sock: WASocket, m: WAMessage) {
-  if (!m.message || m.key.fromMe) return;
+  if (!m.message) return;
+  if (m.key.fromMe) {
+    const suyo = m.key.remoteJid;
+    const texto = extractText(m.message);
+    if (suyo && texto && !isJidStatusBroadcast(suyo) && !isJidNewsletter(suyo) && !(isJidGroup(suyo) && env.whatsappIgnoreGroups)) {
+      anotarLoDelNegocio(m, suyo, texto);
+    }
+    return;
+  }
   const jid = m.key.remoteJid;
   if (!jid || isJidStatusBroadcast(jid) || isJidNewsletter(jid)) return;
   if (isJidGroup(jid) && env.whatsappIgnoreGroups) return;
@@ -248,9 +309,12 @@ function onMessage(sock: WASocket, m: WAMessage) {
   const name = m.pushName ?? undefined;
 
   if (text === null) {
-    // Audio, imagen sin texto, sticker, etc.
+    // 🪤 Audio, imagen sin texto, sticker… Esto contestaba SIEMPRE, incluso con el canal en «solo escuchar»,
+    // porque estaba antes de mirarlo. Y en un negocio de verdad media clientela manda notas de voz: el modo
+    // aprendizaje se delataba justo ahí, con un mensaje de robot en una conversación que llevaba una persona.
+    if (soloEscucha('whatsapp')) return;
     void sock.readMessages([key]);
-    void sock.sendMessage(jid, { text: 'Por ahora solo puedo leer mensajes de texto 🙂 ¿Me lo escribes?' });
+    void mandar(sock, jid, 'Por ahora solo puedo leer mensajes de texto 🙂 ¿Me lo escribes?');
     return;
   }
 
@@ -270,19 +334,25 @@ async function flush(sock: WASocket, jid: string) {
   if (!p) return;
   pending.delete(jid);
   try {
-    await sock.readMessages(p.keys);
-    await sock.sendPresenceUpdate('composing', jid);
+    // 🪤 En «solo escuchar» aiva no marca como leído ni pone «escribiendo…». Parecen inofensivos y son lo
+    // contrario: el cliente ve el doble check azul y que alguien teclea, y luego no le contesta nadie. Es peor
+    // que no hacer nada. Quien lee de verdad es el negocio, desde su teléfono, y su teléfono ya lo marcará.
+    const callado = soloEscucha('whatsapp');
+    if (!callado) {
+      await sock.readMessages(p.keys);
+      await sock.sendPresenceUpdate('composing', jid);
+    }
     const reply = await handleMessage({
       userId: `wa:${jid}`,
       channel: 'whatsapp',
       text: p.texts.join('\n'),
       userName: p.name ?? null,
     });
-    await sock.sendPresenceUpdate('paused', jid);
+    if (!callado) await sock.sendPresenceUpdate('paused', jid);
     if (reply.silent || !reply.text) return; // una persona del equipo responderá desde el tablero
     // Firmado igual que lo que manda una persona desde el tablero: por este número contestan los dos, y el
     // cliente tiene derecho a saber con quién está hablando.
-    await sock.sendMessage(jid, { text: conFirma(reply.text, 'bot', 'whatsapp') });
+    await mandar(sock, jid, conFirma(reply.text, 'bot', 'whatsapp'));
   } catch (err) {
     console.error('[whatsapp] error respondiendo:', err);
   }
