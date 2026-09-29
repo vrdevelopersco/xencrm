@@ -4,7 +4,9 @@ import { business, env } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { metaStatus } from './meta.js';
 import { soloEscucha, channelOn, setChannelOn, type ChannelId } from './switches.js';
-import { startWhatsApp, stopWhatsApp, whatsappStatus, qrSvg } from './whatsapp.js';
+// 🪤 Solo el estado: importar aquí la librería de WhatsApp costaba 77 MB en CADA proceso de cliente,
+// tuviera WhatsApp encendido o no. Se carga cuando se enciende, no antes.
+import { whatsappStatus, qrSvg } from './whatsapp-estado.js';
 import { estadoPuente } from './puente.js';
 
 export type CardState = 'conectado' | 'conectando' | 'esperando_qr' | 'esperando' | 'sin_configurar' | 'apagado' | 'error' | 'no_disponible';
@@ -200,8 +202,9 @@ export async function toggleChannel(id: ChannelId, on: boolean): Promise<void> {
   if (id === 'whatsapp') {
     // Con conector, encender es solo dejarlo dicho: él lo consulta al dar su siguiente señal y actúa.
     if (env.whatsappModo === 'local') {
-      if (on && whatsappStatus().state === 'apagado') await startWhatsApp();
-      if (!on) await stopWhatsApp();
+      const wa = await import('./whatsapp.js'); // aquí sí: es el momento de abrir o cerrar la sesión
+      if (on && whatsappStatus().state === 'apagado') await wa.startWhatsApp();
+      if (!on) await wa.stopWhatsApp();
     }
   }
 }

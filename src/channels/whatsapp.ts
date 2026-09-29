@@ -21,6 +21,10 @@ import { guardarImportados } from '../crm/historial.js';
 import { anotarCursor, cursores } from '../crm/wa-cursor.js';
 import { handleMessage } from '../agent/agent.js';
 import { conFirma, registerSender } from '../crm/outbox.js';
+import { cierres, setStatus, status, whatsappStatus, type WhatsAppState } from './whatsapp-estado.js';
+
+export { cierres, whatsappStatus, qrSvg } from './whatsapp-estado.js';
+export type { WhatsAppState } from './whatsapp-estado.js';
 
 const logger = pino({ level: 'silent' });
 
@@ -34,42 +38,10 @@ interface Pending {
 const pending = new Map<string, Pending>();
 
 // ---------- Estado para el tablero (sección Canales) ----------
-export type WhatsAppState = 'apagado' | 'conectando' | 'esperando_qr' | 'conectado' | 'sesion_cerrada';
-const status: { state: WhatsAppState; qr?: string; me?: string; error?: string; since: number } = { state: 'apagado', since: Date.now() };
+// La sesión abierta ahora mismo y si se la quiere abierta. Vive aquí porque es la librería la que la sostiene;
+// el estado que mira el tablero está en whatsapp-estado.ts, que no carga nada pesado.
 let current: WASocket | null = null;
-let wanted = false; // se apagó desde el tablero: no reconectar
-
-function setStatus(state: WhatsAppState, extra: { qr?: string; me?: string; error?: string } = {}) {
-  Object.assign(status, { state, qr: undefined, error: undefined, ...extra, since: Date.now() });
-}
-
-/** Los últimos cortes, para ver el patrón: cuánto aguantó cada intento y con qué razón se cayó. */
-export const cierres: { cuando: number; code: number | null; razon: string; duroSegundos: number }[] = [];
-
-export function whatsappStatus() {
-  return { ...status, qrSvg: status.qr ? qrSvg(status.qr) : undefined };
-}
-
-// El codificador QR que ya trae qrcode-terminal, dibujado como SVG para escanearlo desde el tablero.
-const require = createRequire(import.meta.url);
-export function qrSvg(text: string): string {
-  const QRCode = require('qrcode-terminal/vendor/QRCode') as new (type: number, level: number) => {
-    addData(d: string): void;
-    make(): void;
-    getModuleCount(): number;
-    isDark(r: number, c: number): boolean;
-  };
-  const level = (require('qrcode-terminal/vendor/QRCode/QRErrorCorrectLevel') as { L: number }).L;
-  const qr = new QRCode(-1, level);
-  qr.addData(text);
-  qr.make();
-  const n = qr.getModuleCount();
-  const quiet = 4;
-  let path = '';
-  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) path += `M${c + quiet} ${r + quiet}h1v1h-1z`;
-  const size = n + quiet * 2;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges"><rect width="${size}" height="${size}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`;
-}
+let wanted = false;
 
 export async function stopWhatsApp(): Promise<void> {
   wanted = false;

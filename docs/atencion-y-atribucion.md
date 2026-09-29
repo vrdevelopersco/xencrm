@@ -200,6 +200,20 @@ entre un mensaje.
 Antes era un tono plano de 880 Hz, y para algo que suena veinte veces al día eso importa: parecía un monitor de
 hospital.
 
+## Lo que pesa cada proceso
+
+🪤 Importar la librería que habla con WhatsApp cuesta **77 MB por proceso**, medido. Con un proceso por cliente,
+tres clientes son 230 MB que se pagan **aunque ninguno tenga WhatsApp encendido**. En un alojamiento con límite
+de memoria eso es la diferencia entre arrancar y no arrancar: pasó, y los cuatro procesos dejaron de levantar
+—el sitio devolvía «todavía está arrancando» en todo menos en la portada, que la sirve el enrutador de memoria—.
+
+Por eso el estado de WhatsApp vive en `channels/whatsapp-estado.ts`, que no depende de nada, y la librería se
+carga **solo al encender el canal**. El tablero puede preguntar «¿cómo va WhatsApp?», enseñar el código QR y
+contar los cortes sin pagar esos megas.
+
+Un proceso de cliente arranca en unos **65 MB** con el canal apagado. Si algún día hay que añadir otra
+dependencia pesada, esta es la medida a repetir antes de importarla desde un módulo que se carga siempre.
+
 ## Lo que todavía no hay
 
 - **Avisos por correo o push del navegador.** Hoy el aviso externo es solo por WhatsApp. El push real necesita

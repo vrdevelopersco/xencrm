@@ -37,7 +37,8 @@ import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
 import { channelCards, toggleChannel } from './registry.js';
 import { diagnosticoDeSalida } from './salida.js';
-import { cierres, olvidarSesionWhatsApp, traerMasHistorial } from './whatsapp.js';
+// Solo el estado; lo que abre la sesión se carga dentro de los handlers que lo necesitan.
+import { cierres } from './whatsapp-estado.js';
 import { anotarEstadoPuente, recogerSalida, sinEntregar, type EstadoPuente } from './puente.js';
 import { channelOn } from './switches.js';
 import { handleMessage } from '../agent/agent.js';
@@ -613,10 +614,12 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const body = (await c.req.json().catch(() => ({}))) as { porChat?: number; chats?: number };
     const porChat = Math.min(200, Math.max(10, Number(body.porChat) || 50));
     const cuantos = Math.min(100, Math.max(1, Number(body.chats) || 25));
+    const { traerMasHistorial } = await import('./whatsapp.js');
     return c.json(await traerMasHistorial(porChat, cuantos));
   });
 
   app.post('/admin/api/whatsapp/desvincular', async (c) => {
+    const { olvidarSesionWhatsApp } = await import('./whatsapp.js');
     await olvidarSesionWhatsApp();
     const body = (await c.req.json().catch(() => ({}))) as { volverAEncender?: boolean };
     if (body.volverAEncender !== false) await toggleChannel('whatsapp', true);
