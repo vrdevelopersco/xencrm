@@ -9,7 +9,7 @@ import { soloEscucha, channelOn, setChannelOn, type ChannelId } from './switches
 import { whatsappStatus, qrSvg } from './whatsapp-estado.js';
 import { estadoPuente } from './puente.js';
 
-export type CardState = 'conectado' | 'conectando' | 'esperando_qr' | 'esperando' | 'sin_configurar' | 'apagado' | 'error' | 'no_disponible';
+export type CardState = 'conectado' | 'conectando' | 'esperando_qr' | 'esperando' | 'sin_configurar' | 'apagado' | 'error' | 'conflicto' | 'no_disponible';
 
 export interface ChannelCard {
   id: ChannelId | 'instagram' | 'messenger';
@@ -104,7 +104,15 @@ export function channelCards(): ChannelCard[] {
         ? ['En el teléfono del negocio abre WhatsApp › Dispositivos vinculados › Vincular un dispositivo.', 'Escanea este código. Se renueva solo cada pocos segundos.']
         : waState === 'error'
           ? [wa.error ?? 'La sesión se cerró.']
-          : [],
+          : // Aquí no vale «reintenta»: mientras el número esté abierto en dos sitios, cada intento echa al otro
+            // y el otro vuelve. Lo que hay que hacer es cerrar uno, y por eso los pasos dicen dónde mirar.
+            waState === 'conflicto'
+            ? [
+                'En el teléfono del negocio: WhatsApp › Dispositivos vinculados. Si hay más de una sesión de aiva, cierra las que sobren.',
+                'Si tienes aiva corriendo en otra máquina (o un conector), apaga el canal de WhatsApp allá.',
+                'Cuando quede en un solo sitio, apaga y vuelve a encender este canal.',
+              ]
+            : [],
     warnings: waOn && metaStatus().configured ? ['El WhatsApp oficial también está configurado: no conectes el mismo número por las dos vías.'] : [],
     qrSvg: waOn && wa.state === 'esperando_qr' ? wa.qrSvg : undefined,
   });

@@ -1316,7 +1316,7 @@
   var CH_STATE = {
     conectado: ['Conectado', 'v-si'], conectando: ['Conectando…', 'v-posible'], esperando_qr: ['Escanea el código', 'v-posible'],
     esperando: ['Esperando mensajes', 'v-posible'], sin_configurar: ['Sin configurar', 'v-no'], apagado: ['Apagado', 'v-no'],
-    error: ['Revisar', 'v-perdido'], no_disponible: ['Todavía no', 'v-no']
+    error: ['Revisar', 'v-perdido'], conflicto: ['Abierto en otro sitio', 'v-perdido'], no_disponible: ['Todavía no', 'v-no']
   };
   var chTimer;
   function loadChannels() {

@@ -10,7 +10,11 @@
 // canal**. El tablero puede preguntar «¿cómo va WhatsApp?» sin pagar esos megas.
 import { createRequire } from 'node:module';
 
-export type WhatsAppState = 'apagado' | 'conectando' | 'esperando_qr' | 'conectado' | 'sesion_cerrada';
+// 🪤 `conflicto` es un estado propio y no un error cualquiera. Significa que este mismo número lo tiene abierto
+// otro sitio (otra copia del proceso, otro servidor, el portátil de alguien), y los dos se echan sin parar. No
+// se arregla reintentando —reintentar es justo lo que lo alimenta—, así que se deja de intentar y se dice qué
+// pasa, que es distinto de «se cayó».
+export type WhatsAppState = 'apagado' | 'conectando' | 'esperando_qr' | 'conectado' | 'sesion_cerrada' | 'conflicto';
 
 export const status: { state: WhatsAppState; qr?: string; me?: string; error?: string; since: number } = {
   state: 'apagado',

@@ -42,9 +42,13 @@ const pending = new Map<string, Pending>();
 // el estado que mira el tablero está en whatsapp-estado.ts, que no carga nada pesado.
 let current: WASocket | null = null;
 let wanted = false;
+// Cortes seguidos sin haber llegado a aguantar abierta. Sirve para dos cosas: esperar cada vez un poco más en
+// vez de golpear cada tres segundos, y darse cuenta de cuándo no tiene sentido seguir.
+let seguidas = 0;
 
 export async function stopWhatsApp(): Promise<void> {
   wanted = false;
+  seguidas = 0; // apagar y volver a encender es lo que hace alguien que ya resolvió el problema: se empieza de cero
   const sock = current;
   current = null;
   sock?.end(undefined);
@@ -152,11 +156,31 @@ export async function startWhatsApp(): Promise<WASocket> {
       const duro = Math.round((Date.now() - status.since) / 1000);
       cierres.unshift({ cuando: Date.now(), code: code ?? null, razon, duroSegundos: duro });
       cierres.splice(8);
-      console.log(`[whatsapp] conexión cerrada (${code ?? 'sin código'}${razon ? `: ${razon}` : ''}) tras ${duro}s, reconectando en 3s...`);
-      setStatus('conectando', { error: `Conexión cerrada (${code ?? 'sin código'}${razon ? `: ${razon}` : ''}) tras ${duro} s; reconectando.` });
+      const comoSeCerro = `${code ?? 'sin código'}${razon ? `: ${razon}` : ''}`;
+      // Si aguantó un rato, lo de antes ya no cuenta: fue un corte suelto, no una pelea.
+      seguidas = duro >= 60 ? 0 : seguidas + 1;
+
+      // 🪤 Dos sitios con el mismo número: WhatsApp echa a uno, el echado vuelve y echa al otro, y así para
+      // siempre. Reintentar no lo arregla, lo mantiene vivo — y machacar la reconexión con el número de un
+      // negocio real es además la mejor forma de que se lo bloqueen. Así que a la cuarta se para y se dice.
+      if ((code === 440 || /conflict/i.test(razon)) && seguidas >= 4) {
+        console.error('[whatsapp] este número lo tiene abierto otro sitio: cada uno echa al otro. Dejo de reintentar.');
+        setStatus('conflicto', {
+          error:
+            'Este WhatsApp está abierto en otro sitio a la vez (otra copia del servidor, otra máquina o el teléfono vinculado dos veces) y cada uno echa al otro. ' +
+            'Déjalo en un solo sitio y vuelve a encender el canal aquí.',
+        });
+        return;
+      }
+
+      // Cada vez se espera un poco más: si es algo pasajero se recupera igual de rápido, y si no lo es, no se
+      // pasa la noche llamando a la puerta.
+      const espera = [3, 3, 6, 12, 30, 60][Math.min(seguidas, 5)]!;
+      console.log(`[whatsapp] conexión cerrada (${comoSeCerro}) tras ${duro}s, reconectando en ${espera}s...`);
+      setStatus('conectando', { error: `Conexión cerrada (${comoSeCerro}) tras ${duro} s; reconectando en ${espera} s.` });
       setTimeout(() => {
         if (wanted && sock === current) void startWhatsApp();
-      }, 3000);
+      }, espera * 1000);
     }
   });
 
