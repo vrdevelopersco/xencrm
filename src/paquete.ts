@@ -37,7 +37,7 @@ const ARRANQUE = String.raw`// Generado por: pnpm paquete — no editar a mano.
 // que sí es ESM). El servidor de estas plataformas —LiteSpeed— no ejecuta "npm start": hace require() del archivo
 // de inicio dentro de su propio proceso. Un require() de un módulo ESM con await arriba revienta con
 // ERR_REQUIRE_ASYNC_MODULE. Los hijos sí arrancan como se debe, con node, y siguen siendo ESM.
-const { spawn } = require('node:child_process');
+const { execFileSync, spawn } = require('node:child_process');
 const net = require('node:net');
 const http = require('node:http');
 const { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = require('node:fs');
@@ -49,15 +49,16 @@ const PUERTO = Number(process.env.PORT || 3000);
 const { dominio, puertoInterno: puertoBase, clientes } = JSON.parse(readFileSync(join(aqui, 'clientes.json'), 'utf8'));
 
 /**
- * 🪤 Buscar un tramo de puertos libre antes de arrancar.
+ * 🪤 Correrse de puerto es el ÚLTIMO recurso, no el primero.
  *
- * Cuando el servidor del alojamiento mata este proceso sin darle tiempo a despedirse, los hijos quedan vivos
- * agarrando sus puertos. La versión nueva arranca, no puede abrirlos, y sus hijos mueren en bucle: el sitio
- * responde «todavía está arrancando» para siempre y en el código nuevo no hay nada roto que encontrar. Pasó, y
- * costó media mañana.
+ * Cuando el alojamiento mata este proceso sin darle tiempo a despedirse, los hijos quedan vivos agarrando sus
+ * puertos. Durante un tiempo esto se resolvió buscando un tramo libre y usándolo: el sitio volvía, sí, pero los
+ * huérfanos seguían ahí — y con ellos, la sesión de WhatsApp del cliente abierta. Dos copias, el mismo número,
+ * cada una echando a la otra: 440 Stream Errored (conflict) en bucle infinito. Correrse de puerto no arreglaba
+ * nada, escondía el cadáver.
  *
- * Así que no se pelea por un puerto: se busca un tramo libre y se usa. Los huérfanos se quedarán ahí hasta que
- * alguien los mate, pero ya no impiden que el sitio vuelva.
+ * Ahora el orden es otro: primero se echa a los de la versión anterior, luego se espera a que suelten, y solo si
+ * después de todo eso el tramo sigue ocupado se busca otro, avisando fuerte de que algo quedó vivo.
  */
 function libre(puerto) {
   return new Promise((res) => {
@@ -80,6 +81,74 @@ async function tramoLibre(base, cuantos) {
   return base;
 }
 
+/** Espera a que el tramo de siempre quede libre. Devuelve true si lo consiguió. */
+async function esperarElTramo(base, cuantos, maxMs) {
+  const hasta = Date.now() + maxMs;
+  for (;;) {
+    const estados = await Promise.all(Array.from({ length: cuantos }, (_, i) => libre(base + i)));
+    if (estados.every(Boolean)) return true;
+    if (Date.now() > hasta) return false;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+}
+
+/**
+ * 🪤 UN SOLO lanzador levanta gente. Los demás solo reparten.
+ *
+ * El alojamiento puede arrancar este mismo archivo más de una vez a la vez. No es una suposición: el 2026-09-29
+ * salieron dos con 1,4 segundos de diferencia, y cada uno levantó su propia copia de los tres clientes y de la
+ * consola —ocho procesos donde debía haber cuatro—. El sitio parecía funcionar. Lo que no funcionaba era
+ * WhatsApp: dos procesos abriendo el mismo número, echándose el uno al otro cada tres segundos, sin parar.
+ *
+ * Y lo peor: /_salud decía «Todo arriba», porque cada lanzador solo sabe de sus hijos y sus hijos estaban bien.
+ *
+ * El cerrojo es un puerto. Quien lo abre, manda; quien no puede abrirlo, sabe que hay otro y se limita a
+ * repartir hacia los puertos del que mandó. Un puerto y no un archivo porque el sistema lo suelta solo cuando el
+ * proceso muere, sin dejar cerrojos viejos trabados que luego hay que salir a limpiar a mano.
+ */
+function tomarElMando(puerto) {
+  return new Promise((res) => {
+    const cerrojo = net.createServer();
+    cerrojo.once('error', () => res(null));
+    cerrojo.once('listening', () => res(cerrojo));
+    cerrojo.listen(puerto, '127.0.0.1');
+  });
+}
+
+/**
+ * Echa a los procesos de clientes de una versión anterior que hayan quedado vivos.
+ *
+ * Se reconocen por dos cosas a la vez: cuelgan de la carpeta de ESTE dominio y son uno de nuestros dos guiones.
+ * Los de la versión que se está levantando ahora (misma carpeta que este archivo) no se tocan. Si no se puede
+ * mirar la lista de procesos, no se mata nada: mejor un huérfano que un disparo a ciegas.
+ */
+function matarLosDeAntes() {
+  const corte = aqui.indexOf('/hbuilds/');
+  const raiz = corte === -1 ? null : aqui.slice(0, corte);
+  if (!raiz) return 0;
+  let idos = 0;
+  try {
+    for (const linea of execFileSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8', timeout: 4000 }).split('\n')) {
+      const m = /^\s*(\d+)\s+(.*)$/.exec(linea);
+      if (!m) continue;
+      const pid = Number(m[1]);
+      const orden = m[2];
+      if (pid === process.pid || !orden.includes(raiz) || orden.includes(aqui)) continue;
+      if (!/\/dist\/(index|consola)\.js(\s|$)/.test(orden)) continue;
+      try {
+        process.kill(pid, 'SIGTERM');
+        idos++;
+      } catch {
+        /* ya no estaba */
+      }
+    }
+  } catch {
+    return 0; // sin la lista de procesos no se adivina
+  }
+  if (idos) console.log('[aiva] eché a ' + idos + ' proceso(s) de la versión anterior que seguían vivos.');
+  return idos;
+}
+
 // ── Dónde guardar ───────────────────────────────────────────────────────────
 // Estas plataformas despliegan en una carpeta nueva cada vez, así que lo que se escriba al lado del código se
 // pierde en la siguiente actualización. Se busca un sitio estable; el primero donde se pueda escribir, gana.
@@ -100,16 +169,46 @@ if (!datos) {
 }
 console.log('[aiva] datos en ' + datos);
 
+// Los sockets por los que el enrutador también puede hablarle a los de adentro. Van en los datos y no en el
+// despliegue, que estrena carpeta en cada actualización.
+const dirSockets = join(datos, '_sockets');
+mkdirSync(dirSockets, { recursive: true });
+
+// 🪤 Un socket de archivo no admite rutas largas: el sistema corta sobre los 100 caracteres y falla con EINVAL,
+// que no dice nada de longitudes. Si la carpeta de datos queda muy adentro se usa la temporal, que es corta; y
+// si tampoco cabe, este se queda sin su puerta de servicio y manda el puerto, como siempre.
+function socketPara(slug) {
+  const enDatos = join(dirSockets, slug + '.sock');
+  if (enDatos.length <= 100) return enDatos;
+  const corto = join(tmpdir(), 'aiva-' + slug + '.sock');
+  if (corto.length <= 100) return corto;
+  console.error('[aiva] sin socket para ' + slug + ': no hay ninguna ruta lo bastante corta.');
+  return '';
+}
+
 const tokenDe = (slug) => process.env['TOKEN_' + slug.toUpperCase().replace(/[^A-Z0-9]/g, '_')] || '';
 
 // ── Un proceso por cliente ──────────────────────────────────────────────────
 const hijos = new Map();
+// A dónde va cada cliente. Es un mapa aparte del de los hijos a propósito: el lanzador que NO tiene el mando no
+// levanta a nadie, pero sí reparte, y para eso le basta saber en qué puerto está cada uno.
+const rutas = new Map();
+// El cerrojo va justo debajo del tramo de siempre: si los clientes están en 4100, el mando está en 4099. Se
+// declara aquí arriba y no junto a donde se usa porque /_salud lo lee, y /_salud contesta desde el primer
+// instante: entre que se abre el puerto y termina de leerse este archivo caben peticiones.
+const PUERTO_MANDO = puertoBase - 1;
+let soyElDueno = false;
+let mandoDe = '';
 let cerrando = false;
 function levantar(slug, guion, env, puerto) {
   if (cerrando) return;
   const antes = hijos.get(slug);
+  // 🪤 Además del puerto, un socket de archivo. Es la puerta que no pasa por la red: en el servidor los cuatro
+  // procesos estaban vivos y escuchando, y el padre recibía ECONNREFUSED en los cuatro. Por ahí se llega igual.
+  const sock = socketPara(slug);
+  if (sock) socketDe.set(puerto, sock);
   const hijo = spawn(process.execPath, [join(aqui, guion)], {
-    env: { ...process.env, ...env, PORT: String(puerto) },
+    env: { ...process.env, ...env, PORT: String(puerto), AIVA_SOCK: sock, AIVA_BIND: process.env.AIVA_BIND || '127.0.0.1' },
     stdio: ['ignore', 'inherit', 'inherit'],
   });
   hijo.on('exit', (code) => {
@@ -123,6 +222,7 @@ function levantar(slug, guion, env, puerto) {
     console.error('[aiva] ' + slug + ' se cayó (' + code + '); lo levanto en 5 s');
     setTimeout(() => levantar(slug, guion, env, puerto), 5000);
   });
+  rutas.set(slug, puerto);
   hijos.set(slug, {
     puerto,
     hijo,
@@ -256,8 +356,13 @@ function escribirIndiceDeClientes() {
           ...c,
           puerto: puertoInterno + i,
           base: 'http://127.0.0.1:' + (puertoInterno + i),
+          // Por si la red entre procesos no funciona: la consola entra por aquí, igual que el enrutador.
+          sock: socketPara(c.slug),
           host: dominio + '/' + c.slug, // para el enlace "Abrir tablero"
         })),
+        // Lo que sigue no lo usa la consola: lo lee el lanzador que se encuentre con que otro tiene el mando,
+        // para repartir hacia los puertos de verdad en vez de inventárselos.
+        mando: { pid: process.pid, consola: puertoConsola, desde: Date.now() },
       },
       null,
       2,
@@ -267,7 +372,11 @@ function escribirIndiceDeClientes() {
 paraLevantar.push({
   slug: 'consola',
   guion: 'dist/consola.js',
-  env: { AIVA_CLIENTES_DIR: dirClientes, CONSOLA_HOST: '127.0.0.1' },
+  // 🪤 AIVA_SUPERVISADO también aquí, y no es un detalle: es lo que hace que la consola se vaya si el lanzador
+  // se muere. Sin esto sobrevive sola, se queda con su puerto, y el lanzador siguiente tiene que correrse de
+  // tramo y levantar una segunda copia de TODO. Lo encontró la prueba de matar al lanzador: de cuatro procesos
+  // se iban tres, y el que se quedaba era justo este.
+  env: { AIVA_CLIENTES_DIR: dirClientes, CONSOLA_HOST: process.env.AIVA_BIND || '127.0.0.1', AIVA_SUPERVISADO: '1' },
   esLaConsola: true,
 });
 
@@ -300,10 +409,10 @@ function haciaDonde(url) {
   const camino = url.split('?')[0] || '/';
   if (camino === '/consola' || camino === '/consola/') return { puerto: puertoConsola, ruta: '/', prefijo: '' };
   const m = /^\/([a-z0-9][a-z0-9_-]*)(\/.*)?$/i.exec(camino);
-  const destino = m && hijos.get(m[1]);
+  const destino = m && rutas.get(m[1]);
   if (!destino) return { puerto: puertoConsola, ruta: url, prefijo: '' };
   const resto = url.slice(1 + m[1].length) || '/';
-  return { puerto: destino.puerto, ruta: resto.startsWith('/') ? resto : '/' + resto, prefijo: '/' + m[1] };
+  return { puerto: destino, ruta: resto.startsWith('/') ? resto : '/' + resto, prefijo: '/' + m[1] };
 }
 
 /**
@@ -315,32 +424,124 @@ function haciaDonde(url) {
  * espera a que respondan, con un tope: si alguno no levanta, igual se abre, porque es mejor un cliente caído
  * que todos.
  */
-const listo = (puerto) =>
+// 🪤 No dar por hecho POR DÓNDE se alcanza a los de adentro.
+//
+// Durante días el enrutador dio por sentado que sus hijos estaban en 127.0.0.1 y punto. En el servidor eso
+// resultó ser falso: los cuatro procesos vivos, escuchando según su propio registro, y el padre recibiendo
+// ECONNREFUSED en los cuatro — con el sitio entero devolviendo «todavía está arrancando». Una suposición de una
+// línea, invisible, que costó una mañana.
+//
+// Así que ya no se supone: se prueban las puertas en orden y se recuerda cuál abrió. La última es un socket de
+// archivo, que no pasa por la red y por eso funciona aunque el enrutador y sus hijos no se vean por ella.
+const socketDe = new Map(); // puerto -> archivo por el que también se le puede hablar
+const porDondeVa = new Map(); // puerto -> la puerta que sí abrió
+
+const nombreDePuerta = (puerta) => (puerta.socketPath ? 'socket' : puerta.host);
+const puertasDe = (puerto) => {
+  const lista = [{ host: '127.0.0.1' }, { host: '::1' }];
+  const sock = socketDe.get(puerto);
+  if (sock) lista.push({ socketPath: sock });
+  return lista;
+};
+/** Cómo hablarle a un puerto de adentro: por donde ya sabemos que abre, o por la puerta de siempre. */
+const comoLlego = (puerto) => porDondeVa.get(puerto) || { host: '127.0.0.1' };
+const conDestino = (puerta, puerto, resto) =>
+  puerta.socketPath ? { socketPath: puerta.socketPath, ...resto } : { host: puerta.host, port: puerto, ...resto };
+
+// Devuelve el MOTIVO, no un sí o un no. «5 de 5 no contestaron a tiempo» no distingue un proceso que todavía no
+// abrió el puerto (ECONNREFUSED) de uno que abrió y está tan ahogado que no alcanza a contestar, y son dos
+// problemas que no se arreglan igual. Eso obligó a leer el registro del panel línea por línea.
+const tocar = (puerta, puerto) =>
   new Promise((res) => {
-    const r = http.request({ host: '127.0.0.1', port: puerto, path: '/health', timeout: 1500 }, (x) => {
+    const r = http.request(conDestino(puerta, puerto, { path: '/health', timeout: 1500 }), (x) => {
       x.resume();
-      res(true);
+      res(null);
     });
-    r.on('error', () => res(false));
+    r.on('error', (e) => res(e.code || e.message || 'error'));
     r.on('timeout', () => {
       r.destroy();
-      res(false);
+      res('no contestó en 1,5 s');
     });
     r.end();
   });
 
+async function sondear(puerto) {
+  const fallos = [];
+  for (const puerta of puertasDe(puerto)) {
+    const mal = await tocar(puerta, puerto);
+    if (!mal) {
+      porDondeVa.set(puerto, puerta);
+      return null;
+    }
+    fallos.push(nombreDePuerta(puerta) + ' ' + mal);
+  }
+  porDondeVa.delete(puerto);
+  return fallos.join(' · ');
+}
+
+/**
+ * 🪤 Qué hay escuchando de verdad en nuestros puertos, según el propio sistema.
+ *
+ * Esto existe porque hubo una mañana entera de callejón sin salida: los cuatro procesos vivos, cada uno diciendo
+ * en su registro «escuchando en 4100», y el padre recibiendo ECONNREFUSED al llamar a 127.0.0.1:4100. Con solo
+ * esos dos datos no se puede avanzar: falta saber en qué DIRECCIÓN quedaron abiertos. El sistema lo sabe y lo
+ * publica; solo había que leerlo. En Linux; donde no esté, no se inventa nada.
+ */
+function quienEscucha() {
+  const mios = new Set(losDeAdentro());
+  const visto = {};
+  const legible = (hex) => {
+    if (hex.length === 8) return [6, 4, 2, 0].map((i) => parseInt(hex.slice(i, i + 2), 16)).join('.');
+    if (/^0+$/.test(hex)) return '::';
+    if (/^0{24}0*1.*$/.test(hex) && parseInt(hex.slice(24), 16) === 1) return '::1';
+    if (hex.slice(0, 24) === '00000000000000000000FFFF') return '::ffff:' + [30, 28, 26, 24].map((i) => parseInt(hex.slice(i, i + 2), 16)).join('.');
+    return 'IPv6 ' + hex;
+  };
+  for (const archivo of ['/proc/net/tcp', '/proc/net/tcp6']) {
+    let texto;
+    try {
+      texto = readFileSync(archivo, 'utf8');
+    } catch {
+      continue;
+    }
+    for (const linea of texto.split('\n').slice(1)) {
+      const campos = linea.trim().split(/\s+/);
+      if (campos.length < 4 || campos[3] !== '0A') continue; // 0A = escuchando
+      const partes = (campos[1] || '').split(':');
+      const puerto = parseInt(partes[1] || '', 16);
+      if (!mios.has(puerto)) continue;
+      visto[puerto] = (visto[puerto] ? visto[puerto] + ' + ' : '') + legible(partes[0]);
+    }
+  }
+  return Object.keys(visto).length ? visto : 'no se pudo mirar (no es Linux) o no hay nada abierto en esos puertos';
+}
+
+/** Lo último que se supo de cada puerto de adentro, para /_salud. */
+let ultimoSondeo = null;
+
+const losDeAdentro = () =>
+  // Sin repetidos: la consola estaba dos veces en esta lista (por su puerto y como hijo), así que el recuento
+  // decía «5 de 5» cuando adentro hay cuatro. Un número que no cuadra hace dudar del diagnóstico entero.
+  [...new Set([puertoConsola, ...[...hijos.values()].map((h) => h.puerto)])];
+
+async function sondearATodos() {
+  const puertos = losDeAdentro();
+  const motivos = await Promise.all(puertos.map(sondear));
+  const fallan = puertos.map((p, i) => ({ puerto: p, motivo: motivos[i] })).filter((x) => x.motivo);
+  ultimoSondeo = { cuando: Date.now(), fallan };
+  return fallan;
+}
+
 async function esperarALosDeAdentro(maxMs = 30000) {
-  const puertos = [puertoConsola, ...[...hijos.values()].map((h) => h.puerto)];
   const hasta = Date.now() + maxMs;
   for (;;) {
-    const estados = await Promise.all(puertos.map(listo));
-    const faltan = estados.filter((x) => !x).length;
-    if (!faltan) {
-      console.log('[aiva] todos adentro listos');
+    const fallan = await sondearATodos();
+    if (!fallan.length) {
+      console.log('[aiva] todos adentro listos, por ' + [...new Set([...porDondeVa.values()].map(nombreDePuerta))].join(' y '));
       return;
     }
     if (Date.now() > hasta) {
-      console.log('[aiva] abro igual: ' + faltan + ' de ' + puertos.length + ' no contestaron a tiempo');
+      console.log('[aiva] abro igual: ' + fallan.length + ' de ' + losDeAdentro().length + ' no contestaron — ' + fallan.map((x) => x.puerto + ': ' + x.motivo).join(', '));
       return;
     }
     await new Promise((r) => setTimeout(r, 500));
@@ -378,7 +579,16 @@ const servidor = http.createServer((pide, responde) => {
         arrancado: new Date(Date.now() - Math.round(process.uptime() * 1000)).toISOString(),
         enPieDesdeHaceMin: Math.round(process.uptime() / 60),
         node: process.version,
+        // 🪤 Quién es este que contesta. Cuando el alojamiento arrancó dos lanzadores, cada uno veía a sus
+        // cuatro hijos perfectos y decía «Todo arriba» — y entre los dos había ocho procesos peleándose el
+        // WhatsApp del cliente. Desde fuera no había forma de notarlo. Ahora lo primero que se dice es si este
+        // tiene el mando o es un espejo, y a quién sigue.
+        papel: soyElDueno ? 'con el mando' : 'espejo del ' + (mandoDe || 'otro lanzador'),
         enrutador: { puerto: PUERTO, memoriaMB: Math.round(mem.rss / 1048576) },
+        sondeo: ultimoSondeo && ultimoSondeo.fallan.length ? ultimoSondeo.fallan : 'todos contestan',
+        // Lo que dice el sistema, no lo que dice cada proceso de sí mismo. Cuando los dos no coinciden, la
+        // respuesta está justo ahí.
+        escuchando: quienEscucha(),
         puertos: conToken
           ? { pedidos: puertoBase, usados: puertoInterno, consola: puertoConsola, semovio: puertoInterno !== puertoBase }
           : { semovio: puertoInterno !== puertoBase },
@@ -387,6 +597,7 @@ const servidor = http.createServer((pide, responde) => {
           puerto: conToken ? h.puerto : undefined,
           pid: conToken ? h.pid : undefined,
           vivo: Boolean(h.hijo && h.hijo.exitCode === null),
+          por: porDondeVa.has(h.puerto) ? nombreDePuerta(porDondeVa.get(h.puerto)) : 'no se le llega',
           enPieDesdeHaceMin: Math.round((Date.now() - h.desde) / 60000),
           arranques: h.arranques,
           caidas: h.caidas,
@@ -397,7 +608,9 @@ const servidor = http.createServer((pide, responde) => {
       // Una línea que diga qué mirar primero, para no tener que interpretar el resto.
       const muertos = cuerpo.adentro.filter((x) => !x.vivo);
       const reinician = cuerpo.adentro.filter((x) => x.caidas > 2);
-      cuerpo.veredicto = !cuerpo.adentro.length
+      cuerpo.veredicto = !soyElDueno
+        ? 'Este lanzador no manda: otro tiene el mando y levantó a los clientes; este solo reparte. Es lo correcto cuando el alojamiento arranca la aplicación más de una vez.'
+        : !cuerpo.adentro.length
         ? 'Todavía no se ha levantado nada: el enrutador acaba de arrancar.'
         : muertos.length === cuerpo.adentro.length
           ? 'Ninguno de adentro está vivo. Mira ultimoCodigo: si es 1, revienta al arrancar; si los puertos se movieron, la versión anterior sigue agarrándolos.'
@@ -413,7 +626,7 @@ const servidor = http.createServer((pide, responde) => {
 
     const { puerto, ruta, prefijo } = haciaDonde(pide.url || '/');
     const salida = http.request(
-      { host: '127.0.0.1', port: puerto, path: ruta, method: pide.method, headers: { ...pide.headers, host: '127.0.0.1:' + puerto } },
+      conDestino(comoLlego(puerto), puerto, { path: ruta, method: pide.method, headers: { ...pide.headers, host: '127.0.0.1:' + puerto } }),
       (r) => {
         const cabeceras = { ...r.headers };
         // Una redirección de adentro no sabe del prefijo: se lo ponemos para que no saque al cliente de su ruta.
@@ -448,8 +661,17 @@ servidor.listen(PUERTO, () => {
   console.log('[aiva] escuchando en ' + PUERTO);
 });
 
-async function arrancar() {
-  puertoInterno = await tramoLibre(puertoBase, paraLevantar.length);
+async function levantarALosMios() {
+  soyElDueno = true;
+  // Primero se echa a los de la versión anterior; luego se les da tiempo a soltar. Correrse de puerto, solo si
+  // después de eso siguen ahí: un tramo distinto significa dos copias vivas, y eso es lo que hay que evitar.
+  matarLosDeAntes();
+  if (!(await esperarElTramo(puertoBase, paraLevantar.length, 12000))) {
+    console.error('[aiva] los puertos de siempre siguen ocupados y algo quedó vivo ahí. Busco otro tramo, pero revisa /_salud.');
+    puertoInterno = await tramoLibre(puertoBase, paraLevantar.length);
+  } else {
+    puertoInterno = puertoBase;
+  }
   puertoConsola = puertoInterno + clientes.length;
   paraLevantar.forEach((h, i) => {
     const puerto = h.esLaConsola ? puertoConsola : puertoInterno + i;
@@ -459,11 +681,56 @@ async function arrancar() {
   // El índice que usa la consola para hablarles tiene que apuntar a los puertos de verdad, no a los de ayer.
   escribirIndiceDeClientes();
   await esperarALosDeAdentro();
+  // Se sigue mirando cada quince segundos: un hijo que se reinicia puede quedar en otra puerta, y /_salud tiene
+  // que decir cómo están las cosas ahora, no cómo estaban al arrancar.
+  setInterval(() => void sondearATodos(), 15000).unref();
   (() => {
     console.log('[aiva]   https://' + dominio + '/            → qué es aiva');
     console.log('[aiva]   https://' + dominio + '/consola     → la consola (tu pantalla)');
     for (const c of clientes) console.log('[aiva]   https://' + dominio + '/' + c.slug + '/  → ' + c.nombre);
   })();
+}
+
+/** Lee del índice a qué puertos hay que repartir. Lo escribió el lanzador que tiene el mando. */
+function seguirAlQueManda() {
+  try {
+    const leido = JSON.parse(readFileSync(join(dirClientes, 'index.json'), 'utf8'));
+    if (!leido || !leido.mando || !Array.isArray(leido.clientes)) return false;
+    for (const c of leido.clientes) if (c.slug && c.puerto) rutas.set(c.slug, c.puerto);
+    rutas.set('consola', leido.mando.consola);
+    puertoConsola = leido.mando.consola;
+    mandoDe = 'lanzador ' + leido.mando.pid;
+    return rutas.size > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sin el mando: no se levanta a nadie, solo se reparte hacia los puertos del que sí lo tiene. Y se sigue
+ * mirando el cerrojo: si ese se va (lo matan, se cae), el primero que consiga abrirlo toma el relevo y levanta
+ * a los clientes. Así dos lanzadores no se estorban, pero tampoco se quedan los dos de brazos cruzados.
+ */
+async function deEspejo() {
+  console.log('[aiva] otro lanzador tiene el mando; este solo reparte (no levanta a nadie).');
+  for (;;) {
+    seguirAlQueManda();
+    await new Promise((r) => setTimeout(r, 4000));
+    if (cerrando) return;
+    const cerrojo = await tomarElMando(PUERTO_MANDO);
+    if (cerrojo) {
+      console.log('[aiva] el lanzador que mandaba ya no está: tomo el mando y levanto a los clientes.');
+      rutas.clear();
+      await levantarALosMios();
+      return;
+    }
+  }
+}
+
+async function arrancar() {
+  const cerrojo = await tomarElMando(PUERTO_MANDO);
+  if (!cerrojo) return deEspejo();
+  await levantarALosMios();
 }
 
 void arrancar();
