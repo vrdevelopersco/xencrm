@@ -5,6 +5,8 @@ import { business } from '../config.js';
 import { formatSlot, getAppointment, listAppointments, setReminder, tzParts, zoned, type Appointment } from './appointments.js';
 import { awaitReminderReply } from './booking.js';
 import { contactNumber, getContact, type Contact } from './contacts.js';
+import { avisarRecordatorio } from './notifications.js';
+import { soloEscucha, type ChannelId } from '../channels/switches.js';
 import { canDeliver, canSendTemplate, replyWindow, sendTemplateToContact, sendToContact } from './outbox.js';
 
 const cfg = business.appointments;
@@ -30,6 +32,10 @@ export function reminderText(appt: Appointment, contact: Contact | null, now = D
 /** Por qué no se puede enviar solo; null si se puede. */
 function manualReason(c: Contact | null): string | null {
   if (!c) return 'El contacto ya no existe.';
+  // 🪤 «Solo escuchar» es modo aprendizaje: aiva mira cómo atiende el negocio y no le escribe al cliente. Un
+  // recordatorio automático lo rompería justo donde más se nota — el cliente recibiría un mensaje de un robot
+  // en una conversación que hasta ahora llevaba una persona. Se recuerda igual, pero a través del equipo.
+  if (soloEscucha(c.channel as ChannelId)) return 'El canal está en solo escuchar: aiva no le escribe al cliente. Mándaselo tú.';
   if (c.humanMode) return `La conversación la lleva ${c.humanBy ?? 'alguien del equipo'}: el recordatorio va mejor de su parte.`;
   if (c.channel === 'whatsapp' || c.channel === 'meta') return null;
   return contactNumber(c) ? 'Llegó por el chat del sitio: recuérdale por WhatsApp.' : 'Llegó por el chat del sitio y no dejó número.';
@@ -63,6 +69,8 @@ export async function runReminders(now = Date.now()): Promise<{ sent: number; ma
       const reason = manualReason(c) ?? (canDeliver(a.userId) ? null : `${c!.channel === 'meta' ? 'WhatsApp oficial' : 'WhatsApp'} no está conectado: recuérdale desde el teléfono.`);
       if (reason) {
         setReminder(a.id, 'a_mano', reason);
+        // Que no se quede esperando a que alguien entre a mirar: se avisa por la campana, con la cita y el porqué.
+        avisarRecordatorio(a.userId, `Recuérdale su cita a ${c?.name || 'este cliente'}`, `${formatSlot(new Date(a.startsAt))} · ${reason}`);
         out.manual++;
         continue;
       }
