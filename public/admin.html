@@ -197,7 +197,23 @@ pre{padding:10px;overflow:auto;white-space:pre-wrap}
 .doc h4{margin:0 0 4px;font-size:13px}.doc p{margin:0;white-space:pre-wrap;font-size:13px;color:var(--muted)}
 /* Toasts */
 .toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50}
-.toast{background:var(--glass-overlay);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);color:var(--text);border:1px solid var(--glass-border);padding:10px 14px;border-radius:14px;box-shadow:var(--glass-inset),0 10px 30px rgba(0,0,0,.22);cursor:pointer;max-width:320px}
+.toast{position:relative;overflow:hidden;display:flex;gap:10px;align-items:flex-start;
+  background:var(--glass-overlay);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);
+  color:var(--text);border:1px solid var(--glass-border);padding:11px 14px 13px;border-radius:14px;
+  box-shadow:var(--glass-inset),0 10px 30px rgba(0,0,0,.22);cursor:pointer;width:min(340px,calc(100vw - 32px))}
+.toast .ic{width:18px;height:18px;flex:0 0 18px;margin-top:1px;color:var(--brand)}
+.toast .cuerpo{display:flex;flex-direction:column;gap:1px;min-width:0}
+/* 🪤 Lo primero que uno busca cuando escribe un cliente es QUIÉN, no qué. Por eso el nombre va en negrita y
+   arriba: el mensaje se lee después, o no se lee y se toca el aviso. */
+.toast b{font-size:13.5px;font-weight:700;line-height:1.3}
+.toast span{font-size:12.5px;line-height:1.35;color:var(--muted);overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.toast span.solo{font-size:13.5px;color:var(--text)}
+/* El tiempo que le queda, a la vista. Se para si pasas el ratón por encima. */
+.toast .reloj{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--brand);opacity:.45;transform-origin:left center}
+.toast.malo .ic{color:var(--bad)}
+.toast.malo .reloj{background:var(--bad)}
+.toast:hover{box-shadow:var(--glass-inset),0 14px 38px rgba(0,0,0,.28)}
 /* Login */
 /* 🪤 Arranca ESCONDIDO y tapa lo de atrás. Antes venía visible en el HTML y era transparente: al recargar,
    durante el segundo que tarda el tablero en decidir, se veía el cajón del token flotando sobre el tablero

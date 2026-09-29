@@ -90,5 +90,15 @@ check('🪤 y cuando se enseña, tapa lo que hay detrás', !/\.login\{[^}]*backg
 // El bloc de notas, a este tamaño, contaba más ruido que información.
 check('en Prospectos el cabezal del bloc va a media voz', /\.col \.card::before\{height:6px/.test(html) && /\.col \.card \.body::before\{display:none\}/.test(html));
 
+// Los avisos: icono, quién en negrita, y tiempo a la vista.
+check('el aviso lleva icono y el título en negrita', /<i class="ic" data-ic="' \+ icono \+ '"><\/i>/.test(js) && /opts\.titulo \? '<b>' \+ esc\(opts\.titulo\)/.test(js));
+check('quien escribe va en el título, no pegado al mensaje', /titulo: c \? nameOf\(c\) : short\(ev\.userId\), icono: 'message'/.test(js),
+  'antes salía «Nombre: mensaje» de corrido y había que leerlo entero para saber de quién era');
+// 🪤 Un solo reloj: la animación de la barra ES el temporizador. Con dos, se desincronizan y el aviso se va
+// mientras lo lees —o la barra llega al final y el aviso se queda—.
+check('🪤 el reloj se para si pasas el ratón por encima', /vida\.finished\.then\(irse\)/.test(js) && /t\.onmouseenter = function \(\) \{ vida\.pause\(\); \}/.test(js));
+check('y hay salida para quien no quiere animaciones', /prefers-reduced-motion/.test(js) && /if \(!t\.animate \|\| quieto\)/.test(js));
+check('sin andamios de prueba colgando', !/__toast|ANDAMIO/.test(js), 'el gancho de las fotos no se sube');
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

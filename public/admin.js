@@ -47,7 +47,9 @@
     store: '<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/>',
     sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h10M18 18h2"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
-    salir: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>'
+    salir: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+    check: '<path d="M20 6L9 17l-5-5"/>',
+    alerta: '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'
   };
   // Dibuja los iconos de un trozo de página. Se llama también sobre lo que se crea después, que si no, sale vacío.
   function iconos(raiz) {
@@ -86,7 +88,63 @@
   function short(id) { var m = /^(wa|meta|web|cli|mcp):(.*)$/.exec(id); if (!m) return id; var v = m[2].replace(/@.*$/, ''); return m[1] === 'web' ? 'web · ' + v.slice(0, 8) : v; }
   function channelIcon(ch) { return { whatsapp: '🟢 WhatsApp', meta: '🟢 WhatsApp', web: '🌐 Web', cli: '⌨️ CLI', mcp: '🔌 MCP' }[ch] || ch; }
   function nameOf(c) { return c.name || short(c.id); }
-  function toast(text, onclick) { var t = document.createElement('div'); t.className = 'toast'; t.textContent = text; t.onclick = function () { t.remove(); if (onclick) onclick(); }; $('toasts').appendChild(t); setTimeout(function () { t.remove(); }, 6000); }
+  /**
+   * Un aviso que aparece abajo a la derecha.
+   *
+   * Tres cosas que no tenía y se notaban: un icono que diga de qué va sin leerlo, el título en negrita —cuando
+   * escribe un cliente, lo primero que uno busca es QUIÉN— y tiempo visible.
+   *
+   * 🪤 El reloj es la propia animación de la barra, no un setTimeout aparte. Así, al pasar el ratón por encima
+   * se pausan los dos a la vez y el aviso no se va mientras lo estás leyendo. Con dos relojes separados se
+   * desincronizan siempre: la barra llega al final y el aviso sigue ahí, o al revés.
+   */
+  function toast(texto, onclick, opts) {
+    opts = opts || {};
+    var t = document.createElement('div');
+    var malo = /^No se pudo|^No pude/.test(texto);
+    t.className = 'toast' + (malo ? ' malo' : '');
+    var icono = opts.icono || (malo ? 'alerta' : 'check');
+    t.innerHTML = '<i class="ic" data-ic="' + icono + '"></i><div class="cuerpo">'
+      + (opts.titulo ? '<b>' + esc(opts.titulo) + '</b>' : '')
+      + '<span' + (opts.titulo ? '' : ' class="solo"') + '>' + esc(texto) + '</span></div><i class="reloj"></i>';
+    iconos(t);
+    $('toasts').appendChild(t);
+
+    var quieto = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var yendo = false;
+    function irse() {
+      if (yendo) return;
+      yendo = true;
+      if (!t.animate || quieto) { t.remove(); return; }
+      // Se encoge además de irse: si solo se desvaneciera, los avisos de abajo pegarían un salto.
+      var alto = t.offsetHeight;
+      t.style.height = alto + 'px';
+      var fin = t.animate(
+        [{ opacity: 1, transform: 'none', height: alto + 'px', marginBottom: '0px' },
+         { opacity: 0, transform: 'translateX(20px)', height: '0px', marginBottom: '-8px' }],
+        { duration: 220, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' },
+      );
+      fin.finished.then(function () { t.remove(); }).catch(function () { t.remove(); });
+    }
+    t.onclick = function () { irse(); if (onclick) onclick(); };
+
+    if (t.animate && !quieto) {
+      t.animate(
+        [{ opacity: 0, transform: 'translateX(28px) scale(.96)' }, { opacity: 1, transform: 'none' }],
+        { duration: 300, easing: 'cubic-bezier(.16,1,.3,1)' },
+      );
+    }
+    var barra = t.querySelector('.reloj');
+    if (barra && barra.animate) {
+      var vida = barra.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: 6000, easing: 'linear', fill: 'forwards' });
+      vida.finished.then(irse).catch(function () { /* se canceló al tocarlo */ });
+      t.onmouseenter = function () { vida.pause(); };
+      t.onmouseleave = function () { vida.play(); };
+    } else {
+      setTimeout(irse, 6000);
+    }
+    return t;
+  }
   var audio = null;
   // El aviso de que entró algo. Es un acorde, no un pitido: suena una vez, cae solo y no deja a nadie en
   // tensión. Antes era un tono plano de 880 Hz que parecía un monitor de hospital.
@@ -1812,7 +1870,7 @@
         if (p.author === 'customer') api('/contacts/' + encodeURIComponent(ev.userId)).then(function () {}); // marca leído
       }
       if (p.author === 'customer') {
-        if (state.current !== ev.userId || document.hidden) { beep(); var c = state.contacts.find(function (x) { return x.id === ev.userId; }); toast((c ? nameOf(c) : short(ev.userId)) + ': ' + p.content.slice(0, 80), function () { go('inbox'); openContact(ev.userId); }); }
+        if (state.current !== ev.userId || document.hidden) { beep(); var c = state.contacts.find(function (x) { return x.id === ev.userId; }); toast(p.content.slice(0, 90), function () { go('inbox'); openContact(ev.userId); }, { titulo: c ? nameOf(c) : short(ev.userId), icono: 'message' }); }
       }
       if (state.view === 'inbox') loadContacts();
       if (state.view === 'today') loadToday();
@@ -1827,9 +1885,9 @@
       var ev = JSON.parse(e.data), n = ev.payload.notification;
       state.notifs.unshift(n); if (state.notifs.length > 100) state.notifs.pop();
       renderNotifs();
-      if (n.kind === 'verify') { beep(); toast(n.title, function () { go('today'); }); }
-      else if (n.kind === 'public') { beep(); toast(n.title, function () { go('channels'); }); }
-      else if (n.kind === 'handoff' || n.kind === 'hot' || n.kind === 'fail' || n.kind === 'engine') { beep(); toast(n.title, function () { if (n.userId !== 'system') { go('inbox'); openContact(n.userId); } else { go('agent'); } }); }
+      if (n.kind === 'verify') { beep(); toast(n.body, function () { go('today'); }, { titulo: n.title, icono: 'bell' }); }
+      else if (n.kind === 'public') { beep(); toast(n.body, function () { go('channels'); }, { titulo: n.title, icono: 'plug' }); }
+      else if (n.kind === 'handoff' || n.kind === 'hot' || n.kind === 'fail' || n.kind === 'engine') { beep(); toast(n.body, function () { if (n.userId !== 'system') { go('inbox'); openContact(n.userId); } else { go('agent'); } }, { titulo: n.title, icono: n.kind === 'hot' ? 'chart' : 'bell' }); }
       if (state.view === 'today') loadToday();
     });
   }
