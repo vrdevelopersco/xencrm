@@ -37,3 +37,26 @@ export function soloEscucha(id: ChannelId): boolean {
 export function setSoloEscucha(id: ChannelId, on: boolean): void {
   setSetting(`channel.${id}.soloEscucha`, on);
 }
+
+/**
+ * Ver los grupos de WhatsApp.
+ *
+ * Apagado de fábrica, y a propósito: en un grupo escribe mucha gente que nunca le escribió al negocio, y
+ * guardar lo que dicen no es lo mismo que guardar una conversación uno a uno con un cliente. Eso lo decide el
+ * negocio, no nosotros, y por eso se enciende a mano y con la explicación delante.
+ *
+ * Cuando está encendido, aiva **mira y aprende**: nunca escribe en un grupo, pase lo que pase con el
+ * interruptor de «Contesta Aiva». Un asistente metiéndose en la conversación de un grupo es el peor sitio
+ * posible para equivocarse, porque se equivoca delante de todos a la vez.
+ *
+ * 🪤 Y no se pone al día: entra lo que se hable DESDE que se enciende. Lo de antes no se trae, ni cuando se
+ * vincula el número. Es una decisión, no una limitación: traer meses de grupos de golpe es meter en casa las
+ * conversaciones de mucha gente que no eligió estar ahí.
+ */
+export function grupos(id: ChannelId): boolean {
+  return getSetting(`channel.${id}.grupos`, false);
+}
+
+export function setGrupos(id: ChannelId, on: boolean): void {
+  setSetting(`channel.${id}.grupos`, on);
+}

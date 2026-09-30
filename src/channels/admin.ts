@@ -55,7 +55,7 @@ import { exportDictionary, getDictionary, importDictionary } from '../agent/dict
 import { teachExpression } from '../agent/teach.js';
 import { closeMisses, listMisses, noteMiss, MISS_KINDS, type MissKind } from '../crm/misses.js';
 import { answerVerification, dismissVerification, listVerifications } from '../crm/verifications.js';
-import { setSoloEscucha, soloEscucha as soloEscuchaDe, type ChannelId } from './switches.js';
+import { grupos as gruposDe, setGrupos, setSoloEscucha, soloEscucha as soloEscuchaDe, type ChannelId } from './switches.js';
 import type { Contact } from '../crm/contacts.js';
 import { cabecerasDeSiempre, soloDesdeAqui } from '../cabeceras.js';
 
@@ -567,6 +567,20 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const body = (await c.req.json().catch(() => ({}))) as { soloEscucha?: boolean };
     if (typeof body.soloEscucha !== 'boolean') return c.json({ error: 'soloEscucha requerido' }, 400);
     setSoloEscucha(id, body.soloEscucha);
+    return c.json(channelCards());
+  });
+
+  /**
+   * Ver los grupos. Va aparte del interruptor del canal a propósito: encender el canal es una decisión de
+   * negocio, y mirar los grupos es una decisión sobre los datos de gente que no eligió estar aquí. No se
+   * mezclan en el mismo botón.
+   */
+  app.post('/admin/api/channels/:id/grupos', async (c) => {
+    const id = c.req.param('id') as ChannelId;
+    if (id !== 'whatsapp') return c.json({ error: 'los grupos solo aplican a WhatsApp' }, 400);
+    const body = (await c.req.json().catch(() => ({}))) as { grupos?: boolean };
+    if (typeof body.grupos !== 'boolean') return c.json({ error: 'grupos requerido' }, 400);
+    setGrupos(id, body.grupos);
     return c.json(channelCards());
   });
 

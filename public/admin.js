@@ -1651,6 +1651,16 @@
           '</div>' +
           '<span class="small muted">' + (ch.soloEscucha ? 'Entra todo al tablero y contestas tú. Aiva no dice nada.' : 'Aiva responde sola a quien escriba.') + '</span>' +
         '</div>';
+      // Los grupos, aparte: encender el canal es una decisión del negocio; mirar los grupos es una decisión
+      // sobre datos de gente que no eligió estar aquí. No van en el mismo botón.
+      var losGrupos = ch.grupos === undefined ? '' :
+        '<div class="fila" style="gap:10px;align-items:center;margin-top:8px">' +
+          '<button class="btn sm" data-grupos="' + ch.id + '" data-set="' + (ch.grupos ? '0' : '1') + '">' +
+            (ch.grupos ? 'Dejar de ver los grupos' : 'Ver también los grupos') + '</button>' +
+          '<span class="small muted">' + (ch.grupos
+            ? 'Aiva aprende de lo que se habla en los grupos. Nunca escribe en ellos.'
+            : 'Los grupos se ignoran: ni se guardan ni se aprenden.') + '</span>' +
+        '</div>';
       // Cuando WhatsApp no levanta, lo primero que hay que saber es si este servidor puede siquiera hablar con
       // WhatsApp. Desde fuera, un fallo del programa y una puerta cerrada en el alojamiento se ven igual.
       // Desvincular: la única forma de volver a recibir lo ya conversado (WhatsApp lo manda solo al emparejar)
@@ -1682,7 +1692,7 @@
         (ch.detail ? '<div class="small">' + esc(ch.detail) + '</div>' : '') +
         (channelStats(ch) ? '<div class="ch-stats">' + esc(channelStats(ch)) + '</div>' : '') +
         (ch.qrSvg ? '<div class="ch-qr" role="img" aria-label="Código QR para vincular WhatsApp">' + ch.qrSvg + '</div>' : '') +
-        steps + warnings + copy + toggle + escucha + masHistorial + desvincular + salida + '<div class="ch-err" id="ch-err-' + ch.id + '" role="status"></div>' + (ch.id === 'meta' ? metaCredForm(ch) : '') + '</div>';
+        steps + warnings + copy + toggle + escucha + losGrupos + masHistorial + desvincular + salida + '<div class="ch-err" id="ch-err-' + ch.id + '" role="status"></div>' + (ch.id === 'meta' ? metaCredForm(ch) : '') + '</div>';
     }).join('');
     if (credDraft && $('meta-cred-form')) {
       $('meta-cred').open = credDraft.open; $('mc-token').value = credDraft.token; $('mc-phone').value = credDraft.phone; $('mc-secret').value = credDraft.secret;
@@ -1738,6 +1748,24 @@
         api('/channels/' + id + '/escucha', { method: 'POST', body: { soloEscucha: solo } }).then(function (r) {
           if (r && r.error) { $('ch-err-' + id).textContent = r.error; loadChannels(); } else renderChannels(r);
         });
+      };
+    });
+    // 🪤 Encender se pregunta; apagar, no. Pedir confirmación para dejar de mirar los grupos sería poner una
+    // puerta en la salida: quien quiere que aiva deje de leerlos tiene que poder hacerlo de un clic.
+    $('channels').querySelectorAll('[data-grupos]').forEach(function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-grupos'), encender = b.getAttribute('data-set') === '1';
+        var mandar = function () {
+          b.disabled = true;
+          api('/channels/' + id + '/grupos', { method: 'POST', body: { grupos: encender } }).then(function (r) {
+            if (r && r.error) { $('ch-err-' + id).textContent = r.error; loadChannels(); }
+            else { renderChannels(r); toast(encender ? 'De aquí en adelante aprende de los grupos' : 'Los grupos vuelven a ignorarse', null, { icono: 'message' }); }
+          });
+        };
+        if (!encender) return mandar();
+        $('grupos-agente').textContent = state.agentName || 'Aiva';
+        $('grupos-si').onclick = function () { $('dlg-grupos').close(); mandar(); };
+        $('dlg-grupos').showModal();
       };
     });
     $('channels').querySelectorAll('[data-copy]').forEach(function (b) {

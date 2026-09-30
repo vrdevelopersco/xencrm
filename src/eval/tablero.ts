@@ -113,5 +113,23 @@ for (const jerga of ['pnpm ', 'CALENDAR_BUSY_ICS', 'PUBLIC_URL', 'ADMIN_TOKEN', 
     'eso lo sabe quien monta el sistema, no quien atiende a sus clientes');
 }
 
+// ---------- Los grupos de WhatsApp ----------
+const sw = readFileSync(new URL('../channels/switches.ts', import.meta.url), 'utf8');
+check('🪤 los grupos vienen apagados', /getSetting\(`channel\.\$\{id\}\.grupos`, false\)/.test(sw),
+  'en un grupo escribe gente que nunca le escribió al negocio: eso se enciende a mano');
+// 🪤 Nunca, pase lo que pase con «Contesta Aiva». Equivocarse en un grupo es equivocarse delante de todos a la
+// vez y no hay forma de recogerlo. Si alguien conecta el envío a los grupos, esto lo dice.
+const dentroDelGrupo = wa.slice(wa.indexOf('if (isJidGroup(jid)) {'), wa.indexOf('if (env.whatsappAllowedNumbers.length)'));
+check('🪤 aiva nunca escribe en un grupo', dentroDelGrupo.includes('return;') && !/mandar\(|sendMessage\(/.test(dentroDelGrupo),
+  dentroDelGrupo.slice(0, 200));
+check('lo del grupo va al aprendizaje, no al tablero', /function anotarDelGrupo/.test(wa) && /'whatsapp-grupo'/.test(wa) && !/anotarDelGrupo[\s\S]{0,400}appendMessage/.test(wa),
+  'un grupo no es un prospecto: como conversación llenaría las listas de fichas que nadie atiende');
+check('🪤 y no se pone al día: el historial sigue sin traer grupos', /isJidGroup\(jid\)\) return \[\]/.test(wa),
+  'traer meses de grupos de golpe es meter en casa conversaciones de mucha gente que no eligió estar ahí');
+
+// Encender se pregunta; apagar, no: pedir confirmación para salir sería poner una puerta en la salida.
+check('encender los grupos pasa por un modal', /\$\('dlg-grupos'\)\.showModal\(\)/.test(js) && html.includes('id="dlg-grupos"'));
+check('y apagarlos es de un clic', /if \(!encender\) return mandar\(\);/.test(js));
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

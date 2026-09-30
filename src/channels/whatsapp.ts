@@ -24,7 +24,7 @@ import { emitEvent } from '../crm/events.js';
 import { anotarCursor, cursores } from '../crm/wa-cursor.js';
 import { handleMessage } from '../agent/agent.js';
 import { conFirma, registerSender } from '../crm/outbox.js';
-import { soloEscucha } from './switches.js';
+import { grupos, soloEscucha } from './switches.js';
 import { cierres, setStatus, status, whatsappStatus, type WhatsAppState } from './whatsapp-estado.js';
 
 export { cierres, whatsappStatus, qrSvg } from './whatsapp-estado.js';
@@ -283,19 +283,56 @@ function anotarLoDelNegocio(m: WAMessage, jid: string, texto: string): void {
   }
 }
 
+/**
+ * Lo que se habla en un grupo: se guarda para aprender, y nada más.
+ *
+ * 🪤 A la tabla de aprendizaje y NO al CRM, que es la diferencia que importa. Un grupo no es un prospecto: no
+ * tiene una persona detrás a la que puntuar, ni una etapa, ni una cita. Meterlo como conversación llenaría el
+ * tablero de fichas que nadie va a atender y estropearía el embudo, que es de donde el negocio saca sus
+ * decisiones. Lo que sí vale de un grupo es cómo contesta ahí el negocio, y eso es aprendizaje.
+ */
+function anotarDelGrupo(m: WAMessage, jid: string, texto: string): void {
+  const mio = Boolean(m.key.fromMe);
+  try {
+    guardarImportados(
+      [{
+        chat: jid,
+        autor: mio ? 'negocio' : (m.pushName ?? 'alguien del grupo'),
+        role: mio ? 'assistant' : 'user',
+        content: texto,
+        ts: Number(m.messageTimestamp ?? 0) * 1000 || Date.now(),
+      }],
+      'whatsapp-grupo',
+    );
+  } catch (err) {
+    console.error('[whatsapp] no pude guardar lo del grupo:', (err as Error).message);
+  }
+}
+
 function onMessage(sock: WASocket, m: WAMessage) {
   if (!m.message) return;
+  const losGrupos = grupos('whatsapp');
   if (m.key.fromMe) {
     const suyo = m.key.remoteJid;
     const texto = extractText(m.message);
-    if (suyo && texto && !isJidStatusBroadcast(suyo) && !isJidNewsletter(suyo) && !(isJidGroup(suyo) && env.whatsappIgnoreGroups)) {
-      anotarLoDelNegocio(m, suyo, texto);
+    if (!suyo || !texto || isJidStatusBroadcast(suyo) || isJidNewsletter(suyo)) return;
+    // En un grupo, lo que contesta el negocio es justo lo que vale la pena aprender.
+    if (isJidGroup(suyo)) {
+      if (losGrupos) anotarDelGrupo(m, suyo, texto);
+      return;
     }
+    anotarLoDelNegocio(m, suyo, texto);
     return;
   }
   const jid = m.key.remoteJid;
   if (!jid || isJidStatusBroadcast(jid) || isJidNewsletter(jid)) return;
-  if (isJidGroup(jid) && env.whatsappIgnoreGroups) return;
+  // 🪤 Aiva NUNCA escribe en un grupo, esté como esté el interruptor de «Contesta Aiva». Equivocarse en un
+  // grupo es equivocarse delante de todos a la vez, y no hay forma de recogerlo. Se mira y se aprende.
+  if (isJidGroup(jid)) {
+    const texto = extractText(m.message);
+    if (losGrupos && texto) anotarDelGrupo(m, jid, texto);
+    return;
+  }
 
   if (env.whatsappAllowedNumbers.length) {
     // Con LIDs (jid @lid) el número real viene en remoteJidAlt; se aceptan ambos.
