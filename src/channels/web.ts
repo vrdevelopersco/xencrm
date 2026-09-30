@@ -18,6 +18,9 @@ import { anotarOrigen, deLaUrl } from '../crm/origen.js';
 import { mountAdmin } from './admin.js';
 import { mountCalendar } from './calendar.js';
 import { channelOn } from './switches.js';
+import { preguntarAAiva } from '../crm/consulta.js';
+import { deDondeViene, direccionPermitida, libretaConfig } from '../crm/libreta-config.js';
+import { leerAdjunto, TOPE_ARCHIVO } from '../crm/adjuntos.js';
 import { irseSiQuedaHuerfano } from '../huerfano.js';
 import { metaConfigured, mountMeta } from './meta.js';
 import { INSTANCE, startPublicCheck } from './public-check.js';
@@ -56,6 +59,84 @@ function clientIp(c: { req: { header: (h: string) => string | undefined }; env: 
 app.get('/health', (c) =>
   c.json({ ok: true, instance: INSTANCE, agent: business.agent.name, store: business.business.name, model: env.chatModel, mode: env.llmEngine, engines: engineStatus(), docs: countDocs() }),
 );
+
+// ---------- La libreta: preguntarle algo a aiva, sin pasar por el tablero ----------
+//
+// 🪤 Dos cerraduras, y hacen falta las dos. Un endpoint que llama al modelo y no pide nada en un dominio
+// público se encuentra solo —los rastreadores prueban rutas todo el día— y quien lo encuentre gasta la clave
+// de OpenAI del negocio.
+//
+//  1. La llave va en la dirección, que es lo que se pidió: «solo para quien la sepa». Pero es una llave de
+//     verdad y sin ella la puerta NO EXISTE (404), no es que conteste que no: una puerta que dice «aquí hay
+//     algo pero no te dejo» es una invitación a insistir.
+//  2. Y el sello por dirección, que es lo que de verdad la cierra: una llave se filtra en un historial, en un
+//     registro o en una captura; una dirección que no coincide no entra ni con la llave correcta.
+//
+// Las dos se ponen desde la consola, en Libreta.
+/** Por dónde llegó la conexión de verdad. Esto no se falsifica; la cabecera sí. Ver deDondeViene(). */
+const porDondeLlego = (c: unknown): string => {
+  const env = (c as { env?: { incoming?: { socket?: { remoteAddress?: string } } } }).env;
+  return env?.incoming?.socket?.remoteAddress ?? '';
+};
+
+const abierta = (c: { env?: unknown; req: { param: (n: string) => string; header: (n: string) => string | undefined } }): boolean => {
+  const cfg = libretaConfig();
+  if (!cfg.llave || cfg.llave.length < 16) return false;
+  const dada = c.req.param('llave') ?? '';
+  if (dada.length !== cfg.llave.length) return false;
+  // Comparación de tiempo constante: con una normal, lo que tarda en fallar dice cuántos caracteres acertaste,
+  // y con eso se adivina la llave carácter a carácter.
+  let dif = 0;
+  for (let i = 0; i < dada.length; i++) dif |= dada.charCodeAt(i) ^ cfg.llave.charCodeAt(i);
+  if (dif !== 0) return false;
+  const cabeceras = {
+    'cf-connecting-ip': c.req.header('cf-connecting-ip'),
+    'x-forwarded-for': c.req.header('x-forwarded-for'),
+    'x-real-ip': c.req.header('x-real-ip'),
+  };
+  return direccionPermitida(deDondeViene(cabeceras, porDondeLlego(c)), cfg.ips);
+};
+
+app.get('/libreta/:llave', (c) => {
+  if (!abierta(c)) return c.notFound();
+  return c.html(readFileSync(new URL('../../public/libreta.html', import.meta.url), 'utf8').replaceAll('__NEGOCIO__', business.business.name));
+});
+
+app.post('/libreta/:llave', async (c) => {
+  if (!abierta(c)) return c.notFound();
+  // Tope de uso: aunque la llave y la dirección estén bien, nadie necesita cien preguntas por minuto.
+  if (rateLimited('libreta', 12, 60_000)) return c.json({ error: 'Muchas preguntas seguidas; espera un momento.' }, 429);
+  // Viene como formulario para poder traer archivos. Nada de lo que llegue se guarda: se lee y se olvida.
+  const form = await c.req.parseBody({ all: true }).catch(() => null);
+  if (!form) return c.json({ error: 'no entendí la pregunta' }, 400);
+  const pregunta = String(form.pregunta ?? '').trim();
+  if (!pregunta) return c.json({ error: 'escribe la pregunta' }, 400);
+  if (pregunta.length > 4000) return c.json({ error: 'la pregunta es demasiado larga' }, 400);
+  let antes: { pregunta: string; respuesta: string }[] = [];
+  try {
+    const crudo = JSON.parse(String(form.antes ?? '[]')) as { pregunta: string; respuesta: string }[];
+    if (Array.isArray(crudo)) antes = crudo.slice(-4);
+  } catch {
+    /* sin hilo previo */
+  }
+  const sueltos = form.archivo === undefined ? [] : Array.isArray(form.archivo) ? form.archivo : [form.archivo];
+  const archivos = sueltos.filter((x): x is File => typeof x === 'object' && x !== null && 'arrayBuffer' in x);
+  if (archivos.length > 4) return c.json({ error: 'máximo cuatro archivos por pregunta' }, 400);
+  const adjuntos = [];
+  for (const f of archivos) {
+    if (f.size > TOPE_ARCHIVO) return c.json({ error: `"${f.name}" pesa demasiado (máximo 2 MB)` }, 400);
+    try {
+      adjuntos.push(leerAdjunto(f.name, new Uint8Array(await f.arrayBuffer())));
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  }
+  try {
+    return c.json(await preguntarAAiva({ pregunta, antes, adjuntos }));
+  } catch (err) {
+    return c.json({ error: (err as Error).message }, 502);
+  }
+});
 
 app.post('/api/chat', async (c) => {
   const body = (await c.req.json().catch(() => null)) as {

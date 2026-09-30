@@ -332,6 +332,9 @@ clientes.forEach((c, i) => {
   writeFileSync(configPath, JSON.stringify(config, null, 2));
   paraLevantar.push({ slug: c.slug, guion: 'dist/index.js', env: {
     ...porDefecto,
+    // La carpeta que comparten la consola y los clientes. La consola escribe ahí la configuración de la
+    // libreta —la llave y desde qué direcciones se abre— y cada cliente la lee.
+    AIVA_CLIENTES_DIR: join(datos, '_consola'),
     AIVA_CONFIG: configPath,
     AIVA_SLUG: c.slug,
     DB_PATH: join(mio, 'data', 'aiva.db'),
