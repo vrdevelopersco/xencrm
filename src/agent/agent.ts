@@ -37,6 +37,12 @@ export interface IncomingMessage {
    * eso cuánto vale?» depende de lo que otro preguntó tres mensajes antes, y de quién es cada quién.
    */
   hilo?: string;
+  /**
+   * Quién es quién en ese grupo: cuánto habla cada uno y desde cuándo. Quien más escribe suele ser el que
+   * organiza; quien llegó ayer todavía no sabe lo que ya se dijo. Sirve para contestarle a la persona y no
+   * solo al mensaje.
+   */
+  gente?: string;
 }
 
 export interface AgentReply {
@@ -104,6 +110,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const donde = grupo
     ? [
         `Esto se escribió en el grupo "${grupo}", donde hay más gente mirando: contesta para el grupo, no en privado.`,
+        msg.gente ? `Quién es quién en ese grupo:\n${msg.gente}` : '',
         msg.hilo ? `Lo que se venía hablando ahí, en orden:\n${msg.hilo}` : '',
       ]
         .filter(Boolean)

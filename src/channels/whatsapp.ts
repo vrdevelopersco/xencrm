@@ -22,6 +22,7 @@ import { appendMessage, touchUser } from '../agent/memory.js';
 import { getContact, setHumanMode, updateContact } from '../crm/contacts.js';
 import { emitEvent } from '../crm/events.js';
 import { anotarCursor, cursores } from '../crm/wa-cursor.js';
+import { anotarParticipante, quienEsQuien } from '../crm/grupo-gente.js';
 import { handleMessage } from '../agent/agent.js';
 import { conFirma, registerSender } from '../crm/outbox.js';
 import { grupos, propone, soloEscucha } from './switches.js';
@@ -294,6 +295,8 @@ function anotarLoDelNegocio(m: WAMessage, jid: string, texto: string): void {
 function anotarDelGrupo(m: WAMessage, jid: string, texto: string): void {
   const mio = Boolean(m.key.fromMe);
   try {
+    // Quién lo dijo. En un grupo el remitente real va en `participant`, no en `remoteJid` —ese es el grupo—.
+    if (!mio) anotarParticipante(jid, jidNormalizedUser(m.key.participant ?? ''), m.pushName ?? '', Number(m.messageTimestamp ?? 0) * 1000 || Date.now());
     guardarImportados(
       [{
         chat: jid,
@@ -363,6 +366,7 @@ async function proponerEnGrupo(sock: WASocket, m: WAMessage, jid: string, texto:
       .filter((x) => x.content !== texto)
       .map((x) => `${x.role === 'assistant' ? 'Nosotros' : x.autor || 'alguien'}: ${x.content.slice(0, 180)}`)
       .join('\n');
+    const quienes = quienEsQuien(jid);
     const respuesta = await handleMessage({
       userId: `wa:${jid}`,
       channel: 'whatsapp',
@@ -370,6 +374,7 @@ async function proponerEnGrupo(sock: WASocket, m: WAMessage, jid: string, texto:
       userName: quien,
       grupo: nombre, // sin esto, aiva contestaría como si hablara a solas con quien escribió
       hilo: antes,
+      gente: quienes,
     });
     if (!respuesta.silent) console.log(`[whatsapp] grupo ${nombre}: propuesta lista`);
   } catch (err) {

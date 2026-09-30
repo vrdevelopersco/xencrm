@@ -10,6 +10,7 @@ import { countDocs, getDb } from '../rag/store.js';
 import { borrarNotaInterna, guardarNotaInterna, notasInternas } from '../rag/interno.js';
 import { retratoDelNegocio } from '../rag/retrato.js';
 import { cerrarPropuesta, propuestaDe, propuestasPendientes, verPropuesta } from '../crm/propuestas.js';
+import { genteDelGrupo } from '../crm/grupo-gente.js';
 import { getMessages } from '../agent/memory.js';
 import { contactNumber, deleteContact, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
@@ -999,7 +1000,10 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       public: publicStatus(),
       // Lo que aiva dejó listo en un grupo: ahí no hay conversación en el tablero donde pueda aparecer, así que
       // su sitio es este. Las de una conversación normal salen dentro de ella.
-      enGrupos: propuestasPendientes().filter((p) => p.grupo),
+      enGrupos: propuestasPendientes()
+        .filter((p) => p.grupo)
+        // Con quién habla: en un grupo no hay ficha que abrir, así que la gente va aquí o no va a ninguna parte.
+        .map((p) => ({ ...p, gente: genteDelGrupo(p.userId.replace(/^wa:/, ''), 6) })),
     });
   });
 

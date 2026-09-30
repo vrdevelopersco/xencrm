@@ -792,6 +792,15 @@
               // 🪤 La pregunta primero. Una respuesta suelta, fuera de la conversación donde nació, no se puede
               // juzgar — y en un grupo no hay conversación en el tablero que abrir para ir a verla.
               + (p.sobre ? '<div class="small muted" style="margin-top:6px">' + esc(p.sobre) + '</div>' : '')
+              // Quién es quién ahí dentro: quien más escribe suele ser el que organiza, y eso cambia a quién
+              // le estás contestando. Sin esto, la tarjeta es una respuesta sin destinatario.
+              + ((p.gente || []).length
+                  ? '<div class="fila" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">'
+                    + p.gente.map(function (g) {
+                        return '<span class="chip" title="' + esc(String(g.mensajes)) + ' mensajes en este grupo">'
+                          + esc(g.nombre || String(g.persona).split('@')[0]) + ' · ' + g.mensajes + '</span>';
+                      }).join('') + '</div>'
+                  : '')
               + '<div class="small" style="margin-top:6px;white-space:pre-wrap;border-left:3px solid var(--brand);padding-left:8px">' + esc(p.texto) + '</div>'
               + '<div class="fila" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'
               + '<button class="btn sm primary" data-gr-si="' + p.id + '">Enviar al grupo</button>'

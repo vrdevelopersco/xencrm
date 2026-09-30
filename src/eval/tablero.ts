@@ -181,7 +181,7 @@ check('y aiva sigue sin mandar nada a un grupo por su cuenta', /if \(propone\('w
 check('🪤 un grupo nunca entra al CRM como contacto', /u\.id NOT LIKE '%@g\.us'/.test(cont) && /id NOT LIKE '%@g\.us'/.test(cont));
 check('lo del grupo se manda suelto, sin ficha', /if \(p\.grupo\) \{[\s\S]{0,200}?enviarSuelto\('whatsapp'/.test(adm),
   'sendToContact revienta con «no existe» porque un grupo no es un contacto');
-check('y se ve en Hoy, que es donde no tiene conversación', /enGrupos: propuestasPendientes\(\)\.filter/.test(adm) && /Te escribieron en un grupo/.test(js));
+check('y se ve en Hoy, que es donde no tiene conversación', /enGrupos: propuestasPendientes\(\)/.test(adm) && /filter\(\(p\) => p\.grupo\)/.test(adm) && /Te escribieron en un grupo/.test(js));
 // 🪤 Una tabla que ya existe no gana columnas con CREATE TABLE IF NOT EXISTS.
 check('🪤 la tabla vieja se actualiza sola', /ALTER TABLE propuestas ADD COLUMN grupo/.test(prop),
   'quien tenga la de ayer se quedaría con «no such column: grupo» sin saber de dónde sale');
@@ -199,6 +199,20 @@ check('y no se le repite el mensaje que acaba de llegar', /filter\(\(x\) => x\.c
 // 🪤 Una respuesta suelta, fuera de la conversación donde nació, no se puede juzgar.
 check('🪤 la propuesta guarda a qué contesta', /sobre: string;/.test(prop) && /p\.sobre \? '<div class="small muted"/.test(js),
   'en un grupo no hay conversación en el tablero que abrir para ir a ver la pregunta');
+
+// ---------- Quién es quién en un grupo ----------
+const gg = readFileSync(new URL('../crm/grupo-gente.ts', import.meta.url), 'utf8');
+// 🪤 En un grupo el remitente real va en `participant`; `remoteJid` es el grupo. Confundirlos daría una sola
+// ficha por grupo, con el nombre de quien escribió de último.
+check('🪤 se anota a quien escribe, no al grupo', /anotarParticipante\(jid, jidNormalizedUser\(m\.key\.participant/.test(wa));
+// 🪤 WhatsApp no siempre manda el pushName: machacar «Marcela» con vacío deja la ficha en un número.
+check('🪤 un nombre vacío no borra el que ya había', /WHEN excluded\.nombre <> '' THEN excluded\.nombre ELSE grupo_gente\.nombre END/.test(gg));
+// 🪤 Quien escribe en un grupo no le escribió al negocio: no tiene etapa, ni puntaje, ni cita.
+check('🪤 la gente de un grupo no entra al CRM', !/touchUser|updateContact|appendMessage/.test(gg),
+  'meterlos en las listas llenaría el embudo de gente que nunca pidió nada');
+check('el modelo recibe quién es quién', /gente: quienes/.test(wa) && /Quién es quién en ese grupo/.test(ag2));
+check('y quien atiende también lo ve', /genteDelGrupo\(p\.userId/.test(adm) && /g\.nombre \|\| String\(g\.persona\)/.test(js),
+  'una respuesta sin saber a quién se le contesta no se puede juzgar');
 
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);
