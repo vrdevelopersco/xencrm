@@ -784,6 +784,16 @@
       // Orden por costo del silencio: primero lo que alguien está esperando.
       var sections = [
         { t: 'Por verificar', n: t.verifications.length, html: t.verifications.map(verifyItem).join(''), empty: 'Nada pendiente: ' + (state.agentName || 'Aiva') + ' supo responder todo.' },
+        // Lo de los grupos va primero: es lo único de esta pantalla donde alguien está esperando en público.
+        { t: 'Te escribieron en un grupo', n: (t.enGrupos || []).length, html: (t.enGrupos || []).map(function (p) {
+            return '<div class="card"><div class="body">'
+              + '<div class="fila" style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
+              + '<b>' + esc(p.grupo) + '</b><span class="small muted">hace ' + rel(p.creado) + '</span></div>'
+              + '<div class="small" style="margin-top:6px;white-space:pre-wrap">' + esc(p.texto) + '</div>'
+              + '<div class="fila" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'
+              + '<button class="btn sm primary" data-gr-si="' + p.id + '">Enviar al grupo</button>'
+              + '<button class="btn sm" data-gr-no="' + p.id + '">Descartar</button></div></div></div>';
+          }).join(''), empty: 'Nadie te ha escrito en un grupo.' },
         { t: 'Esperan tu respuesta', n: t.unanswered.length, html: t.unanswered.map(function (c) { return contactRow(c, c.humanMode ? 'La última palabra la tiene el cliente y Aiva está en pausa.' : 'La última palabra la tiene el cliente y Aiva no respondió.'); }).join(''), empty: 'Nadie espera respuesta de una persona.' },
         { t: 'Pidieron una persona', n: t.handoffs.length, html: t.handoffs.map(function (c) { return contactRow(c); }).join(''), empty: 'Aiva lleva todas las conversaciones.' },
         { t: '¿Cómo les fue? (citas que ya pasaron)', n: (t.past || []).length, html: (t.past || []).map(pastItem).join(''), empty: 'Ninguna cita pasada sin resultado.' },
@@ -807,6 +817,23 @@
       $('today').querySelectorAll('.row').forEach(function (r) {
         r.onclick = function () { go('inbox'); openContact(r.getAttribute('data-id')); };
         r.oncontextmenu = function (e) { e.preventDefault(); abrirMenu(e.clientX, e.clientY, r.getAttribute('data-id')); };
+      });
+      $('today').querySelectorAll('[data-gr-si]').forEach(function (b) {
+        b.onclick = function () {
+          b.disabled = true;
+          api('/propuestas/' + b.getAttribute('data-gr-si') + '/enviar', { method: 'POST', body: { by: state.name } })
+            .then(function (r) {
+              if (r && r.error) { b.disabled = false; toast('No se pudo: ' + r.error); return; }
+              toast('Enviada al grupo', null, { icono: 'check' }); loadToday();
+            });
+        };
+      });
+      $('today').querySelectorAll('[data-gr-no]').forEach(function (b) {
+        b.onclick = function () {
+          b.disabled = true;
+          api('/propuestas/' + b.getAttribute('data-gr-no') + '/descartar', { method: 'POST', body: { by: state.name } })
+            .then(function () { loadToday(); });
+        };
       });
       $('today').querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-open')); }; });
       $('today').querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });

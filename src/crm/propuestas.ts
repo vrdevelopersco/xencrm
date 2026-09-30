@@ -16,6 +16,8 @@ export interface Propuesta {
   userId: string;
   texto: string;
   intent: string;
+  /** El grupo donde se dijo, si fue en uno. Vacío en una conversación normal. */
+  grupo: string;
   /** El último mensaje del cliente cuando se redactó: si ya no es el último, la propuesta se quedó vieja. */
   sobreMensaje: number;
   creado: number;
@@ -33,6 +35,7 @@ function tabla() {
         texto TEXT NOT NULL,
         intent TEXT NOT NULL DEFAULT '',
         sobre_mensaje INTEGER NOT NULL DEFAULT 0,
+        grupo TEXT NOT NULL DEFAULT '',
         estado TEXT NOT NULL DEFAULT 'pendiente',
         creado INTEGER NOT NULL,
         resuelto INTEGER,
@@ -40,6 +43,10 @@ function tabla() {
       );
       CREATE INDEX IF NOT EXISTS propuestas_pendientes ON propuestas(estado, user_id);
     `);
+    // 🪤 CREATE TABLE IF NOT EXISTS no añade columnas a una tabla que ya existe. Quien tenga la de ayer se
+    // quedaría con un «no such column: grupo» en la primera propuesta, y sin saber de dónde sale.
+    const cols = new Set((db.prepare('PRAGMA table_info(propuestas)').all() as { name: string }[]).map((c) => c.name));
+    if (!cols.has('grupo')) db.exec("ALTER TABLE propuestas ADD COLUMN grupo TEXT NOT NULL DEFAULT ''");
     lista = true;
   }
   return db;
@@ -52,16 +59,16 @@ const ultimoMensaje = (userId: string): number =>
  * Guarda una propuesta. Solo una pendiente por conversación: si aiva redacta otra, la anterior sobra — es la
  * misma pregunta con más contexto, y dos respuestas a medias no ayudan a nadie a decidir.
  */
-export function proponer(userId: string, texto: string, intent = ''): Propuesta {
+export function proponer(userId: string, texto: string, intent = '', grupo = ''): Propuesta {
   const db = tabla();
   db.prepare("UPDATE propuestas SET estado = 'reemplazada', resuelto = ? WHERE user_id = ? AND estado = 'pendiente'").run(Date.now(), userId);
   const creado = Date.now();
   const sobre = ultimoMensaje(userId);
   const id = Number(
-    db.prepare('INSERT INTO propuestas (user_id, texto, intent, sobre_mensaje, creado) VALUES (?, ?, ?, ?, ?)').run(userId, texto, intent, sobre, creado)
+    db.prepare('INSERT INTO propuestas (user_id, texto, intent, grupo, sobre_mensaje, creado) VALUES (?, ?, ?, ?, ?, ?)').run(userId, texto, intent, grupo, sobre, creado)
       .lastInsertRowid,
   );
-  const p: Propuesta = { id, userId, texto, intent, sobreMensaje: sobre, creado };
+  const p: Propuesta = { id, userId, texto, intent, grupo, sobreMensaje: sobre, creado };
   emitEvent('propuesta', userId, { propuesta: p });
   return p;
 }
@@ -69,14 +76,15 @@ export function proponer(userId: string, texto: string, intent = ''): Propuesta 
 /** La que está esperando en esa conversación, si hay. */
 export function propuestaDe(userId: string): (Propuesta & { vieja: boolean }) | null {
   const f = tabla()
-    .prepare("SELECT id, user_id, texto, intent, sobre_mensaje, creado FROM propuestas WHERE user_id = ? AND estado = 'pendiente' ORDER BY id DESC LIMIT 1")
-    .get(userId) as { id: number; user_id: string; texto: string; intent: string; sobre_mensaje: number; creado: number } | undefined;
+    .prepare("SELECT id, user_id, texto, intent, grupo, sobre_mensaje, creado FROM propuestas WHERE user_id = ? AND estado = 'pendiente' ORDER BY id DESC LIMIT 1")
+    .get(userId) as { id: number; user_id: string; texto: string; intent: string; grupo: string; sobre_mensaje: number; creado: number } | undefined;
   if (!f) return null;
   return {
     id: f.id,
     userId: f.user_id,
     texto: f.texto,
     intent: f.intent,
+    grupo: f.grupo,
     sobreMensaje: f.sobre_mensaje,
     creado: f.creado,
     // Llegó algo después de redactarla: ya no contesta a lo último que dijeron.
@@ -87,7 +95,7 @@ export function propuestaDe(userId: string): (Propuesta & { vieja: boolean }) | 
 /** Todas las que esperan, para la pantalla de Hoy. */
 export function propuestasPendientes(limite = 50): Propuesta[] {
   return tabla()
-    .prepare("SELECT id, user_id AS userId, texto, intent, sobre_mensaje AS sobreMensaje, creado FROM propuestas WHERE estado = 'pendiente' ORDER BY creado DESC LIMIT ?")
+    .prepare("SELECT id, user_id AS userId, texto, intent, grupo, sobre_mensaje AS sobreMensaje, creado FROM propuestas WHERE estado = 'pendiente' ORDER BY creado DESC LIMIT ?")
     .all(limite) as unknown as Propuesta[];
 }
 
@@ -97,7 +105,7 @@ export function cerrarPropuesta(id: number, estado: 'enviada' | 'descartada', po
 
 export function verPropuesta(id: number): Propuesta | null {
   const f = tabla()
-    .prepare("SELECT id, user_id, texto, intent, sobre_mensaje, creado FROM propuestas WHERE id = ? AND estado = 'pendiente'")
-    .get(id) as { id: number; user_id: string; texto: string; intent: string; sobre_mensaje: number; creado: number } | undefined;
-  return f ? { id: f.id, userId: f.user_id, texto: f.texto, intent: f.intent, sobreMensaje: f.sobre_mensaje, creado: f.creado } : null;
+    .prepare("SELECT id, user_id, texto, intent, grupo, sobre_mensaje, creado FROM propuestas WHERE id = ? AND estado = 'pendiente'")
+    .get(id) as { id: number; user_id: string; texto: string; intent: string; grupo: string; sobre_mensaje: number; creado: number } | undefined;
+  return f ? { id: f.id, userId: f.user_id, texto: f.texto, intent: f.intent, grupo: f.grupo, sobreMensaje: f.sobre_mensaje, creado: f.creado } : null;
 }

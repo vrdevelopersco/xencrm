@@ -169,5 +169,22 @@ check('🪤 sin corregir la manda aiva; corregida, la manda la persona', /correg
 check('🪤 la propuesta caduca cuando el cliente vuelve a escribir', /vieja: ultimoMensaje\(userId\) > f\.sobre_mensaje/.test(prop));
 check('y solo hay una esperando por conversación', /estado = 'reemplazada'/.test(prop));
 
+// ---------- Propone, en grupos ----------
+const cont = readFileSync(new URL('../crm/contacts.ts', import.meta.url), 'utf8');
+// 🪤 Un grupo de veinte personas son cientos de mensajes al día. Si el disparador fuera «alguien escribió»,
+// sería plata quemada y un aviso cada tres minutos hasta que alguien lo apague de puro cansancio.
+check('🪤 en un grupo solo se propone si le hablan al negocio', /function meHablanAMi/.test(wa) && /mentionedJid/.test(wa) && /quotedMessage/.test(wa),
+  'el disparador no puede ser «alguien escribió»');
+check('y aiva sigue sin mandar nada a un grupo por su cuenta', /if \(propone\('whatsapp'\) && meHablanAMi/.test(wa) && !/proponerEnGrupo[\s\S]{0,400}?mandar\(/.test(wa));
+// 🪤 El camino de una conversación da de alta al que escribe. Un grupo acabaría en las listas y en el embudo
+// como un prospecto: fichas que nadie va a atender y un embudo mentiroso.
+check('🪤 un grupo nunca entra al CRM como contacto', /u\.id NOT LIKE '%@g\.us'/.test(cont) && /id NOT LIKE '%@g\.us'/.test(cont));
+check('lo del grupo se manda suelto, sin ficha', /if \(p\.grupo\) \{[\s\S]{0,200}?enviarSuelto\('whatsapp'/.test(adm),
+  'sendToContact revienta con «no existe» porque un grupo no es un contacto');
+check('y se ve en Hoy, que es donde no tiene conversación', /enGrupos: propuestasPendientes\(\)\.filter/.test(adm) && /Te escribieron en un grupo/.test(js));
+// 🪤 Una tabla que ya existe no gana columnas con CREATE TABLE IF NOT EXISTS.
+check('🪤 la tabla vieja se actualiza sola', /ALTER TABLE propuestas ADD COLUMN grupo/.test(prop),
+  'quien tenga la de ayer se quedaría con «no such column: grupo» sin saber de dónde sale');
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

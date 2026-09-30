@@ -24,7 +24,7 @@ import { emitEvent } from '../crm/events.js';
 import { anotarCursor, cursores } from '../crm/wa-cursor.js';
 import { handleMessage } from '../agent/agent.js';
 import { conFirma, registerSender } from '../crm/outbox.js';
-import { grupos, soloEscucha } from './switches.js';
+import { grupos, propone, soloEscucha } from './switches.js';
 import { cierres, setStatus, status, whatsappStatus, type WhatsAppState } from './whatsapp-estado.js';
 
 export { cierres, whatsappStatus, qrSvg } from './whatsapp-estado.js';
@@ -309,6 +309,66 @@ function anotarDelGrupo(m: WAMessage, jid: string, texto: string): void {
   }
 }
 
+/**
+ * 🪤 En un grupo el disparador NO puede ser «alguien escribió».
+ *
+ * Un grupo de veinte personas son cientos de mensajes al día. Pasarlos todos por el modelo es plata quemada y
+ * un aviso cada tres minutos hasta que alguien apague el modo de puro cansancio. Lo que de verdad pide una
+ * respuesta es otra cosa: **que le estén hablando al negocio**.
+ *
+ * Y eso sí se sabe sin gastar nada, mirando el propio mensaje: o mencionan su número, o están respondiendo a
+ * algo que escribió él. Lo demás es la conversación del grupo, que se aprende igual pero no se contesta.
+ */
+function meHablanAMi(m: WAMessage, yo: string): boolean {
+  const inner = m.message?.ephemeralMessage?.message ?? m.message?.viewOnceMessageV2?.message ?? m.message ?? {};
+  const ctx = (inner.extendedTextMessage?.contextInfo ?? (inner as { contextInfo?: proto.IContextInfo }).contextInfo) as proto.IContextInfo | undefined;
+  if (!ctx || !yo) return false;
+  const mio = jidNormalizedUser(yo);
+  const mencionado = (ctx.mentionedJid ?? []).some((j) => jidNormalizedUser(j ?? '') === mio);
+  // Responder a un mensaje del negocio es hablarle a él aunque no lo mencione: es lo más normal en un grupo.
+  const contestandome = Boolean(ctx.quotedMessage) && jidNormalizedUser(ctx.participant ?? '') === mio;
+  return mencionado || contestandome;
+}
+
+/** El nombre del grupo, para que en pantalla diga «Novios Diciembre» y no un número con arroba. */
+const nombresDeGrupo = new Map<string, string>();
+async function nombreDelGrupo(sock: WASocket, jid: string): Promise<string> {
+  const ya = nombresDeGrupo.get(jid);
+  if (ya) return ya;
+  try {
+    const meta = await sock.groupMetadata(jid);
+    const nombre = meta?.subject || jid.split('@')[0] || jid;
+    nombresDeGrupo.set(jid, nombre);
+    return nombre;
+  } catch {
+    return jid.split('@')[0] || jid;
+  }
+}
+
+/**
+ * Le hablaron al negocio en un grupo y el canal está en «Propone»: aiva redacta y espera a una persona.
+ *
+ * 🪤 Redacta y NADA MÁS. En un grupo, aiva no manda ni aunque el canal estuviera en «Contesta»: equivocarse
+ * ahí es equivocarse delante de todos a la vez y no hay forma de recogerlo. Lo que sale de un grupo siempre lo
+ * manda una persona, mensaje por mensaje.
+ */
+async function proponerEnGrupo(sock: WASocket, m: WAMessage, jid: string, texto: string): Promise<void> {
+  try {
+    const quien = m.pushName ?? 'alguien del grupo';
+    const nombre = await nombreDelGrupo(sock, jid);
+    const respuesta = await handleMessage({
+      userId: `wa:${jid}`,
+      channel: 'whatsapp',
+      text: texto,
+      userName: quien,
+      grupo: nombre, // sin esto, aiva contestaría como si hablara a solas con quien escribió
+    });
+    if (!respuesta.silent) console.log(`[whatsapp] grupo ${nombre}: propuesta lista`);
+  } catch (err) {
+    console.error('[whatsapp] no pude preparar la respuesta del grupo:', (err as Error).message);
+  }
+}
+
 function onMessage(sock: WASocket, m: WAMessage) {
   if (!m.message) return;
   const losGrupos = grupos('whatsapp');
@@ -330,7 +390,10 @@ function onMessage(sock: WASocket, m: WAMessage) {
   // grupo es equivocarse delante de todos a la vez, y no hay forma de recogerlo. Se mira y se aprende.
   if (isJidGroup(jid)) {
     const texto = extractText(m.message);
-    if (losGrupos && texto) anotarDelGrupo(m, jid, texto);
+    if (!losGrupos || !texto) return;
+    anotarDelGrupo(m, jid, texto);
+    // Y si le hablaron a él y el canal está en «Propone», se deja la respuesta lista para una persona.
+    if (propone('whatsapp') && meHablanAMi(m, sock.user?.id ?? '')) void proponerEnGrupo(sock, m, jid, texto);
     return;
   }
 

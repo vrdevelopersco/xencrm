@@ -154,7 +154,12 @@ export function ponerNumerosAlDia() {
 }
 
 export function listContacts(opts: { stage?: Stage; humanMode?: boolean; q?: string; limit?: number; archived?: boolean } = {}): Contact[] {
-  const where: string[] = [`u.archived = ${opts.archived ? 1 : 0}`]; // por defecto, sin las archivadas
+  // 🪤 Un grupo NUNCA es un contacto. Cuando alguien le habla al negocio en un grupo, aiva pasa por el mismo
+  // camino que una conversación —y ese camino da de alta al que escribe—, así que el grupo acabaría en las
+  // listas y en el embudo como si fuera un prospecto: fichas que nadie va a atender y un embudo mentiroso, que
+  // es de donde el negocio saca sus decisiones. Se quedan fuera aquí, por su dirección, que es lo único que no
+  // depende de que nadie se acuerde de marcarlos.
+  const where: string[] = [`u.archived = ${opts.archived ? 1 : 0}`, "u.id NOT LIKE '%@g.us'"];
   const params: unknown[] = [];
   if (opts.stage) {
     where.push('u.stage = ?');
@@ -265,8 +270,8 @@ export function listEvents(userId: string, limit = 50): { id: number; ts: number
 export function stats() {
   const db = getDb();
   const byStage = Object.fromEntries(STAGES.map((s) => [s, 0])) as Record<Stage, number>;
-  for (const r of db.prepare('SELECT stage, COUNT(*) n FROM users WHERE archived = 0 GROUP BY stage').all() as { stage: Stage; n: number }[]) byStage[r.stage] = r.n;
-  const total = (db.prepare('SELECT COUNT(*) n FROM users WHERE archived = 0').get() as { n: number }).n;
+  for (const r of db.prepare("SELECT stage, COUNT(*) n FROM users WHERE archived = 0 AND id NOT LIKE '%@g.us' GROUP BY stage").all() as { stage: Stage; n: number }[]) byStage[r.stage] = r.n;
+  const total = (db.prepare("SELECT COUNT(*) n FROM users WHERE archived = 0 AND id NOT LIKE '%@g.us'").get() as { n: number }).n;
   const avgScore = (db.prepare('SELECT AVG(score) a FROM users WHERE archived = 0').get() as { a: number | null }).a ?? 0;
   // Calientes de hoy: el puntaje con el descuento por silencio, igual que en las listas. Solo se leen las tres
   // columnas que hacen falta: construir la ficha entera de cada contacto costaba 130 ms con 20.000.

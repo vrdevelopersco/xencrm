@@ -26,6 +26,12 @@ export interface IncomingMessage {
   channel: Channel;
   text: string;
   userName?: string | null;
+  /**
+   * El grupo donde se dijo, si fue en uno. Sirve para dos cosas: decirle al modelo que hay más gente mirando
+   * —sin eso redactaría como si hablara a solas con quien escribió— y poner el nombre en pantalla, que «Novios
+   * Diciembre» se entiende y un número con arroba no.
+   */
+  grupo?: string;
 }
 
 export interface AgentReply {
@@ -89,6 +95,8 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const started = Date.now();
   const text = msg.text.trim();
   const user = touchUser(msg.userId, msg.channel, msg.userName);
+  const grupo = msg.grupo?.trim() || '';
+  const donde = grupo ? `Esto se escribió en el grupo "${grupo}", donde hay más gente mirando: contesta para el grupo, no en privado.` : '';
   const contact = getContact(msg.userId);
   const base = { sources: [] as AgentReply['sources'], route: '', gateVia: '' };
   // Si venía hablando por otro canal, se le dice una vez (y el historial de allá ya entró en el contexto). Se
@@ -102,7 +110,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     // lo que el cliente ve si abre el chat del sitio— una respuesta que nadie mandó, y el asistente seguiría la
     // conversación dando por hecho que ya contestó eso.
     if (propone(msg.channel as ChannelId)) {
-      proponer(msg.userId, reply, intent);
+      proponer(msg.userId, reply, intent, grupo);
       scheduleAnalysis(msg.userId);
       const msProp = Date.now() - started;
       console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} propuesta lista, espera a una persona ${msProp}ms`);
@@ -210,10 +218,11 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const sources = [...products, ...knowledge];
 
   const persona = personaPrompt();
-  let note: string | undefined;
+  // Lo de dónde se dijo va con la nota del turno, no en la persona: la persona es idéntica para todos.
+  let note: string | undefined = donde || undefined;
   const details = gate.intent === 'compra' && DETAILS_RE.test(text);
   if (details) {
-    note =
+    note = [donde, ''].filter(Boolean).join('\n') +
       'El cliente pide información o detalles de un producto: usa la descripción y la ficha técnica completas (medidas, material, tiempos, qué incluye), en 3 a 6 frases naturales, sin lista de precio ni enlace. Si no nombra el producto, se refiere al último del que hablaron (el primero de la lista). No repitas nada que ya le hayas dicho; si ya diste la descripción corta, amplía con lo que falta. Si no hay más datos en la ficha, dilo con naturalidad y ofrece confirmar lo puntual con el equipo.';
   } else if (gate.intent === 'compra' && STOCK_RE.test(text)) {
     note = 'El cliente pregunta por disponibilidad: responde con el dato de "Disponibilidad" del producto; si no está en la lista, di que no lo tenemos.';

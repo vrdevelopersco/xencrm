@@ -605,8 +605,15 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     if (!texto) return c.json({ error: 'no hay nada que mandar' }, 400);
     const corregida = texto !== p.texto.trim();
     const by = (body.by ?? '').trim();
+    // 🪤 Un grupo no es un contacto —a propósito—, así que sendToContact no sirve ahí: revienta con «no
+    // existe». Lo del grupo sale suelto, por el canal, sin ficha ni ventana de 24 horas que mirar.
     try {
-      await sendToContact(p.userId, texto, corregida ? 'human' : 'bot', corregida ? { by } : {});
+      if (p.grupo) {
+        const fue = await enviarSuelto('whatsapp', p.userId, texto);
+        if (!fue) return c.json({ error: 'WhatsApp no está conectado ahora mismo' }, 400);
+      } else {
+        await sendToContact(p.userId, texto, corregida ? 'human' : 'bot', corregida ? { by } : {});
+      }
     } catch (err) {
       return c.json({ error: (err as Error).message }, 400);
     }
@@ -990,6 +997,9 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       // Lo que el bot no supo y prometió verificar: el cliente espera la respuesta del equipo.
       verifications: listVerifications('pendiente').map((v) => ({ ...v, window: replyWindow(v.userId) })),
       public: publicStatus(),
+      // Lo que aiva dejó listo en un grupo: ahí no hay conversación en el tablero donde pueda aparecer, así que
+      // su sitio es este. Las de una conversación normal salen dentro de ella.
+      enGrupos: propuestasPendientes().filter((p) => p.grupo),
     });
   });
 
