@@ -336,6 +336,35 @@ form.alta label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-w
 form.alta label input,form.alta label select,form.alta label textarea{font-weight:400}
 .vacio{text-align:center;color:var(--muted);padding:44px 12px}
 #msg{min-height:20px}
+
+/* La libreta: la pantalla donde se decide quién puede abrir esa puerta sin sesión. Ancho de lectura, no de
+   tablero — son cuatro decisiones, no una lista. */
+.lib{max-width:760px;display:flex;flex-direction:column;gap:14px}
+.lib-estado{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lib .tarjeta{background:var(--vidrio-fuerte);backdrop-filter:var(--desenfoque);-webkit-backdrop-filter:var(--desenfoque);
+  border:1px solid var(--vidrio-borde);border-radius:var(--r-card);box-shadow:var(--filo),var(--shadow);padding:16px}
+.lib .tarjeta h3{margin:0 0 2px;font-size:15px}
+.lib .tarjeta p{margin:0 0 10px}
+.lib input{flex:1;min-width:0;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-input);
+  background:var(--panel);color:var(--tinta);font:inherit;box-shadow:inset 0 1px 2px rgba(20,17,12,.05)}
+.lib input:focus-visible{outline:2px solid var(--oro-claro);outline-offset:1px}
+.lib .llave{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.02em}
+.lib .ips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lib .ip{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);
+  border-radius:999px;padding:6px 6px 6px 12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;
+  box-shadow:var(--rim)}
+/* La dirección desde la que estás entrando se distingue por el borde Y por su etiqueta: el color solo no basta. */
+.lib .ip.tuya{border-color:var(--oro-claro);background:var(--oro-papel)}
+.lib .ip .small{font-family:Figtree,sans-serif}
+.lib .ip .x{width:28px;height:28px;min-width:28px;border:none;border-radius:999px;background:transparent;color:var(--muted);
+  cursor:pointer;font-size:13px;line-height:1}
+.lib .ip .x:hover{background:var(--alta-soft);color:var(--alta)}
+.lib .enlaces{display:flex;flex-direction:column;gap:8px}
+.lib .enlace{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lib .enlace b{min-width:140px}
+.lib .enlace code{flex:1;min-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  background:var(--baja-soft);border-radius:8px;padding:6px 10px;font-size:12px}
+@media (max-width:720px){.lib .enlace b{min-width:0;width:100%}}
 </style>
 </head>
 <body>
@@ -392,6 +421,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       <button class="tab on" id="tab-atender"><span class="ic">◧</span>Atender<span class="badge" id="n-pend">0</span></button>
       <button class="tab" id="tab-clientes"><span class="ic">▤</span>Clientes</button>
       <button class="tab" id="tab-equipo" hidden><span class="ic">☻</span>Equipo</button>
+      <button class="tab" id="tab-libreta" hidden><span class="ic">✎</span>Libreta</button>
     </nav>
 
     <div class="side-pie">
@@ -419,6 +449,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     </main>
     <main id="lista" hidden></main>
     <main id="equipo" hidden></main>
+    <main id="libreta" hidden></main>
   </div>
 </div>
 
@@ -473,6 +504,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   var token = localStorage.getItem('aiva.consola.token') || '';
   var sesion = localStorage.getItem('aiva.consola.sesion') || '';
   var yo = null, esSuper = false;
+  var LIB = { llave: '', ips: [], tuIp: '', clientes: [] }; // la libreta; se llena en cargarLibreta()
   // Si algo se rompe dentro de una promesa y nadie lo atrapa, que al menos quede dicho. Sin esto, la pantalla se
   // queda a medias y no hay ni un rastro de qué pasó.
   addEventListener('unhandledrejection', function (e) {
@@ -522,7 +554,10 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     $('resumen').textContent = '';
     $('n-pend').textContent = '';
     $('yo-nombre').textContent = '…';
+    $('libreta').innerHTML = '';
+    LIB = { llave: '', ips: [], tuIp: '', clientes: [] };
     $('tab-equipo').hidden = true;   // hasta que /yo diga que es super
+    $('tab-libreta').hidden = true;  // la libreta es del super-admin: es la llave de una puerta sin sesión
     $('nuevo').hidden = true;
     if ($('dlg-atender').open) $('dlg-atender').close();
   }
@@ -581,6 +616,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         : 'Entraste con la llave maestra';
       $('nuevo').hidden = !esSuper;
       $('tab-equipo').hidden = !esSuper;
+      $('tab-libreta').hidden = !esSuper;
       cargarTodo(); cargarPendientes();
       ver(localStorage.getItem('aiva.consola.vista') || 'atender');
     });
@@ -1435,24 +1471,174 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     atender: ['Atender', 'Lo que espera a una persona, de todos tus clientes'],
     clientes: ['Clientes', 'Cómo va cada negocio y qué hay que mirarle'],
     equipo: ['Equipo', 'Quién entra a la consola y qué clientes atiende'],
+    libreta: ['Libreta', 'Preguntarle algo a aiva sin entrar al tablero. Con llave y desde esta dirección'],
   };
 
   function ver(cual) {
-    if (cual === 'equipo' && !esSuper) cual = 'atender';
+    if ((cual === 'equipo' || cual === 'libreta') && !esSuper) cual = 'atender';
     $('titulo').textContent = TITULOS[cual][0];
     $('subtitulo').textContent = TITULOS[cual][1];
     $('nuevo').hidden = !esSuper || cual !== 'clientes';
     $('atender').hidden = cual !== 'atender';
     $('lista').hidden = cual !== 'clientes';
     $('equipo').hidden = cual !== 'equipo';
+    $('libreta').hidden = cual !== 'libreta';
     $('tab-atender').classList.toggle('on', cual === 'atender');
     $('tab-clientes').classList.toggle('on', cual === 'clientes');
     $('tab-equipo').classList.toggle('on', cual === 'equipo');
+    $('tab-libreta').classList.toggle('on', cual === 'libreta');
     localStorage.setItem('aiva.consola.vista', cual);
   }
   $('tab-atender').onclick = function () { ver('atender'); cargarPendientes(); };
   $('tab-clientes').onclick = function () { ver('clientes'); cargarTodo(); };
   $('tab-equipo').onclick = function () { ver('equipo'); cargarEquipo(); };
+  $('tab-libreta').onclick = function () { ver('libreta'); cargarLibreta(); };
+
+  // ── La libreta ────────────────────────────────────────────────────────────
+  //
+  // Una puerta aparte para preguntarle algo a aiva sin entrar al tablero. Aquí se decide quién puede abrirla, y
+  // son dos cosas a la vez: una llave larga en la dirección y desde qué direcciones de internet se acepta.
+  //
+  // 🪤 Las dos hacen falta y la pantalla lo dice en grande, porque la tentación es poner la llave, ver que
+  // funciona y dejarlo así. Una llave sola viaja en la dirección: queda en el historial, en una captura, en el
+  // registro de cualquier servidor por el que pase. El sello por dirección es lo que de verdad cierra.
+  function libretaAbierta() { return LIB.llave.length >= 24 && LIB.ips.length > 0; }
+
+  function cargarLibreta() {
+    return api('/libreta').then(function (d) {
+      if (d.error) { $('libreta').innerHTML = '<div class="vacio">' + esc(d.error) + '</div>'; return; }
+      LIB = { llave: d.llave || '', ips: d.ips || [], tuIp: d.tuIp || '', clientes: d.clientes || [] };
+      pintarLibreta();
+    });
+  }
+
+  function pintarLibreta() {
+    var abierta = libretaAbierta();
+    // El estado, dicho en una frase: qué pasa ahora mismo si alguien abre el enlace.
+    var estado = abierta
+      ? ['ok', 'Abierta', 'Quien tenga el enlace y entre desde ' + (LIB.ips.length === 1 ? 'esa dirección' : 'una de esas ' + LIB.ips.length + ' direcciones') + ' puede preguntarle a aiva.']
+      : !LIB.llave
+        ? ['', 'Cerrada', 'No hay llave, así que el enlace no existe: quien lo pruebe recibe un «no encontrado».']
+        : LIB.llave.length < 24
+          ? ['alta', 'Llave muy corta', 'Con menos de 24 caracteres se adivina probando. No se guardará así.']
+          : ['media', 'Cerrada', 'Hay llave pero no hay ninguna dirección permitida, y sin eso no entra nadie. Añade la tuya abajo.'];
+
+    var mias = LIB.tuIp && LIB.ips.indexOf(LIB.tuIp) === -1;
+
+    $('libreta').innerHTML =
+      '<div class="lib">' +
+        '<div class="lib-estado">' +
+          '<span class="chip ' + estado[0] + '">' + estado[1] + '</span>' +
+          '<span class="small">' + esc(estado[2]) + '</span>' +
+        '</div>' +
+
+        '<section class="tarjeta">' +
+          '<h3>La llave</h3>' +
+          '<p class="muted small">Va dentro de la dirección. Quien la tenga puede abrir la libreta desde una dirección permitida; nadie más ve que existe.</p>' +
+          '<div class="fila">' +
+            '<input id="lib-llave" class="llave" value="' + esc(LIB.llave) + '" placeholder="sin llave: la libreta no existe" spellcheck="false" autocomplete="off">' +
+            '<button class="btn sm" id="lib-generar">Generar</button>' +
+            '<button class="btn sm" id="lib-copiar"' + (LIB.llave ? '' : ' disabled') + '>Copiar</button>' +
+          '</div>' +
+          '<div class="small muted" style="margin-top:6px">Mínimo 24 caracteres. Al cambiarla, los enlaces de antes dejan de servir.</div>' +
+        '</section>' +
+
+        '<section class="tarjeta">' +
+          '<h3>Desde dónde se puede abrir</h3>' +
+          '<p class="muted small">Sin ninguna dirección aquí, la libreta no abre ni con la llave correcta. Puedes poner una red entera terminando en punto: <code>190.24.</code></p>' +
+          '<div class="ips" id="lib-ips">' +
+            (LIB.ips.length
+              ? LIB.ips.map(function (ip) {
+                  return '<span class="ip' + (ip === LIB.tuIp ? ' tuya' : '') + '">' + esc(ip) +
+                    (ip === LIB.tuIp ? '<span class="small muted">esta es la tuya</span>' : '') +
+                    '<button class="x" data-ip="' + esc(ip) + '" title="Quitar ' + esc(ip) + '" aria-label="Quitar ' + esc(ip) + '">✕</button></span>';
+                }).join('')
+              : '<span class="muted small">Ninguna todavía.</span>') +
+          '</div>' +
+          '<div class="fila" style="margin-top:10px">' +
+            '<input id="lib-ip" placeholder="190.24.10.4" spellcheck="false" autocomplete="off" inputmode="numeric">' +
+            '<button class="btn sm" id="lib-add">Añadir</button>' +
+            (mias ? '<button class="btn sm" id="lib-mia">Añadir la mía (' + esc(LIB.tuIp) + ')</button>' : '') +
+          '</div>' +
+          (LIB.tuIp ? '' : '<div class="small muted" style="margin-top:6px">No puedo ver desde qué dirección entras; escríbela a mano.</div>') +
+        '</section>' +
+
+        '<section class="tarjeta">' +
+          '<h3>Los enlaces</h3>' +
+          '<p class="muted small">Uno por cliente: cada libreta sabe de su negocio y contesta con su tono. Guárdalos tú; no se los mandes al cliente.</p>' +
+          (LIB.llave.length >= 24
+            ? '<div class="enlaces">' + LIB.clientes.map(function (c) {
+                var url = c.publico + '/libreta/' + encodeURIComponent(LIB.llave);
+                return '<div class="enlace">' +
+                  '<b>' + esc(c.nombre) + '</b>' +
+                  '<code>' + esc(url) + '</code>' +
+                  '<button class="btn sm cp" data-url="' + esc(url) + '">Copiar</button>' +
+                  '<a class="btn sm" href="' + esc(url) + '" target="_blank" rel="noopener">Abrir</a>' +
+                '</div>';
+              }).join('') + '</div>'
+            : '<div class="muted small">Pon una llave y aquí salen los enlaces.</div>') +
+        '</section>' +
+
+        '<div class="fila">' +
+          '<button class="btn primary" id="lib-guardar">Guardar</button>' +
+          (LIB.llave ? '<button class="btn" id="lib-cerrar">Cerrar la libreta</button>' : '') +
+          '<span class="grow"></span><span class="small" id="lib-msg" role="status"></span>' +
+        '</div>' +
+      '</div>';
+
+    $('lib-generar').onclick = function () {
+      // En el navegador, con el generador de verdad: 32 caracteres sin los que se confunden al leerlos en voz alta.
+      var abc = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      var b = new Uint8Array(32); crypto.getRandomValues(b);
+      $('lib-llave').value = Array.prototype.map.call(b, function (n) { return abc[n % abc.length]; }).join('');
+      $('lib-msg').textContent = 'Llave nueva. Dale a Guardar.';
+    };
+    $('lib-copiar').onclick = function () { copiarAlPortapapeles($('lib-llave').value, 'Llave copiada.'); };
+    var anadir = function (ip) {
+      ip = (ip || '').trim();
+      if (!ip) return;
+      if (LIB.ips.indexOf(ip) === -1) LIB.ips.push(ip);
+      LIB.llave = $('lib-llave').value.trim();
+      pintarLibreta();
+      $('lib-msg').textContent = 'Añadida. Dale a Guardar.';
+    };
+    $('lib-add').onclick = function () { anadir($('lib-ip').value); };
+    $('lib-ip').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); anadir($('lib-ip').value); } };
+    if ($('lib-mia')) $('lib-mia').onclick = function () { anadir(LIB.tuIp); };
+    Array.prototype.forEach.call($('lib-ips').querySelectorAll('.x'), function (b) {
+      b.onclick = function () {
+        LIB.ips = LIB.ips.filter(function (x) { return x !== b.dataset.ip; });
+        LIB.llave = $('lib-llave').value.trim();
+        pintarLibreta();
+        $('lib-msg').textContent = 'Quitada. Dale a Guardar.';
+      };
+    });
+    Array.prototype.forEach.call($('libreta').querySelectorAll('.cp'), function (b) {
+      b.onclick = function () { copiarAlPortapapeles(b.dataset.url, 'Enlace copiado.'); };
+    });
+    $('lib-guardar').onclick = function () { guardarLibreta($('lib-llave').value.trim(), LIB.ips); };
+    if ($('lib-cerrar')) $('lib-cerrar').onclick = function () { guardarLibreta('', []); };
+  }
+
+  function guardarLibreta(llave, ips) {
+    $('lib-msg').textContent = 'Guardando…';
+    return api('/libreta', { method: 'POST', body: { llave: llave, ips: ips } }).then(function (d) {
+      if (d.error) { $('lib-msg').textContent = d.error; return; }
+      LIB.llave = d.llave || ''; LIB.ips = d.ips || [];
+      pintarLibreta();
+      $('lib-msg').textContent = libretaAbierta() ? 'Guardado. La libreta está abierta.' : 'Guardado. La libreta sigue cerrada.';
+    });
+  }
+
+  function copiarAlPortapapeles(texto, dijo) {
+    var listo = function () { if ($('lib-msg')) $('lib-msg').textContent = dijo; };
+    if (navigator.clipboard) { navigator.clipboard.writeText(texto).then(listo, listo); return; }
+    // Sin portapapeles (pasa fuera de https): al menos dejarlo seleccionado para copiarlo a mano.
+    var t = document.createElement('textarea');
+    t.value = texto; document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); listo(); } catch (e) { /* que se copie a mano */ }
+    document.body.removeChild(t);
+  }
 
   // Quién entra a la consola y qué clientes atiende. Solo lo ve el super-admin.
   function cargarEquipo() {

@@ -15,6 +15,7 @@ import { actualizarCliente, crearCliente, darDeBajaCliente, leerIndice, llamarAC
 import { cabecerasDeSiempre, soloDesdeAqui } from './cabeceras.js';
 import { abrirSesion, actualizarUsuario, alcanza, borrarUsuario, cambiarLoMio, COLORES, colorDe, cerrarSesion, crearUsuario, leerUsuarios, quitarClienteDeUsuarios, sesionDe, sinClave, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
 import { irseSiQuedaHuerfano } from './huerfano.js';
+import { deDondeViene, guardarLibretaConfig, libretaConfig } from './crm/libreta-config.js';
 
 // El .env de la raíz, sin pasar por la configuración de un cliente (la consola no es de ningún cliente).
 function envRaiz(clave: string): string {
@@ -684,6 +685,44 @@ export function mountConsola(app: Hono) {
     } catch (err) {
       return c.json({ error: (err as Error).message }, 404);
     }
+  });
+
+  /**
+   * La libreta: quién puede abrirla. Va aquí, en la consola, porque es una herramienta de quien opera el
+   * sistema, no del negocio. Lo que se guarda lo leen los procesos de los clientes de la carpeta compartida.
+   */
+  app.get('/api/libreta', (c) => {
+    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
+    const cfg = libretaConfig();
+    return c.json({
+      ...cfg,
+      // Desde dónde está entrando quien pregunta: para poder añadirla de un clic y no tener que ir a buscarla.
+      tuIp: deDondeViene(
+        {
+          'cf-connecting-ip': c.req.header('cf-connecting-ip'),
+          'x-forwarded-for': c.req.header('x-forwarded-for'),
+          'x-real-ip': c.req.header('x-real-ip'),
+        },
+        (c as { env?: { incoming?: { socket?: { remoteAddress?: string } } } }).env?.incoming?.socket?.remoteAddress ?? '',
+      ),
+      // 🪤 La dirección PÚBLICA de cada cliente, no la del proxy de la consola. Si el enlace fuera por
+      // `/c/<slug>/…`, quien lo abriera entraría con la dirección de este servidor y no con la suya, así que el
+      // sello por IP dejaría pasar a cualquiera con la llave — justo lo que el sello existe para evitar.
+      clientes: leerIndice().map((x) => ({
+        slug: x.slug,
+        nombre: x.nombre,
+        publico: x.host ? `https://${x.host}` : x.base ? x.base.replace(/\/$/, '') : `/${x.slug}`,
+      })),
+    });
+  });
+
+  app.post('/api/libreta', async (c) => {
+    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
+    const body = (await c.req.json().catch(() => ({}))) as { llave?: string; ips?: string[] };
+    const llave = (body.llave ?? '').trim();
+    // 🪤 Una llave corta se adivina probando. Mejor negarse que dejar puesta una que no protege nada.
+    if (llave && llave.length < 24) return c.json({ error: 'la llave debe tener al menos 24 caracteres' }, 400);
+    return c.json(guardarLibretaConfig({ llave, ips: Array.isArray(body.ips) ? body.ips.map(String) : [] }));
   });
 
   app.get('/api/clientes/:slug/token', (c) => {
