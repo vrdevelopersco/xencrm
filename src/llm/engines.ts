@@ -29,6 +29,8 @@ export interface GenerateInput {
   maxTokens?: number;
   /** Rol del turno: con OpenAI decide el modelo (OPENAI_MODEL_<ROL>). */
   role?: Role;
+  /** Para el registro de gasto, cuando la llamada no es de atender a un cliente. */
+  task?: Task;
 }
 
 export interface ClassifyInput {
@@ -156,7 +158,7 @@ export function estimateTokens(text: string): number {
 
 // ---------- Operaciones ----------
 export async function generate(engine: Engine, input: GenerateInput): Promise<string> {
-  const usage = { task: (input.role ?? 'light') as Task, userId: input.sessionId };
+  const usage = { task: input.task ?? ((input.role ?? 'light') as Task), userId: input.sessionId };
   try {
     let out: string;
     // Lo que cambia en cada turno: información encontrada, nombre del cliente y nota.

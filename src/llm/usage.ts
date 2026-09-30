@@ -3,7 +3,9 @@
 import { getDb } from '../rag/store.js';
 
 /** light/heavy = responder; gate = clasificar; analysis = ficha y puntaje; when = interpretar fechas. */
-export type Task = 'light' | 'heavy' | 'gate' | 'analysis' | 'when' | 'embeddings';
+// `consulta` es aparte para que se vea cuánto cuesta lo que pregunta el equipo, que no es lo que gasta
+// atendiendo clientes. Mezclarlo escondería las dos cosas: parecería que atender cuesta más de lo que cuesta.
+export type Task = 'light' | 'heavy' | 'gate' | 'analysis' | 'when' | 'embeddings' | 'consulta';
 
 export interface UsageTag {
   task?: Task;
