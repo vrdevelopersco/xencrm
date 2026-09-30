@@ -48,5 +48,24 @@ check('el número sale de la dirección de WhatsApp', contactNumber(getContact('
 touchUser('web:anonimo', 'web', null);
 check('sin teléfono no hay número', contactNumber(getContact('web:anonimo')) === null);
 
+// ---------- Lo interno no sale por una conversación ----------
+// 🪤 Esta es LA prueba de esta función. Lo interno y lo que se le cuenta al cliente viven en la misma tabla, y
+// lo único que los separa es que el buscador excluya un tipo por defecto. Si alguien cambia eso, no habría un
+// error que ver: el buscador encontraría el documento que mejor encaja y resultaría ser el que dice cuánto le
+// cuesta cada traje al negocio. Por eso se prueba el silencio, que es lo que no se nota cuando se rompe.
+const { upsertDoc } = await import('../rag/store.js');
+const { retrieve } = await import('../rag/retriever.js');
+upsertDoc({ id: 'k1', kind: 'knowledge', title: 'Esmoquin', content: 'El esmoquin azul se alquila por tres días.', url: null, meta: {}, embedding: [] });
+upsertDoc({ id: 'i1', kind: 'interno', title: 'Margen esmoquin', content: 'El esmoquin azul nos cuesta 90.000 y se alquila a 350.000.', url: null, meta: {}, embedding: [] });
+
+const paraElCliente = await retrieve('esmoquin azul', { k: 10 });
+check('🪤 buscar sin decir el tipo NO trae lo interno', !paraElCliente.some((d) => d.kind === 'interno'),
+  JSON.stringify(paraElCliente.map((d) => d.id)));
+check('y sí trae lo que se le puede contar', paraElCliente.some((d) => d.id === 'k1'),
+  'si esto falla, la prueba de arriba pasa por la razón equivocada');
+const pidiendolo = await retrieve('esmoquin azul', { k: 10, kinds: ['interno'] });
+check('quien lo pide por su nombre sí lo encuentra', pidiendolo.some((d) => d.id === 'i1'),
+  'excluirlo siempre lo haría inútil: el equipo tiene que poder consultarlo');
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

@@ -7,6 +7,7 @@ import { streamSSE } from 'hono/streaming';
 import { business, env } from '../config.js';
 import { engineStatus, roleLabel } from '../llm/engines.js';
 import { countDocs, getDb } from '../rag/store.js';
+import { borrarNotaInterna, guardarNotaInterna, notasInternas } from '../rag/interno.js';
 import { getMessages } from '../agent/memory.js';
 import { contactNumber, deleteContact, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
@@ -980,6 +981,23 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
         }[]);
     return c.json(rows);
   });
+
+  /**
+   * Lo que aiva sabe del negocio y no le cuenta a nadie. Va por su propia puerta a propósito: mezclarlo con
+   * `/knowledge` sería invitar a que algún día se sirvan juntos.
+   */
+  app.get('/admin/api/interno', (c) => c.json(notasInternas()));
+
+  app.post('/admin/api/interno', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { id?: string; titulo?: string; contenido?: string };
+    const contenido = (body.contenido ?? '').trim();
+    if (!contenido) return c.json({ error: 'escribe algo' }, 400);
+    return c.json(await guardarNotaInterna({ id: body.id, titulo: body.titulo ?? '', contenido }));
+  });
+
+  app.delete('/admin/api/interno/:id', (c) =>
+    borrarNotaInterna(c.req.param('id')) ? c.json({ ok: true }) : c.json({ error: 'no existe' }, 404),
+  );
 
   app.get('/admin/api/stream', (c) =>
     streamSSE(c, async (stream) => {

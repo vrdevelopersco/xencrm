@@ -643,6 +643,18 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .paleta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .tinta{width:30px;height:30px;border-radius:10px;border:2px solid transparent;cursor:pointer;box-shadow:var(--bevel-hi),var(--raise)}
 .tinta.puesto{border-color:var(--text);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 40%,transparent)}
+/* 🪤 Pestañas de verdad, no un interruptor. `.seg` es una rejilla de DOS columnas con una pastilla que se
+   desliza a la mitad: es el «Aiva | Tú», y está bien así. Meterle una tercera opción la parte en dos líneas y
+   deja la pastilla debajo de la pestaña equivocada. Esto es lo mismo por fuera y aguanta las que hagan falta. */
+.tabs{display:inline-flex;flex-wrap:nowrap;white-space:nowrap;gap:4px;padding:3px;border-radius:999px;
+  background:var(--glass-strong);border:1px solid var(--glass-border);box-shadow:var(--rim)}
+.tabs button{border:0;background:transparent;border-radius:999px;padding:6px 14px;min-height:36px;cursor:pointer;
+  color:var(--text);font-weight:500;transition:background .15s,color .15s}
+.tabs button:hover{background:var(--row-hover)}
+.tabs button.on{background:linear-gradient(180deg,color-mix(in srgb,var(--brand) 85%,#fff),var(--brand));
+  color:var(--on-brand);font-weight:700;box-shadow:0 2px 8px color-mix(in srgb,var(--brand) 40%,transparent)}
+.tabs button:focus-visible{outline:none;box-shadow:var(--ring)}
+
 .seg-tema{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .seg-tema .btn.puesto{background:var(--brand);color:var(--on-brand);border-color:transparent;font-weight:600}
 
@@ -1045,10 +1057,24 @@ dialog#dlg-grupos > b{font-size:17px}
     </section>
     <!-- Conocimiento -->
     <section class="view" id="view-knowledge">
-      <div class="topbar"><h1>Lo que sabe el agente</h1><span class="grow"></span><div class="seg"><button class="on" data-kind="knowledge" id="k-kn">Información</button><button data-kind="product" id="k-pr">Productos</button></div></div>
+      <div class="topbar"><h1>Lo que sabe el agente</h1><span class="grow"></span><div class="tabs"><button class="on" data-kind="knowledge" id="k-kn">Información</button><button data-kind="product" id="k-pr">Productos</button><button data-kind="interno" id="k-in">Solo para el equipo</button></div></div>
       <div class="pad">
         <input type="search" id="k-q" placeholder="Buscar en lo que sabe el agente…">
         <div id="k-list"></div>
+        <!-- Lo interno se escribe aquí; lo demás entra por el catálogo y los documentos del negocio. -->
+        <div id="k-interno" hidden>
+          <div class="small muted" style="margin-bottom:10px">Esto <b>no se le cuenta a ningún cliente</b>: es lo que <span id="k-agente">el asistente</span> necesita saber para ayudarte a ti. Con qué proveedor trabajas, qué margen manejas, qué conviene y qué no. Nunca sale por una conversación.</div>
+          <div id="k-notas"></div>
+          <div class="panel" style="margin-top:12px;padding:12px;display:flex;flex-direction:column;gap:8px">
+            <input type="text" id="k-nota-titulo" placeholder="De qué se trata (ej.: Proveedor de telas)">
+            <textarea id="k-nota-texto" rows="3" placeholder="Lo que haya que saber, con tus palabras."></textarea>
+            <div class="fila" style="gap:8px;justify-content:flex-end">
+              <span class="small muted grow" id="k-nota-edit"></span>
+              <button class="btn" id="k-nota-limpiar" hidden>Cancelar</button>
+              <button class="btn primary" id="k-nota-guardar">Guardar</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </main>

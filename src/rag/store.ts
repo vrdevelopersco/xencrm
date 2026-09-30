@@ -3,7 +3,31 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { env } from '../config.js';
 
-export type DocKind = 'product' | 'knowledge';
+/**
+ * Lo que aiva sabe, por audiencia.
+ *
+ * `product` y `knowledge` son lo que se le puede CONTAR a un cliente: el catálogo y la información del negocio
+ * —qué hace cada programa, cómo funciona el proceso, qué incluye—. Esa parte hace falta y mucho: sin ella, el
+ * asistente de un negocio de software no sabe explicar su propio producto.
+ *
+ * 🪤 `interno` es lo contrario: lo que aiva necesita saber para ayudar AL EQUIPO y no debe salir nunca por una
+ * conversación. Con qué proveedor trabajan, qué margen manejan, qué cliente da problemas, qué producto no
+ * quieren empujar. Va aparte porque la diferencia no es de tema, es de a quién se le puede decir.
+ */
+export type DocKind = 'product' | 'knowledge' | 'interno';
+
+/**
+ * 🪤 Lo interno hay que pedirlo POR SU NOMBRE para que salga.
+ *
+ * Buscar sin decir de qué tipo devolvía de todo, y eso convierte un `retrieve(pregunta)` escrito de buena fe en
+ * una filtración: el buscador hace su trabajo, encuentra el documento que mejor encaja, y resulta ser el que
+ * dice cuánto le cuesta cada traje al negocio. No habría un error que buscar, porque no habría ningún error.
+ *
+ * Así que lo peligroso se excluye por defecto y quien lo quiera tiene que nombrarlo. Un descuido futuro se
+ * queda en «no encontró nada», que es un fallo que se ve y no hace daño.
+ */
+const PARA_EL_CLIENTE: DocKind[] = ['product', 'knowledge'];
+const paraBuscar = (kinds?: DocKind[]): DocKind[] => kinds ?? PARA_EL_CLIENTE;
 
 export interface Doc {
   id: string;
@@ -391,10 +415,11 @@ export function getDocs(ids: string[]): Map<string, Doc> {
 
 export function vectorSearch(queryEmbedding: number[], k: number, kinds?: DocKind[]): { id: string; sim: number }[] {
   const q = normalize(queryEmbedding);
-  const allowed = kinds ? kindIndex(kinds) : undefined;
+  const allowed = kindIndex(paraBuscar(kinds));
   const hits: { id: string; sim: number }[] = [];
   for (const { id, vec } of vectors) {
-    if (allowed && !allowed.has(id)) continue;
+    if (!vec.length) continue; // guardado sin vector (el motor no contestó): se encuentra por texto, no por parecido
+    if (!allowed.has(id)) continue;
     let dot = 0;
     for (let i = 0; i < vec.length; i++) dot += vec[i]! * q[i]!;
     hits.push({ id, sim: dot });
@@ -436,7 +461,8 @@ export function toFtsQuery(text: string): string | null {
 export function ftsSearch(text: string, k: number, kinds?: DocKind[]): string[] {
   const q = toFtsQuery(text);
   if (!q) return [];
-  const kindFilter = kinds ? `AND d.kind IN (${kinds.map(() => '?').join(',')})` : '';
+  const tipos = paraBuscar(kinds);
+  const kindFilter = `AND d.kind IN (${tipos.map(() => '?').join(',')})`;
   try {
     const rows = getDb()
       .prepare(
@@ -444,7 +470,7 @@ export function ftsSearch(text: string, k: number, kinds?: DocKind[]): string[] 
          WHERE docs_fts MATCH ? ${kindFilter}
          ORDER BY bm25(docs_fts, 2.0, 1.0) LIMIT ?`,
       )
-      .all(q, ...(kinds ?? []), k) as { id: string }[];
+      .all(q, ...tipos, k) as { id: string }[];
     return rows.map((r) => r.id);
   } catch {
     return [];

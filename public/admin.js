@@ -1874,8 +1874,75 @@
   }
 
   // ---------- conocimiento ----------
-  $('k-kn').onclick = function () { state.kind = 'knowledge'; $('k-kn').classList.add('on'); $('k-pr').classList.remove('on'); loadKnowledge(); };
-  $('k-pr').onclick = function () { state.kind = 'product'; $('k-pr').classList.add('on'); $('k-kn').classList.remove('on'); loadKnowledge(); };
+  function pestanaSabe(cual) {
+    state.kind = cual;
+    ['kn', 'pr', 'in'].forEach(function (x) {
+      var mapa = { kn: 'knowledge', pr: 'product', in: 'interno' };
+      $('k-' + x).classList.toggle('on', mapa[x] === cual);
+    });
+    var interno = cual === 'interno';
+    $('k-interno').hidden = !interno;
+    $('k-list').hidden = interno;
+    $('k-q').hidden = interno;
+    if (interno) cargarNotas(); else loadKnowledge();
+  }
+  $('k-kn').onclick = function () { pestanaSabe('knowledge'); };
+  $('k-pr').onclick = function () { pestanaSabe('product'); };
+  $('k-in').onclick = function () { pestanaSabe('interno'); };
+
+  // ---------- lo que no se le cuenta a nadie ----------
+  var notaEditando = null;
+  function cargarNotas() {
+    if ($('k-agente')) $('k-agente').textContent = state.agentName || 'el asistente';
+    api('/interno').then(function (notas) {
+      $('k-notas').innerHTML = (notas || []).length
+        ? notas.map(function (n) {
+            return '<div class="panel" style="padding:10px 12px;margin-bottom:8px">'
+              + '<div class="fila" style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b>' + esc(n.titulo) + '</b>'
+              + '<span class="small muted">' + esc(n.origen) + ' · ' + rel(n.actualizado) + '</span><span class="grow"></span>'
+              + '<button class="btn sm" data-nota-edit="' + esc(n.id) + '">Corregir</button>'
+              + '<button class="btn sm" data-nota-del="' + esc(n.id) + '">Borrar</button></div>'
+              + '<div class="small" style="margin-top:6px;white-space:pre-wrap">' + esc(n.contenido) + '</div></div>';
+          }).join('')
+        : '<div class="empty">Todavía no hay nada. Escribe abajo lo primero que se te ocurra que ' + esc(state.agentName || 'el asistente') + ' debería saber de tu negocio y no decirle a nadie.</div>';
+      $('k-notas').querySelectorAll('[data-nota-edit]').forEach(function (b) {
+        b.onclick = function () {
+          var n = notas.find(function (x) { return x.id === b.getAttribute('data-nota-edit'); });
+          if (!n) return;
+          notaEditando = n.id;
+          $('k-nota-titulo').value = n.titulo; $('k-nota-texto').value = n.contenido;
+          $('k-nota-edit').textContent = 'Corrigiendo «' + n.titulo + '»';
+          $('k-nota-limpiar').hidden = false;
+          $('k-nota-texto').focus();
+        };
+      });
+      $('k-notas').querySelectorAll('[data-nota-del]').forEach(function (b) {
+        b.onclick = function () {
+          b.disabled = true;
+          api('/interno/' + encodeURIComponent(b.getAttribute('data-nota-del')), { method: 'DELETE' })
+            .then(function () { toast('Borrada'); cargarNotas(); });
+        };
+      });
+    });
+  }
+  function limpiarNota() {
+    notaEditando = null;
+    $('k-nota-titulo').value = ''; $('k-nota-texto').value = '';
+    $('k-nota-edit').textContent = ''; $('k-nota-limpiar').hidden = true;
+  }
+  $('k-nota-limpiar').onclick = limpiarNota;
+  $('k-nota-guardar').onclick = function () {
+    var texto = $('k-nota-texto').value.trim();
+    if (!texto) return;
+    $('k-nota-guardar').disabled = true;
+    api('/interno', { method: 'POST', body: { id: notaEditando || undefined, titulo: $('k-nota-titulo').value, contenido: texto } })
+      .then(function (r) {
+        $('k-nota-guardar').disabled = false;
+        if (r && r.error) { toast('No se pudo: ' + r.error); return; }
+        limpiarNota(); cargarNotas();
+        toast('Guardado. Esto no sale en ninguna conversación.', null, { icono: 'book' });
+      });
+  };
   var kTimer; $('k-q').oninput = function () { clearTimeout(kTimer); kTimer = setTimeout(loadKnowledge, 250); };
   function loadKnowledge() {
     api('/knowledge?kind=' + state.kind + '&q=' + encodeURIComponent($('k-q').value.trim())).then(function (docs) {
