@@ -1930,6 +1930,57 @@
     $('k-nota-titulo').value = ''; $('k-nota-texto').value = '';
     $('k-nota-edit').textContent = ''; $('k-nota-limpiar').hidden = true;
   }
+  // 🪤 El borrador se enseña y NO se guarda. Guardarlo solo sería poner en boca del negocio cosas que dedujo
+  // una máquina de sus conversaciones; y si algo estuviera mal, aiva aconsejaría con seguridad sobre una
+  // premisa falsa sin que nadie sepa de dónde salió. Cada nota se acepta —o se corrige— una por una.
+  $('k-retrato').onclick = function () {
+    $('k-retrato').disabled = true;
+    $('k-retrato-nota').textContent = 'Leyendo lo que ya tiene…';
+    api('/interno/retrato', { method: 'POST', body: {} }).then(function (r) {
+      $('k-retrato').disabled = false;
+      $('k-retrato-nota').textContent = 'Lee lo que ya tiene —conversaciones, temas, tiempos— y redacta un borrador para que lo corrijas.';
+      if (!r || r.error) { toast('No se pudo: ' + ((r && r.error) || 'sin respuesta')); return; }
+      if (r.flaco) {
+        $('k-propuesta').innerHTML = '<div class="empty">Todavía hay poco de dónde deducir ('
+          + r.desde.conversaciones + ' conversaciones, ' + r.desde.contactos + ' contactos). Con tan poco, lo que salga encaja en cualquier negocio y no dice nada del tuyo. Vuelve a intentarlo cuando haya más.</div>';
+        return;
+      }
+      if (!r.notas.length) { $('k-propuesta').innerHTML = '<div class="empty">No alcanzó a sacar nada en limpio. Inténtalo otra vez.</div>'; return; }
+      $('k-propuesta').innerHTML = '<div class="panel" style="padding:12px;margin-bottom:12px">'
+        + '<div class="fila" style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b>Esto es lo que entendí</b>'
+        + '<span class="small muted">deducido de ' + [
+            r.desde.conversaciones ? r.desde.conversaciones + ' conversaciones' : '',
+            r.desde.temas ? r.desde.temas + ' temas que se repiten' : '',
+            r.desde.contactos ? r.desde.contactos + ' contactos' : ''
+          ].filter(Boolean).join(', ') + ' · corrígeme lo que esté mal</span></div>'
+        + r.notas.map(function (n, i) {
+            return '<div class="panel" style="padding:10px 12px;margin-top:8px">'
+              + '<div class="fila" style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b>' + esc(n.titulo) + '</b><span class="grow"></span>'
+              + '<button class="btn sm" data-prop-edit="' + i + '">Corregir</button>'
+              + '<button class="btn sm primary" data-prop-ok="' + i + '">Está bien</button></div>'
+              + '<div class="small" style="margin-top:6px;white-space:pre-wrap">' + esc(n.contenido) + '</div></div>';
+          }).join('')
+        + '<div class="small muted" style="margin-top:10px">Nada de esto se ha guardado todavía.</div></div>';
+      $('k-propuesta').querySelectorAll('[data-prop-ok]').forEach(function (b) {
+        b.onclick = function () {
+          var n = r.notas[Number(b.getAttribute('data-prop-ok'))];
+          b.disabled = true;
+          api('/interno', { method: 'POST', body: { titulo: n.titulo, contenido: n.contenido, origen: 'deducido y confirmado' } })
+            .then(function () { b.closest('.panel').remove(); cargarNotas(); toast('Guardado', null, { icono: 'check' }); });
+        };
+      });
+      $('k-propuesta').querySelectorAll('[data-prop-edit]').forEach(function (b) {
+        b.onclick = function () {
+          var n = r.notas[Number(b.getAttribute('data-prop-edit'))];
+          $('k-nota-titulo').value = n.titulo; $('k-nota-texto').value = n.contenido;
+          $('k-nota-edit').textContent = 'Corrigiendo lo que propuso ' + (state.agentName || 'el asistente');
+          $('k-nota-limpiar').hidden = false;
+          $('k-nota-texto').focus();
+          b.closest('.panel').remove();
+        };
+      });
+    });
+  };
   $('k-nota-limpiar').onclick = limpiarNota;
   $('k-nota-guardar').onclick = function () {
     var texto = $('k-nota-texto').value.trim();

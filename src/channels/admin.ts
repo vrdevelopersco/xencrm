@@ -8,6 +8,7 @@ import { business, env } from '../config.js';
 import { engineStatus, roleLabel } from '../llm/engines.js';
 import { countDocs, getDb } from '../rag/store.js';
 import { borrarNotaInterna, guardarNotaInterna, notasInternas } from '../rag/interno.js';
+import { retratoDelNegocio } from '../rag/retrato.js';
 import { getMessages } from '../agent/memory.js';
 import { contactNumber, deleteContact, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
@@ -987,6 +988,18 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * `/knowledge` sería invitar a que algún día se sirvan juntos.
    */
   app.get('/admin/api/interno', (c) => c.json(notasInternas()));
+
+  /**
+   * Que aiva escriba lo que entendió del negocio. Devuelve un BORRADOR y no guarda nada: quien lo lea decide
+   * qué es cierto. Un retrato equivocado guardado solo sería peor que no tener ninguno.
+   */
+  app.post('/admin/api/interno/retrato', async (c) => {
+    try {
+      return c.json(await retratoDelNegocio());
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 502);
+    }
+  });
 
   app.post('/admin/api/interno', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { id?: string; titulo?: string; contenido?: string };

@@ -131,5 +131,21 @@ check('🪤 y no se pone al día: el historial sigue sin traer grupos', /isJidGr
 check('encender los grupos pasa por un modal', /\$\('dlg-grupos'\)\.showModal\(\)/.test(js) && html.includes('id="dlg-grupos"'));
 check('y apagarlos es de un clic', /if \(!encender\) return mandar\(\);/.test(js));
 
+// ---------- El retrato: lo que aiva entendió del negocio ----------
+const ret = readFileSync(new URL('../rag/retrato.ts', import.meta.url), 'utf8');
+// 🪤 Un retrato equivocado es peor que no tener ninguno: aiva aconsejaría con seguridad sobre una premisa falsa
+// y nadie sabría de dónde salió. Por eso NO se guarda solo y dice de qué se dedujo.
+check('🪤 el retrato es un borrador: no se guarda solo', !/guardarNotaInterna/.test(ret) && /Nada de esto se ha guardado todav/.test(js),
+  'guardarlo solo sería poner en boca del negocio lo que dedujo una máquina');
+check('y dice de qué se dedujo', /desde: \{ conversaciones/.test(ret) && /corrígeme lo que esté mal/.test(js));
+check('lo que se acepta queda marcado como deducido', /origen: 'deducido y confirmado'/.test(js),
+  'hay que poder distinguir lo que escribió una persona de lo que dedujo la máquina');
+// 🪤 Con dos conversaciones, cualquier retrato encaja en cualquier negocio.
+check('🪤 con poco material dice que hay poco, en vez de inventar', /const flaco = desde\.conversaciones < 3/.test(ret));
+// 🪤 «18 segundos» redondeado a minutos es «0 minutos», y el modelo lo repite con seguridad.
+check('🪤 un dato que no se puede decir bien, no se dice', /menos de un minuto/.test(ret),
+  'redondear a cero convierte el retrato en una frase falsa dicha con confianza');
+check('el retrato sale como nota interna, no como información del cliente', !/kind: 'knowledge'/.test(ret));
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

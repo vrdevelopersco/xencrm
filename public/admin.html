@@ -1064,6 +1064,11 @@ dialog#dlg-grupos > b{font-size:17px}
         <!-- Lo interno se escribe aquí; lo demás entra por el catálogo y los documentos del negocio. -->
         <div id="k-interno" hidden>
           <div class="small muted" style="margin-bottom:10px">Esto <b>no se le cuenta a ningún cliente</b>: es lo que <span id="k-agente">el asistente</span> necesita saber para ayudarte a ti. Con qué proveedor trabajas, qué margen manejas, qué conviene y qué no. Nunca sale por una conversación.</div>
+          <div class="fila" style="gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+            <button class="btn" id="k-retrato">Que escriba lo que entendió de tu negocio</button>
+            <span class="small muted" id="k-retrato-nota">Lee lo que ya tiene —conversaciones, temas, tiempos— y redacta un borrador para que lo corrijas.</span>
+          </div>
+          <div id="k-propuesta"></div>
           <div id="k-notas"></div>
           <div class="panel" style="margin-top:12px;padding:12px;display:flex;flex-direction:column;gap:8px">
             <input type="text" id="k-nota-titulo" placeholder="De qué se trata (ej.: Proveedor de telas)">
