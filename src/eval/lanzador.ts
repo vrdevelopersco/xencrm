@@ -69,6 +69,18 @@ check('y no abrir el puerto ya no tumba al proceso', /servidor\.on\('error'/.tes
 // El sondeo tiene que decir POR QUÉ no contestan: «5 de 5 no contestaron» costó una mañana de registros.
 check('el sondeo dice el motivo de cada puerto que falla', /res\(e\.code \|\| e\.message/.test(arranque));
 
+// ---------- El hueco entre que abre la puerta y levantan los de adentro ----------
+// 🪤 El enrutador abre en medio segundo (obligatorio) y los de adentro tardan unos segundos más. Quien entraba
+// en ese hueco se llevaba un «todavía está arrancando» aunque bastaba esperar dos segundos.
+check('🪤 se reintenta antes de rendirse', /const intentar = \(quedan\)/.test(arranque) && /intentar\(sinCuerpo \? 6 : 0\)/.test(arranque));
+// 🪤 El cuerpo de un POST ya se consumió al primer intento: reenviarlo mandaría medio formulario.
+check('🪤 solo se reintenta lo que no lleva cuerpo', /const sinCuerpo = pide\.method === 'GET' \|\| pide\.method === 'HEAD';/.test(arranque));
+check('y lo que se ve es una pantalla, no texto pelado', /const ARRANCANDO = \[/.test(arranque) && /text\/html; charset=utf-8'/.test(arranque));
+// 🪤 Un proceso que ni rechaza ni contesta dejaba la petición esperando para siempre.
+check('🪤 el reparto tiene reloj…', /salida\.setTimeout\(4000/.test(arranque));
+// …pero se quita al contestar: el chat en vivo se queda abierto a propósito.
+check('…y se le quita en cuanto contesta, por el chat en vivo', /salida\.setTimeout\(0\);/.test(arranque));
+
 // ---------- El que reparte sin mandar ----------
 // 🪤 Esto rompió producción el 2026-09-30, con todo bien levantado. El alojamiento arrancó la aplicación dos
 // veces: uno tomó el mando y levantó a los clientes por socket —bien—, y el otro se quedó de espejo. Pero el

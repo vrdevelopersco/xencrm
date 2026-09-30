@@ -157,8 +157,14 @@ textarea{resize:vertical;min-height:70px}
 /* Pipeline */
 /* 🪤 `padding-right` de más y `scroll-padding`: la última etapa quedaba pegada al borde y cortada, y como
    es «Perdido» —la que nadie mira— nadie avisaba. Con seis etapas esto SIEMPRE se desplaza. */
-.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(250px,1fr);gap:12px;padding:16px 20px 16px 16px;
+/* 🪤 Flex y no rejilla: `grid-auto-columns` le da el mismo ancho a TODAS, así que una etapa vacía ocupa lo
+   mismo que una con doce tarjetas. Con flex cada una pide lo suyo y las vacías se encogen. */
+.board{display:flex;gap:12px;padding:16px 20px 16px 16px;
   overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;flex:1;min-height:0}
+.board>.col{flex:1 1 250px;min-width:250px}
+.board>.col.vacia{flex:0 0 140px;min-width:140px}
+.board>.col.vacia h3{font-size:13px}
+@media(max-width:900px){.board>.col,.board>.col.vacia{flex:0 0 78vw;min-width:78vw}}
 .board>.col{scroll-snap-align:start}
 .col{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow);border-radius:16px;display:flex;flex-direction:column;min-height:0}
 .col h3{margin:0;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}

@@ -108,8 +108,15 @@ const textos = js
   .split('\n')
   .filter((l) => !l.trim().startsWith('//'))
   .join('\n');
+// 🪤 Y no solo en el tablero: media pantalla de Canales la escribe el SERVIDOR. La primera versión de esta
+// prueba solo miraba admin.js y admin.html, así que dejó pasar un «PUBLIC_URL en .env» que el cliente veía en
+// letra grande. Lo que se mira es todo lo que le llega a él.
+const dichoAlCliente = [textos, html, readFileSync(new URL('../channels/registry.ts', import.meta.url), 'utf8')
+  .split('\n')
+  .filter((l) => !l.trim().startsWith('//'))
+  .join('\n')].join('\n');
 for (const jerga of ['pnpm ', 'CALENDAR_BUSY_ICS', 'PUBLIC_URL', 'ADMIN_TOKEN', 'ALLOWED_ORIGINS', 'OPENAI_API_KEY']) {
-  check(`🪤 el tablero del cliente no nombra «${jerga.trim()}»`, !textos.includes(jerga) && !html.includes(jerga),
+  check(`🪤 al cliente no se le nombra «${jerga.trim()}»`, !dichoAlCliente.includes(jerga),
     'eso lo sabe quien monta el sistema, no quien atiende a sus clientes');
 }
 

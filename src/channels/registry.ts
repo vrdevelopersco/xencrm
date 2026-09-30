@@ -74,10 +74,10 @@ export function channelCards(): ChannelCard[] {
       { label: 'Código para pegar en el sitio', value: `<script src="${base()}/widget.js" async></script>` },
       { label: 'Página de prueba', value: `${base()}/` },
     ],
-    steps: env.publicUrl ? [] : ['Para usarlo en el sitio real hace falta una URL pública (PUBLIC_URL en .env, con el túnel).'],
+    steps: env.publicUrl ? [] : ['Para usarlo en el sitio real hace falta una dirección pública. Avísanos y la dejamos lista.'],
     warnings:
       env.publicUrl && env.allowedOrigins.includes('*')
-        ? [`Cualquier sitio puede usar este chat: pon en ALLOWED_ORIGINS el dominio de ${name} (${business.business.siteUrl}).`]
+        ? [`Cualquier sitio puede usar este chat. Para dejarlo solo en el de ${name} (${business.business.siteUrl}), avísanos.`]
         : [],
   });
 
@@ -153,7 +153,7 @@ export function channelCards(): ChannelCard[] {
     steps: meta.configured
       ? env.publicUrl
         ? []
-        : ['Meta necesita una URL pública para el webhook: configura PUBLIC_URL (el túnel).']
+        : ['Meta necesita una dirección pública para avisarnos de los mensajes. Avísanos y la dejamos lista.']
       : [
           'En developers.facebook.com crea una app de tipo Negocio y agrégale el producto WhatsApp.',
           'En WhatsApp › Configuración de la API copia el token de acceso y el ID del número, y pégalos abajo en «Credenciales». La clave secreta está en Configuración de la app › Básica.',
@@ -184,11 +184,11 @@ export function channelCards(): ChannelCard[] {
     pending('instagram', 'Instagram (mensajes directos)', `Responder los mensajes directos de la cuenta de Instagram de ${name}.`, [
       'Cuenta profesional de Instagram vinculada a una página de Facebook.',
       'Una app de Meta con el permiso de mensajería de Instagram (Meta la revisa antes de usarla con clientes reales).',
-      'URL pública para el webhook (PUBLIC_URL).',
+      'Una dirección pública para que Meta nos avise de los mensajes.',
     ]),
     pending('messenger', 'Facebook Messenger', `Responder los mensajes de la página de Facebook de ${name}.`, [
       'Una página de Facebook y una app de Meta con el permiso de mensajería de páginas (con revisión de Meta).',
-      'URL pública para el webhook (PUBLIC_URL). Usa la misma plataforma que Instagram: sale casi junto.',
+      'Una dirección pública para que Meta nos avise. Usa la misma que Instagram: sale casi junto.',
     ]),
   );
 

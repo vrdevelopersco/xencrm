@@ -377,7 +377,9 @@
   // 🪤 Solo aparece donde tiene algo que decir. Un panel vacío a la izquierda «para que se vea simétrico» es
   // espacio robado a lo único que importa en esta pantalla, que es la conversación.
   var CFG_VIEWS = { agent: 1, channels: 1, knowledge: 1, help: 1 };
-  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Prospectos', analysis: 'Análisis', agent: 'El asistente', channels: 'Canales', knowledge: 'Lo que sabe', help: 'Ayuda' };
+  // 🪤 En las pantallas de configuración el panel decía lo mismo que el título de la página, dos veces en la
+  // misma fila. Aquí dice el ÁREA —dónde estás— y la lista de abajo dice la pantalla: cada uno aporta algo.
+  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Prospectos', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración' };
   function pintarPanel(view) {
     var panel = $('subnav');
     if (!panel) return;
@@ -968,7 +970,9 @@
         // El color de la columna sale del PAPEL de la etapa, no de su nombre: cada negocio las llama distinto y
         // con los nombres fijos una financiera veía el tablero entero en gris.
         var def = (state.stages || []).find(function (x) { return x.id === s; }) || {};
-        return '<div class="col" data-stage="' + s + '" data-rol="' + esc(def.rol || '') + '">' +
+        // Una etapa vacía no necesita el mismo ancho que una llena: encogida deja ver más del tablero sin
+        // esconderla, que sigue siendo un sitio donde soltar una tarjeta.
+        return '<div class="col' + (cards.length ? '' : ' vacia') + '" data-stage="' + s + '" data-rol="' + esc(def.rol || '') + '">' +
           '<h3>' + esc(state.stageLabels[s]) + '<span class="cuenta">' + cards.length + '</span></h3><div class="cards">' +
           cards.map(function (c) {
             return '<div class="card" draggable="true" data-id="' + esc(c.id) + '"><div class="body">' +

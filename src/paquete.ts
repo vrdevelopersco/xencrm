@@ -384,6 +384,44 @@ paraLevantar.push({
 // La portada: una página que explica qué es aiva. La sirve el enrutador mismo, sin molestar a nadie, porque es
 // lo único que ve quien llega al dominio pelado. La consola queda en /consola, y sus llamadas (/api/...) siguen
 // saliendo de la raíz, que es a donde van por defecto.
+/**
+ * Lo que se ve en el hueco entre que abre la puerta el enrutador y levantan los de adentro.
+ *
+ * 🪤 Antes era texto pelado: «Todavía está arrancando». Técnicamente cierto y, para quien abre el tablero de
+ * su negocio, indistinguible de que todo se rompió. Se ve durante un par de segundos y es lo primero que ve
+ * alguien tras una actualización: merece parecer lo que es —algo encendiéndose— y no una página de error.
+ *
+ * Se recarga sola, así que nadie tiene que tocar nada. Va entera aquí dentro, sin pedirle nada a nadie: si
+ * hubiera que traer una hoja de estilos o una fuente, justo ahora no hay quien la sirva.
+ */
+const ARRANCANDO = [
+  '<!doctype html><html lang="es"><head><meta charset="utf-8">',
+  '<meta name="viewport" content="width=device-width,initial-scale=1">',
+  '<meta http-equiv="refresh" content="4">',
+  '<title>Arrancando</title><style>',
+  ':root{color-scheme:light dark}',
+  'body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f7f5f0;color:#1d1a15;',
+  'font:16px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif}',
+  '@media(prefers-color-scheme:dark){body{background:#12100d;color:#ece7dd}}',
+  'body::before{content:"";position:fixed;inset:-20%;z-index:-1;filter:blur(60px);opacity:.5;',
+  'background:radial-gradient(600px 500px at 10% 10%,#d9c58a,transparent 60%),',
+  'radial-gradient(700px 600px at 90% 20%,#9fb8d6,transparent 60%),',
+  'radial-gradient(600px 500px at 60% 100%,#c9a6a0,transparent 60%)}',
+  '.caja{text-align:center;padding:30px 36px;border-radius:20px;background:rgba(255,255,255,.55);',
+  'border:1px solid rgba(255,255,255,.65);box-shadow:0 12px 44px rgba(0,0,0,.12);',
+  '-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}',
+  '@media(prefers-color-scheme:dark){.caja{background:rgba(30,26,20,.55);border-color:rgba(255,255,255,.12)}}',
+  '.rueda{width:30px;height:30px;margin:0 auto 16px;border-radius:50%;',
+  'border:3px solid rgba(127,127,127,.22);border-top-color:currentColor;animation:giro 900ms linear infinite}',
+  '@keyframes giro{to{transform:rotate(360deg)}}',
+  '@media(prefers-reduced-motion:reduce){.rueda{animation:none;border-top-color:rgba(127,127,127,.22)}}',
+  'b{font-size:17px;display:block;letter-spacing:-.01em}small{opacity:.7;font-size:13.5px}',
+  '</style></head><body><div class="caja"><div class="rueda"></div>',
+  '<b>Arrancando</b><small>Tarda unos segundos. Se abre solo.</small></div>',
+  '<script>setTimeout(function(){location.reload()},2000)<\/script>',
+  '</body></html>',
+].join('');
+
 const PORTADA = (() => {
   try {
     return readFileSync(join(aqui, 'public', 'inicio.html'));
@@ -639,23 +677,48 @@ const servidor = http.createServer((pide, responde) => {
     }
 
     const { puerto, ruta, prefijo } = haciaDonde(pide.url || '/');
-    const salida = http.request(
-      conDestino(comoLlego(puerto), puerto, { path: ruta, method: pide.method, headers: { ...pide.headers, host: '127.0.0.1:' + puerto } }),
-      (r) => {
-        const cabeceras = { ...r.headers };
-        // Una redirección de adentro no sabe del prefijo: se lo ponemos para que no saque al cliente de su ruta.
-        if (prefijo && typeof cabeceras.location === 'string' && cabeceras.location.startsWith('/')) {
-          cabeceras.location = prefijo + cabeceras.location;
+
+    /**
+     * 🪤 Reintentar antes de rendirse. El enrutador abre la puerta en medio segundo —obligatorio: si tarda
+     * tres, el alojamiento lo mata— y los procesos de adentro tardan unos segundos más en levantar. En ese
+     * hueco, quien entraba se llevaba un «todavía está arrancando» aunque bastaba con esperar dos segundos.
+     *
+     * Solo se reintenta lo que no lleva cuerpo (GET y HEAD): el cuerpo de un POST ya se consumió al primer
+     * intento y reenviarlo mandaría medio formulario. Y esos son justo los que importan, porque el que se
+     * encuentra el hueco es el que ABRE la página, no el que manda algo.
+     */
+    const sinCuerpo = pide.method === 'GET' || pide.method === 'HEAD';
+    const intentar = (quedan) => {
+      const salida = http.request(
+        conDestino(comoLlego(puerto), puerto, { path: ruta, method: pide.method, headers: { ...pide.headers, host: '127.0.0.1:' + puerto } }),
+        (r) => {
+          // 🪤 Se quita el reloj EN CUANTO contesta. El de arriba es para que una petición no se quede colgada
+          // esperando a un proceso que ni rechaza ni responde; pero el chat en vivo se queda abierto a
+          // propósito y con el reloj puesto lo cortaríamos cada pocos segundos.
+          salida.setTimeout(0);
+          const cabeceras = { ...r.headers };
+          // Una redirección de adentro no sabe del prefijo: se lo ponemos para que no saque al cliente de su ruta.
+          if (prefijo && typeof cabeceras.location === 'string' && cabeceras.location.startsWith('/')) {
+            cabeceras.location = prefijo + cabeceras.location;
+          }
+          responde.writeHead(r.statusCode || 502, cabeceras);
+          r.pipe(responde); // sin buffer: así el chat en vivo (SSE) sigue llegando mensaje a mensaje
+        },
+      );
+      // Un proceso que no rechaza pero tampoco contesta dejaba la petición esperando para siempre: el navegador
+      // en blanco y nada en los registros. Cuatro segundos y se da por fallido, que es lo que ya sabemos tratar.
+      salida.setTimeout(4000, () => salida.destroy(new Error('no contestó a tiempo')));
+      salida.on('error', () => {
+        if (quedan > 0 && sinCuerpo) {
+          setTimeout(() => intentar(quedan - 1), 400);
+          return;
         }
-        responde.writeHead(r.statusCode || 502, cabeceras);
-        r.pipe(responde); // sin buffer: así el chat en vivo (SSE) sigue llegando mensaje a mensaje
-      },
-    );
-    salida.on('error', () => {
-      responde.writeHead(503, { 'content-type': 'text/plain; charset=utf-8', 'retry-after': '5' });
-      responde.end('Todavía está arrancando. Vuelve a intentar en unos segundos.');
-    });
-    pide.pipe(salida);
+        responde.writeHead(503, { 'content-type': 'text/html; charset=utf-8', 'retry-after': '3' });
+        responde.end(pide.method === 'HEAD' ? undefined : ARRANCANDO);
+      });
+      pide.pipe(salida);
+    };
+    intentar(sinCuerpo ? 6 : 0); // ~2,4 s, que es lo que tardan en levantar
 });
 
 // 🪤 El await de nivel superior no existe aquí: este lanzador es CommonJS porque el servidor del alojamiento lo
