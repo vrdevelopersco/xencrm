@@ -10,7 +10,7 @@ export interface Notification {
   id: number;
   ts: number;
   userId: string;
-  kind: 'handoff' | 'hot' | 'appointment' | 'new' | 'fail' | 'engine' | 'verify' | 'public' | 'cross' | 'recordatorio';
+  kind: 'handoff' | 'hot' | 'appointment' | 'new' | 'fail' | 'engine' | 'verify' | 'public' | 'cross' | 'recordatorio' | 'propuesta';
   title: string;
   body: string;
 }
@@ -47,6 +47,10 @@ export function startNotifications() {
   started = true;
   onEvent((ev: CrmEvent) => {
     const p = ev.payload as Record<string, unknown>;
+    if (ev.type === 'propuesta') {
+      const prop = p.propuesta as { texto?: string } | undefined;
+      push('propuesta', ev.userId, `Respuesta lista para ${nameOf(ev.userId)}`, (prop?.texto ?? '').slice(0, 120));
+    }
     if (ev.type === 'handoff' && p.on && p.by === 'bot') push('handoff', ev.userId, `${nameOf(ev.userId)} pidió hablar con una persona`, 'Aiva está en pausa en esa conversación.');
     if (ev.type === 'analysis') {
       const score = Number(p.score ?? 0);

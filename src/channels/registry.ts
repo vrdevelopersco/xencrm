@@ -3,7 +3,7 @@
 import { business, env } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { metaStatus } from './meta.js';
-import { grupos, soloEscucha, channelOn, setChannelOn, type ChannelId } from './switches.js';
+import { grupos, modoCanal, soloEscucha, channelOn, setChannelOn, type ChannelId } from './switches.js';
 // 🪤 Solo el estado: importar aquí la librería de WhatsApp costaba 77 MB en CADA proceso de cliente,
 // tuviera WhatsApp encendido o no. Se carga cuando se enciende, no antes.
 import { whatsappStatus, qrSvg } from './whatsapp-estado.js';
@@ -22,6 +22,8 @@ export interface ChannelCard {
   canToggle: boolean;
   /** Recibe y guarda, pero el asistente no contesta: responde una persona desde el tablero. */
   soloEscucha?: boolean;
+  /** Los tres modos del canal: mira, propone o contesta. */
+  modo?: 'mira' | 'propone' | 'contesta';
   /** Solo WhatsApp: si aiva mira lo que se habla en los grupos (para aprender; nunca escribe en ellos). */
   grupos?: boolean;
   /** Mensajes de clientes en los últimos 7 días, cuántas personas y cuándo llegó el último (de siempre). */
@@ -99,6 +101,7 @@ export function channelCards(): ChannelCard[] {
     on: waOn,
     canToggle: true,
     soloEscucha: soloEscucha('whatsapp'),
+    modo: modoCanal('whatsapp'),
     grupos: grupos('whatsapp'),
     ...stats('whatsapp'),
     copy: [],

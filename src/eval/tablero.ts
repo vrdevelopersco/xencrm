@@ -147,5 +147,27 @@ check('🪤 un dato que no se puede decir bien, no se dice', /menos de un minuto
   'redondear a cero convierte el retrato en una frase falsa dicha con confianza');
 check('el retrato sale como nota interna, no como información del cliente', !/kind: 'knowledge'/.test(ret));
 
+// ---------- Mira · Propone · Contesta ----------
+const sw2 = readFileSync(new URL('../channels/switches.ts', import.meta.url), 'utf8');
+const ag2 = readFileSync(new URL('../agent/agent.ts', import.meta.url), 'utf8');
+const prop = readFileSync(new URL('../crm/propuestas.ts', import.meta.url), 'utf8');
+const adm = readFileSync(new URL('../channels/admin.ts', import.meta.url), 'utf8');
+
+check('hay tres modos, no dos', /'mira' \| 'propone' \| 'contesta'/.test(sw2));
+// 🪤 Quien ya tenía el canal en «solo escuchar» no debe encontrarse a aiva hablándole a sus clientes.
+check('🪤 el ajuste viejo se respeta al actualizar', /escuchaba \? 'mira' : 'contesta'/.test(sw2),
+  'sin esto, actualizar pondría el canal en «contesta» a quien lo tenía callado');
+// 🪤 «Propone» tiene que pasar por el modelo: ese es su trabajo. Solo «mira» se corta antes.
+check('🪤 solo «mira» se corta antes del modelo', /modoCanal\(msg\.channel as ChannelId\) === 'mira'/.test(ag2));
+// 🪤 Anotar como dicho algo que nadie mandó deja al asistente siguiendo la conversación como si ya hubiera
+// contestado eso, y al cliente viendo una respuesta que no recibió.
+check('🪤 lo propuesto NO se anota como dicho por aiva', /if \(propone\(msg\.channel as ChannelId\)\) \{[\s\S]{0,300}?proponer\(/.test(ag2) && !/proponer\([\s\S]{0,200}?recordBotReply/.test(ag2));
+// 🪤 Del propio asistente no se aprende nada; de lo que escribe una persona, sí.
+check('🪤 sin corregir la manda aiva; corregida, la manda la persona', /corregida \? 'human' : 'bot'/.test(adm),
+  'si va siempre como humana, aiva acabaría aprendiendo de sí misma');
+// 🪤 Una respuesta preparada hace veinte minutos, con tres mensajes nuevos encima, ya no contesta a nada.
+check('🪤 la propuesta caduca cuando el cliente vuelve a escribir', /vieja: ultimoMensaje\(userId\) > f\.sobre_mensaje/.test(prop));
+check('y solo hay una esperando por conversación', /estado = 'reemplazada'/.test(prop));
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

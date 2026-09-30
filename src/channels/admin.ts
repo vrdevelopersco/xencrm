@@ -9,6 +9,7 @@ import { engineStatus, roleLabel } from '../llm/engines.js';
 import { countDocs, getDb } from '../rag/store.js';
 import { borrarNotaInterna, guardarNotaInterna, notasInternas } from '../rag/interno.js';
 import { retratoDelNegocio } from '../rag/retrato.js';
+import { cerrarPropuesta, propuestaDe, propuestasPendientes, verPropuesta } from '../crm/propuestas.js';
 import { getMessages } from '../agent/memory.js';
 import { contactNumber, deleteContact, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
@@ -57,7 +58,7 @@ import { exportDictionary, getDictionary, importDictionary } from '../agent/dict
 import { teachExpression } from '../agent/teach.js';
 import { closeMisses, listMisses, noteMiss, MISS_KINDS, type MissKind } from '../crm/misses.js';
 import { answerVerification, dismissVerification, listVerifications } from '../crm/verifications.js';
-import { grupos as gruposDe, setGrupos, setSoloEscucha, soloEscucha as soloEscuchaDe, type ChannelId } from './switches.js';
+import { grupos as gruposDe, setGrupos, setModoCanal, setSoloEscucha, soloEscucha as soloEscuchaDe, type ChannelId } from './switches.js';
 import type { Contact } from '../crm/contacts.js';
 import { cabecerasDeSiempre, soloDesdeAqui } from '../cabeceras.js';
 
@@ -145,6 +146,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       events: listEvents(id, 50),
       appointments: listAppointments({ userId: id, limit: 20 }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })),
       replyWindow: replyWindow(id),
+      propuesta: propuestaDe(id), // lo que aiva dejó listo aquí, si hay
+
       number: contactNumber(contact), // para escribirle o llamarlo desde el tablero
       presentes: quienesEstan(id), // quién más está metido aquí ahora mismo
       origen: origenDe(id), // por dónde llegó: sirve al atender y para saber qué anuncio trae clientes
@@ -577,6 +580,47 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * negocio, y mirar los grupos es una decisión sobre los datos de gente que no eligió estar aquí. No se
    * mezclan en el mismo botón.
    */
+  app.post('/admin/api/channels/:id/modo', async (c) => {
+    const id = c.req.param('id') as ChannelId;
+    if (!['web', 'whatsapp', 'meta', 'mcp'].includes(id)) return c.json({ error: 'canal desconocido' }, 404);
+    const body = (await c.req.json().catch(() => ({}))) as { modo?: string };
+    if (body.modo !== 'mira' && body.modo !== 'propone' && body.modo !== 'contesta') return c.json({ error: 'modo desconocido' }, 400);
+    setModoCanal(id, body.modo);
+    return c.json(channelCards());
+  });
+
+  /** Lo que aiva dejó listo y espera a una persona. */
+  app.get('/admin/api/propuestas', (c) => c.json(propuestasPendientes()));
+
+  /**
+   * Mandar lo propuesto. 🪤 Si el texto viene igual, lo manda AIVA (author bot): es suyo y del propio asistente
+   * no se aprende nada. Si alguien lo corrigió, lo manda esa persona y sí entra al aprendizaje, porque eso —lo
+   * que una persona escribió de verdad— es lo que enseña cómo atiende este negocio.
+   */
+  app.post('/admin/api/propuestas/:id/enviar', async (c) => {
+    const p = verPropuesta(Number(c.req.param('id')));
+    if (!p) return c.json({ error: 'esa propuesta ya no está' }, 404);
+    const body = (await c.req.json().catch(() => ({}))) as { texto?: string; by?: string };
+    const texto = (body.texto ?? p.texto).trim();
+    if (!texto) return c.json({ error: 'no hay nada que mandar' }, 400);
+    const corregida = texto !== p.texto.trim();
+    const by = (body.by ?? '').trim();
+    try {
+      await sendToContact(p.userId, texto, corregida ? 'human' : 'bot', corregida ? { by } : {});
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+    cerrarPropuesta(p.id, 'enviada', by);
+    return c.json({ ok: true, corregida });
+  });
+
+  app.post('/admin/api/propuestas/:id/descartar', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { by?: string };
+    return cerrarPropuesta(Number(c.req.param('id')), 'descartada', (body.by ?? '').trim())
+      ? c.json({ ok: true })
+      : c.json({ error: 'esa propuesta ya no está' }, 404);
+  });
+
   app.post('/admin/api/channels/:id/grupos', async (c) => {
     const id = c.req.param('id') as ChannelId;
     if (id !== 'whatsapp') return c.json({ error: 'los grupos solo aplican a WhatsApp' }, 400);

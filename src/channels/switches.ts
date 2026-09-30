@@ -30,12 +30,46 @@ export function setChannelOn(id: ChannelId, on: boolean): void {
  *
  * 🪤 No es solo «no mandar»: el mensaje ni siquiera pasa por el modelo, así que tampoco cuesta dinero.
  */
+/**
+ * Los tres modos de un canal, por orden de confianza: **mira · propone · contesta**.
+ *
+ * - `mira` — entra todo y aiva no dice nada. Es el modo aprendizaje: mira cómo atiende el negocio.
+ * - `propone` — aiva prepara la respuesta y la deja lista; la manda una persona con un toque, o la corrige.
+ * - `contesta` — responde sola.
+ *
+ * 🪤 El del medio es el que faltaba, y es el más valioso de los tres: sin él la decisión es «que no diga nada»
+ * o «que le hable a mis clientes», y entre esas dos hay un abismo que nadie cruza tranquilo. Con este se pasa
+ * de una a otra mirando, que es como se gana la confianza en algo que le habla a tus clientes.
+ */
+export type ModoCanal = 'mira' | 'propone' | 'contesta';
+
+export function modoCanal(id: ChannelId): ModoCanal {
+  const guardado = getSetting(`channel.${id}.modo`, '') as string;
+  if (guardado === 'mira' || guardado === 'propone' || guardado === 'contesta') return guardado;
+  // Lo de antes era un sí/no. Quien ya lo tenía puesto no se entera del cambio: se lee su ajuste viejo.
+  const escuchaba = getSetting(`channel.${id}.soloEscucha`, id === 'whatsapp' ? env.whatsappSoloEscucha : false);
+  return escuchaba ? 'mira' : 'contesta';
+}
+
+export function setModoCanal(id: ChannelId, modo: ModoCanal): void {
+  setSetting(`channel.${id}.modo`, modo);
+  // Se mantiene el ajuste viejo al día: si alguien vuelve a una versión anterior, no se encuentra a aiva
+  // contestándole a sus clientes sin haberlo pedido.
+  setSetting(`channel.${id}.soloEscucha`, modo !== 'contesta');
+}
+
+/** Aiva no manda nada por su cuenta: ni mirando ni proponiendo. */
 export function soloEscucha(id: ChannelId): boolean {
-  return getSetting(`channel.${id}.soloEscucha`, id === 'whatsapp' ? env.whatsappSoloEscucha : false);
+  return modoCanal(id) !== 'contesta';
+}
+
+/** Aiva prepara la respuesta pero no la manda: la decide una persona. */
+export function propone(id: ChannelId): boolean {
+  return modoCanal(id) === 'propone';
 }
 
 export function setSoloEscucha(id: ChannelId, on: boolean): void {
-  setSetting(`channel.${id}.soloEscucha`, on);
+  setModoCanal(id, on ? 'mira' : 'contesta');
 }
 
 /**

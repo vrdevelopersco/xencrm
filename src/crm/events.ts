@@ -8,6 +8,7 @@ export type CrmEventType =
   | 'appointment'
   | 'handoff'
   | 'notification'
+  | 'propuesta'
   | 'bot_failed'
   | 'engine_down'
   | 'verification'

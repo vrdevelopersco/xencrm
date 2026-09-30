@@ -518,6 +518,7 @@
     var who = $('chat-who'); if (!who) { who = document.createElement('span'); who.id = 'chat-who'; who.className = 'chip who'; $('chat-temp').after(who); }
     who.hidden = !c.humanMode; who.textContent = c.humanMode ? 'La lleva ' + whoHas(c) + (c.humanSince ? ' · desde hace ' + rel(c.humanSince) : '') : '';
     setMode(c.humanMode);
+    pintarPropuesta(d.propuesta);
     var m = $('msgs');
     // 🪤 Primero lo que ya estaba conversado antes de que aiva entrara. Sin esto, el tablero enseñaba media
     // conversación —lo que escribió el cliente y ninguna respuesta— mientras el asistente sí tenía el contexto
@@ -547,6 +548,51 @@
     var label = who === 'customer' ? 'Cliente' : who === 'human' ? (msg.by ? esc(msg.by) + ' (equipo)' : 'Equipo') : 'Aiva';
     return '<div class="bubble ' + who + '"><span class="who">' + label + '</span>' + esc(msg.content) + '<span class="ts">' + hhmm(msg.ts) + '</span></div>';
   }
+  // ---------- lo que aiva dejó listo ----------
+  var propuestaActual = null;
+  function pintarPropuesta(p) {
+    propuestaActual = p || null;
+    var caja = $('propuesta');
+    if (!caja) return;
+    caja.hidden = !p;
+    if (!p) return;
+    caja.classList.toggle('vieja', Boolean(p.vieja));
+    $('propuesta-titulo').textContent = p.vieja ? 'Esta respuesta se quedó atrás' : 'Respuesta lista';
+    // 🪤 Si llegó algo después de redactarla, ya no contesta a lo último que dijeron. Mandarla de un toque
+    // sería peor que no tener el modo: el cliente recibiría una respuesta a una pregunta que ya cambió.
+    $('propuesta-meta').textContent = p.vieja
+      ? 'escribió otra vez después · léela antes de mandarla'
+      : esc(state.agentName || 'Aiva') + ' la escribió hace ' + rel(p.creado);
+    $('propuesta-texto').textContent = p.texto;
+    $('propuesta-si').classList.toggle('primary', !p.vieja);
+  }
+  function cerrarPropuestaUI() { pintarPropuesta(null); }
+  $('propuesta-si').onclick = function () {
+    if (!propuestaActual) return;
+    $('propuesta-si').disabled = true;
+    api('/propuestas/' + propuestaActual.id + '/enviar', { method: 'POST', body: { by: state.name } }).then(function (r) {
+      $('propuesta-si').disabled = false;
+      if (r && r.error) { toast('No se pudo: ' + r.error); return; }
+      cerrarPropuestaUI(); openContact(state.current);
+      toast('Enviada', null, { icono: 'check' });
+    });
+  };
+  $('propuesta-editar').onclick = function () {
+    if (!propuestaActual) return;
+    // Se pasa al cajón tal cual: corregir es más rápido que escribir, y al mandarla corregida cuenta como tuya
+    // —se aprende de ella— en vez de como suya.
+    $('reply').value = propuestaActual.texto;
+    $('reply').focus();
+    $('reply').setSelectionRange(propuestaActual.texto.length, propuestaActual.texto.length);
+    toast('Córrgela y envíala: así queda como tuya y se aprende de ella', null, { icono: 'user' });
+  };
+  $('propuesta-no').onclick = function () {
+    if (!propuestaActual) return;
+    var id = propuestaActual.id;
+    cerrarPropuestaUI();
+    api('/propuestas/' + id + '/descartar', { method: 'POST', body: { by: state.name } });
+  };
+
   function setMode(human) {
     $('seg-bot').classList.toggle('on', !human); $('seg-human').classList.toggle('on', human);
     $('seg').dataset.on = human ? 'human' : 'bot';
@@ -1643,13 +1689,23 @@
       }).join('');
       // Solo escuchar: entra todo al CRM y contesta una persona. Es lo que se usa al enchufar el WhatsApp de un
       // negocio de verdad, para mirar antes de darle voz al asistente.
-      var escucha = ch.soloEscucha === undefined ? '' :
-        '<div class="fila" style="gap:10px;align-items:center;margin-top:10px">' +
-          '<div class="seg" role="group" aria-label="Quién contesta en ' + esc(ch.name) + '" data-on="' + (ch.soloEscucha ? 'off' : 'on') + '">' +
-            '<button data-esc="' + ch.id + '" data-set="0" aria-pressed="' + !ch.soloEscucha + '"' + (ch.soloEscucha ? '' : ' class="on"') + '>Contesta Aiva</button>' +
-            '<button data-esc="' + ch.id + '" data-set="1" aria-pressed="' + ch.soloEscucha + '"' + (ch.soloEscucha ? ' class="on"' : '') + '>Solo escuchar</button>' +
+      // Los tres modos, por orden de confianza. El del medio es el que faltaba: sin él la decisión es «que no
+      // diga nada» o «que le hable a mis clientes», y entre esas dos hay un abismo que nadie cruza tranquilo.
+      var MODOS = [
+        { id: 'mira', lbl: 'Mira', dice: 'Entra todo al tablero y contestas tú. ' + esc(state.agentName || 'Aiva') + ' no dice nada: mira cómo atiendes y aprende.' },
+        { id: 'propone', lbl: 'Propone', dice: 'Deja la respuesta escrita y la mandas tú con un toque, o la corriges. No manda nada sola.' },
+        { id: 'contesta', lbl: 'Contesta', dice: 'Responde sola a quien escriba.' }
+      ];
+      var modo = ch.modo || (ch.soloEscucha ? 'mira' : 'contesta');
+      var escucha = ch.modo === undefined && ch.soloEscucha === undefined ? '' :
+        '<div class="fila" style="gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap">' +
+          '<div class="tabs" role="group" aria-label="Qué hace ' + esc(state.agentName || 'Aiva') + ' en ' + esc(ch.name) + '">' +
+            MODOS.map(function (m) {
+              return '<button data-modo="' + ch.id + '" data-set="' + m.id + '" aria-pressed="' + (modo === m.id) + '"'
+                + (modo === m.id ? ' class="on"' : '') + '>' + m.lbl + '</button>';
+            }).join('') +
           '</div>' +
-          '<span class="small muted">' + (ch.soloEscucha ? 'Entra todo al tablero y contestas tú. Aiva no dice nada.' : 'Aiva responde sola a quien escriba.') + '</span>' +
+          '<span class="small muted" style="flex:1;min-width:220px">' + (MODOS.find(function (m) { return m.id === modo; }) || MODOS[0]).dice + '</span>' +
         '</div>';
       // Los grupos, aparte: encender el canal es una decisión del negocio; mirar los grupos es una decisión
       // sobre datos de gente que no eligió estar aquí. No van en el mismo botón.
@@ -1741,11 +1797,11 @@
         engancharOcultarSalida();
       });
     };
-    $('channels').querySelectorAll('[data-esc]').forEach(function (b) {
+    $('channels').querySelectorAll('[data-modo]').forEach(function (b) {
       b.onclick = function () {
-        var id = b.getAttribute('data-esc'), solo = b.getAttribute('data-set') === '1';
-        $('channels').querySelectorAll('[data-esc="' + id + '"]').forEach(function (x) { x.disabled = true; });
-        api('/channels/' + id + '/escucha', { method: 'POST', body: { soloEscucha: solo } }).then(function (r) {
+        var id = b.getAttribute('data-modo'), modo = b.getAttribute('data-set');
+        $('channels').querySelectorAll('[data-modo="' + id + '"]').forEach(function (x) { x.disabled = true; });
+        api('/channels/' + id + '/modo', { method: 'POST', body: { modo: modo } }).then(function (r) {
           if (r && r.error) { $('ch-err-' + id).textContent = r.error; loadChannels(); } else renderChannels(r);
         });
       };
@@ -2021,6 +2077,15 @@
       if (state.view === 'inbox') loadContacts();
       if (state.view === 'today') loadToday();
     });
+    // Aiva dejó algo listo: si estás en esa conversación aparece sola; si no, suena y se avisa.
+    es.addEventListener('propuesta', function (e) {
+      var ev = JSON.parse(e.data), p = ev.payload.propuesta;
+      if (state.current === ev.userId) { openContact(ev.userId); return; }
+      beep();
+      var c = state.contacts.find(function (x) { return x.id === ev.userId; });
+      toast(String(p.texto || '').slice(0, 90), function () { go('inbox'); openContact(ev.userId); },
+        { titulo: 'Lista para ' + (c ? nameOf(c) : short(ev.userId)), icono: 'bot' });
+    });
     es.addEventListener('verification', function () { if (state.view === 'today') loadToday(); });
     es.addEventListener('contact', function () { if (state.view === 'inbox') loadContacts(); if (state.view === 'pipeline') loadPipeline(); });
     es.addEventListener('analysis', function (e) { var ev = JSON.parse(e.data); if (state.current === ev.userId) openContact(ev.userId); else if (state.view === 'inbox') loadContacts(); });
@@ -2032,6 +2097,7 @@
       state.notifs.unshift(n); if (state.notifs.length > 100) state.notifs.pop();
       renderNotifs();
       if (n.kind === 'verify') { beep(); toast(n.body, function () { go('today'); }, { titulo: n.title, icono: 'bell' }); }
+      else if (n.kind === 'propuesta') { /* ya se avisó por el evento propuesta */ }
       else if (n.kind === 'public') { beep(); toast(n.body, function () { go('channels'); }, { titulo: n.title, icono: 'plug' }); }
       else if (n.kind === 'handoff' || n.kind === 'hot' || n.kind === 'fail' || n.kind === 'engine') { beep(); toast(n.body, function () { if (n.userId !== 'system') { go('inbox'); openContact(n.userId); } else { go('agent'); } }, { titulo: n.title, icono: n.kind === 'hot' ? 'chart' : 'bell' }); }
       if (state.view === 'today') loadToday();

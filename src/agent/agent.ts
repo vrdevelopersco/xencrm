@@ -1,5 +1,5 @@
 import { business, env } from '../config.js';
-import { soloEscucha, type ChannelId } from '../channels/switches.js';
+import { modoCanal, propone, soloEscucha, type ChannelId } from '../channels/switches.js';
 import { businessSheet, retrieve, formatContext } from '../rag/retriever.js';
 import { getDocs, productsMentionedIn, type ScoredDoc } from '../rag/store.js';
 import { generate, estimateTokens, fallbackOrder, type Engine } from '../llm/engines.js';
@@ -13,6 +13,7 @@ import { openVerification, saysWillVerify } from '../crm/verifications.js';
 import { ERROR_REPLIES, HUMAN_REPLIES, OUT_OF_SCOPE_REPLIES, personaPrompt, pick, type Intent } from './prompts.js';
 import { crossChannelGreeting } from '../crm/cross.js';
 import { getContact, purgeContact, setHumanMode, updateContact } from '../crm/contacts.js';
+import { proponer } from '../crm/propuestas.js';
 import { emitEvent } from '../crm/events.js';
 import { scheduleAnalysis } from '../crm/analyzer.js';
 import { bookingStep, hasBookingInProgress, manageIntent, startBooking } from '../crm/booking.js';
@@ -97,6 +98,16 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     if (crossNote === undefined) crossNote = contact ? crossChannelGreeting(msg.userId) : null;
     const reply = crossNote ? `${crossNote}\n\n${answer}` : answer;
     recordCustomerMessage(msg.userId, text, intent);
+    // 🪤 En «Propone» NO se anota como dicho por aiva: no se ha dicho. Anotarlo dejaría en el historial —y en
+    // lo que el cliente ve si abre el chat del sitio— una respuesta que nadie mandó, y el asistente seguiría la
+    // conversación dando por hecho que ya contestó eso.
+    if (propone(msg.channel as ChannelId)) {
+      proponer(msg.userId, reply, intent);
+      scheduleAnalysis(msg.userId);
+      const msProp = Date.now() - started;
+      console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} propuesta lista, espera a una persona ${msProp}ms`);
+      return { ...base, text: '', silent: true, intent, engine, ms: msProp, ...extra };
+    }
     recordBotReply(msg.userId, reply);
     scheduleAnalysis(msg.userId);
     const ms = Date.now() - started;
@@ -118,7 +129,9 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
 
   // El canal está en «solo escuchar»: entra todo al CRM, contesta una persona. Se corta aquí, antes del
   // modelo, así que además no cuesta nada.
-  if (soloEscucha(msg.channel as ChannelId)) {
+  // 🪤 Solo «mira» se corta aquí. «Propone» tiene que pasar por el modelo —ese es su trabajo— y se detiene
+  // más abajo, en finish(), justo antes de hablar.
+  if (modoCanal(msg.channel as ChannelId) === 'mira') {
     recordCustomerMessage(msg.userId, text, 'humano');
     scheduleAnalysis(msg.userId);
     console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} canal en solo escuchar, sin respuesta automática`);
