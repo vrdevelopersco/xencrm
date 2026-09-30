@@ -32,6 +32,11 @@ export interface IncomingMessage {
    * Diciembre» se entiende y un número con arroba no.
    */
   grupo?: string;
+  /**
+   * Lo que se venía hablando ahí, con quién lo dijo. En un grupo la pregunta casi nunca se entiende sola: «¿y
+   * eso cuánto vale?» depende de lo que otro preguntó tres mensajes antes, y de quién es cada quién.
+   */
+  hilo?: string;
 }
 
 export interface AgentReply {
@@ -96,7 +101,14 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const text = msg.text.trim();
   const user = touchUser(msg.userId, msg.channel, msg.userName);
   const grupo = msg.grupo?.trim() || '';
-  const donde = grupo ? `Esto se escribió en el grupo "${grupo}", donde hay más gente mirando: contesta para el grupo, no en privado.` : '';
+  const donde = grupo
+    ? [
+        `Esto se escribió en el grupo "${grupo}", donde hay más gente mirando: contesta para el grupo, no en privado.`,
+        msg.hilo ? `Lo que se venía hablando ahí, en orden:\n${msg.hilo}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+    : '';
   const contact = getContact(msg.userId);
   const base = { sources: [] as AgentReply['sources'], route: '', gateVia: '' };
   // Si venía hablando por otro canal, se le dice una vez (y el historial de allá ya entró en el contexto). Se
@@ -110,7 +122,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     // lo que el cliente ve si abre el chat del sitio— una respuesta que nadie mandó, y el asistente seguiría la
     // conversación dando por hecho que ya contestó eso.
     if (propone(msg.channel as ChannelId)) {
-      proponer(msg.userId, reply, intent, grupo);
+      proponer(msg.userId, reply, intent, grupo, grupo ? `${msg.userName || 'alguien'}: ${text}` : '');
       scheduleAnalysis(msg.userId);
       const msProp = Date.now() - started;
       console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} propuesta lista, espera a una persona ${msProp}ms`);

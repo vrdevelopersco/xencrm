@@ -152,6 +152,22 @@ export function contactosDelHistorial(tope = 200): number {
   return nuevos;
 }
 
+/**
+ * Los últimos mensajes de un chat, del más viejo al más nuevo.
+ *
+ * 🪤 `mensajesDeChat` ordena de viejo a nuevo y corta con LIMIT, así que devuelve los PRIMEROS. Para seguirle
+ * la cuerda a una conversación hacen falta los ÚLTIMOS, que es lo contrario: se pide al revés y se da la
+ * vuelta. Pedir «los últimos» y recibir los del año pasado es el tipo de error que no salta a la vista.
+ */
+export function ultimosDeChat(userId: string, cuantos = 12): MensajeImportado[] {
+  const jid = userId.replace(/^wa:/, '');
+  const normal = jid.replace(/:\d+@/, '@');
+  const filas = getDb()
+    .prepare('SELECT chat, autor, role, content, ts FROM import_messages WHERE chat IN (?, ?) ORDER BY ts DESC LIMIT ?')
+    .all(jid, normal, cuantos) as unknown as MensajeImportado[];
+  return filas.reverse();
+}
+
 export function chatsImportados(): { chat: string; mensajes: MensajeImportado[] }[] {
   const filas = getDb()
     .prepare('SELECT chat, autor, role, content, ts FROM import_messages ORDER BY chat, ts')

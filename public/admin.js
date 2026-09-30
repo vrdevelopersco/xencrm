@@ -789,7 +789,10 @@
             return '<div class="card"><div class="body">'
               + '<div class="fila" style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
               + '<b>' + esc(p.grupo) + '</b><span class="small muted">hace ' + rel(p.creado) + '</span></div>'
-              + '<div class="small" style="margin-top:6px;white-space:pre-wrap">' + esc(p.texto) + '</div>'
+              // 🪤 La pregunta primero. Una respuesta suelta, fuera de la conversación donde nació, no se puede
+              // juzgar — y en un grupo no hay conversación en el tablero que abrir para ir a verla.
+              + (p.sobre ? '<div class="small muted" style="margin-top:6px">' + esc(p.sobre) + '</div>' : '')
+              + '<div class="small" style="margin-top:6px;white-space:pre-wrap;border-left:3px solid var(--brand);padding-left:8px">' + esc(p.texto) + '</div>'
               + '<div class="fila" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'
               + '<button class="btn sm primary" data-gr-si="' + p.id + '">Enviar al grupo</button>'
               + '<button class="btn sm" data-gr-no="' + p.id + '">Descartar</button></div></div></div>';

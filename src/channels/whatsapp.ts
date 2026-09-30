@@ -17,7 +17,7 @@ import qrcode from 'qrcode-terminal';
 import { mkdirSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { business, env } from '../config.js';
-import { aprenderDeLaRespuesta, contactosDelHistorial, guardarImportados } from '../crm/historial.js';
+import { aprenderDeLaRespuesta, contactosDelHistorial, guardarImportados, ultimosDeChat } from '../crm/historial.js';
 import { appendMessage, touchUser } from '../agent/memory.js';
 import { getContact, setHumanMode, updateContact } from '../crm/contacts.js';
 import { emitEvent } from '../crm/events.js';
@@ -356,12 +356,20 @@ async function proponerEnGrupo(sock: WASocket, m: WAMessage, jid: string, texto:
   try {
     const quien = m.pushName ?? 'alguien del grupo';
     const nombre = await nombreDelGrupo(sock, jid);
+    // 🪤 El hilo, con nombres. En un grupo la pregunta casi nunca se entiende sola: «¿y eso cuánto vale?»
+    // depende de lo que otro preguntó tres mensajes antes. Y sin saber quién es quién, aiva le contesta a
+    // Marcela lo que preguntó Jorge. Sale de lo que ya se guarda del grupo, así que no cuesta nada más.
+    const antes = ultimosDeChat(`wa:${jid}`, 12)
+      .filter((x) => x.content !== texto)
+      .map((x) => `${x.role === 'assistant' ? 'Nosotros' : x.autor || 'alguien'}: ${x.content.slice(0, 180)}`)
+      .join('\n');
     const respuesta = await handleMessage({
       userId: `wa:${jid}`,
       channel: 'whatsapp',
       text: texto,
       userName: quien,
       grupo: nombre, // sin esto, aiva contestaría como si hablara a solas con quien escribió
+      hilo: antes,
     });
     if (!respuesta.silent) console.log(`[whatsapp] grupo ${nombre}: propuesta lista`);
   } catch (err) {

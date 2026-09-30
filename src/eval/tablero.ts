@@ -186,5 +186,19 @@ check('y se ve en Hoy, que es donde no tiene conversación', /enGrupos: propuest
 check('🪤 la tabla vieja se actualiza sola', /ALTER TABLE propuestas ADD COLUMN grupo/.test(prop),
   'quien tenga la de ayer se quedaría con «no such column: grupo» sin saber de dónde sale');
 
+// ---------- Seguirle la cuerda al grupo ----------
+const hist = readFileSync(new URL('../crm/historial.ts', import.meta.url), 'utf8');
+// 🪤 «¿y eso cuánto vale?» no se entiende solo: depende de lo que otro preguntó tres mensajes antes. Y sin
+// nombres, aiva le contesta a Marcela lo que preguntó Jorge.
+check('🪤 en un grupo se le pasa el hilo, con nombres', /hilo: antes/.test(wa) && /x\.autor \|\| 'alguien'/.test(wa),
+  'contestar un mensaje suelto en un grupo es contestar a medias');
+// 🪤 mensajesDeChat ordena de viejo a nuevo y corta con LIMIT: devuelve los PRIMEROS.
+check('🪤 el hilo son los ÚLTIMOS mensajes, no los primeros', /ORDER BY ts DESC LIMIT \?/.test(hist) && /return filas\.reverse\(\)/.test(hist),
+  'pedir «los últimos» y recibir los del año pasado no salta a la vista');
+check('y no se le repite el mensaje que acaba de llegar', /filter\(\(x\) => x\.content !== texto\)/.test(wa));
+// 🪤 Una respuesta suelta, fuera de la conversación donde nació, no se puede juzgar.
+check('🪤 la propuesta guarda a qué contesta', /sobre: string;/.test(prop) && /p\.sobre \? '<div class="small muted"/.test(js),
+  'en un grupo no hay conversación en el tablero que abrir para ir a ver la pregunta');
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);
