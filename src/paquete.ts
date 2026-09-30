@@ -362,7 +362,7 @@ function escribirIndiceDeClientes() {
         })),
         // Lo que sigue no lo usa la consola: lo lee el lanzador que se encuentre con que otro tiene el mando,
         // para repartir hacia los puertos de verdad en vez de inventárselos.
-        mando: { pid: process.pid, consola: puertoConsola, desde: Date.now() },
+        mando: { pid: process.pid, consola: puertoConsola, sock: socketPara('consola'), desde: Date.now() },
       },
       null,
       2,
@@ -522,7 +522,11 @@ let ultimoSondeo = null;
 const losDeAdentro = () =>
   // Sin repetidos: la consola estaba dos veces en esta lista (por su puerto y como hijo), así que el recuento
   // decía «5 de 5» cuando adentro hay cuatro. Un número que no cuadra hace dudar del diagnóstico entero.
-  [...new Set([puertoConsola, ...[...hijos.values()].map((h) => h.puerto)])];
+  //
+  // 🪤 De RUTAS y no de los hijos: el espejo no tiene hijos —no levanta a nadie— y así no sondeaba nada. Se
+  // quedaba creyendo que a todos se les llega por el puerto, que es justo lo que aquí no funciona, y repartía
+  // contra una puerta cerrada: el sitio entero devolviendo «todavía está arrancando» con todo bien levantado.
+  [...new Set([puertoConsola, ...rutas.values()])];
 
 async function sondearATodos() {
   const puertos = losDeAdentro();
@@ -585,13 +589,23 @@ const servidor = http.createServer((pide, responde) => {
         // tiene el mando o es un espejo, y a quién sigue.
         papel: soyElDueno ? 'con el mando' : 'espejo del ' + (mandoDe || 'otro lanzador'),
         enrutador: { puerto: PUERTO, memoriaMB: Math.round(mem.rss / 1048576) },
-        sondeo: ultimoSondeo && ultimoSondeo.fallan.length ? ultimoSondeo.fallan : 'todos contestan',
+        // 🪤 Sin sondeo hecho NO se dice «todos contestan». El espejo nunca sondeaba y contestaba eso mismo
+        // mientras el sitio entero daba 503: un diagnóstico que inventa buenas noticias cierra la única pista.
+        sondeo: !ultimoSondeo ? 'todavía no se ha mirado' : ultimoSondeo.fallan.length ? ultimoSondeo.fallan : 'todos contestan',
         // Lo que dice el sistema, no lo que dice cada proceso de sí mismo. Cuando los dos no coinciden, la
         // respuesta está justo ahí.
         escuchando: quienEscucha(),
         puertos: conToken
           ? { pedidos: puertoBase, usados: puertoInterno, consola: puertoConsola, semovio: puertoInterno !== puertoBase }
           : { semovio: puertoInterno !== puertoBase },
+        // El espejo no tiene hijos que enseñar, pero sí reparte: por dónde lo hace es justo lo que hay que ver
+        // cuando el sitio no responde y los procesos están bien.
+        reparte: soyElDueno
+          ? undefined
+          : [...rutas.entries()].map(([slug, puerto]) => ({
+              slug,
+              por: porDondeVa.has(puerto) ? nombreDePuerta(porDondeVa.get(puerto)) : 'no se le llega',
+            })),
         adentro: [...hijos.entries()].map(([slug, h]) => ({
           slug,
           puerto: conToken ? h.puerto : undefined,
@@ -696,8 +710,16 @@ function seguirAlQueManda() {
   try {
     const leido = JSON.parse(readFileSync(join(dirClientes, 'index.json'), 'utf8'));
     if (!leido || !leido.mando || !Array.isArray(leido.clientes)) return false;
-    for (const c of leido.clientes) if (c.slug && c.puerto) rutas.set(c.slug, c.puerto);
+    // 🪤 Los sockets también: son la puerta que de verdad funciona en este alojamiento. El espejo los sacaba de
+    // ninguna parte —se apuntan al levantar a cada hijo, y él no levanta a nadie—, así que solo le quedaba el
+    // puerto. Aquí los lee del índice, que es para lo que el dueño los escribe.
+    for (const c of leido.clientes) {
+      if (!c.slug || !c.puerto) continue;
+      rutas.set(c.slug, c.puerto);
+      if (c.sock) socketDe.set(c.puerto, c.sock);
+    }
     rutas.set('consola', leido.mando.consola);
+    if (leido.mando.sock) socketDe.set(leido.mando.consola, leido.mando.sock);
     puertoConsola = leido.mando.consola;
     mandoDe = 'lanzador ' + leido.mando.pid;
     return rutas.size > 0;
@@ -714,7 +736,8 @@ function seguirAlQueManda() {
 async function deEspejo() {
   console.log('[aiva] otro lanzador tiene el mando; este solo reparte (no levanta a nadie).');
   for (;;) {
-    seguirAlQueManda();
+    // Sondear no es cosa del dueño: es de quien reparte. Y reparten los dos.
+    if (seguirAlQueManda()) await sondearATodos();
     await new Promise((r) => setTimeout(r, 4000));
     if (cerrando) return;
     const cerrojo = await tomarElMando(PUERTO_MANDO);

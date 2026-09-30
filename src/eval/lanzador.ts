@@ -69,6 +69,21 @@ check('y no abrir el puerto ya no tumba al proceso', /servidor\.on\('error'/.tes
 // El sondeo tiene que decir POR QUÉ no contestan: «5 de 5 no contestaron» costó una mañana de registros.
 check('el sondeo dice el motivo de cada puerto que falla', /res\(e\.code \|\| e\.message/.test(arranque));
 
+// ---------- El que reparte sin mandar ----------
+// 🪤 Esto rompió producción el 2026-09-30, con todo bien levantado. El alojamiento arrancó la aplicación dos
+// veces: uno tomó el mando y levantó a los clientes por socket —bien—, y el otro se quedó de espejo. Pero el
+// espejo no sondeaba (eso vivía dentro de «levantar a los míos») ni sabía de los sockets (se apuntan al
+// levantar a cada hijo, y él no levanta a nadie). Así que repartía contra el puerto, que es justo lo que en ese
+// servidor no funciona, y el sitio entero devolvía «todavía está arrancando».
+check('🪤 la lista de a quién sondear sale de las rutas, no de los hijos', /\[\.\.\.new Set\(\[puertoConsola, \.\.\.rutas\.values\(\)\]\)\]/.test(arranque),
+  'el espejo no tiene hijos: con la lista sacada de ahí, no sondea nada y cree que a todos se les llega por el puerto');
+check('🪤 el espejo también sondea', /if \(seguirAlQueManda\(\)\) await sondearATodos\(\);/.test(arranque),
+  'sondear no es cosa del dueño: es de quien reparte, y reparten los dos');
+check('y aprende los sockets del índice', /if \(c\.sock\) socketDe\.set\(c\.puerto, c\.sock\)/.test(arranque) && /sock: socketPara\('consola'\)/.test(arranque));
+check('🪤 sin haber sondeado, /_salud no dice que todos contestan', /!ultimoSondeo \? 'todav/.test(arranque),
+  'un diagnóstico que inventa buenas noticias cierra la única pista que quedaba');
+check('y el espejo dice por dónde reparte', /reparte: soyElDueno/.test(arranque));
+
 // ---------- Que la consola llegue a un cliente aunque la red no responda ----------
 // 🪤 Esto no es hipotético: el 2026-09-29 pasó en producción. Los tres clientes atendiendo perfectamente y la
 // consola enseñándolos a los tres como «sin conexión», porque le hablaba por red y ahí la red entre nuestros
