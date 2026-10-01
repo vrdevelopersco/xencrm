@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>__STORE_NAME__ · escríbenos</title>
+<meta name="description" content="Escríbele a __AGENT_NAME__, el asistente de __STORE_NAME__.">
+<!-- 🪤 Esta página es la puerta de un negocio, no una pantalla del producto: quien llega aquí no sabe qué es
+     aiva ni le importa. Por eso no se nombra a aiva por ninguna parte, y lo único con peso visual es el nombre
+     del negocio y la conversación. -->
+<meta name="robots" content="noindex">
+<style>
+/* El color de marca lo pone cada cliente y puede ser cualquiera: amarillo, negro, fucsia. Así que NUNCA lleva
+   texto encima en esta página —eso lo resuelve el widget, que calcula el contraste—, aquí solo se usa como luz
+   de fondo, donde da igual lo oscuro que sea. Es la única forma de que un color arbitrario no rompa la
+   legibilidad de una pantalla que ve gente de la calle. */
+:root{
+  --marca:__BRAND_COLOR__;
+  --papel:#f7f6f3; --tinta:#191713; --muted:#5d584f; --tenue:#8b857a;
+  --linea:rgba(25,23,19,.10);
+  --alto-barra:60px;
+  --curva:cubic-bezier(.22,.7,.28,1);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --papel:#14130f; --tinta:#f2efe8; --muted:#a8a296; --tenue:#7d776c; --linea:rgba(255,255,255,.12);
+  }
+}
+:root[data-theme="dark"]{
+  --papel:#14130f; --tinta:#f2efe8; --muted:#a8a296; --tenue:#7d776c; --linea:rgba(255,255,255,.12);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--papel);color:var(--tinta);
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;
+  height:100dvh;overflow:hidden;
+}
+/* La luz de la marca, detrás de todo y sin tocar ningún texto. */
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(900px 620px at 50% -10%,var(--marca),transparent 62%);
+  opacity:.16;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) body::before{opacity:.22}}
+
+.barra{
+  position:relative;z-index:1;flex:0 0 auto;min-height:var(--alto-barra);
+  display:flex;align-items:center;gap:12px;padding:10px 16px;
+  border-bottom:1px solid var(--linea);
+  background:color-mix(in srgb,var(--papel) 82%,transparent);
+  backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);
+}
+.logo{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:0 0 38px;
+  background:#fff;box-shadow:0 0 0 1px var(--linea),0 1px 3px rgba(0,0,0,.10)}
+.sigla{width:38px;height:38px;border-radius:50%;flex:0 0 38px;display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:15px;color:var(--tinta);background:color-mix(in srgb,var(--marca) 26%,var(--papel));
+  box-shadow:0 0 0 1px var(--linea)}
+.quien{min-width:0}
+.quien b{display:block;font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.quien span{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+/* 🪤 El estado no se dice solo con un punto de color: quien no distingue verde de gris se queda sin el dato.
+   El punto acompaña a la palabra, no la sustituye. */
+.pulso{width:8px;height:8px;border-radius:50%;flex:0 0 8px;background:#2c8a4b;box-shadow:0 0 0 3px rgba(44,138,75,.18)}
+.pulso.frio{background:var(--tenue);box-shadow:0 0 0 3px rgba(139,133,122,.18)}
+
+#aiva-ventana{position:relative;z-index:1;flex:1 1 auto;min-height:0;display:flex;width:100%}
+
+.pie{position:relative;z-index:1;flex:0 0 auto;text-align:center;font-size:11.5px;color:var(--tenue);
+  padding:0 16px calc(8px + env(safe-area-inset-bottom))}
+
+/* Cuando el chat está apagado no se deja una caja de texto que no va a ninguna parte: se dice qué pasa y por
+   dónde sí se puede escribir. Un formulario que traga mensajes al vacío es peor que no tener formulario. */
+.cerrado{position:relative;z-index:1;flex:1 1 auto;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;text-align:center;padding:24px}
+.cerrado h2{margin:0;font-size:19px}
+.cerrado p{margin:0;max-width:34ch;color:var(--muted);font-size:15px}
+.cerrado a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 20px;margin-top:6px;
+  border-radius:999px;background:var(--tinta);color:var(--papel);text-decoration:none;font-weight:600;
+  transition:transform .15s var(--curva)}
+.cerrado a:hover{transform:translateY(-1px)}
+.cerrado a:focus-visible{outline:2px solid var(--marca);outline-offset:3px}
+
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<header class="barra">
+  __MARCA__
+  <div class="quien">
+    <b>__STORE_NAME__</b>
+    <span>__ESTADO__</span>
+  </div>
+</header>
+
+__CUERPO__
+</body>
+</html>

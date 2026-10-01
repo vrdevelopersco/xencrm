@@ -25,10 +25,29 @@
   var EDGE = toward(RAW, '#000000', '#ffffff', 3); // marca como borde o foco sobre blanco
   var AGENT = '__AGENT_NAME__';
   var STORE = '__STORE_NAME__';
-  var GREETING = (script && script.getAttribute('data-greeting')) || ('¡Hola! Soy ' + AGENT + ', de ' + STORE + '. ¿Qué estás buscando hoy?');
-  var LEFT = script && script.getAttribute('data-position') === 'left';
+  // 🪤 Orden de mando, de más fuerte a más débil: el atributo del <script>, lo que decidió este cliente, lo
+  // general del aplicativo, y el código. El atributo va primero porque es lo más concreto que hay —alguien lo
+  // escribió PARA ESTE SITIO—, y porque un cliente puede pegar la burbuja en dos páginas distintas y querer un
+  // saludo distinto en cada una sin tener dos configuraciones.
+  var GREETING = (script && script.getAttribute('data-greeting')) || '__SALUDO__' || ('¡Hola! Soy ' + AGENT + ', de ' + STORE + '. ¿Qué estás buscando hoy?');
+  var POS = (script && script.getAttribute('data-position')) || '__POSICION__';
+  var LEFT = POS === 'left' || POS === 'izquierda';
+  var ABRE_SOLA = Number('__ABRE_SOLA__') || 0;
+  // Dos presentaciones del MISMO chat: la burbuja que se pega en el sitio de un cliente, y la ventana completa
+  // que vive en /chat. Es una sola implementación a propósito: la sesión, el historial, el paso a una persona y
+  // el registro de dónde vino el visitante son exactamente lo mismo, y tenerlo dos veces significa arreglar
+  // cada error dos veces —y acordarse de los dos sitios, que es lo que no pasa.
+  var VENTANA = script && script.getAttribute('data-modo') === 'ventana';
   var KEY = 'aiva.session.' + BASE;
 
+  // 🪤 De aquí abajo y hasta el `;`, todo es UNA cadena de JavaScript sostenida con barras al final de cada
+  // línea. Un comentario de varias líneas metido aquí dentro corta la cadena en la primera y rompe el archivo
+  // entero en el sitio del cliente —pasó—, así que aquí dentro solo van comentarios de una línea, con su barra.
+  //
+  // Sobre `.aiva-msgs > :first-child{margin-top:auto}`: hace que los mensajes se apoyen ABAJO, contra la caja
+  // de escribir, como en cualquier chat. Sin eso una conversación de dos frases queda colgada del techo con
+  // medio metro de vacío debajo, y lo último que se dijo acaba lo más lejos posible de donde se está
+  // escribiendo. El `auto` del primero empuja todo hacia abajo y deja el scroll intacto cuando ya no cabe.
   var css = '\
   .aiva-btn{position:fixed;bottom:20px;' + (LEFT ? 'left' : 'right') + ':20px;width:58px;height:58px;border-radius:50%;border:0;background:' + COLOR + ';color:' + ON + ';box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;z-index:2147483000;display:flex;align-items:center;justify-content:center;transition:transform .15s}\
   .aiva-btn:hover{transform:scale(1.06)}\
@@ -56,7 +75,16 @@
   .aiva-form button{flex:0 0 auto;width:42px;height:42px;border:0;border-radius:50%;background:' + COLOR + ';color:' + ON + ';display:flex;align-items:center;justify-content:center;cursor:pointer}\
   .aiva-form button svg{width:20px;height:20px}\
   .aiva-form button:disabled{opacity:.45;cursor:default}\
-  @media(max-width:480px){.aiva-panel{position:fixed;inset:0;width:100%;max-width:100%;height:100dvh;max-height:100dvh;border-radius:0}.aiva-btn{bottom:16px}}';
+  @media(max-width:480px){.aiva-panel{position:fixed;inset:0;width:100%;max-width:100%;height:100dvh;max-height:100dvh;border-radius:0}.aiva-btn{bottom:16px}}\
+  .aiva-panel.ventana{position:relative;inset:auto;bottom:auto;right:auto;left:auto;width:100%;max-width:820px;height:100%;max-height:none;margin:0 auto;display:flex;border-radius:0;box-shadow:none;border:0;background:transparent}\
+  .aiva-panel.ventana .aiva-msgs{background:transparent;padding:20px 16px;gap:10px}\
+  /* Se apoyan abajo, contra la caja de escribir: ver el porqué arriba, donde empieza este CSS. */\
+  .aiva-panel.ventana .aiva-msgs > :first-child{margin-top:auto}\
+  .aiva-panel.ventana .aiva-m{max-width:min(85%,620px);font-size:15px;padding:11px 14px}\
+  .aiva-panel.ventana .aiva-form{background:transparent;border-top:0;padding:8px 16px calc(16px + env(safe-area-inset-bottom))}\
+  .aiva-panel.ventana .aiva-form input{border-radius:26px;padding:14px 18px;box-shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.06)}\
+  .aiva-panel.ventana .aiva-form button{width:46px;height:46px}\
+  @media(max-width:480px){.aiva-panel.ventana{position:relative;height:100%;max-height:none}}';
   var style = document.createElement('style');
   style.textContent = css;
   document.head.appendChild(style);
@@ -67,13 +95,17 @@
   btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg>';
 
   var panel = document.createElement('div');
-  panel.className = 'aiva-panel';
+  panel.className = 'aiva-panel' + (VENTANA ? ' ventana open' : '');
   panel.innerHTML =
-    '<div class="aiva-head">' + (LOGO ? '<img class="aiva-logo" alt="" src="' + esc(LOGO) + '">' : '') + '<div><b>' + esc(AGENT) + '</b><small>' + esc(STORE) + ' · normalmente responde en segundos</small></div><button class="aiva-close" aria-label="Cerrar">×</button></div>' +
+    // En la ventana la cabecera sobra: la página ya dice de quién es y con quién hablas, y repetirlo le roba
+    // alto a la conversación, que es lo único que importa ahí.
+    (VENTANA ? '' : '<div class="aiva-head">' + (LOGO ? '<img class="aiva-logo" alt="" src="' + esc(LOGO) + '">' : '') + '<div><b>' + esc(AGENT) + '</b><small>' + esc(STORE) + ' · normalmente responde en segundos</small></div><button class="aiva-close" aria-label="Cerrar">×</button></div>') +
     '<div class="aiva-msgs"></div>' +
     '<form class="aiva-form"><input type="text" placeholder="Escribe tu mensaje..." maxlength="1000" autocomplete="off" enterkeyhint="send"><button type="submit" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg></button></form>';
-  document.body.appendChild(btn);
-  document.body.appendChild(panel);
+  // La ventana se monta donde la página diga; la burbuja siempre flota sobre el sitio ajeno.
+  var donde = VENTANA ? (document.getElementById('aiva-ventana') || document.body) : document.body;
+  if (!VENTANA) document.body.appendChild(btn);
+  donde.appendChild(panel);
 
   var msgs = panel.querySelector('.aiva-msgs');
   var form = panel.querySelector('form');
@@ -123,15 +155,25 @@
   }
   function open() {
     panel.classList.add('open');
-    if (window.innerWidth <= 480) btn.style.display = 'none';
+    if (!VENTANA && window.innerWidth <= 480) btn.style.display = 'none';
     if (!opened) {
       opened = true;
       loadHistory().then(function (had) { if (!had) addMsg(GREETING, 'bot'); connectStream(); });
     }
     input.focus();
   }
-  btn.onclick = function () { panel.classList.contains('open') ? panel.classList.remove('open') : open(); };
-  panel.querySelector('.aiva-close').onclick = function () { panel.classList.remove('open'); btn.style.display = ''; };
+  if (VENTANA) {
+    open();
+  } else {
+    btn.onclick = function () { panel.classList.contains('open') ? panel.classList.remove('open') : open(); };
+    panel.querySelector('.aiva-close').onclick = function () { panel.classList.remove('open'); btn.style.display = ''; };
+    // Abrirse sola: solo si alguien lo encendió, solo una vez por visita, y nunca si ya hay conversación
+    // empezada —quien ya habló no necesita que le abran nada— ni en un teléfono, donde el panel ocupa la
+    // pantalla entera y taparía el sitio que la persona está leyendo.
+    if (ABRE_SOLA > 0 && !sessionId && window.innerWidth > 480) {
+      setTimeout(function () { if (!panel.classList.contains('open')) open(); }, ABRE_SOLA * 1000);
+    }
+  }
 
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function linkify(s) {

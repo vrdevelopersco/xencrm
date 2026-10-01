@@ -15,6 +15,8 @@ import { getContact } from '../crm/contacts.js';
 import { onEvent } from '../crm/events.js';
 import { registerSender } from '../crm/outbox.js';
 import { anotarOrigen, deLaUrl } from '../crm/origen.js';
+import { atendiendoAhora } from '../crm/tiempos.js';
+import { burbujaDe, paraCadenaJs, ventanaDe } from '../crm/chat-config.js';
 import { mountAdmin } from './admin.js';
 import { mountCalendar } from './calendar.js';
 import { channelOn } from './switches.js';
@@ -59,6 +61,16 @@ function clientIp(c: { req: { header: (h: string) => string | undefined }; env: 
 app.get('/health', (c) =>
   c.json({ ok: true, instance: INSTANCE, agent: business.agent.name, store: business.business.name, model: env.chatModel, mode: env.llmEngine, engines: engineStatus(), docs: countDocs() }),
 );
+
+/**
+ * Para meter texto del negocio dentro del HTML de una página.
+ *
+ * 🪤 El nombre, el color y la dirección del logo los escribe quien configura el cliente, y de ahí salen a una
+ * página que ve gente de la calle. Un `"` en el nombre del negocio rompería el atributo donde cae; algo peor,
+ * escrito a propósito, haría más que romperlo.
+ */
+const escaparHtml = (s: string): string =>
+  s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch] ?? ch);
 
 // ---------- La libreta: preguntarle algo a aiva, sin pasar por el tablero ----------
 //
@@ -220,16 +232,78 @@ app.get('/brand/logo', (c) => {
 });
 
 app.get('/widget.js', (c) => {
+  const b = burbujaDe();
+  // Fuera de horario la burbuja no se pinta: se devuelve un archivo que no hace nada. Es a propósito que sea
+  // aquí y no en el navegador —así el sitio del cliente queda literalmente limpio, sin un botón muerto— y a
+  // propósito que el cache sea corto, porque si no la burbuja tardaría en volver al abrir el negocio.
+  if (b.soloEnHorario && !atendiendoAhora()) {
+    return c.body('/* fuera del horario de atención */', 200, { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'public, max-age=60' });
+  }
   const js = readFileSync(new URL('../../public/widget.js', import.meta.url), 'utf8')
     .replace('__AGENT_NAME__', business.agent.name)
     .replace('__STORE_NAME__', business.business.name)
     .replace('__BRAND_COLOR__', business.brand.color)
-    .replace('__BRAND_LOGO__', logoUrl() ?? '');
+    .replace('__BRAND_LOGO__', logoUrl() ?? '')
+    // Esto se mete DENTRO de comillas simples en el archivo: ver paraCadenaJs() para lo que puede pasar.
+    .replace('__SALUDO__', paraCadenaJs(b.saludo))
+    .replace('__POSICION__', b.posicion)
+    .replace('__ABRE_SOLA__', String(b.abreSola));
   return c.body(js, 200, { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'public, max-age=60' });
 });
 
 app.get('/', (c) => {
   const html = readFileSync(new URL('../../public/demo.html', import.meta.url), 'utf8').replaceAll('__STORE_NAME__', business.business.name);
+  return c.html(html);
+});
+
+/**
+ * La ventana de chat del negocio: su puerta web, para enlazar desde su sitio o mandar por WhatsApp.
+ *
+ * Es la misma conversación que la burbuja —el mismo `/api/chat`, la misma sesión, el mismo paso a una persona—,
+ * solo que a pantalla completa y con la marca del negocio alrededor. Quien escriba aquí entra al CRM como
+ * contacto del canal `web`, con su origen anotado, igual que si hubiera escrito desde la burbuja.
+ *
+ * 🪤 Se entra sin decir quién eres. Pedir el nombre en la puerta parece que ordena el embudo y lo que hace es
+ * vaciarlo: quien solo iba a preguntar a qué hora abren se da la vuelta. El nombre lo pide el asistente cuando
+ * la conversación llega a un punto en que hace falta, que es como ya funciona por WhatsApp.
+ */
+app.get('/chat', (c) => {
+  const sigla = business.business.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join('')
+    .toUpperCase();
+  const logo = logoUrl();
+  const marca = logo ? `<img class="logo" src="${escaparHtml(logo)}" alt="">` : `<span class="sigla" aria-hidden="true">${escaparHtml(sigla)}</span>`;
+
+  const v = ventanaDe();
+  const prendido = channelOn('web');
+  const atendiendo = atendiendoAhora();
+  // Lo que dice la barra: lo que de verdad va a pasar cuando escriban. Prometer «responde en minutos» de
+  // madrugada deja a alguien esperando delante de una pantalla.
+  const estado = !prendido
+    ? '<span class="pulso frio"></span>El chat está cerrado'
+    : atendiendo
+      ? '<span class="pulso"></span>En línea · suele responder en segundos'
+      : '<span class="pulso frio"></span>Fuera de horario · te responden apenas abran';
+
+  const cuerpo = prendido
+    ? `<div id="aiva-ventana"></div>\n<p class="pie">${escaparHtml(v.pie || 'Esta conversación queda guardada en este navegador.')}</p>\n<script src="widget.js" data-modo="ventana" async></script>`
+    : // No se deja una caja de texto que se traga los mensajes: se dice que está cerrado y por dónde sí llegan.
+      // Lo que se ofrece es lo que el propio negocio escribió en «cómo contactar a una persona», que es lo
+      // único que aquí se sabe de cierto; inventar un enlace a WhatsApp con un número que no tenemos sería
+      // mandar a la gente a una puerta que no existe.
+      `<div class="cerrado"><h2>Ahora mismo no estamos en el chat</h2><p>${escaparHtml(v.cerradaDice || business.business.humanContact || 'Vuelve en un rato y con gusto te atendemos.')}</p></div>`;
+
+  const html = readFileSync(new URL('../../public/chat.html', import.meta.url), 'utf8')
+    .replaceAll('__STORE_NAME__', escaparHtml(v.titulo || business.business.name))
+    .replaceAll('__AGENT_NAME__', escaparHtml(business.agent.name))
+    .replaceAll('__BRAND_COLOR__', /^#[0-9a-fA-F]{6}$/.test(business.brand.color) ? business.brand.color : '#2f7d4f')
+    .replaceAll('__MARCA__', marca)
+    .replaceAll('__ESTADO__', estado)
+    .replaceAll('__CUERPO__', cuerpo);
   return c.html(html);
 });
 

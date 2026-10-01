@@ -232,3 +232,20 @@ export function resumenTiempos(opts: { desde?: number; acuerdoMin?: number; ahor
     acuerdoMin,
   };
 }
+
+/**
+ * ¿El negocio está atendiendo ahora mismo?
+ *
+ * Sirve para lo que ve quien llega por la web: decirle «suele responder en minutos» a las tres de la mañana es
+ * prometer algo que no va a pasar, y quien lo lea a esa hora se va a quedar esperando.
+ *
+ * 🪤 Sin horario declarado contesta que sí. Un negocio que no configuró sus horas no está cerrado —es que no lo
+ * ha dicho—, y tratarlo como cerrado apagaría el chat de todo cliente nuevo hasta que alguien se diera cuenta.
+ */
+export function atendiendoAhora(ahora = Date.now()): boolean {
+  const { dias, franjas } = horarioDelNegocio();
+  if (!franjas.length) return true;
+  const p = enLaZona(ahora);
+  if (!dias.includes(p.diaSemana)) return false;
+  return franjas.some(([ini, fin]) => p.minutos >= ini && p.minutos < fin);
+}
