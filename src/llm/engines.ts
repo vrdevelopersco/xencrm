@@ -94,6 +94,33 @@ function enginesInUse(): Set<Engine> {
   return new Set([env.lightEngine, env.heavyEngine, env.gateEngine, env.analysisEngine]);
 }
 
+/**
+ * Prueba UN motor ahora mismo, lo esté usando alguien o no.
+ *
+ * 🪤 Existe porque `probeEngines()` solo sondea los motores que ya están asignados a un rol, y con eso solo no
+ * se puede decidir nada: Apple aparece como «no disponible — no asignado a ningún rol», que es verdad y es
+ * inútil. Quien quiera ponerlo necesita saber si funcionaría, y preguntárselo a `engineStatus()` da un círculo
+ * cerrado — no está disponible porque no lo usas, y no lo puedes usar porque no está disponible.
+ *
+ * No toca `state`: esto contesta una pregunta («¿serviría?»), no cambia lo que el programa cree que tiene.
+ */
+export async function probarMotor(engine: Engine): Promise<{ available: boolean; reason?: string }> {
+  if (engine === 'apple') {
+    const a = await apple.probe();
+    return { available: a.ok, reason: a.reason };
+  }
+  if (engine === 'openai') {
+    if (!env.openaiApiKey) return { available: false, reason: 'sin OPENAI_API_KEY' };
+    const p = await probeOpenAI(ROLES.map(openaiModel));
+    return { available: p.ok, reason: p.reason };
+  }
+  const o = await checkOllama();
+  return {
+    available: o.ok && !o.missing.includes(env.chatModel),
+    reason: !o.ok ? `sin conexión a ${env.ollamaUrl}` : o.missing.length ? `faltan modelos: ${o.missing.join(', ')}` : undefined,
+  };
+}
+
 export async function probeEngines(): Promise<Record<Engine, { available: boolean; reason?: string }>> {
   const inUse = enginesInUse();
   const o = await checkOllama();

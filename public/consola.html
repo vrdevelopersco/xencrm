@@ -387,6 +387,16 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   background:var(--panel);color:var(--tinta);font:inherit}
 .lib .dos{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media (max-width:640px){.lib .dos{grid-template-columns:1fr}}
+/* Motores: un rol por fila, con lo que hace a la izquierda y lo que se elige a la derecha. */
+.mot-rol{display:flex;gap:16px;align-items:flex-start;padding:14px 0;border-top:1px solid var(--line)}
+.mot-rol > :first-child{flex:1 1 auto;min-width:0}
+.mot-campos{flex:0 0 auto;display:flex;flex-direction:column;gap:8px;width:220px}
+.mot-campos select,.mot-campos input{width:100%;max-width:none}
+/* 🪤 Deshabilitado tiene que VERSE deshabilitado: el campo del modelo no cuenta si el motor no es OpenAI, y un
+   campo que acepta texto que luego se ignora es una forma silenciosa de mentir. */
+.mot-campos input:disabled{opacity:.45;cursor:not-allowed;background:var(--baja-soft)}
+.aviso-gate{margin-top:6px;color:var(--media);background:var(--media-soft);border-radius:8px;padding:6px 10px}
+@media (max-width:640px){.mot-rol{flex-direction:column;gap:10px}.mot-campos{width:100%}}
 </style>
 </head>
 <body>
@@ -1560,6 +1570,14 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         pintarConfig();
       };
     });
+    // 🪤 El subtítulo cambia con la sección porque no todas son lo mismo: tres valen para todos los clientes y
+    // los motores son uno por uno. Dejar el de arriba fijo diciendo «para todos» mientras se mira una pantalla
+    // que es por cliente enseña a no leerlo, y entonces deja de servir en las tres donde sí importa.
+    $('subtitulo').textContent = SECCION === 'motores'
+      ? 'Qué modelo hace cada cosa, en cada cliente. Hace falta reiniciarlo para que lo tome'
+      : SECCION === 'libreta'
+        ? 'Preguntarle algo a aiva sin entrar al tablero. Con llave y desde una dirección permitida'
+        : 'Lo que vale para todos tus clientes mientras cada uno no decida otra cosa';
     if (SECCION === 'libreta') return pintarLibreta();
     if (SECCION === 'motores') return pintarMotores();
     return pintarChat(SECCION);
@@ -1637,14 +1655,141 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     };
   }
 
-  // Los motores todavía no se cambian desde aquí: decirlo es más honesto que una pantalla que parece que sí.
+  // ── Motores ───────────────────────────────────────────────────────────────
+  //
+  // 🪤 Esto es por cliente y NO tiene un valor «para todos», al revés que el resto de esta pantalla. Cada
+  // negocio corre en su propia máquina o en su propio proceso, con lo que tenga instalado: uno puede tener
+  // Ollama y otro no, uno puede estar en un Mac con Apple y otro en un servidor Linux. Un defecto global aquí
+  // sería un defecto que la mitad de los clientes no puede cumplir, y se descubriría al reiniciar, que es el
+  // peor momento. Lo que hay es el botón de copiarle a los demás lo de uno, que pregunta cliente por cliente.
+  var MOT = {};        // slug -> lo que contestó ese cliente
+  var MOT_ABIERTO = null;
+
+  var ROLES_UI = [
+    ['light', 'Responder', 'La mayoría de los mensajes: saludar, orientar, responder lo de siempre. Es el que más se usa.'],
+    ['heavy', 'Lo específico', 'Lo que pide precisión: tipo de prenda, color, medidas, detalles, recomendar.'],
+    ['gate', 'Clasificar', 'Decide qué clase de mensaje llegó y a dónde va. No se ve, pero de él depende todo lo demás.'],
+    ['analysis', 'Analizar', 'La ficha del contacto, el puntaje y el resumen. Nadie espera delante de la pantalla.'],
+  ];
+  // 🪤 El aviso del clasificador. Va aquí y no en un comentario del código porque el que puede equivocarse es
+  // quien está mirando la pantalla, no quien la escribió.
+  var CUIDADO_GATE = 'Es el único que corre en todos los mensajes y de él dependen los demás. Si clasifica mal, da igual lo bueno que sea el resto. Cambiarlo por ahorrar suele costar más de lo que ahorra.';
+
   function pintarMotores() {
     $('config-cuerpo').innerHTML =
-      '<div class="lib"><section class="tarjeta">' +
-        '<h3>Qué modelo hace cada cosa</h3>' +
-        '<p class="muted small">Hoy esto se decide en el <code>.env</code> de cada cliente y hace falta reiniciarlo para que tome el cambio. Todavía no lo puedes mover desde aquí.</p>' +
-        '<div class="small muted">Lo que sí puedes ver, por cliente, está en su tablero: Configuración › Motores.</div>' +
-      '</section></div>';
+      '<div class="lib">' +
+        '<div class="lib-estado"><span class="chip">Uno por uno</span>' +
+        '<span class="small">Cada cliente corre con lo que tenga instalado su máquina, así que esto no tiene un valor para todos. Elige un cliente.</span></div>' +
+        LIB.clientes.map(function (c) {
+          return '<section class="tarjeta mot" data-slug="' + esc(c.slug) + '">' +
+            '<div class="fila"><h3 style="margin:0">' + esc(c.nombre) + '</h3><span class="grow"></span>' +
+            '<span class="small muted" id="mot-res-' + esc(c.slug) + '">…</span>' +
+            '<button class="btn sm mot-ver" aria-expanded="false">Ver</button></div>' +
+            '<div class="mot-cuerpo" hidden></div>' +
+          '</section>';
+        }).join('') +
+      '</div>';
+
+    Array.prototype.forEach.call($('config-cuerpo').querySelectorAll('.mot'), function (caja) {
+      var slug = caja.dataset.slug;
+      // Un vistazo por cliente, sin abrir nada: para saber de un golpe si alguno está en otra cosa.
+      cli(slug + '/motores').then(function (d) {
+        MOT[slug] = d;
+        var res = $('mot-res-' + slug);
+        if (!res) return;
+        if (d.error) { res.textContent = 'no contesta'; return; }
+        var cuantos = {};
+        (d.roles || []).forEach(function (r) { cuantos[r.motor] = (cuantos[r.motor] || 0) + 1; });
+        res.textContent = Object.keys(cuantos).map(function (m) { return cuantos[m] + '× ' + m; }).join(' · ');
+        if (MOT_ABIERTO === slug) abrirMotores(caja, slug);
+      });
+      caja.querySelector('.mot-ver').onclick = function () {
+        var cuerpo = caja.querySelector('.mot-cuerpo');
+        if (!cuerpo.hidden) { cuerpo.hidden = true; MOT_ABIERTO = null; this.setAttribute('aria-expanded', 'false'); this.textContent = 'Ver'; return; }
+        MOT_ABIERTO = slug;
+        this.setAttribute('aria-expanded', 'true');
+        this.textContent = 'Cerrar';
+        abrirMotores(caja, slug);
+      };
+    });
+  }
+
+  function abrirMotores(caja, slug) {
+    var d = MOT[slug], cuerpo = caja.querySelector('.mot-cuerpo');
+    cuerpo.hidden = false;
+    if (!d) { cuerpo.innerHTML = '<div class="small muted">Cargando…</div>'; return; }
+    if (d.error) { cuerpo.innerHTML = '<div class="small muted">' + esc(d.error) + '</div>'; return; }
+
+    var disp = d.disponibles || {};
+    // 🪤 Un motor que no responde en ESA máquina se puede elegir igual —puede que lo vayan a instalar—, pero
+    // sale dicho. Esconderlo haría pensar que no existe; ofrecerlo callando haría guardar algo que deja al
+    // cliente mudo. Y guardar lo rechaza igual, sondeando de verdad en ese momento.
+    var opciones = function (puesto) {
+      return ['ollama', 'apple', 'openai'].map(function (m) {
+        var e = disp[m] || {};
+        var nota = e.available ? '' : ' — no responde' + (e.reason ? ': ' + e.reason : '');
+        return '<option value="' + m + '"' + (m === puesto ? ' selected' : '') + '>' + m + nota + '</option>';
+      }).join('');
+    };
+
+    cuerpo.innerHTML =
+      '<div class="small muted" style="margin:10px 0 2px">Lo que corre ahora. Guardar deja el archivo listo, pero hace falta reiniciar ese cliente para que lo tome.</div>' +
+      (d.roles || []).map(function (r) {
+        var meta = ROLES_UI.filter(function (x) { return x[0] === r.rol; })[0] || [r.rol, r.rol, ''];
+        return '<div class="mot-rol">' +
+          '<div><b>' + esc(meta[1]) + '</b><div class="small muted">' + esc(meta[2]) + '</div>' +
+            (r.rol === 'gate' ? '<div class="small aviso-gate">⚠ ' + esc(CUIDADO_GATE) + '</div>' : '') + '</div>' +
+          '<div class="mot-campos">' +
+            '<select data-rol="' + r.rol + '" class="m-motor" aria-label="Motor de ' + esc(meta[1]) + '">' + opciones(r.motor) + '</select>' +
+            '<input data-rol="' + r.rol + '" class="m-modelo" value="' + esc(r.modelo || '') + '" placeholder="' + esc(d.modeloGeneral || 'modelo') + '" aria-label="Modelo de ' + esc(meta[1]) + '"' + (r.motor === 'openai' ? '' : ' disabled') + '>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+      '<div class="fila" style="margin-top:14px">' +
+        '<button class="btn primary m-guardar">Guardar en ' + esc(slug) + '</button>' +
+        (d.puedeReiniciarse ? '<button class="btn m-reiniciar">Reiniciar ahora</button>'
+          : '<span class="small muted">Aquí nadie lo volvería a levantar, así que no te ofrezco reiniciarlo: hazlo tú.</span>') +
+        '<span class="grow"></span><span class="small" id="mot-msg-' + esc(slug) + '" role="status"></span>' +
+      '</div>';
+
+    // El campo del modelo solo cuenta con OpenAI: con los otros se apaga en vez de aceptar algo que se ignora.
+    Array.prototype.forEach.call(cuerpo.querySelectorAll('.m-motor'), function (sel) {
+      sel.onchange = function () {
+        var campo = cuerpo.querySelector('.m-modelo[data-rol="' + sel.dataset.rol + '"]');
+        campo.disabled = sel.value !== 'openai';
+      };
+    });
+
+    cuerpo.querySelector('.m-guardar').onclick = function () {
+      var roles = ROLES_UI.map(function (x) {
+        var sel = cuerpo.querySelector('.m-motor[data-rol="' + x[0] + '"]');
+        var campo = cuerpo.querySelector('.m-modelo[data-rol="' + x[0] + '"]');
+        return { rol: x[0], motor: sel.value, modelo: campo.value.trim() };
+      });
+      var msg = $('mot-msg-' + slug);
+      msg.textContent = 'Guardando…';
+      cli(slug + '/motores', { method: 'PUT', body: { roles: roles } }).then(function (r) {
+        if (r.error) { msg.textContent = r.error; return; }
+        MOT[slug] = r.motores;
+        msg.textContent = r.hayQueReiniciar ? 'Guardado. Reinicia ese cliente para que lo tome.' : 'Guardado.';
+      });
+    };
+    var rein = cuerpo.querySelector('.m-reiniciar');
+    if (rein) rein.onclick = function () {
+      var msg = $('mot-msg-' + slug);
+      msg.textContent = 'Reiniciando…';
+      // 🪤 El cliente se muere a propósito, así que la petición se corta sin respuesta: eso NO es un error y no
+      // se pinta como tal. Se espera y se vuelve a preguntar, que es lo único que dice de verdad si volvió.
+      cli(slug + '/config/restart', { method: 'POST' }).catch(function () {}).then(function () {
+        setTimeout(function () {
+          cli(slug + '/motores').then(function (d2) {
+            MOT[slug] = d2;
+            msg.textContent = d2 && !d2.error ? 'Arriba otra vez, con lo nuevo.' : 'Todavía no contesta; dale unos segundos.';
+            if (d2 && !d2.error) abrirMotores(caja, slug);
+          }).catch(function () { msg.textContent = 'Todavía no contesta; dale unos segundos.'; });
+        }, 5000);
+      });
+    };
   }
 
   // ── La libreta ────────────────────────────────────────────────────────────

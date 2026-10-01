@@ -36,6 +36,7 @@ import { cuantas as cuantasImportadas, importarChat, importarMensajes, quitar as
 import { armar as armarRespaldo, restaurar as restaurarRespaldo, revisar as revisarRespaldo } from '../crm/respaldo.js';
 import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
+import { guardarMotores, motoresDe } from '../motores.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
@@ -372,6 +373,21 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       return c.json({ ok: true, ajustes: r.ajustes, hayQueReiniciar: r.hayQueReiniciar, puedeReiniciarse: puedeReiniciarse() });
     } catch (err) {
       return c.json({ error: comoSeLee(err) }, 400);
+    }
+  });
+
+  /**
+   * Qué motor hace cada cosa en este cliente. Se lee y se escribe su `.env`; ver `src/motores.ts` para por qué
+   * no se aplica en caliente y por qué un motor que no esté disponible aquí no se guarda.
+   */
+  app.get('/admin/api/motores', (c) => c.json(motoresDe()));
+
+  app.put('/admin/api/motores', async (c) => {
+    try {
+      const r = await guardarMotores(await c.req.json());
+      return c.json({ ok: true, ...r });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'no pude guardar los motores' }, 400);
     }
   });
 
