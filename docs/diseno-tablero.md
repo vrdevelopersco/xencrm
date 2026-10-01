@@ -202,8 +202,29 @@ texto en tinta y el chip con su dorado intacto, en `public/hrc-technologies.png`
 | Gris secundario, oscuro | 6.8:1 |
 | Dorado sobre papel, oscuro | 10.6:1 |
 
-🪤 El modo oscuro del tablero no se ha visto renderizado: el tablero fija el tema al arrancar y pisa lo que uno
-ponga a mano en una maqueta. Los valores están medidos, pero la primera vez que se despliegue hay que darle al 🌙.
+### El modo oscuro, ya renderizado y medido (2026-10-01)
+
+Hasta hoy los valores de oscuro estaban **calculados, no vistos**: el tablero fija el tema al arrancar y pisa lo que
+uno ponga a mano en una maqueta. HRCAPOLO se negó a validarlos por eso, y tenía razón.
+
+Ya está pintado, con Chrome de verdad: entrar, darle al 🌙 hasta que `data-theme` diga `dark`, ir a Prospectos, y
+medir **sobre los píxeles**: se oculta el texto (`color:transparent`), se captura, y se busca dentro del recuadro de
+ese texto el peor píxel —el que más se le parece en luminancia—. Así es como se midieron los chips en septiembre.
+
+| Pieza | Calculado | **Medido** |
+|---|---|---|
+| Nombre en la tarjeta (hoja de bloc) | 13.8:1 | **11.63:1** |
+| Detalle de la tarjeta, sobre los renglones | 6.4:1 | **5.41:1** |
+| Título de la pantalla, sobre el vidrio | 15.9:1 | **14.59:1** |
+
+🪤 **Los tres salieron entre 1 y 2 puntos por debajo de lo calculado, y en la misma dirección.** Ninguno incumple
+—el mínimo es 4.5:1 y el peor queda en 5.41— pero el margen real es menor del que decía esta tabla. La causa es la
+de siempre: el cálculo usa el color base de la superficie y lo que hay pintado lleva encima el grano del papel, el
+renglonado y el vidrio con la aurora detrás. Quien toque estos colores no tiene 2 puntos de margen que creía tener.
+
+🪤 Y una advertencia sobre el método: medir el recuadro de un CONTENEDOR no sirve. La caja de `.card .body`
+incluye los chips con su propio fondo, así que el «peor píxel» que sale es el de un chip verde y el número no
+significa nada. Solo vale sobre el recuadro del texto en sí.
 
 ### El tablero de prospectos se pinta por el papel de la etapa (2026-09-25)
 
@@ -275,3 +296,21 @@ Las tres dan el mismo síntoma —«la página no hace nada»— y ninguna la co
 La tercera vivió un día entero sin que nadie la viera: el servidor contestaba 200 y el HTML era correcto. Salió
 abriendo la página en un navegador de verdad con la sesión puesta (`node herramientas/mirar.mjs`), que imprime los
 errores de JavaScript. **Una pantalla nueva no está probada hasta que se abre en un navegador.**
+
+
+## Dos formas de que una pantalla esté rota sin que nada lo diga (2026-10-01)
+
+Al documento ya le costó caro la tercera trampa de arriba, y la lección que dejó —«una pantalla nueva no está
+probada hasta que se abre en un navegador»— resultó estar incompleta. Faltaban dos formas más, y las dos
+aparecieron el mismo día:
+
+1. **En el ancho en que de verdad se usa.** La consola se desbordaba 104 px a 390 px: la página entera medía 494 y
+   se desplazaba en horizontal. Causa: añadirle una cuarta pestaña al riel, que en móvil es una fila; sin
+   `min-width:0` en la cadena de flex/grid, un hijo no baja de su ancho natural y empuja al padre, el padre a la
+   página, y la página se lleva por delante toda la pantalla. Abrirla en un navegador no basta si se abre a 1280.
+2. **Con la regla que de verdad gana.** El arreglo de arriba no se aplicaba: estaba escrito en un bloque `@media`
+   que va ANTES de la regla base en la hoja, y entre dos reglas de la misma especificidad gana la última. No da
+   error, no lo ve TypeScript, el servidor contesta 200 y el HTML es correcto. Solo se ve en una captura a 390 px.
+
+De ahí la regla ampliada: **una pantalla nueva no está probada hasta que se abre en un navegador de verdad, al
+ancho de un teléfono, y se mide lo que quedó pintado** — no lo que dice la hoja de estilos que debería quedar.
