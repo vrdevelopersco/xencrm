@@ -892,9 +892,11 @@ dialog#dlg-grupos > b{font-size:17px}
 .doc-fila > :first-child{flex:1;min-width:0}
 /* 🪤 «Sin indexar» no se dice solo con color: quien no lo distinga tiene que poder leerlo igual. */
 .aviso-cero{color:var(--media);font-weight:600}
-#k-escribir summary{cursor:pointer;color:var(--muted)}
-#k-escribir summary:hover{color:var(--text)}
-#k-escribir input,#k-escribir textarea{width:100%}
+/* Un solo patrón para escribir algo a mano, en las dos pestañas que lo necesitan. */
+#k-escribir summary,#k-ra-escribir summary{cursor:pointer;color:var(--muted)}
+#k-escribir summary:hover,#k-ra-escribir summary:hover{color:var(--text)}
+#k-escribir input,#k-escribir textarea,#k-ra-escribir input,#k-ra-escribir textarea{width:100%}
+#k-escribir label,#k-ra-escribir label{font-weight:600;margin-bottom:-4px}
 
 /* Respuestas rápidas. */
 .ra{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;background:var(--panel)}
@@ -1134,7 +1136,15 @@ dialog#dlg-grupos > b{font-size:17px}
             <details id="k-escribir">
               <summary class="small">Prefiero escribirlo</summary>
               <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
-                <input type="text" id="k-doc-titulo" placeholder="De qué se trata (ej.: Políticas de pago)">
+                <!--
+                  🪤 Rótulo de verdad, no solo `placeholder`. Un placeholder desaparece en cuanto escribes —y
+                  entonces nadie sabe ya qué iba en ese campo si se distrae— y los lectores de pantalla no lo
+                  tratan igual que a un rótulo. Es el mismo patrón que el de Respuestas rápidas: si los dos
+                  sitios donde se escribe a mano no se comportan igual, no es un patrón, son dos cosas parecidas.
+                -->
+                <label class="small" for="k-doc-titulo">De qué se trata</label>
+                <input type="text" id="k-doc-titulo" placeholder="Políticas de pago">
+                <label class="small" for="k-doc-texto">Lo que tenga que saber</label>
                 <textarea id="k-doc-texto" rows="5" placeholder="Escríbelo con tus palabras, como se lo explicarías a alguien que entra a trabajar contigo."></textarea>
                 <div class="fila" style="gap:8px;justify-content:flex-end"><button class="btn primary" id="k-doc-guardar">Guardar</button></div>
               </div>
@@ -1170,9 +1180,23 @@ dialog#dlg-grupos > b{font-size:17px}
             <div class="fila" style="gap:8px;align-items:center;flex-wrap:wrap">
               <input type="file" id="k-ra-archivo" hidden accept=".txt,.md,.docx,.xlsx,text/plain,text/markdown">
               <button class="btn" id="k-ra-material">Sacar los temas de un historial</button>
-              <button class="btn" id="k-ra-nueva">Escribir una</button>
               <span class="small" id="k-ra-msg" role="status"></span>
             </div>
+            <!--
+              El MISMO patrón que «Prefiero escribirlo» de la pestaña Información: un <details> con sus campos.
+              Antes esto era un prompt() del navegador, que además de romper la marca y no respetar el foco
+              dejaba dos formas distintas de hacer lo mismo —escribir algo a mano— en la misma pantalla.
+            -->
+            <details id="k-ra-escribir">
+              <summary class="small">Escribir una a mano</summary>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+                <label class="small" for="k-ra-tema">De qué trata</label>
+                <input type="text" id="k-ra-tema" placeholder="Plazo de desembolso">
+                <label class="small" for="k-ra-como">Cómo lo preguntan, uno por línea</label>
+                <textarea id="k-ra-como" rows="3" placeholder="¿cuándo me desembolsan?&#10;no me ha llegado la plata&#10;hace cuánto aprobaron lo mío"></textarea>
+                <div class="fila" style="gap:8px;justify-content:flex-end"><button class="btn primary" id="k-ra-crear">Añadirla</button></div>
+              </div>
+            </details>
             <div class="small muted">De un recap de tickets o un historial salen los <b>temas</b> y cómo los preguntan. La respuesta la escribes tú: lo que se contestó en marzo puede no ser lo que prometes hoy.</div>
           </div>
           <div id="k-ra-propuestas"></div>

@@ -2340,15 +2340,16 @@
       .catch(function () { $('k-ra-msg').textContent = 'No pude leerlo.'; });
   };
 
-  $('k-ra-nueva').onclick = function () {
-    var tema = prompt('¿De qué trata? (ej.: Plazo de desembolso)');
-    if (!tema) return;
-    var como = prompt('¿Cómo lo preguntan? Escribe una o varias formas, separadas por |');
-    if (!como) return;
-    api('/rapidas', { method: 'POST', body: { tema: tema, ejemplos: como.split('|'), respuesta: '', estado: 'borrador', origen: 'a mano' } })
+  $('k-ra-crear').onclick = function () {
+    var tema = $('k-ra-tema').value.trim();
+    var como = $('k-ra-como').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+    if (!tema || !como.length) { $('k-ra-msg').textContent = 'Ponle un tema y al menos una forma de preguntarlo.'; return; }
+    api('/rapidas', { method: 'POST', body: { tema: tema, ejemplos: como, respuesta: '', estado: 'borrador', origen: 'a mano' } })
       .then(function (d) {
         if (d.error) { $('k-ra-msg').textContent = d.error; return; }
-        $('k-ra-msg').textContent = 'Añadida. Escríbele la respuesta abajo.';
+        $('k-ra-tema').value = ''; $('k-ra-como').value = '';
+        $('k-ra-escribir').open = false;
+        $('k-ra-msg').textContent = 'Añadida. Escríbele la respuesta abajo y dale a «Empezar a usarla».';
         cargarRapidas();
       });
   };

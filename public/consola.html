@@ -124,16 +124,34 @@ h1{font-size:19px;margin:0;letter-spacing:-.02em}
 main{padding:20px 24px 70px;max-width:1240px;width:100%}
 
 @media (max-width:900px){
-  .app{grid-template-columns:1fr}
+  /* 🪤 `min-width:0` en todo lo que es hijo de un flex o de un grid. Sin eso, un hijo no baja de su ancho
+     natural —el texto más largo que lleve dentro— y en vez de encogerse empuja al padre; el padre empuja a la
+     página, y la página entera queda más ancha que el teléfono y se desplaza en horizontal. Es lo que pasó al
+     añadirle la cuarta pestaña al riel: dejó de caber y se llevó por delante toda la pantalla, no solo el riel. */
+  .app{grid-template-columns:1fr;min-width:0}
+  .app > *{min-width:0}
+  .zona{min-width:0}
   .side{position:static;height:auto;flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap;
-    border-right:none;border-bottom:1px solid var(--vidrio-borde)}
+    border-right:none;border-bottom:1px solid var(--vidrio-borde);min-width:0}
   .side .marca{padding:0}
-  .nav{flex-direction:row;flex:1}
+  /* El riel se envuelve en vez de estirarse. Envolver es mejor que desplazar: una pestaña fuera de la pantalla
+     es una pestaña que nadie encuentra, y aquí cada una es una sección entera del producto.
+     🪤 Y se reparten a mitades, no «las que quepan y la última sola». Tres arriba y una abajo se lee como si la
+     de abajo fuera de otra categoría; dos y dos se lee como una rejilla, que es lo que es. */
+  .nav{flex-direction:row;flex:1 1 100%;flex-wrap:wrap;min-width:0;gap:6px}
+  .nav .tab{width:auto;flex:1 1 calc(50% - 6px);min-width:0;justify-content:flex-start}
   .nav .grupo{display:none}
-  .side-pie{margin:0;border-top:none;flex-direction:row;align-items:center}
+  .side-pie{margin:0;border-top:none;flex-direction:row;align-items:center;flex-wrap:wrap;min-width:0}
   .side-pie .small{display:none}
   .perfil-btn .quien-soy{max-width:110px}
+  /* Lo que se desborda por dentro: una dirección larga, un enlace de libreta, una tabla de motores. */
+  main{min-width:0;overflow-x:hidden}
+  .lib,.lib .tarjeta{max-width:100%;min-width:0}
+  .lib .enlace code{min-width:0;width:100%}
 }
+/* Y el cinturón: que la página NO se desplace en horizontal pase lo que pase. Un desbordamiento dentro de una
+   caja se arregla; uno que mueve la página entera hace que todo se sienta roto. */
+html,body{max-width:100%;overflow-x:hidden}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:8px 14px;
   border-radius:999px;border:1px solid var(--line);background:var(--panel);text-decoration:none;
@@ -397,6 +415,16 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
 .mot-campos input:disabled{opacity:.45;cursor:not-allowed;background:var(--baja-soft)}
 .aviso-gate{margin-top:6px;color:var(--media);background:var(--media-soft);border-radius:8px;padding:6px 10px}
 @media (max-width:640px){.mot-rol{flex-direction:column;gap:10px}.mot-campos{width:100%}}
+
+/* 🪤 Esta consulta va al FINAL de la hoja a propósito. `.tabs` base se define más abajo que el bloque móvil de
+   arriba, y entre dos reglas de la misma especificidad gana la última: la versión móvil escrita antes no se
+   aplicaba nunca. Es un fallo que no da error y solo se ve en una captura a 390 px.
+   Lo que arregla: una cápsula de radio 999 envuelta en dos renglones queda como un bulto con los lados
+   redondeados y el medio recto, que no se lee como un grupo de pestañas ni como ninguna otra cosa. */
+@media (max-width:900px){
+  .tabs{display:flex;width:100%;border-radius:14px;padding:4px;gap:4px}
+  .tabs button{flex:1 1 calc(50% - 4px);min-width:0;border-radius:10px}
+}
 </style>
 </head>
 <body>
