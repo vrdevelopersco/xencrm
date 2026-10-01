@@ -6,6 +6,7 @@ import { generate, estimateTokens, fallbackOrder, type Engine } from '../llm/eng
 import { openaiModel } from '../llm/openai.js';
 import { appendMessage, clearHistory, getHistory, touchUser } from './memory.js';
 import { classify } from './gate.js';
+import { anotarUso, buscarRespuestaRapida } from '../crm/respuestas-rapidas.js';
 import { chooseEngine } from './router.js';
 import { claimsBooked, dropRepeatedFacts, isHonest, postProcess, stripRepeatedGreeting, touchesPending, unsupportedAnswer, ungroundedNumbers } from './format.js';
 import { pendingTopics } from '../profile.js';
@@ -183,6 +184,29 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // (con confirmación), nunca el modelo, que podría decir "listo, cancelada" sin haberlo hecho.
   if (business.appointments.enabled && manageIntent(text, { strict: true }) && nextAppointmentFor(msg.userId)) {
     return finish(await startBooking(msg.userId, text), 'cita', 'template', { route: 'cambiar o cancelar cita' });
+  }
+
+  // ¿Es una de las de siempre? Si el negocio ya dejó escrita y aprobada la respuesta a esta pregunta, se usa.
+  //
+  // Va aquí —después de los flujos de cita y antes del clasificador— porque los flujos de cita son estado de una
+  // conversación en marcha y mandan sobre cualquier plantilla, mientras que el clasificador y el modelo son
+  // justamente lo que esto se ahorra cuando acierta: menos espera para quien pregunta y menos gasto.
+  //
+  // 🪤 Se ahorra el clasificador solo cuando el parecido es ALTÍSIMO y la respuesta la aprobó una persona. El
+  // clasificador es el que decide a dónde va cada mensaje y de él depende todo lo demás; saltárselo a la ligera
+  // por ahorrar es cambiar unos céntimos por una conversación mal atendida. Ante la duda, no se reconoce y
+  // contesta el modelo, que es lo que pasaba antes de que esto existiera.
+  //
+  // Lo que sale de aquí entra por `finish()` como cualquier otra respuesta, así que el modo del canal sigue
+  // mandando: en «Propone» queda esperando a que una persona la mande, en «Contesta» sale sola. No hay un
+  // interruptor aparte para esto, y no debe haberlo: serían dos sitios donde decir lo mismo.
+  const rapida = await buscarRespuestaRapida(text);
+  if (rapida) {
+    anotarUso(rapida.respuesta.id);
+    return finish(rapida.respuesta.respuesta, 'info_tienda', 'template', {
+      route: `respuesta rápida · ${rapida.respuesta.tema}`,
+      gateVia: 'rápida',
+    });
   }
 
   const history = getHistory(msg.userId);

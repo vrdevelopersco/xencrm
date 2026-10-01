@@ -39,6 +39,8 @@ import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes,
 import { guardarMotores, motoresDe } from '../motores.js';
 import { borrarDocumento, documentosDelNegocio, guardarCatalogo, guardarDocumento } from '../rag/documentos.js';
 import { leerAdjunto } from '../crm/adjuntos.js';
+import { borrarRespuestaRapida, guardarRespuestaRapida, respuestasRapidas } from '../crm/respuestas-rapidas.js';
+import { temasDelMaterial } from '../crm/aprender-temas.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
@@ -1103,6 +1105,57 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       return fue ? c.json({ ok: true, docs: countDocs() }) : c.json({ error: 'ese documento ya no está' }, 404);
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'no pude borrarlo' }, 400);
+    }
+  });
+
+  // ── Respuestas rápidas ────────────────────────────────────────────────────
+  //
+  // Lo que se pregunta mucho, contestado una vez. Sale como sugerencia o se manda sola según el modo del canal;
+  // ver `crm/respuestas-rapidas.ts`.
+  app.get('/admin/api/rapidas', (c) => c.json({ rapidas: respuestasRapidas() }));
+
+  app.post('/admin/api/rapidas', async (c) => {
+    try {
+      const b = (await c.req.json()) as { id?: number; tema?: string; ejemplos?: string[]; respuesta?: string; estado?: 'borrador' | 'lista'; origen?: string };
+      const r = await guardarRespuestaRapida({
+        id: b.id,
+        tema: b.tema ?? '',
+        ejemplos: Array.isArray(b.ejemplos) ? b.ejemplos.map(String) : [],
+        respuesta: b.respuesta,
+        estado: b.estado,
+        origen: b.origen,
+      });
+      return c.json({ ok: true, rapida: r });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'no pude guardarla' }, 400);
+    }
+  });
+
+  app.delete('/admin/api/rapidas/:id', (c) =>
+    borrarRespuestaRapida(Number(c.req.param('id'))) ? c.json({ ok: true }) : c.json({ error: 'esa ya no está' }, 404),
+  );
+
+  /**
+   * Leer material del historial y proponer temas.
+   *
+   * 🪤 Propone y NO guarda. Lo que vuelve es una lista para que una persona la mire: guardarlo directo
+   * convertiría un documento que alguien dejó en una carpeta en configuración viva del asistente sin que nadie
+   * lo hubiera aprobado. Y nunca trae respuestas, por lo mismo que explica `crm/aprender-temas.ts`.
+   */
+  app.post('/admin/api/rapidas/del-material', async (c) => {
+    try {
+      let texto = '';
+      if ((c.req.header('content-type') ?? '').includes('multipart/form-data')) {
+        const form = await c.req.parseBody();
+        const f = form.archivo;
+        if (!(f instanceof File)) return c.json({ error: 'no llegó ningún archivo' }, 400);
+        texto = leerAdjunto(f.name, new Uint8Array(await f.arrayBuffer())).texto;
+      } else {
+        texto = String(((await c.req.json()) as { texto?: string }).texto ?? '');
+      }
+      return c.json({ temas: await temasDelMaterial(texto) });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'no pude leer ese material' }, 400);
     }
   });
 

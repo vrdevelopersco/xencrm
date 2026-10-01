@@ -895,6 +895,21 @@ dialog#dlg-grupos > b{font-size:17px}
 #k-escribir summary{cursor:pointer;color:var(--muted)}
 #k-escribir summary:hover{color:var(--text)}
 #k-escribir input,#k-escribir textarea{width:100%}
+
+/* Respuestas rápidas. */
+.ra{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;background:var(--panel)}
+.ra .cab{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ra .cab b{font-size:14.5px}
+/* 🪤 «Borrador» y «Lista» se distinguen por la palabra, no solo por el color: de esto depende si una respuesta
+   le sale o no a un cliente, y no puede quedar a merced de distinguir dos tonos. */
+.ra .estado{font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 9px}
+.ra .estado.lista{background:var(--ok-soft);color:var(--ok)}
+.ra .estado.borrador{background:var(--media-soft);color:var(--media)}
+.ra .frases{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+.ra .frases span{font-size:12px;color:var(--muted);background:var(--baja-soft);border-radius:999px;padding:3px 10px}
+.ra textarea,.ra input{width:100%}
+.ra .pista{font-size:12.5px;color:var(--media);background:var(--media-soft);border-radius:8px;padding:7px 10px;margin:6px 0}
+.ra .veces{font-size:11.5px;color:var(--tenue);margin-left:auto}
 </style>
 </head>
 <body>
@@ -1098,7 +1113,7 @@ dialog#dlg-grupos > b{font-size:17px}
     </section>
     <!-- Conocimiento -->
     <section class="view" id="view-knowledge">
-      <div class="topbar"><h1>Lo que sabe el agente</h1><span class="grow"></span><div class="tabs"><button class="on" data-kind="knowledge" id="k-kn">Información</button><button data-kind="product" id="k-pr">Productos</button><button data-kind="interno" id="k-in">Solo para el equipo</button></div></div>
+      <div class="topbar"><h1>Lo que sabe el agente</h1><span class="grow"></span><div class="tabs"><button class="on" data-kind="knowledge" id="k-kn">Información</button><button data-kind="product" id="k-pr">Productos</button><button data-kind="rapidas" id="k-ra">Respuestas rápidas</button><button data-kind="interno" id="k-in">Solo para el equipo</button></div></div>
       <div class="pad">
         <!--
           Los documentos del negocio. Antes esto solo se podía cargar dejando archivos en el servidor, así que un
@@ -1141,6 +1156,27 @@ dialog#dlg-grupos > b{font-size:17px}
               <span class="small" id="k-cat-msg" role="status"></span>
             </div>
           </div>
+        </div>
+
+        <!--
+          Respuestas rápidas: lo que se pregunta mucho, contestado una vez. Sale como sugerencia o se manda
+          sola según el modo del canal — no hay interruptor aparte, y no debe haberlo.
+        -->
+        <div id="k-rapidas" hidden>
+          <div class="panel" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div><b>Lo que te preguntan todos los días</b>
+              <div class="small muted" id="k-ra-como">Escribes la respuesta una vez y sale sola. Dónde sale depende del modo del canal.</div>
+            </div>
+            <div class="fila" style="gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="file" id="k-ra-archivo" hidden accept=".txt,.md,.docx,.xlsx,text/plain,text/markdown">
+              <button class="btn" id="k-ra-material">Sacar los temas de un historial</button>
+              <button class="btn" id="k-ra-nueva">Escribir una</button>
+              <span class="small" id="k-ra-msg" role="status"></span>
+            </div>
+            <div class="small muted">De un recap de tickets o un historial salen los <b>temas</b> y cómo los preguntan. La respuesta la escribes tú: lo que se contestó en marzo puede no ser lo que prometes hoy.</div>
+          </div>
+          <div id="k-ra-propuestas"></div>
+          <div id="k-ra-lista"></div>
         </div>
 
         <input type="search" id="k-q" placeholder="Buscar en lo que sabe el agente…">

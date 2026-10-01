@@ -1978,23 +1978,28 @@
   // ---------- conocimiento ----------
   function pestanaSabe(cual) {
     state.kind = cual;
-    ['kn', 'pr', 'in'].forEach(function (x) {
-      var mapa = { kn: 'knowledge', pr: 'product', in: 'interno' };
+    ['kn', 'pr', 'ra', 'in'].forEach(function (x) {
+      var mapa = { kn: 'knowledge', pr: 'product', ra: 'rapidas', in: 'interno' };
       $('k-' + x).classList.toggle('on', mapa[x] === cual);
     });
     var interno = cual === 'interno';
+    var rapidas = cual === 'rapidas';
     $('k-interno').hidden = !interno;
-    $('k-list').hidden = interno;
-    $('k-q').hidden = interno;
+    $('k-rapidas').hidden = !rapidas;
+    // La lista de fragmentos indexados no pinta nada en estas dos: una es lo que no se le cuenta a nadie y la
+    // otra son respuestas escritas a mano, no trozos de documento.
+    $('k-list').hidden = interno || rapidas;
+    $('k-q').hidden = interno || rapidas;
     // Cada pestaña enseña cómo se le mete contenido a ESA pestaña. Un único cajón de subida para las tres
     // obligaría a elegir primero el tipo, y elegir mal significa que un catálogo acabe troceado como texto.
     $('k-cargar').hidden = cual !== 'knowledge';
     $('k-catalogo').hidden = cual !== 'product';
-    if (interno) cargarNotas(); else loadKnowledge();
+    if (interno) cargarNotas(); else if (rapidas) cargarRapidas(); else loadKnowledge();
     if (cual === 'knowledge') cargarDocumentos();
   }
   $('k-kn').onclick = function () { pestanaSabe('knowledge'); };
   $('k-pr').onclick = function () { pestanaSabe('product'); };
+  $('k-ra').onclick = function () { pestanaSabe('rapidas'); };
   $('k-in').onclick = function () { pestanaSabe('interno'); };
 
   // ---------- lo que no se le cuenta a nadie ----------
@@ -2203,6 +2208,149 @@
         if (!r.error) loadKnowledge();
       })
       .catch(function () { $('k-cat-msg').textContent = 'No pude subirlo.'; });
+  };
+
+
+  // ---------- respuestas rápidas ----------
+  //
+  // Lo que se pregunta mucho, escrito una vez. Dónde sale lo decide el modo del canal, no un interruptor de
+  // aquí: en «Propone» queda esperando a una persona, en «Contesta» sale sola.
+  var RAPIDAS = [];
+  var PROPUESTOS = [];
+
+  function cargarRapidas() {
+    return api('/rapidas').then(function (d) {
+      RAPIDAS = d.rapidas || [];
+      pintarRapidas();
+    });
+  }
+
+  function fichaRapida(r) {
+    var listo = r.estado === 'lista';
+    return '<div class="ra" data-id="' + r.id + '">' +
+      '<div class="cab"><b>' + esc(r.tema) + '</b>' +
+        '<span class="estado ' + r.estado + '">' + (listo ? 'Lista' : 'Borrador') + '</span>' +
+        (r.origen ? '<span class="small muted">' + esc(r.origen) + '</span>' : '') +
+        (r.veces ? '<span class="veces">usada ' + r.veces + (r.veces === 1 ? ' vez' : ' veces') + '</span>' : '') +
+      '</div>' +
+      '<div class="frases">' + r.ejemplos.map(function (e) { return '<span>' + esc(e) + '</span>'; }).join('') + '</div>' +
+      '<textarea rows="3" class="ra-texto" placeholder="Lo que se contesta. Escríbelo como se lo dirías a un cliente.">' + esc(r.respuesta || '') + '</textarea>' +
+      '<div class="fila" style="gap:8px;justify-content:flex-end;margin-top:8px">' +
+        '<span class="small muted grow ra-msg"></span>' +
+        '<button class="btn sm ra-borrar">Quitar</button>' +
+        // 🪤 Marcar «lista» es lo que hace que empiece a salirle a un cliente, así que el botón dice eso y no
+        // «guardar»: son dos acciones distintas y confundirlas es publicar sin querer.
+        '<button class="btn sm ra-guardar">Guardar borrador</button>' +
+        (listo ? '<button class="btn sm ra-pausar">Dejar de usarla</button>' : '<button class="btn primary sm ra-publicar">Empezar a usarla</button>') +
+      '</div>' +
+    '</div>';
+  }
+
+  function pintarRapidas() {
+    var listas = RAPIDAS.filter(function (r) { return r.estado === 'lista'; });
+    var borradores = RAPIDAS.filter(function (r) { return r.estado !== 'lista'; });
+    $('k-ra-lista').innerHTML =
+      (borradores.length ? '<div class="small muted" style="margin:16px 0 6px">' + borradores.length + ' sin contestar todavía — el asistente no las usa hasta que escribas la respuesta</div>' + borradores.map(fichaRapida).join('') : '') +
+      (listas.length ? '<div class="small muted" style="margin:16px 0 6px">' + listas.length + ' en uso</div>' + listas.map(fichaRapida).join('') : '') +
+      (RAPIDAS.length ? '' : '<div class="empty" style="margin-top:14px">Todavía no hay ninguna. Saca los temas de un historial, o escribe una.</div>');
+    enganchaRapidas();
+  }
+
+  function enganchaRapidas() {
+    Array.prototype.forEach.call($('k-ra-lista').querySelectorAll('.ra'), function (caja) {
+      var id = Number(caja.dataset.id);
+      var r = RAPIDAS.filter(function (x) { return x.id === id; })[0];
+      if (!r) return;
+      var msg = caja.querySelector('.ra-msg');
+      var guardar = function (estado) {
+        var texto = caja.querySelector('.ra-texto').value.trim();
+        if (estado === 'lista' && !texto) { msg.textContent = 'Escribe la respuesta antes de usarla.'; return; }
+        msg.textContent = 'Guardando…';
+        api('/rapidas', { method: 'POST', body: { id: id, tema: r.tema, ejemplos: r.ejemplos, respuesta: texto, estado: estado } })
+          .then(function (d) {
+            if (d.error) { msg.textContent = d.error; return; }
+            cargarRapidas();
+          });
+      };
+      caja.querySelector('.ra-guardar').onclick = function () { guardar('borrador'); };
+      var pub = caja.querySelector('.ra-publicar');
+      if (pub) pub.onclick = function () { guardar('lista'); };
+      var pau = caja.querySelector('.ra-pausar');
+      if (pau) pau.onclick = function () { guardar('borrador'); };
+      caja.querySelector('.ra-borrar').onclick = function () {
+        if (!confirm('¿Quitar "' + r.tema + '"?')) return;
+        api('/rapidas/' + id, { method: 'DELETE' }).then(cargarRapidas);
+      };
+    });
+  }
+
+  // Los temas que salen de un historial: se enseñan para aceptarlos uno a uno, no se guardan solos. Un
+  // documento que alguien dejó en una carpeta no puede volverse configuración del asistente sin que nadie mire.
+  function pintarPropuestos() {
+    $('k-ra-propuestas').innerHTML = !PROPUESTOS.length ? '' :
+      '<div class="panel" style="padding:14px;margin-top:12px">' +
+        '<b>' + PROPUESTOS.length + ' temas encontrados</b>' +
+        '<div class="small muted" style="margin-bottom:10px">Ninguno trae respuesta, a propósito: lo que se contestó entonces puede no ser lo que prometes hoy. Acepta los que te sirvan y escríbelas tú.</div>' +
+        PROPUESTOS.map(function (t, i) {
+          return '<div class="ra" data-i="' + i + '">' +
+            '<div class="cab"><b>' + esc(t.tema) + '</b></div>' +
+            '<div class="frases">' + t.ejemplos.map(function (e) { return '<span>' + esc(e) + '</span>'; }).join('') + '</div>' +
+            (t.pista ? '<div class="pista">Para contestarlo: ' + esc(t.pista) + '</div>' : '') +
+            '<div class="fila" style="gap:8px;justify-content:flex-end">' +
+              '<button class="btn sm prop-no">No me sirve</button>' +
+              '<button class="btn primary sm prop-si">Añadirlo</button>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    Array.prototype.forEach.call($('k-ra-propuestas').querySelectorAll('.ra'), function (caja) {
+      var i = Number(caja.dataset.i);
+      caja.querySelector('.prop-no').onclick = function () { PROPUESTOS.splice(i, 1); pintarPropuestos(); };
+      caja.querySelector('.prop-si').onclick = function () {
+        var t = PROPUESTOS[i];
+        caja.querySelector('.prop-si').disabled = true;
+        api('/rapidas', { method: 'POST', body: { tema: t.tema, ejemplos: t.ejemplos, respuesta: '', estado: 'borrador', origen: 'del historial' } })
+          .then(function (d) {
+            if (d.error) { $('k-ra-msg').textContent = d.error; caja.querySelector('.prop-si').disabled = false; return; }
+            PROPUESTOS.splice(i, 1);
+            pintarPropuestos();
+            cargarRapidas();
+          });
+      };
+    });
+  }
+
+  $('k-ra-material').onclick = function () { $('k-ra-archivo').click(); };
+  $('k-ra-archivo').onchange = function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    // Leerlo entero y sacar los temas tarda; decirlo evita que le den tres veces al botón.
+    $('k-ra-msg').textContent = 'Leyendo el historial y buscando temas… puede tardar un poco.';
+    var datos = new FormData();
+    datos.append('archivo', f, f.name);
+    fetch(BASE + '/admin/api/rapidas/del-material', { method: 'POST', headers: { 'x-admin-token': state.token }, body: datos })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error) { $('k-ra-msg').textContent = d.error; return; }
+        PROPUESTOS = d.temas || [];
+        $('k-ra-msg').textContent = PROPUESTOS.length ? '' : 'No saqué temas claros de ahí.';
+        pintarPropuestos();
+      })
+      .catch(function () { $('k-ra-msg').textContent = 'No pude leerlo.'; });
+  };
+
+  $('k-ra-nueva').onclick = function () {
+    var tema = prompt('¿De qué trata? (ej.: Plazo de desembolso)');
+    if (!tema) return;
+    var como = prompt('¿Cómo lo preguntan? Escribe una o varias formas, separadas por |');
+    if (!como) return;
+    api('/rapidas', { method: 'POST', body: { tema: tema, ejemplos: como.split('|'), respuesta: '', estado: 'borrador', origen: 'a mano' } })
+      .then(function (d) {
+        if (d.error) { $('k-ra-msg').textContent = d.error; return; }
+        $('k-ra-msg').textContent = 'Añadida. Escríbele la respuesta abajo.';
+        cargarRapidas();
+      });
   };
 
   function loadKnowledge() {
