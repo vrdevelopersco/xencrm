@@ -16,6 +16,7 @@ import { cabecerasDeSiempre, soloDesdeAqui } from './cabeceras.js';
 import { abrirSesion, actualizarUsuario, alcanza, borrarUsuario, cambiarLoMio, COLORES, colorDe, cerrarSesion, crearUsuario, leerUsuarios, quitarClienteDeUsuarios, sesionDe, sinClave, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
 import { irseSiQuedaHuerfano } from './huerfano.js';
 import { deDondeViene, guardarLibretaConfig, libretaConfig } from './crm/libreta-config.js';
+import { general, guardarGeneral } from './crm/general.js';
 
 // El .env de la raíz, sin pasar por la configuración de un cliente (la consola no es de ningún cliente).
 function envRaiz(clave: string): string {
@@ -723,6 +724,21 @@ export function mountConsola(app: Hono) {
     // 🪤 Una llave corta se adivina probando. Mejor negarse que dejar puesta una que no protege nada.
     if (llave && llave.length < 24) return c.json({ error: 'la llave debe tener al menos 24 caracteres' }, 400);
     return c.json(guardarLibretaConfig({ llave, ips: Array.isArray(body.ips) ? body.ips.map(String) : [] }));
+  });
+
+  // ── La configuración general del aplicativo ──────────────────────────────
+  //
+  // Lo que vale para TODOS los clientes mientras cada uno no decida otra cosa en su tablero. Ver crm/general.ts
+  // para el porqué de los dos niveles y de quién le gana a quién.
+  app.get('/api/general', (c) => {
+    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
+    return c.json(general());
+  });
+
+  app.post('/api/general', async (c) => {
+    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
+    const body = await c.req.json().catch(() => ({}));
+    return c.json(guardarGeneral(body));
   });
 
   app.get('/api/clientes/:slug/token', (c) => {

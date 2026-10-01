@@ -345,7 +345,10 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   border:1px solid var(--vidrio-borde);border-radius:var(--r-card);box-shadow:var(--filo),var(--shadow);padding:16px}
 .lib .tarjeta h3{margin:0 0 2px;font-size:15px}
 .lib .tarjeta p{margin:0 0 10px}
-.lib input{flex:1;min-width:0;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-input);
+/* 🪤 `width:100%` además de `flex:1`: estos campos viven a veces en una fila (junto a un botón, donde manda el
+   flex) y a veces sueltos bajo su etiqueta, y ahí el flex no hace nada — el campo se quedaba del ancho que trae
+   de fábrica, unos 180 px, para escribir un saludo entero. */
+.lib input{flex:1;width:100%;min-width:0;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-input);
   background:var(--panel);color:var(--tinta);font:inherit;box-shadow:inset 0 1px 2px rgba(20,17,12,.05)}
 .lib input:focus-visible{outline:2px solid var(--oro-claro);outline-offset:1px}
 .lib .llave{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.02em}
@@ -365,6 +368,25 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
 .lib .enlace code{flex:1;min-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   background:var(--baja-soft);border-radius:8px;padding:6px 10px;font-size:12px}
 @media (max-width:720px){.lib .enlace b{min-width:0;width:100%}}
+
+/* Sub-pestañas dentro de una vista. Existen porque Configuración tiene cuatro asuntos distintos y ponerlos uno
+   debajo de otro haría una página que hay que recorrer entera para cambiar una palabra. */
+.tabs{display:inline-flex;flex-wrap:wrap;gap:4px;padding:3px;border-radius:999px;margin-bottom:16px;
+  background:var(--vidrio);border:1px solid var(--vidrio-borde);box-shadow:var(--filo)}
+.tabs button{border:0;background:transparent;border-radius:999px;padding:8px 16px;min-height:40px;cursor:pointer;
+  font:inherit;font-weight:600;color:var(--muted);transition:color .15s var(--curva)}
+.tabs button:hover{color:var(--tinta)}
+.tabs button.on{background:var(--panel);color:var(--oro);box-shadow:var(--rim),var(--shadow)}
+.tabs button:focus-visible{outline:2px solid var(--oro-claro);outline-offset:2px}
+/* 🪤 De quién viene cada valor, dicho con palabras y no solo con un color: «de lo general» contra «lo cambió
+   este cliente» es la diferencia entre entender la pantalla y adivinarla. */
+.dedonde{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tenue);margin-left:auto}
+.lib label{display:block;font-weight:600;font-size:13.5px;margin:12px 0 4px}
+.lib label:first-of-type{margin-top:0}
+.lib select{width:100%;max-width:280px;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-input);
+  background:var(--panel);color:var(--tinta);font:inherit}
+.lib .dos{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.lib .dos{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -421,7 +443,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       <button class="tab on" id="tab-atender"><span class="ic">◧</span>Atender<span class="badge" id="n-pend">0</span></button>
       <button class="tab" id="tab-clientes"><span class="ic">▤</span>Clientes</button>
       <button class="tab" id="tab-equipo" hidden><span class="ic">☻</span>Equipo</button>
-      <button class="tab" id="tab-libreta" hidden><span class="ic">✎</span>Libreta</button>
+      <button class="tab" id="tab-config" hidden><span class="ic">⚙</span>Configuración</button>
     </nav>
 
     <div class="side-pie">
@@ -449,7 +471,10 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     </main>
     <main id="lista" hidden></main>
     <main id="equipo" hidden></main>
-    <main id="libreta" hidden></main>
+    <main id="config" hidden>
+      <div class="tabs" id="config-nav" role="tablist"></div>
+      <div id="config-cuerpo"></div>
+    </main>
   </div>
 </div>
 
@@ -554,10 +579,12 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     $('resumen').textContent = '';
     $('n-pend').textContent = '';
     $('yo-nombre').textContent = '…';
-    $('libreta').innerHTML = '';
+    $('config-cuerpo').innerHTML = '';
+    $('config-nav').innerHTML = '';
     LIB = { llave: '', ips: [], tuIp: '', clientes: [] };
+    GEN = null;
     $('tab-equipo').hidden = true;   // hasta que /yo diga que es super
-    $('tab-libreta').hidden = true;  // la libreta es del super-admin: es la llave de una puerta sin sesión
+    $('tab-config').hidden = true;   // la configuración es del super-admin: toca a todos los clientes a la vez
     $('nuevo').hidden = true;
     if ($('dlg-atender').open) $('dlg-atender').close();
   }
@@ -616,7 +643,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         : 'Entraste con la llave maestra';
       $('nuevo').hidden = !esSuper;
       $('tab-equipo').hidden = !esSuper;
-      $('tab-libreta').hidden = !esSuper;
+      $('tab-config').hidden = !esSuper;
       cargarTodo(); cargarPendientes();
       ver(localStorage.getItem('aiva.consola.vista') || 'atender');
     });
@@ -1471,28 +1498,154 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     atender: ['Atender', 'Lo que espera a una persona, de todos tus clientes'],
     clientes: ['Clientes', 'Cómo va cada negocio y qué hay que mirarle'],
     equipo: ['Equipo', 'Quién entra a la consola y qué clientes atiende'],
-    libreta: ['Libreta', 'Preguntarle algo a aiva sin entrar al tablero. Con llave y desde esta dirección'],
+    config: ['Configuración', 'Lo que vale para todos tus clientes mientras cada uno no decida otra cosa'],
   };
 
   function ver(cual) {
-    if ((cual === 'equipo' || cual === 'libreta') && !esSuper) cual = 'atender';
+    if ((cual === 'equipo' || cual === 'config') && !esSuper) cual = 'atender';
     $('titulo').textContent = TITULOS[cual][0];
     $('subtitulo').textContent = TITULOS[cual][1];
     $('nuevo').hidden = !esSuper || cual !== 'clientes';
     $('atender').hidden = cual !== 'atender';
     $('lista').hidden = cual !== 'clientes';
     $('equipo').hidden = cual !== 'equipo';
-    $('libreta').hidden = cual !== 'libreta';
+    $('config').hidden = cual !== 'config';
     $('tab-atender').classList.toggle('on', cual === 'atender');
     $('tab-clientes').classList.toggle('on', cual === 'clientes');
     $('tab-equipo').classList.toggle('on', cual === 'equipo');
-    $('tab-libreta').classList.toggle('on', cual === 'libreta');
+    $('tab-config').classList.toggle('on', cual === 'config');
     localStorage.setItem('aiva.consola.vista', cual);
   }
   $('tab-atender').onclick = function () { ver('atender'); cargarPendientes(); };
   $('tab-clientes').onclick = function () { ver('clientes'); cargarTodo(); };
   $('tab-equipo').onclick = function () { ver('equipo'); cargarEquipo(); };
-  $('tab-libreta').onclick = function () { ver('libreta'); cargarLibreta(); };
+  $('tab-config').onclick = function () { ver('config'); cargarConfig(); };
+
+  // ── Configuración general ─────────────────────────────────────────────────
+  //
+  // 🪤 Todo lo que se toca aquí vale para TODOS los clientes a la vez. Eso es exactamente lo que hace falta
+  // —hasta ahora no había dónde decir «esto para todos»— y exactamente lo que puede hacer daño, así que la
+  // pantalla lo dice en cada sección en vez de darlo por sabido: lo que un negocio haya decidido en su propio
+  // tablero le gana a esto, siempre, y aquí no se le pisa nada a nadie.
+  var GEN = null;
+  var SECCION = localStorage.getItem('aiva.consola.config') || 'burbuja';
+  var SECCIONES = [
+    ['burbuja', 'Burbuja del sitio'],
+    ['ventana', 'Ventana de chat'],
+    ['libreta', 'La libreta'],
+    ['motores', 'Motores'],
+  ];
+
+  function cargarConfig() {
+    return Promise.all([api('/general'), api('/libreta')]).then(function (r) {
+      if (r[0].error || r[1].error) {
+        $('config-cuerpo').innerHTML = '<div class="vacio">' + esc(r[0].error || r[1].error) + '</div>';
+        return;
+      }
+      GEN = r[0];
+      LIB = { llave: r[1].llave || '', ips: r[1].ips || [], tuIp: r[1].tuIp || '', clientes: r[1].clientes || [] };
+      pintarConfig();
+    });
+  }
+
+  function pintarConfig() {
+    $('config-nav').innerHTML = SECCIONES.map(function (s) {
+      return '<button role="tab" data-s="' + s[0] + '" class="' + (s[0] === SECCION ? 'on' : '') + '"' +
+        (s[0] === SECCION ? ' aria-selected="true"' : '') + '>' + esc(s[1]) + '</button>';
+    }).join('');
+    Array.prototype.forEach.call($('config-nav').querySelectorAll('button'), function (b) {
+      b.onclick = function () {
+        SECCION = b.dataset.s;
+        localStorage.setItem('aiva.consola.config', SECCION);
+        pintarConfig();
+      };
+    });
+    if (SECCION === 'libreta') return pintarLibreta();
+    if (SECCION === 'motores') return pintarMotores();
+    return pintarChat(SECCION);
+  }
+
+  // El aviso que lleva cada sección que toca a todos los clientes. Es la misma frase siempre a propósito: si
+  // cambiara de una sección a otra, habría que leerla cada vez para saber si esta vez dice otra cosa.
+  var PARA_TODOS = '<div class="lib-estado"><span class="chip media">Para todos</span>' +
+    '<span class="small">Esto es el valor por defecto de tus ' + '__N__' + ' clientes. Lo que un negocio haya cambiado en su propio tablero le gana a esto.</span></div>';
+
+  function avisoParaTodos() { return PARA_TODOS.replace('__N__', String(LIB.clientes.length)); }
+
+  function pintarChat(cual) {
+    var g = GEN[cual] || {};
+    var campos = cual === 'burbuja'
+      ? '<label for="g-saludo">El primer mensaje</label>' +
+        '<input id="g-saludo" value="' + esc(g.saludo || '') + '" placeholder="Vacío: «¡Hola! Soy [asistente], de [negocio]. ¿Qué estás buscando hoy?»" maxlength="400">' +
+        '<div class="small muted" style="margin-top:4px">Déjalo vacío y cada negocio saluda con su propio nombre, que suele ser lo que quieres.</div>' +
+        '<div class="dos">' +
+          '<div><label for="g-pos">De qué lado aparece</label>' +
+            '<select id="g-pos"><option value="derecha"' + (g.posicion === 'derecha' ? ' selected' : '') + '>Derecha</option>' +
+            '<option value="izquierda"' + (g.posicion === 'izquierda' ? ' selected' : '') + '>Izquierda</option></select></div>' +
+          '<div><label for="g-abre">Se abre sola a los</label>' +
+            '<select id="g-abre">' + [0, 5, 10, 20, 30, 60].map(function (n) {
+              return '<option value="' + n + '"' + (Number(g.abreSola) === n ? ' selected' : '') + '>' + (n === 0 ? 'Nunca' : n + ' segundos') + '</option>';
+            }).join('') + '</select>' +
+            // 🪤 Esto se ve bien en una demo y molesta en un sitio de verdad. Que quien lo encienda sepa lo que
+            // está encendiendo, en vez de descubrirlo por las quejas del cliente.
+            '<div class="small muted" style="margin-top:4px">Sube las conversaciones y tapa el sitio de quien está leyendo. Nunca se abre sola en un teléfono ni a quien ya venía hablando.</div></div>' +
+        '</div>' +
+        '<label style="display:flex;align-items:center;gap:10px;margin-top:14px;font-weight:400">' +
+          '<input type="checkbox" id="g-horario" style="flex:0 0 auto;width:20px;height:20px;min-height:0"' + (g.soloEnHorario ? ' checked' : '') + '>' +
+          '<span><b style="font-size:13.5px">Solo dentro del horario de atención</b><br><span class="small muted">Fuera de horario la burbuja no aparece: el sitio del cliente queda limpio en vez de con un botón que nadie va a contestar.</span></span>' +
+        '</label>'
+      : '<label for="g-titulo">Lo que dice la barra de arriba</label>' +
+        '<input id="g-titulo" value="' + esc(g.titulo || '') + '" placeholder="Vacío: el nombre del negocio" maxlength="60">' +
+        '<label for="g-pie">La línea de abajo</label>' +
+        '<input id="g-pie" value="' + esc(g.pie || '') + '" placeholder="Vacío: «Esta conversación queda guardada en este navegador.»" maxlength="200">' +
+        '<label for="g-cerrada">Qué se lee cuando el chat está apagado</label>' +
+        '<input id="g-cerrada" value="' + esc(g.cerradaDice || '') + '" placeholder="Vacío: lo que cada negocio puso en «cómo contactar a una persona»" maxlength="400">' +
+        '<div class="small muted" style="margin-top:6px">La ventana vive en <code>/chat</code> de cada cliente. Los enlaces están en «La libreta».</div>';
+
+    $('config-cuerpo').innerHTML =
+      '<div class="lib">' + avisoParaTodos() +
+        '<section class="tarjeta">' +
+          '<h3>' + (cual === 'burbuja' ? 'La burbuja que se pega en el sitio del cliente' : 'La ventana de chat del negocio') + '</h3>' +
+          '<p class="muted small">' + (cual === 'burbuja'
+            ? 'El botón flotante que el negocio pega en su página con una línea de código. Es la misma conversación que la ventana: entra al CRM como contacto de canal web.'
+            : 'La puerta web del negocio, a pantalla completa, para enlazar desde su sitio o mandar por WhatsApp. Quien escriba aquí entra al CRM igual que por la burbuja.') + '</p>' +
+          campos +
+        '</section>' +
+        '<div class="fila"><button class="btn primary" id="g-guardar">Guardar</button>' +
+        '<span class="grow"></span><span class="small" id="lib-msg" role="status"></span></div>' +
+      '</div>';
+
+    $('g-guardar').onclick = function () {
+      var nuevo = JSON.parse(JSON.stringify(GEN));
+      if (cual === 'burbuja') {
+        nuevo.burbuja = {
+          saludo: $('g-saludo').value.trim(),
+          posicion: $('g-pos').value,
+          abreSola: Number($('g-abre').value),
+          soloEnHorario: $('g-horario').checked,
+        };
+      } else {
+        nuevo.ventana = { titulo: $('g-titulo').value.trim(), pie: $('g-pie').value.trim(), cerradaDice: $('g-cerrada').value.trim() };
+      }
+      $('lib-msg').textContent = 'Guardando…';
+      api('/general', { method: 'POST', body: nuevo }).then(function (d) {
+        if (d.error) { $('lib-msg').textContent = d.error; return; }
+        GEN = d;
+        pintarConfig();
+        $('lib-msg').textContent = 'Guardado. Se ve al recargar la página del chat.';
+      });
+    };
+  }
+
+  // Los motores todavía no se cambian desde aquí: decirlo es más honesto que una pantalla que parece que sí.
+  function pintarMotores() {
+    $('config-cuerpo').innerHTML =
+      '<div class="lib"><section class="tarjeta">' +
+        '<h3>Qué modelo hace cada cosa</h3>' +
+        '<p class="muted small">Hoy esto se decide en el <code>.env</code> de cada cliente y hace falta reiniciarlo para que tome el cambio. Todavía no lo puedes mover desde aquí.</p>' +
+        '<div class="small muted">Lo que sí puedes ver, por cliente, está en su tablero: Configuración › Motores.</div>' +
+      '</section></div>';
+  }
 
   // ── La libreta ────────────────────────────────────────────────────────────
   //
@@ -1503,14 +1656,6 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   // funciona y dejarlo así. Una llave sola viaja en la dirección: queda en el historial, en una captura, en el
   // registro de cualquier servidor por el que pase. El sello por dirección es lo que de verdad cierra.
   function libretaAbierta() { return LIB.llave.length >= 24 && LIB.ips.length > 0; }
-
-  function cargarLibreta() {
-    return api('/libreta').then(function (d) {
-      if (d.error) { $('libreta').innerHTML = '<div class="vacio">' + esc(d.error) + '</div>'; return; }
-      LIB = { llave: d.llave || '', ips: d.ips || [], tuIp: d.tuIp || '', clientes: d.clientes || [] };
-      pintarLibreta();
-    });
-  }
 
   function pintarLibreta() {
     var abierta = libretaAbierta();
@@ -1525,7 +1670,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
 
     var mias = LIB.tuIp && LIB.ips.indexOf(LIB.tuIp) === -1;
 
-    $('libreta').innerHTML =
+    $('config-cuerpo').innerHTML =
       '<div class="lib">' +
         '<div class="lib-estado">' +
           '<span class="chip ' + estado[0] + '">' + estado[1] + '</span>' +
@@ -1613,7 +1758,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         $('lib-msg').textContent = 'Quitada. Dale a Guardar.';
       };
     });
-    Array.prototype.forEach.call($('libreta').querySelectorAll('.cp'), function (b) {
+    Array.prototype.forEach.call($('config-cuerpo').querySelectorAll('.cp'), function (b) {
       b.onclick = function () { copiarAlPortapapeles(b.dataset.url, 'Enlace copiado.'); };
     });
     $('lib-guardar').onclick = function () { guardarLibreta($('lib-llave').value.trim(), LIB.ips); };
