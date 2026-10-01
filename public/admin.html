@@ -912,6 +912,20 @@ dialog#dlg-grupos > b{font-size:17px}
 .ra textarea,.ra input{width:100%}
 .ra .pista{font-size:12.5px;color:var(--media);background:var(--media-soft);border-radius:8px;padding:7px 10px;margin:6px 0}
 .ra .veces{font-size:11.5px;color:var(--tenue);margin-left:auto}
+
+/* 🪤 Las pestañas de «Lo que sabe» a ancho de teléfono. Va al FINAL de la hoja a propósito: `.tabs` base está
+   más arriba y entre dos reglas de la misma especificidad gana la última — una versión móvil escrita antes no se
+   aplicaría nunca. Ya pasó una vez en la consola y no se vio hasta mirar una captura a 390 px.
+   El problema: con `flex-wrap:nowrap` las cuatro pestañas no caben y «Solo para el equipo» quedaba fuera de la
+   pantalla, sin nada que dijera que estaba ahí. Una pestaña que no se ve es una pestaña que nadie encuentra, y
+   cada una de estas es una sección entera. Envuelven a mitades, y con dos filas la cápsula pasa a caja: el radio
+   999 en dos renglones queda como un bulto con los lados redondeados y el medio recto. */
+@media (max-width:760px){
+  .tabs{display:flex;flex-wrap:wrap;white-space:normal;width:100%;border-radius:14px;gap:4px}
+  .tabs button{flex:1 1 calc(50% - 4px);min-width:0;border-radius:10px;padding:8px 10px;min-height:44px}
+  /* La barra donde viven: en teléfono el título y las pestañas no caben en la misma línea. */
+  #view-knowledge .topbar{flex-wrap:wrap;gap:8px}
+}
 </style>
 </head>
 <body>
