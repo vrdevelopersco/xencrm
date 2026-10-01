@@ -882,6 +882,19 @@ dialog#dlg-grupos > b{font-size:17px}
   .app[data-subnav="no"] .subnav{display:none}
   .cfg-pop{left:8px;right:8px;width:auto;bottom:74px}
 }
+
+/* Cargar documentos: el recuadro de soltar y la lista de lo que hay. */
+.soltar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px;border:1.5px dashed var(--line);
+  border-radius:12px;transition:border-color .15s,background .15s}
+.soltar.encima{border-color:var(--brand);background:var(--brand-soft)}
+.doc-fila{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+  margin-bottom:6px;background:var(--panel)}
+.doc-fila > :first-child{flex:1;min-width:0}
+/* 🪤 «Sin indexar» no se dice solo con color: quien no lo distinga tiene que poder leerlo igual. */
+.aviso-cero{color:var(--media);font-weight:600}
+#k-escribir summary{cursor:pointer;color:var(--muted)}
+#k-escribir summary:hover{color:var(--text)}
+#k-escribir input,#k-escribir textarea{width:100%}
 </style>
 </head>
 <body>
@@ -1087,6 +1100,49 @@ dialog#dlg-grupos > b{font-size:17px}
     <section class="view" id="view-knowledge">
       <div class="topbar"><h1>Lo que sabe el agente</h1><span class="grow"></span><div class="tabs"><button class="on" data-kind="knowledge" id="k-kn">Información</button><button data-kind="product" id="k-pr">Productos</button><button data-kind="interno" id="k-in">Solo para el equipo</button></div></div>
       <div class="pad">
+        <!--
+          Los documentos del negocio. Antes esto solo se podía cargar dejando archivos en el servidor, así que un
+          cliente dado de alta se quedaba con el índice en cero hasta que alguien entrara por ssh: no es que no
+          tuviera nada que contar, es que no tenía por dónde metérselo.
+        -->
+        <div id="k-cargar" hidden>
+          <div class="panel" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div><b>Lo que el asistente puede contar</b>
+              <div class="small muted">Tus políticas, tus servicios, las preguntas de siempre. Sube un Word, un Excel o un texto, o escríbelo aquí.</div>
+            </div>
+            <div id="k-soltar" class="soltar">
+              <input type="file" id="k-archivos" multiple hidden
+                     accept=".txt,.md,.csv,.docx,.xlsx,text/plain,text/markdown,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+              <button class="btn" id="k-subir">Subir un documento</button>
+              <span class="small muted">o arrástralo aquí · Word, Excel, texto</span>
+            </div>
+            <details id="k-escribir">
+              <summary class="small">Prefiero escribirlo</summary>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+                <input type="text" id="k-doc-titulo" placeholder="De qué se trata (ej.: Políticas de pago)">
+                <textarea id="k-doc-texto" rows="5" placeholder="Escríbelo con tus palabras, como se lo explicarías a alguien que entra a trabajar contigo."></textarea>
+                <div class="fila" style="gap:8px;justify-content:flex-end"><button class="btn primary" id="k-doc-guardar">Guardar</button></div>
+              </div>
+            </details>
+            <div class="small" id="k-cargar-msg" role="status"></div>
+          </div>
+          <div id="k-docs"></div>
+        </div>
+
+        <!-- El catálogo: fichas con precio, que es otra cosa que un fragmento de texto. -->
+        <div id="k-catalogo" hidden>
+          <div class="panel" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div><b>El catálogo</b>
+              <div class="small muted">Tus productos o servicios con su precio. Un archivo JSON o CSV; reemplaza el que haya.</div>
+            </div>
+            <div class="fila" style="gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="file" id="k-cat-archivo" hidden accept=".json,.csv,application/json,text/csv">
+              <button class="btn" id="k-cat-subir">Subir el catálogo</button>
+              <span class="small" id="k-cat-msg" role="status"></span>
+            </div>
+          </div>
+        </div>
+
         <input type="search" id="k-q" placeholder="Buscar en lo que sabe el agente…">
         <div id="k-list"></div>
         <!-- Lo interno se escribe aquí; lo demás entra por el catálogo y los documentos del negocio. -->

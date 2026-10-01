@@ -37,6 +37,8 @@ import { armar as armarRespaldo, restaurar as restaurarRespaldo, revisar as revi
 import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
 import { guardarMotores, motoresDe } from '../motores.js';
+import { borrarDocumento, documentosDelNegocio, guardarCatalogo, guardarDocumento } from '../rag/documentos.js';
+import { leerAdjunto } from '../crm/adjuntos.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
@@ -1055,6 +1057,67 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
           url: string | null;
         }[]);
     return c.json(rows);
+  });
+
+  // ── Los documentos del negocio ────────────────────────────────────────────
+  //
+  // Cargarle conocimiento desde el tablero, que hasta ahora solo se podía haciendo ssh al servidor. Ver
+  // `rag/documentos.ts` para por qué todo acaba en un archivo y no solo en la base.
+  app.get('/admin/api/documentos', (c) => c.json({ documentos: documentosDelNegocio(), docs: countDocs() }));
+
+  app.post('/admin/api/documentos', async (c) => {
+    try {
+      // Dos formas de llegar y una sola salida: un archivo que alguien sube, o un texto escrito a mano en el
+      // tablero. Las dos acaban en el mismo `.md` en la carpeta del negocio.
+      if ((c.req.header('content-type') ?? '').includes('multipart/form-data')) {
+        const form = await c.req.parseBody({ all: true });
+        const sueltos = form.archivo;
+        const archivos = (Array.isArray(sueltos) ? sueltos : [sueltos]).filter((f): f is File => f instanceof File);
+        if (!archivos.length) return c.json({ error: 'no llegó ningún archivo' }, 400);
+        const hechos = [];
+        const fallos: string[] = [];
+        for (const f of archivos.slice(0, 10)) {
+          try {
+            // El mismo lector de la libreta: Word, Excel y texto, sin añadir dependencias. Y los mismos noes:
+            // un ejecutable disfrazado de .docx no entra tampoco por aquí.
+            const leido = leerAdjunto(f.name, new Uint8Array(await f.arrayBuffer()));
+            hechos.push(await guardarDocumento(f.name, leido.texto));
+          } catch (e) {
+            fallos.push(e instanceof Error ? e.message : `no pude leer "${f.name}"`);
+          }
+        }
+        if (!hechos.length) return c.json({ error: fallos.join('. ') || 'no pude leer nada' }, 400);
+        return c.json({ ok: true, documentos: hechos, fallos, docs: countDocs() });
+      }
+      const body = (await c.req.json()) as { titulo?: string; contenido?: string };
+      const hecho = await guardarDocumento(body.titulo ?? '', body.contenido ?? '', body.titulo ?? '');
+      return c.json({ ok: true, documentos: [hecho], fallos: [], docs: countDocs() });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'no pude guardarlo' }, 400);
+    }
+  });
+
+  app.delete('/admin/api/documentos/:archivo{.+}', async (c) => {
+    try {
+      const fue = await borrarDocumento(decodeURIComponent(c.req.param('archivo')));
+      return fue ? c.json({ ok: true, docs: countDocs() }) : c.json({ error: 'ese documento ya no está' }, 404);
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'no pude borrarlo' }, 400);
+    }
+  });
+
+  /** El catálogo de productos, que es la otra mitad: fichas con precio, no fragmentos de texto. */
+  app.post('/admin/api/catalogo', async (c) => {
+    try {
+      const form = await c.req.parseBody();
+      const f = form.archivo;
+      if (!(f instanceof File)) return c.json({ error: 'no llegó ningún archivo' }, 400);
+      const texto = new TextDecoder().decode(new Uint8Array(await f.arrayBuffer()));
+      const productos = await guardarCatalogo(texto, /\.csv$/i.test(f.name));
+      return c.json({ ok: true, productos, docs: countDocs() });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'no pude guardar el catálogo' }, 400);
+    }
   });
 
   /**

@@ -175,7 +175,12 @@ export function chunkText(text: string, opts: { size?: number; title: string; ur
 
   const chunks: { title: string; content: string }[] = [];
   for (const sec of sections) {
-    const title = sec.heading ? `${opts.title} › ${sec.heading}` : opts.title;
+    // 🪤 El encabezado solo se añade si DICE algo nuevo. El título del archivo sale de su primer `# H1`, así que
+    // en un documento con un solo encabezado los dos son el mismo y el fragmento acababa titulado «Políticas de
+    // pago › Políticas de pago». Se ve mal en el tablero y, lo que importa, gasta la mitad del título —que es
+    // con lo que el modelo decide si el fragmento le sirve— repitiendo lo mismo dos veces.
+    const titulosIguales = sec.heading.toLowerCase() === opts.title.toLowerCase();
+    const title = sec.heading && !titulosIguales ? `${opts.title} › ${sec.heading}` : opts.title;
     const paras = sec.body
       .split(/\n\s*\n/)
       .map((p) => p.trim())

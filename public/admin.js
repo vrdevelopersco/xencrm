@@ -417,7 +417,10 @@
     if (view === 'agent') loadAgent();
     if (view === 'help') loadHelp();
     if (view === 'channels') loadChannels();
-    if (view === 'knowledge') loadKnowledge();
+    // Al entrar se pasa por pestanaSabe y no por loadKnowledge a secas: es pestanaSabe quien decide qué
+    // pestaña está puesta y qué se enseña con ella. Llamando solo a loadKnowledge, la pantalla salía con la
+    // pestaña «Información» marcada pero sin su caja de cargar documentos, que es justo lo que se viene a hacer.
+    if (view === 'knowledge') pestanaSabe(state.kind || 'knowledge');
   }
 
   // ---------- bandeja ----------
@@ -1983,7 +1986,12 @@
     $('k-interno').hidden = !interno;
     $('k-list').hidden = interno;
     $('k-q').hidden = interno;
+    // Cada pestaña enseña cómo se le mete contenido a ESA pestaña. Un único cajón de subida para las tres
+    // obligaría a elegir primero el tipo, y elegir mal significa que un catálogo acabe troceado como texto.
+    $('k-cargar').hidden = cual !== 'knowledge';
+    $('k-catalogo').hidden = cual !== 'product';
     if (interno) cargarNotas(); else loadKnowledge();
+    if (cual === 'knowledge') cargarDocumentos();
   }
   $('k-kn').onclick = function () { pestanaSabe('knowledge'); };
   $('k-pr').onclick = function () { pestanaSabe('product'); };
@@ -2094,6 +2102,109 @@
       });
   };
   var kTimer; $('k-q').oninput = function () { clearTimeout(kTimer); kTimer = setTimeout(loadKnowledge, 250); };
+
+  // ---------- los documentos del negocio ----------
+  //
+  // Lo que el asistente puede contarle a un cliente. Cada documento es un archivo de verdad en la carpeta del
+  // negocio: ver src/rag/documentos.ts para por qué no basta con meterlo en la base.
+  function cargarDocumentos() {
+    return api('/documentos').then(function (d) {
+      var docs = d.documentos || [];
+      $('k-docs').innerHTML = docs.length
+        ? '<div class="small muted" style="margin:14px 0 6px">' + docs.length + (docs.length === 1 ? ' documento cargado' : ' documentos cargados') + '</div>' +
+          docs.map(function (x) {
+            return '<div class="doc-fila">' +
+              '<div><b>' + esc(x.titulo) + '</b>' +
+                '<div class="small muted">' + esc(x.archivo) + ' · ' + Math.max(1, Math.round(x.bytes / 1024)) + ' KB · ' +
+                // 🪤 Un archivo con 0 fragmentos está cargado pero NO indexado, así que el asistente no lo ve.
+                // Decir solo «cargado» ahí haría creer que ya está contestando con él.
+                (x.fragmentos ? x.fragmentos + (x.fragmentos === 1 ? ' fragmento' : ' fragmentos') : '<span class="aviso-cero">sin indexar todavía</span>') +
+                '</div></div>' +
+              '<button class="btn sm borrar-doc" data-a="' + esc(x.archivo) + '">Quitar</button>' +
+            '</div>';
+          }).join('')
+        : '<div class="empty" style="margin-top:14px">Todavía no le has cargado nada. Sin esto, el asistente solo sabe lo que diga el perfil del negocio.</div>';
+      Array.prototype.forEach.call($('k-docs').querySelectorAll('.borrar-doc'), function (b) {
+        b.onclick = function () {
+          // Quitar un documento es rehacer el índice, así que se dice qué se va antes de irse.
+          if (!confirm('¿Quitar "' + b.dataset.a + '"? El asistente dejará de saber lo que dice.')) return;
+          b.disabled = true;
+          api('/documentos/' + encodeURIComponent(b.dataset.a), { method: 'DELETE' }).then(function (r) {
+            if (r.error) { $('k-cargar-msg').textContent = r.error; b.disabled = false; return; }
+            $('k-cargar-msg').textContent = 'Quitado.';
+            cargarDocumentos(); loadKnowledge();
+          });
+        };
+      });
+    });
+  }
+
+  function subirDocumentos(archivos) {
+    if (!archivos || !archivos.length) return;
+    var datos = new FormData();
+    for (var i = 0; i < archivos.length && i < 10; i++) datos.append('archivo', archivos[i], archivos[i].name);
+    // Indexar lleva unos segundos —hay que calcular los vectores— y sin decirlo parece que no pasó nada y la
+    // gente vuelve a darle al botón.
+    $('k-cargar-msg').textContent = 'Leyendo e indexando…';
+    fetch(BASE + '/admin/api/documentos', { method: 'POST', headers: { 'x-admin-token': state.token }, body: datos })
+      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (r.error) { $('k-cargar-msg').textContent = r.error; return; }
+        var n = (r.documentos || []).length;
+        // Si subieron cinco y entraron tres, se dicen los dos números y por qué faltan los otros. Decir solo
+        // «listo» dejaría a alguien creyendo que su PDF entró.
+        $('k-cargar-msg').textContent = n + (n === 1 ? ' documento cargado.' : ' documentos cargados.') +
+          ((r.fallos || []).length ? ' No pude con: ' + r.fallos.join(' ') : '');
+        cargarDocumentos(); loadKnowledge();
+      })
+      .catch(function () { $('k-cargar-msg').textContent = 'No pude subirlo. Intenta de nuevo.'; });
+  }
+
+  $('k-subir').onclick = function () { $('k-archivos').click(); };
+  $('k-archivos').onchange = function () { subirDocumentos(this.files); this.value = ''; };
+  $('k-doc-guardar').onclick = function () {
+    var titulo = $('k-doc-titulo').value.trim(), texto = $('k-doc-texto').value.trim();
+    if (!titulo || !texto) { $('k-cargar-msg').textContent = 'Ponle un título y un texto.'; return; }
+    $('k-cargar-msg').textContent = 'Guardando e indexando…';
+    api('/documentos', { method: 'POST', body: { titulo: titulo, contenido: texto } }).then(function (r) {
+      if (r.error) { $('k-cargar-msg').textContent = r.error; return; }
+      $('k-doc-titulo').value = ''; $('k-doc-texto').value = '';
+      $('k-escribir').open = false;
+      $('k-cargar-msg').textContent = 'Guardado.';
+      cargarDocumentos(); loadKnowledge();
+    });
+  };
+
+  // Arrastrar y soltar sobre el recuadro, que es como se sube un archivo cuando ya lo tienes delante.
+  (function () {
+    var caja = $('k-soltar');
+    if (!caja) return;
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      caja.addEventListener(ev, function (e) { e.preventDefault(); caja.classList.add('encima'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      caja.addEventListener(ev, function (e) { e.preventDefault(); caja.classList.remove('encima'); });
+    });
+    caja.addEventListener('drop', function (e) { subirDocumentos(e.dataTransfer && e.dataTransfer.files); });
+  })();
+
+  $('k-cat-subir').onclick = function () { $('k-cat-archivo').click(); };
+  $('k-cat-archivo').onchange = function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    $('k-cat-msg').textContent = 'Leyendo e indexando…';
+    var datos = new FormData();
+    datos.append('archivo', f, f.name);
+    fetch(BASE + '/admin/api/catalogo', { method: 'POST', headers: { 'x-admin-token': state.token }, body: datos })
+      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        $('k-cat-msg').textContent = r.error ? r.error : r.productos + (r.productos === 1 ? ' producto en el catálogo.' : ' productos en el catálogo.');
+        if (!r.error) loadKnowledge();
+      })
+      .catch(function () { $('k-cat-msg').textContent = 'No pude subirlo.'; });
+  };
+
   function loadKnowledge() {
     api('/knowledge?kind=' + state.kind + '&q=' + encodeURIComponent($('k-q').value.trim())).then(function (docs) {
       $('k-list').innerHTML = docs.map(function (d) { return '<div class="doc"><h4>' + esc(d.title) + (d.url ? ' · <a href="' + esc(d.url) + '" target="_blank">enlace</a>' : '') + '</h4><p>' + esc(d.content) + '</p></div>'; }).join('') || '<div class="empty">Nada indexado con ese texto.</div>';
