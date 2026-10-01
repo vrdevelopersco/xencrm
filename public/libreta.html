@@ -99,13 +99,59 @@ textarea{flex:1;border:0;background:none;color:inherit;font:inherit;resize:none;
            accept=".txt,.md,.csv,.json,.docx,.xlsx,text/plain,text/csv,application/json,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
   </div>
   <div class="adjuntos" id="adjuntos"></div>
-  <div class="pie">Puedes adjuntar Word, Excel o texto (máximo 2 MB). Nada de esto se guarda: si recargas, se pierde.</div>
+  <div class="pie">Puedes adjuntar Word, Excel o texto (máximo 2 MB). Lo que hablen queda solo en este navegador y se borra a los dos días.</div>
 </footer>
 
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
-  var hilo = [];               // lo dicho, solo en memoria: recargar es empezar de cero
+  var hilo = [];               // lo dicho; se guarda en este navegador y dura un par de días (ver guardar())
+
+  // ── El historial, en este navegador y por poco tiempo ──────────────────────
+  //
+  // El servidor no guarda ni una línea de esto, y no es por pereza: esta puerta no pide sesión, y acumular ahí
+  // conversaciones que pueden llevar datos de clientes dentro sería crear un archivo que nadie pidió y que
+  // habría que cuidar. Aquí se queda en el navegador de quien pregunta, que es de quien es.
+  //
+  // 🪤 La clave se arma con la RUTA DEL CLIENTE, no con la del navegador entero. En producción todos los
+  // clientes viven en el mismo dominio (…/dunor/, …/confia/), así que comparten almacenamiento: con una clave
+  // fija, la libreta de un negocio enseñaría las preguntas hechas sobre otro.
+  //
+  // Y no lleva la llave dentro aunque esté en la dirección: cambiarla es una acción de seguridad —se usa cuando
+  // uno teme que se haya filtrado— y no tiene por qué costarle a nadie lo que llevaba escrito.
+  var DIAS = 2;
+  var CLAVE = 'aiva.libreta.' + location.pathname.replace(/\/libreta\/.*$/, '');
+
+  function guardar() {
+    try {
+      // Solo lo que quedó completo: un turno a medias o con error no ayuda a nadie mañana. Y un tope, porque
+      // esto comparte un espacio limitado con todo lo demás del dominio.
+      var limpio = hilo.filter(function (t) { return t.respuesta && !t.error; }).slice(-30);
+      if (!limpio.length) { localStorage.removeItem(CLAVE); return; }
+      localStorage.setItem(CLAVE, JSON.stringify({ v: 1, cuando: Date.now(), hilo: limpio }));
+    } catch (e) {
+      // Ventana privada, espacio lleno, almacenamiento bloqueado: la libreta funciona igual, solo que sin
+      // memoria. No es un error que haya que contarle a nadie.
+    }
+  }
+
+  function recuperar() {
+    try {
+      var crudo = localStorage.getItem(CLAVE);
+      if (!crudo) return [];
+      var d = JSON.parse(crudo);
+      // 🪤 Se mira la fecha ANTES de usarlo. Lo que se pidió es una memoria corta, y una memoria corta que no
+      // caduca es una memoria larga: en dos días lo que se habló ya no es contexto, es ruido con nombres de
+      // clientes dentro.
+      if (!d || d.v !== 1 || !Array.isArray(d.hilo) || Date.now() - Number(d.cuando || 0) > DIAS * 86400000) {
+        localStorage.removeItem(CLAVE);
+        return [];
+      }
+      return d.hilo.filter(function (t) { return t && typeof t.pregunta === 'string' && typeof t.respuesta === 'string'; });
+    } catch (e) {
+      return [];
+    }
+  }
   var pegados = [];            // los archivos de la pregunta que se está escribiendo
   var esperando = false;
 
@@ -175,8 +221,13 @@ textarea{flex:1;border:0;background:none;color:inherit;font:inherit;resize:none;
         var ultimo = hilo[hilo.length - 1];
         ultimo.respuesta = 'No se pudo conectar.'; ultimo.error = true;
       })
-      .finally(function () { esperando = false; pintarAdjuntos(); pintar(); $('campo').focus(); });
+      .finally(function () { esperando = false; guardar(); pintarAdjuntos(); pintar(); $('campo').focus(); });
   }
+
+  // Lo de los últimos dos días, si lo hay. Va antes de enganchar nada: así la pantalla aparece ya con su hilo
+  // en vez de parpadear vacía y llenarse después.
+  hilo = recuperar();
+  if (hilo.length) pintar();
 
   var campo = $('campo');
   function alto() { campo.style.height = 'auto'; campo.style.height = Math.min(campo.scrollHeight, 180) + 'px'; }
@@ -185,7 +236,14 @@ textarea{flex:1;border:0;background:none;color:inherit;font:inherit;resize:none;
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); var t = campo.value; campo.value = ''; alto(); preguntar(t); }
   });
   $('enviar').onclick = function () { var t = campo.value; campo.value = ''; alto(); preguntar(t); };
-  $('limpiar').onclick = function () { location.reload(); };
+  // 🪤 Antes esto recargaba, que bastaba cuando el hilo vivía solo en memoria. Ahora el hilo sobrevive a la
+  // recarga, así que recargar dejaría todo donde estaba: «empezar de nuevo» tiene que BORRAR.
+  $('limpiar').onclick = function () {
+    hilo = [];
+    try { localStorage.removeItem(CLAVE); } catch (e) { /* sin almacenamiento no había nada que borrar */ }
+    pintar();
+    $('campo').focus();
+  };
   $('clip').onclick = function () { $('archivos').click(); };
   $('archivos').onchange = function () {
     for (var i = 0; i < this.files.length && pegados.length < 4; i++) pegados.push(this.files[i]);
