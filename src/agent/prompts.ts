@@ -107,6 +107,27 @@ export const HUMAN_REPLIES = [
   `Por supuesto. Ya le aviso a una persona del equipo para que te atienda por este chat. Mientras tanto, cuéntame qué pasó por si puedo adelantar algo.`,
 ] as const;
 
+/**
+ * Lo que se dice mientras se consulta algo que tarda.
+ *
+ * Cuando una pregunta necesita el modelo pesado, la respuesta tarda entre cinco y diez segundos. En un chat eso
+ * es un silencio larguísimo: quien escribió se queda mirando la pantalla sin saber si llegó su mensaje, y lo que
+ * siente es que le está contestando una máquina lenta. Una persona en esa situación diría «dame un segundito» —
+ * así que eso es lo que se dice.
+ *
+ * 🪤 No es decoración ni es una mentira piadosa: es verdad que está consultando, y decirlo cambia lo que la
+ * espera significa. El mismo silencio, anunciado, se lee como alguien buscando; sin anunciar, se lee como algo
+ * que se trabó.
+ *
+ * Van en primera persona y sin saludo: es la continuación de una conversación que ya empezó, no un mensaje nuevo.
+ */
+export const MIENTRAS_CONSULTO = [
+  'Dame un segundito que lo consulto 👀',
+  'Permíteme un momento, lo reviso y te digo.',
+  'Ya mismo lo miro, dame un segundo.',
+  'Déjame verificarlo bien y te cuento.',
+] as const;
+
 export const ERROR_REPLIES = [
   'Uy, se me enredó algo por aquí 😅 ¿Me lo repites en un momentico?',
   'Perdón, tuve un problemita técnico. ¿Me lo vuelves a escribir?',

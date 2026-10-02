@@ -13,10 +13,11 @@ import { chooseEngine } from './router.js';
 import { claimsBooked, dropRepeatedFacts, isHonest, postProcess, stripRepeatedGreeting, touchesPending, unsupportedAnswer, ungroundedNumbers } from './format.js';
 import { pendingTopics } from '../profile.js';
 import { openVerification, saysWillVerify } from '../crm/verifications.js';
-import { ERROR_REPLIES, HUMAN_REPLIES, OUT_OF_SCOPE_REPLIES, personaPrompt, pick, type Intent } from './prompts.js';
+import { ERROR_REPLIES, HUMAN_REPLIES, MIENTRAS_CONSULTO, OUT_OF_SCOPE_REPLIES, personaPrompt, pick, type Intent } from './prompts.js';
 import { crossChannelGreeting } from '../crm/cross.js';
 import { getContact, purgeContact, setHumanMode, updateContact } from '../crm/contacts.js';
 import { proponer } from '../crm/propuestas.js';
+import { canDeliver, sendToContact } from '../crm/outbox.js';
 import { emitEvent } from '../crm/events.js';
 import { scheduleAnalysis } from '../crm/analyzer.js';
 import { bookingStep, hasBookingInProgress, manageIntent, startBooking } from '../crm/booking.js';
@@ -82,6 +83,9 @@ const queues = new Map<string, Promise<unknown>>();
 const lastEngine = new Map<string, Engine>();
 // Último rol que respondió: un seguimiento corto tras una recomendación sigue con el rol pesado.
 const lastRole = new Map<string, 'light' | 'heavy'>();
+// El último «dame un segundito» que se le dijo a cada quien: repetir la misma frase dos veces seguidas es
+// exactamente lo que delata a una máquina, que es lo contrario de lo que esta frase viene a hacer.
+const ultimoAviso = new Map<string, string>();
 
 export function handleMessage(msg: IncomingMessage): Promise<AgentReply> {
   const prev = queues.get(msg.userId) ?? Promise.resolve();
@@ -305,6 +309,23 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const estimatedTokens = estimateTokens(persona + liteContext + text) + Math.min(history.length, 12) * 60;
 
   const chosen = chooseEngine({ intent: gate.intent, userText: text, estimatedTokens, lastRole: lastRole.get(msg.userId) });
+
+  // Esta va a tardar: se avisa, como haría una persona.
+  //
+  // El rol pesado se lleva entre cinco y diez segundos. En un chat eso es un silencio larguísimo —quien escribió
+  // se queda mirando la pantalla sin saber si llegó su mensaje— y lo que siente es que le contesta una máquina
+  // lenta. Un «dame un segundito que lo consulto» convierte el mismo silencio en alguien buscando algo.
+  //
+  // 🪤 NUNCA en «Propone». Ahí no se le manda nada al cliente —la respuesta espera a que una persona la mande— y
+  // este sería el único mensaje que se escapara, dejando al cliente con un «ya te digo» que nadie continúa.
+  // 🪤 Y nunca se espera a que salga: se manda y se sigue. Si el canal tarda en aceptarlo, lo que no puede pasar
+  // es que la respuesta de verdad llegue más tarde todavía por culpa del aviso de que va a tardar.
+  if (chosen.role === 'heavy' && !propone(msg.channel as ChannelId) && canDeliver(msg.userId)) {
+    const aviso = pick(MIENTRAS_CONSULTO.filter((x) => x !== ultimoAviso.get(msg.userId)));
+    ultimoAviso.set(msg.userId, aviso);
+    void sendToContact(msg.userId, aviso, 'bot').catch(() => undefined);
+  }
+
   const order = fallbackOrder(chosen.engine);
   // Negocio chico + OpenAI: toda la información va fija al inicio del prompt (completa y desde la caché de OpenAI);
   // de la búsqueda solo queda una pista de qué es lo más relacionado con el mensaje.

@@ -259,6 +259,10 @@ const porDefecto = {
   HEAVY_ENGINE: process.env.HEAVY_ENGINE || 'openai',
   GATE_ENGINE: process.env.GATE_ENGINE || 'openai',
   ANALYSIS_ENGINE: process.env.ANALYSIS_ENGINE || 'openai',
+  // 🪤 El modelo pesado, explícito. Si liviano y pesado acaban siendo el mismo modelo, el enrutador se queda
+  // en liviano para siempre y nunca sube de categoría: el aviso de «dame un segundito» no sale nunca porque no
+  // hay turno pesado que anunciar. (Sin acentos graves aquí: esto vive dentro de la plantilla del lanzador.)
+  OPENAI_MODEL_HEAVY: process.env.OPENAI_MODEL_HEAVY || 'gpt-5.4',
   EMBED_ENGINE: process.env.EMBED_ENGINE || 'openai',
   // Aquí hay quien los vuelva a levantar (este mismo arranque), así que el tablero puede ofrecer reiniciar para
   // aplicar un cambio de configuración sin miedo a dejar al cliente abajo.
@@ -872,11 +876,17 @@ writeFileSync(join(dir, 'dist', 'package.json'), '{ "type": "module" }\n');
 
 const variables = [
   'OPENAI_API_KEY=PONER',
-  'OPENAI_MODEL=gpt-5.4-mini',
+  'OPENAI_MODEL=gpt-5.4-mini    # el de siempre: saludar, orientar, lo de todos los días',
   'LIGHT_ENGINE=openai',
   'HEAVY_ENGINE=openai',
   'GATE_ENGINE=openai',
   'ANALYSIS_ENGINE=openai',
+  // 🪤 Sin esta línea NO HAY motor pesado. El enrutador compara el modelo de liviano con el de pesado y, si
+  // son el mismo, se queda en liviano y dice «un solo motor»: nunca sube de categoría, por mucho que la pregunta
+  // lo pida. El paquete salía así —los dos en mini— y nadie lo notaba, porque no falla: simplemente contesta
+  // siempre con el modelo pequeño lo que debería contestar el grande.
+  'OPENAI_MODEL_HEAVY=gpt-5.4    # lo específico: prenda, color, medidas, recomendar',
+  'OPENAI_MODEL_ANALYSIS=gpt-5.4-mini    # la ficha y el puntaje, donde nadie espera',
   'EMBED_ENGINE=openai',
   'CONSOLA_TOKEN=PONER    # la llave maestra de la consola',
   ...clientes.map((c) => `TOKEN_${c.slug.toUpperCase().replace(/[^A-Z0-9]/g, '_')}=PONER    # el token de ${c.nombre}, en clientes/${c.slug}/.env`),
