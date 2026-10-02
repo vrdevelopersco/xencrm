@@ -39,7 +39,7 @@ import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes,
 import { guardarMotores, motoresDe } from '../motores.js';
 import { borrarDocumento, documentosDelNegocio, guardarCatalogo, guardarDocumento } from '../rag/documentos.js';
 import { leerAdjunto } from '../crm/adjuntos.js';
-import { borrarRespuestaRapida, guardarRespuestaRapida, respuestasRapidas } from '../crm/respuestas-rapidas.js';
+import { borrarRespuestaRapida, buscarRespuestaRapida, guardarRespuestaRapida, respuestasRapidas } from '../crm/respuestas-rapidas.js';
 import { temasDelMaterial } from '../crm/aprender-temas.js';
 import { cuantoLeQueda, HORAS_MAXIMO, ponerPrueba, pruebaActiva, quitarPrueba } from '../crm/modo-prueba.js';
 import { feedUrls } from '../crm/calendar.js';
@@ -1163,6 +1163,24 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   app.delete('/admin/api/rapidas/:id', (c) =>
     borrarRespuestaRapida(Number(c.req.param('id'))) ? c.json({ ok: true }) : c.json({ error: 'esa ya no está' }, 404),
   );
+
+  /**
+   * Ensayar una pregunta: ¿saldría por el guion o se iría al modelo?
+   *
+   * 🪤 No le manda nada a nadie y no cuenta como uso. Es para antes de una demostración en vivo: teclear la
+   * pregunta exacta que se le va a guiar al cliente y saber, ANTES de estar delante de la gente, si va a salir
+   * la respuesta escrita —instantánea y sin posibilidad de inventar— o si va a pasar por el modelo, que tarda y
+   * puede decir que no sabe. Descubrir eso en el escenario es el peor momento, y es exactamente cuando se
+   * descubre si no hay forma de ensayarlo.
+   */
+  app.post('/admin/api/rapidas/probar', async (c) => {
+    const texto = String(((await c.req.json().catch(() => ({}))) as { texto?: string }).texto ?? '').trim();
+    if (!texto) return c.json({ error: 'escribe la pregunta' }, 400);
+    const a = await buscarRespuestaRapida(texto);
+    return a
+      ? c.json({ acierta: true, tema: a.respuesta.tema, respuesta: a.respuesta.respuesta, comoLoPreguntan: a.comoLoPreguntan, parecido: Math.round(a.parecido * 100) })
+      : c.json({ acierta: false });
+  });
 
   /**
    * Leer material del historial y proponer temas.

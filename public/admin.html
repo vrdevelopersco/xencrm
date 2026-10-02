@@ -897,6 +897,17 @@ dialog#dlg-grupos > b{font-size:17px}
 #k-escribir summary:hover,#k-ra-escribir summary:hover{color:var(--text)}
 #k-escribir input,#k-escribir textarea,#k-ra-escribir input,#k-ra-escribir textarea{width:100%}
 #k-escribir label,#k-ra-escribir label{font-weight:600;margin-bottom:-4px}
+/* El ensayo: separado por una línea, porque no es configuración sino comprobación. */
+.ensayo{border-top:1px solid var(--line);padding-top:12px;margin-top:4px;display:flex;flex-direction:column;gap:6px}
+.ensayo input{flex:1;min-width:0}
+.ensayo label{font-weight:600}
+/* 🪤 Acierta y falla se dicen con palabra y con icono, nunca solo con el color: de esto depende si alguien sale
+   al escenario creyendo que tiene guion cuando no lo tiene. */
+.ensayo .veredicto{border-radius:10px;padding:10px 12px;margin-top:4px;font-size:13.5px}
+.ensayo .veredicto.si{background:var(--ok-soft);color:var(--ok)}
+.ensayo .veredicto.no{background:var(--media-soft);color:var(--media)}
+.ensayo .veredicto b{display:block;margin-bottom:3px}
+.ensayo .veredicto .dicho{color:var(--text);background:var(--panel);border-radius:8px;padding:8px 10px;margin-top:6px}
 
 /* Respuestas rápidas. */
 .ra{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;background:var(--panel)}
@@ -1212,6 +1223,21 @@ dialog#dlg-grupos > b{font-size:17px}
               </div>
             </details>
             <div class="small muted">De un recap de tickets o un historial salen los <b>temas</b> y cómo los preguntan. La respuesta la escribes tú: lo que se contestó en marzo puede no ser lo que prometes hoy.</div>
+            <!--
+              Ensayar antes de salir al escenario. Es la pieza que faltaba para enseñar aiva en vivo: saber si la
+              pregunta que vas a guiar sale por el guion —instantánea, escrita por ti, sin pasar por el modelo— o
+              se va al modelo, que tarda y puede decir que no tiene el dato. Descubrirlo delante de la gente es
+              el peor momento, y es cuando se descubre si no hay forma de ensayarlo.
+            -->
+            <div class="ensayo">
+              <label class="small" for="k-ra-ensayo">Ensaya una pregunta</label>
+              <div class="fila" style="gap:8px;align-items:center">
+                <input type="text" id="k-ra-ensayo" placeholder="Escríbela tal como la haría un cliente">
+                <button class="btn" id="k-ra-probar">Probar</button>
+              </div>
+              <div class="small muted">No le manda nada a nadie: solo te dice qué pasaría.</div>
+              <div id="k-ra-resultado"></div>
+            </div>
           </div>
           <div id="k-ra-propuestas"></div>
           <div id="k-ra-lista"></div>

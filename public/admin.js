@@ -2340,6 +2340,28 @@
       .catch(function () { $('k-ra-msg').textContent = 'No pude leerlo.'; });
   };
 
+  // Ensayar: lo que de verdad hace falta antes de enseñar aiva en vivo. Dice si la pregunta sale por el guion o
+  // se va al modelo, sin mandarle nada a nadie.
+  function ensayar() {
+    var texto = $('k-ra-ensayo').value.trim();
+    if (!texto) return;
+    $('k-ra-resultado').innerHTML = '<div class="small muted" style="margin-top:6px">Probando…</div>';
+    api('/rapidas/probar', { method: 'POST', body: { texto: texto } }).then(function (r) {
+      if (r.error) { $('k-ra-resultado').innerHTML = '<div class="small muted">' + esc(r.error) + '</div>'; return; }
+      $('k-ra-resultado').innerHTML = r.acierta
+        ? '<div class="veredicto si"><b>✓ Sale por el guion — «' + esc(r.tema) + '»</b>' +
+          'Se parece un ' + r.parecido + '% a «' + esc(r.comoLoPreguntan) + '». Contesta al instante, sin pasar por el modelo.' +
+          '<div class="dicho">' + esc(r.respuesta) + '</div></div>'
+        // 🪤 Que NO acierte no es un error: es información. Lo que no puede pasar es salir al escenario creyendo
+        // que hay guion donde no lo hay, así que se dice qué va a ocurrir en vez de un «no encontrado».
+        : '<div class="veredicto no"><b>⚠ Esta se va al modelo</b>' +
+          'Contestará, pero tarda unos segundos y puede decir que no tiene el dato. Si es una de las que vas a ' +
+          'enseñar, añádela arriba con esta forma exacta de preguntarla.</div>';
+    });
+  }
+  $('k-ra-probar').onclick = ensayar;
+  $('k-ra-ensayo').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); ensayar(); } };
+
   $('k-ra-crear').onclick = function () {
     var tema = $('k-ra-tema').value.trim();
     var como = $('k-ra-como').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
