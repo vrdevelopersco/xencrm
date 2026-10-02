@@ -280,14 +280,20 @@ app.get('/chat', (c) => {
 
   const v = ventanaDe();
   const prendido = channelOn('web');
+  // 🪤 El asistente contesta SIEMPRE: el horario del negocio es de las PERSONAS, no suyo. Para eso está.
+  //
+  // Esto decía «fuera de horario» mirando las franjas de las CITAS, y un negocio que agenda de 10 a 13 y de 15
+  // a 19 tiene un hueco a las 14:30 que es el almuerzo, no el cierre. Resultado: le dijo a un cliente que no
+  // esperara respuesta —delante de gente— mientras el asistente contestaba igual de bien. Un rótulo que
+  // contradice lo que la pantalla está haciendo es peor que no tener rótulo.
+  //
+  // Fuera de la jornada solo cambia el matiz: contesta igual, y lo que tarda es que entre una persona.
   const atendiendo = atendiendoAhora();
-  // Lo que dice la barra: lo que de verdad va a pasar cuando escriban. Prometer «responde en minutos» de
-  // madrugada deja a alguien esperando delante de una pantalla.
   const estado = !prendido
     ? '<span class="pulso frio"></span>El chat está cerrado'
     : atendiendo
       ? '<span class="pulso"></span>En línea · suele responder en segundos'
-      : '<span class="pulso frio"></span>Fuera de horario · te responden apenas abran';
+      : '<span class="pulso"></span>En línea · si hace falta una persona, te escribe apenas abran';
 
   const cuerpo = prendido
     ? `<div id="aiva-ventana"></div>\n<p class="pie">${escaparHtml(v.pie || 'Esta conversación queda guardada en este navegador.')}</p>\n<script src="widget.js" data-modo="ventana" async></script>`

@@ -92,6 +92,11 @@ main{padding:16px 20px 40px;max-width:1100px;margin:0 auto}
   // El token se pasa en la dirección (#) para poder abrirlo de un pegón en otro aparato sin escribir nada.
   // 🪤 Va en el fragmento y no en la consulta: lo que va después de la almohadilla NO se manda al servidor ni
   // queda en sus registros, y aquí lo único que hace falta es que llegue al navegador.
+  // 🪤 La base se saca de la propia dirección. En producción cada cliente vive bajo su prefijo
+  // (…/dunor/admin/monitor), así que pedir «/admin/api/vivo» desde la raíz del dominio no encuentra nada. En
+  // local no hay prefijo y por eso no se veía: el monitor abría y se quedaba en «sin conexión, reintentando».
+  var BASE = location.pathname.replace(/\/admin\/monitor\/?$/, '');
+
   var token = (location.hash || '').replace(/^#/, '').trim();
   try { if (token) localStorage.setItem('aiva.monitor.token', token); else token = localStorage.getItem('aiva.monitor.token') || ''; } catch (e) {}
   if (token) history.replaceState(null, '', location.pathname);
@@ -141,11 +146,14 @@ main{padding:16px 20px 40px;max-width:1100px;margin:0 auto}
   }
 
   function traer() {
-    return fetch('/admin/api/vivo', { headers: { 'x-admin-token': token } })
+    return fetch(BASE + '/admin/api/vivo', { headers: { 'x-admin-token': token } })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
       .then(pintar)
       .catch(function (e) {
-        $('estado').innerHTML = '<span class="punto frio"></span>' + (e === 401 ? 'token inválido: ábrelo con #TOKEN al final' : 'sin conexión, reintentando');
+        $('estado').innerHTML = '<span class="punto frio"></span>' +
+          (e === 401 ? 'token inválido: ábrelo con #TOKEN al final'
+            : e === 404 ? 'no encuentro ' + BASE + '/admin/api/vivo — ¿el despliegue está al día?'
+            : 'sin conexión (' + e + '), reintentando');
       });
   }
 
@@ -156,7 +164,7 @@ main{padding:16px 20px 40px;max-width:1100px;margin:0 auto}
   setInterval(traer, 2000);
 
   $('limpiar').onclick = function () {
-    fetch('/admin/api/vivo', { method: 'DELETE', headers: { 'x-admin-token': token } }).then(traer);
+    fetch(BASE + '/admin/api/vivo', { method: 'DELETE', headers: { 'x-admin-token': token } }).then(traer);
   };
 })();
 </script>

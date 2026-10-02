@@ -1955,8 +1955,8 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
           'A todos los demás les guarda el mensaje y espera a una persona. Se vence en ' + esc(d.queda) + '.' + (d.por ? ' La puso ' + esc(d.por) + '.' : '') + '</div>'
         : '') +
       '<label for="pr-chats-' + esc(slug) + '">A quién sí le contesta</label>' +
-      '<textarea id="pr-chats-' + esc(slug) + '" rows="3" placeholder="Un número o un chat por línea&#10;300 123 4567&#10;+57 301 987 6543">' + esc((d.chats || []).join('\n')) + '</textarea>' +
-      '<div class="small muted" style="margin-top:4px">Números de WhatsApp como quieras escribirlos: con espacios, con indicativo o sin él. Todo lo que no esté aquí entra al CRM y lo atiende una persona.</div>' +
+      '<textarea id="pr-chats-' + esc(slug) + '" rows="3" placeholder="Un número o un chat por línea&#10;300 123 4567&#10;web">' + esc((d.chats || []).join('\n')) + '</textarea>' +
+      '<div class="small muted" style="margin-top:4px">Números de WhatsApp como quieras escribirlos: con espacios, con indicativo o sin él. Escribe <b>web</b> en una línea para dejar pasar la ventana de chat entera —no tiene número, así que no se puede listar de otra forma—. Todo lo que no esté aquí entra al CRM y lo atiende una persona.</div>' +
       '<label for="pr-horas-' + esc(slug) + '">Durante</label>' +
       '<select id="pr-horas-' + esc(slug) + '">' + [1, 2, 4, 8, 12].map(function (h) {
         return '<option value="' + h + '"' + (h === 2 ? ' selected' : '') + '>' + h + (h === 1 ? ' hora' : ' horas') + '</option>';

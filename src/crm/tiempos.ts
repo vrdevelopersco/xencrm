@@ -247,5 +247,13 @@ export function atendiendoAhora(ahora = Date.now()): boolean {
   if (!franjas.length) return true;
   const p = enLaZona(ahora);
   if (!dias.includes(p.diaSemana)) return false;
-  return franjas.some(([ini, fin]) => p.minutos >= ini && p.minutos < fin);
+  // 🪤 La JORNADA, no las franjas una por una. Estas franjas son las de las CITAS, y un negocio que agenda de
+  // 10 a 13 y de 15 a 19 no está cerrado a las 14:30: está almorzando, y a un mensaje contesta igual. Mirar
+  // franja por franja hacía que el chat dijera «fuera de horario» a media tarde —pasó, delante de un cliente—
+  // y eso no es un detalle estético: le dice a quien escribe que no espere respuesta cuando sí la va a haber.
+  //
+  // Se mira de la primera apertura al último cierre del día. Fuera de eso sí está cerrado de verdad.
+  const abre = Math.min(...franjas.map(([ini]) => ini));
+  const cierra = Math.max(...franjas.map(([, fin]) => fin));
+  return p.minutos >= abre && p.minutos < cierra;
 }

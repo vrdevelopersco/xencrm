@@ -69,6 +69,15 @@ export function puedeContestar(userId: string, ahora = Date.now()): boolean {
   const id = userId.toLowerCase();
   const digitos = soloNumeros(userId);
   return p.chats.some((c) => {
+    const t0 = c.trim().toLowerCase();
+    // 🪤 «web» deja pasar la ventana de chat entera, y hace falta: un chat web no tiene número, tiene un
+    // identificador que genera el navegador en el momento. No se puede saber de antemano, así que una lista de
+    // teléfonos deja la ventana muda — y eso es exactamente lo que pasó en una demostración en vivo, con el
+    // asistente callado y nadie entendiendo por qué.
+    //
+    // Es razonable dejarla entera: la dirección de la ventana no se anuncia en ninguna parte, así que durante
+    // una demostración no va a entrar nadie que no sea a quien se la pasaste.
+    if (t0 === 'web' || t0 === 'chat' || t0 === 'ventana') return userId.startsWith('web:');
     const d = soloNumeros(c);
     // Un número: casa si uno termina en el otro (con o sin indicativo del país).
     if (d.length >= 7 && digitos.length >= 7) return digitos.endsWith(d) || d.endsWith(digitos);
