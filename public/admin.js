@@ -793,17 +793,33 @@
    * 🪤 Cada uno LLEVA A ALGUNA PARTE. Un número que solo se mira es decoración, y la primera regla de este
    * tablero es que ninguna métrica lo sea: se tocan y abren la lista que los explica.
    */
-  function pintarKpis(r) {
+  function pintarKpis(r, embudo) {
     var tarjetas = [
       { k: 'activas', ic: 'message', t: 'Conversaciones activas', p: 'Ni ganadas ni perdidas', ir: function () { go('inbox'); setFilter('all'); } },
       { k: 'nuevos', ic: 'user', t: 'Prospectos nuevos', p: 'Escribieron hoy por primera vez', ir: function () { go('inbox'); setFilter('all'); } },
       { k: 'calientes', ic: 'chart', t: 'Prospectos calientes', p: 'Puntaje de 60 para arriba', ir: function () { go('inbox'); setFilter('hot'); } },
       { k: 'citasHoy', ic: 'calendar', t: 'Citas hoy', p: d2(), ir: function () { go('calendar'); } },
     ];
+    // La quinta: lo que hay en el embudo, en dinero.
+    //
+    // 🪤 Cero NO se pinta como un número más. Si el catálogo no tiene precios, lo que falta es cargarlos, y
+    // enseñar «$0» a secas junto a cuatro cifras de verdad le dice a quien mira que el negocio no vale nada.
+    // Dice qué falta y lleva a arreglarlo.
+    if (embudo) {
+      var hay = embudo.total > 0;
+      tarjetas.push({
+        k: '_embudo', ic: 'chart', t: 'Valor del embudo',
+        valor: hay ? plata(embudo.total) : 'Sin precios',
+        p: embudo.catalogoSinPrecios ? 'Tu catálogo no tiene precios: cárgalos'
+          : hay ? embudo.conValor + ' de ' + (embudo.conValor + embudo.sinValor) + ' con valor conocido'
+          : 'Ninguno coincide con el catálogo',
+        ir: function () { embudo.catalogoSinPrecios ? go('knowledge') : go('pipeline'); },
+      });
+    }
     $('kpis').innerHTML = tarjetas.map(function (x) {
       return '<button class="kpi" data-k="' + x.k + '"><i class="ic" data-ic="' + x.ic + '"></i>' +
         '<span class="t">' + esc(x.t) + '</span>' +
-        '<span class="n">' + (r[x.k] == null ? '—' : r[x.k]) + '</span>' +
+        '<span class="n' + (x.valor && !/^\$/.test(x.valor) ? ' flojo' : '') + '">' + esc(x.valor != null ? x.valor : (r[x.k] == null ? '—' : String(r[x.k]))) + '</span>' +
         '<span class="p">' + esc(x.p) + '</span></button>';
     }).join('');
     iconos($('kpis'));
@@ -812,6 +828,12 @@
       if (x) b.onclick = x.ir;
     });
   }
+
+  /** Dinero en pesos, sin decimales y con el punto de los miles, que es como se escribe aquí. */
+  function plata(n) {
+    try { return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n); }
+    catch (e) { return '$' + Math.round(n).toLocaleString('es-CO'); }
+  }
   function d2() { return new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }); }
 
 
@@ -819,7 +841,7 @@
     api('/today').then(function (t) {
       var d = new Date();
       $('today-sub').textContent = d.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }) + (state.name ? ' · ' + state.name : '');
-      pintarKpis(t.resumen || {});
+      pintarKpis(t.resumen || {}, t.embudo || null);
       // Orden por costo del silencio: primero lo que alguien está esperando.
       var sections = [
         { t: 'Por verificar', n: t.verifications.length, html: t.verifications.map(verifyItem).join(''), empty: 'Nada pendiente: ' + (state.agentName || 'Aiva') + ' supo responder todo.' },

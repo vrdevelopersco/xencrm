@@ -43,6 +43,7 @@ import { borrarRespuestaRapida, buscarRespuestaRapida, guardarRespuestaRapida, r
 import { temasDelMaterial } from '../crm/aprender-temas.js';
 import { cuantoLeQueda, HORAS_MAXIMO, ponerPrueba, pruebaActiva, quitarPrueba } from '../crm/modo-prueba.js';
 import { comoVa, gastoDeLaDemo, olvidarTodo } from '../crm/vivo.js';
+import { olvidarPrecios, valorDelEmbudo } from '../crm/valor.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
@@ -1031,6 +1032,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
         calientes: open.filter((x) => x.score >= 60).length,
         citasHoy: citasHoy.length,
       },
+      // Lo que hay en el embudo, en dinero. Ver crm/valor.ts para de dónde sale y por qué 0 no es «no vale».
+      embudo: valorDelEmbudo(),
       appointments: citasHoy.map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt), { withDay: false }), remindAt: reminderTime(a.startsAt) })),
       // Citas que ya pasaron y siguen "confirmadas": su resultado (vino, no vino, compró) es lo que calibra el puntaje.
       past: listAppointments({ from: now - 14 * 86400_000, to: now, status: 'confirmada' })
