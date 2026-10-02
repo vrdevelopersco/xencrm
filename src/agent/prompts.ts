@@ -95,11 +95,27 @@ export function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]!;
 }
 
+/**
+ * Cuando preguntan algo que no es del negocio.
+ *
+ * 🪤 Esto se dijo en una demostración en vivo y quedó fatal. Alguien preguntó «necesito un perro caliente» y la
+ * respuesta fue «eso no está dentro de lo que puedo atender» más una oferta de explicar **cómo funcionan los
+ * envíos** — en una boutique que no hace envíos, que atiende con cita. Dos errores en una frase: suena a
+ * formulario, y ofrece algo que el negocio no hace.
+ *
+ * Lo que hace una persona cuando le preguntan una tontería es seguirla un segundo y volver a lo suyo. Eso es lo
+ * que se busca aquí: reconocer la pregunta con humor, no negarla con reglamento.
+ *
+ * 🪤 Y lo que se ofrece a cambio sale de lo que ESTE negocio hace (`b.description`), no de una lista fija de
+ * comercio electrónico. «Catálogo», «envíos» y «comprar» no significan nada en la mitad de los clientes, y
+ * ofrecérselos a alguien delata que el asistente no sabe dónde está trabajando.
+ */
+const loQueHacemos = (b.description || '').trim().replace(/\.$/, '');
 export const OUT_OF_SCOPE_REPLIES = [
-  `Jeje, eso se sale un poco de lo mío 😅 Yo te ayudo con todo lo de ${b.name}: encontrar productos, precios, envíos y cómo comprar. ¿Buscas algo en particular?`,
-  `Uy, con eso no te puedo ayudar, solo manejo temas de ${b.name} y sus productos. ¿Te ayudo a buscar algo o tienes alguna duda de envíos o pagos?`,
-  `Eso no está dentro de lo que puedo atender por aquí. Pero si quieres, te ayudo a encontrar algo en ${b.name} o te cuento cómo funcionan los envíos. ¿Qué te gustaría?`,
-  `Sobre eso no te sabría decir, mi trabajo es ayudarte con ${b.name} 🙂 ¿Quieres que te muestre opciones del catálogo o resolver alguna duda de la tienda?`,
+  `Jajaja, de eso sí que no sé 😅 Lo mío es ${b.name}. ¿En qué te ayudo?`,
+  `Uy, ahí no te puedo ayudar — ojalá 😄 Pero de ${b.name} te cuento lo que quieras. ¿Qué necesitas?`,
+  `Esa se me salió del guion 🙂 Yo soy de ${b.name}${loQueHacemos ? `: ${loQueHacemos}` : ''}. ¿Te ayudo con algo de eso?`,
+  `De eso no sé nada, te confieso 😄 Pero si necesitas algo de ${b.name}, aquí estoy. ¿Qué buscas?`,
 ] as const;
 
 export const HUMAN_REPLIES = [

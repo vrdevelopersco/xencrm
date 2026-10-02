@@ -251,16 +251,20 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
 
   if (gate.intent === 'fuera_de_alcance') return finish(pick(OUT_OF_SCOPE_REPLIES), gate.intent, 'template', { gateVia: gate.via });
   if (gate.intent === 'cita') return finish(await startBooking(msg.userId, text), gate.intent, 'template', { gateVia: gate.via, route: 'flujo de cita' });
-  if (gate.intent === 'humano') {
+  // 🪤 En una demostración NO se traspasa, ni con la frase: se contesta la pregunta y punto.
+  //
+  // Pasó en vivo y fue peor de lo que parecía. El clasificador manda a una persona en cuanto ve «queja»,
+  // «reclamo», «pqr», o «hablar con alguien» — lo cual está bien fuera de una demostración—. Ahí el asistente
+  // soltaba «ahora te atiende alguien del equipo» y se apartaba. Devolver el switch no bastaba: el siguiente
+  // mensaje con una de esas palabras volvía a traspasar, y quien presentaba veía a aiva repitiendo que viene
+  // un humano que no existe, una y otra vez, delante del jurado.
+  //
+  // Con una prueba en marcha se deja pasar al camino normal: hay un modelo y un guion esperando, y cualquiera
+  // de los dos contesta mejor que prometer una persona que nadie va a mandar.
+  if (gate.intent === 'humano' && !pruebaActiva()) {
     const reply = finish(pick(HUMAN_REPLIES), gate.intent, 'template', { gateVia: gate.via, route: 'traspaso a humano' });
-    // 🪤 En una demostración NO se traspasa, porque no hay nadie a quien traspasarle.
     //
-    // Fuera de la demo esto está bien: alguien pide una persona, el bot se aparta y no vuelve a hablar hasta que
-    // el equipo le devuelva la conversación. Pero en una demostración el equipo no está mirando, así que lo que
-    // pasa es que el asistente se queda mudo para siempre a mitad de la prueba —y desde fuera no se ve «pidió
-    // una persona», se ve «esto no funciona»—. Pasó, en vivo. Se contesta la frase de traspaso, que suena bien,
-    // y se sigue atendiendo.
-    if (!pruebaActiva()) setHumanMode(msg.userId, true, 'bot');
+    setHumanMode(msg.userId, true, 'bot'); // a partir de aquí el bot se calla hasta que el equipo lo devuelva
     return reply;
   }
 
