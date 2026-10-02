@@ -13,14 +13,12 @@
 *{box-sizing:border-box}html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);
   font:14.5px/1.5 Figtree,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
-/* 🪤 Las manchas de luz se fueron con el vidrio. Estaban ahí porque una superficie translúcida sin color
-   debajo se ve gris; ahora las superficies son opacas y ese fondo solo añadía ruido de color a una pantalla
-   que quiere parecerse a una herramienta, no a un cartel. */
+/* 🪤 Las manchas de luz se fueron con el vidrio: estaban ahí porque una superficie translúcida sin color
+   debajo se ve gris, y ya no hay ninguna translúcida. */
 /* Liquid glass: superficies translúcidas con desenfoque y borde con brillo. Solo en contenedores, no en filas ni burbujas. */
-/* Superficie: blanca, con su línea y una sombra mínima. Sin desenfoque: no hay nada que desenfocar y cada
-   `backdrop-filter` se paga en cada repintado. */
 .glass{background:var(--glass);border:1px solid var(--glass-border);box-shadow:var(--glass-shadow)}
 /* Las superficies grandes también son vidrio: si solo lo es el contenedor, el efecto no se lee. */
+.side,.topbar,.col,.card .body,.panel,dialog,.modal-config{}
 button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--brand)}
 .app{display:grid;grid-template-columns:220px 1fr;height:100vh}
@@ -247,7 +245,11 @@ pre{padding:10px;overflow:auto;white-space:pre-wrap}
    —que ya estaba dibujado detrás—. Parecía que la sesión se había caído, y no. Y si la sesión sí vence, el
    cajón salía encima de las conversaciones de los clientes, a la vista de quien pasara por ahí. */
 .login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:100;
-  background:color-mix(in srgb,var(--bg) 88%,transparent);border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow);border-radius:18px;padding:24px;width:min(360px,90vw);display:flex;flex-direction:column;gap:10px}
+  /* 🪤 OPACO del todo. Antes era 88 % y lo tapaba el desenfoque del vidrio; al quitar el vidrio ese 12 % dejó
+     de ser inofensivo y las conversaciones de los clientes se leían detrás del cajón del token, a la vista de
+     quien pasara por ahí. Lo cazó la prueba en el mismo commit que lo rompió. */
+  background:var(--bg)}
+.login .box{background:var(--glass-overlay);border:1px solid var(--glass-border);box-shadow:var(--glass-inset),var(--glass-shadow);border-radius:18px;padding:24px;width:min(360px,90vw);display:flex;flex-direction:column;gap:10px}
 .login[hidden]{display:none}
 @media(max-width:900px){.chat .head .seg-row{flex-basis:100%;justify-content:flex-end}
 /* Área de toque de 44 px (Apple HIG / Material) sin agrandar el botón a la vista: padding invisible con pseudo-elemento. */
@@ -263,7 +265,10 @@ body::before{animation:aurora 48s ease-in-out infinite alternate;will-change:tra
 @keyframes aurora{from{transform:translate3d(-2%,-1.5%,0) rotate(-1.5deg) scale(1.02)}to{transform:translate3d(2%,2%,0) rotate(2deg) scale(1.06)}}
 @media(prefers-reduced-motion:reduce){body::before{animation:none}}
 .side,.topbar,.list,.details,.chat .head,.composer,.col,.panel,.tile,.notif,.login .box,.toast,.card,.appt,.doc{box-shadow:var(--rim),var(--glass-shadow)}
-.side{transform:translateY(-1px);transition:transform .15s,box-shadow .15s}
+.side{}
+.panel,.tile,.col,.notif,.login .box{border-radius:20px}
+.card,.appt,.doc{border-radius:14px}
+.tile:hover,.card:hover,.panel:hover{box-shadow:var(--rim),var(--lift);transform:translateY(-1px);transition:transform .15s,box-shadow .15s}
 .nav button{border-radius:999px;transition:background .15s,box-shadow .15s}
 .nav button:hover{background:var(--row-hover)}
 .nav button.active{background:var(--glass-strong);box-shadow:var(--rim),0 4px 14px rgba(17,24,39,.08)}
@@ -541,23 +546,21 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 #today .panel h3{border-bottom:2px solid color-mix(in srgb,var(--tono) 45%,transparent);padding-bottom:8px}
 #today .panel h3 .chip{background:color-mix(in srgb,var(--tono) 85%,var(--text));color:var(--panel);border-color:transparent;font-weight:700}
 /* 🪤 Aquí vivía el bloc de notas: cabezal de cartón con su costura, perforación de arrancar, papel con
-   renglones cada 22 px y margen rojo. Se quitó entero el 2026-10-02, a petición del cliente, que pidió que esto
-   se pareciera al administrador de anuncios de Facebook.
-   No se pierde lo que aquella decisión protegía: el color sigue significando lo mismo —la franja de la etapa
-   sigue ahí, ahora como una línea— y el estado sigue dicho con palabras. Lo que se va es la metáfora, no la
-   información. Si alguna vez se quiere recuperar, está en el historial de este archivo. */
+   renglones cada 22 px y margen rojo. Se quitó el 2026-10-02 porque el cliente pidió que esto se pareciera al
+   administrador de anuncios de Facebook. Era una decisión tomada a conciencia y documentada; se va porque
+   pidieron otra cosa, no porque estuviera mal.
+   Lo que aquella decisión protegía NO se pierde: el color sigue significando lo mismo —la franja de la etapa
+   sigue ahí, ahora como una línea a la izquierda— y el estado se sigue diciendo con palabras. Se va la
+   metáfora, no la información. Está en el historial de este archivo. */
 #today .row,#today .appt,#today .verify{position:relative;border:1px solid var(--line);border-radius:10px;
-  padding:11px 12px;margin-bottom:8px;background:var(--panel);box-shadow:var(--shadow)}
-/* De qué sección es: una línea a la izquierda, que es lo que hace una herramienta. */
+  padding:11px 12px 11px 18px;margin-bottom:8px;background:var(--panel);box-shadow:var(--shadow)}
 #today .row::before,#today .appt::before,#today .verify::before{content:"";position:absolute;left:0;top:10px;bottom:10px;
   width:3px;border-radius:0 3px 3px 0;background:var(--tono,var(--brand))}
-#today .row{padding-left:18px}
-#today .appt,#today .verify{padding-left:18px}
 #today .row:hover{background:var(--row-hover)}
 
 /* La tarjeta del tablero: blanca, con la etapa en una línea arriba. */
 .card{position:relative;padding:0;border-radius:10px;overflow:hidden;border:1px solid var(--line);
-  background:var(--panel);box-shadow:var(--shadow);transition:box-shadow .15s,border-color .15s}
+  background:var(--panel);box-shadow:var(--shadow);transition:box-shadow .15s,border-color .15s;cursor:grab}
 .card::before{content:"";display:block;height:3px;background:var(--tone,var(--brand))}
 .card .body{position:relative;padding:10px 12px;background:var(--panel)}
 .card:hover{border-color:var(--muted);box-shadow:var(--lift)}
@@ -670,6 +673,8 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 dialog#dlg-grupos{border:1px solid var(--glass-border);border-radius:20px;padding:20px 22px;color:var(--text);
   background:var(--glass-overlay);box-shadow:var(--rim),0 24px 60px rgba(17,24,39,.28);width:min(560px,calc(100% - 28px))}
 dialog#dlg-grupos::backdrop{background:rgba(17,24,39,.45);}
+dialog#dlg-grupos > b{font-size:17px}
+.modal-config::backdrop{background:rgba(17,24,39,.45)}
 .modal-cabeza{display:flex;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .modal-cabeza b{font-size:17px}
 .cfg-tabs{display:flex;gap:6px;margin-left:auto}

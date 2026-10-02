@@ -84,11 +84,15 @@ check("🪤 /reset solo vale desde la consola de pruebas", /text === '\/reset' &
 // encima de las conversaciones de los clientes, a la vista de cualquiera que pasara por ahí.
 check('🪤 el login arranca escondido, no visible', /<div class="login" id="login" hidden>/.test(html),
   'visible de entrada parpadea en cada recarga aunque ya hayas entrado');
-check('🪤 y cuando se enseña, tapa lo que hay detrás', !/\.login\{[^}]*background:transparent/.test(html) && /\.login\{[^}]*backdrop-filter:blur/.test(html),
+// 🪤 Opaco del todo, no translúcido. Antes bastaba con el desenfoque del vidrio; al quitarlo, cualquier
+// transparencia deja leer las conversaciones de los clientes detrás del cajón del token.
+check('🪤 y cuando se enseña, tapa lo que hay detrás', /\.login\{[^}]*background:var\(--bg\)\}/.test(html) && !/\.login\{[^}]*transparent/.test(html),
   'transparente deja ver las conversaciones detrás del cajón del token');
 
 // El bloc de notas, a este tamaño, contaba más ruido que información.
-check('en Prospectos el cabezal del bloc va a media voz', /\.col \.card::before\{height:6px/.test(html) && /\.col \.card \.body::before\{display:none\}/.test(html));
+// La tarjeta ya no es un bloc de notas (2026-10-02), pero de qué etapa es se sigue diciendo con color: ahora
+// una línea arriba, en el tono de la columna. Lo que se prueba es eso, no el adorno de turno.
+check('la tarjeta dice su etapa con color', /\.card::before\{content:"";display:block;height:3px;background:var\(--tone/.test(html));
 
 // Los avisos: icono, quién en negrita, y tiempo a la vista.
 check('el aviso lleva icono y el título en negrita', /<i class="ic" data-ic="' \+ icono \+ '"><\/i>/.test(js) && /opts\.titulo \? '<b>' \+ esc\(opts\.titulo\)/.test(js));
