@@ -786,10 +786,40 @@
   function contactRow(c, extra, actions) {
     return '<div class="row" data-id="' + esc(c.id) + '"><div class="name"><span class="n">' + esc(nameOf(c)) + '</span>' + (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div><div class="time">' + rel(c.lastMessageAt) + '</div><div class="snip">' + esc(extra || c.recap || c.summary || '') + '</div><div class="meta"><span class="chip canal">' + esc(channelIcon(c.channel)) + '</span><span class="chip stage-' + (rol(c.stage) || c.stage) + '">' + esc(state.stageLabels[c.stage] || c.stage) + '</span>' + scoreChip(c) + (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '') + '</div>' + (actions ? '<div class="acts">' + actions + '</div>' : '') + '</div>';
   }
+
+  /**
+   * Los cuatro números de arriba.
+   *
+   * 🪤 Cada uno LLEVA A ALGUNA PARTE. Un número que solo se mira es decoración, y la primera regla de este
+   * tablero es que ninguna métrica lo sea: se tocan y abren la lista que los explica.
+   */
+  function pintarKpis(r) {
+    var tarjetas = [
+      { k: 'activas', ic: 'message', t: 'Conversaciones activas', p: 'Ni ganadas ni perdidas', ir: function () { go('inbox'); setFilter('all'); } },
+      { k: 'nuevos', ic: 'user', t: 'Prospectos nuevos', p: 'Escribieron hoy por primera vez', ir: function () { go('inbox'); setFilter('all'); } },
+      { k: 'calientes', ic: 'chart', t: 'Prospectos calientes', p: 'Puntaje de 60 para arriba', ir: function () { go('inbox'); setFilter('hot'); } },
+      { k: 'citasHoy', ic: 'calendar', t: 'Citas hoy', p: d2(), ir: function () { go('calendar'); } },
+    ];
+    $('kpis').innerHTML = tarjetas.map(function (x) {
+      return '<button class="kpi" data-k="' + x.k + '"><i class="ic" data-ic="' + x.ic + '"></i>' +
+        '<span class="t">' + esc(x.t) + '</span>' +
+        '<span class="n">' + (r[x.k] == null ? '—' : r[x.k]) + '</span>' +
+        '<span class="p">' + esc(x.p) + '</span></button>';
+    }).join('');
+    iconos($('kpis'));
+    Array.prototype.forEach.call($('kpis').querySelectorAll('.kpi'), function (b) {
+      var x = tarjetas.filter(function (y) { return y.k === b.dataset.k; })[0];
+      if (x) b.onclick = x.ir;
+    });
+  }
+  function d2() { return new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }); }
+
+
   function loadToday() {
     api('/today').then(function (t) {
       var d = new Date();
       $('today-sub').textContent = d.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }) + (state.name ? ' · ' + state.name : '');
+      pintarKpis(t.resumen || {});
       // Orden por costo del silencio: primero lo que alguien está esperando.
       var sections = [
         { t: 'Por verificar', n: t.verifications.length, html: t.verifications.map(verifyItem).join(''), empty: 'Nada pendiente: ' + (state.agentName || 'Aiva') + ' supo responder todo.' },

@@ -1021,8 +1021,17 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
         .filter((a) => a.endsAt < now)
         .map((a) => a.userId),
     );
+    const citasHoy = listAppointments({ from: startOfDay.getTime(), to: endOfDay, status: 'confirmada' });
     return c.json({
-      appointments: listAppointments({ from: startOfDay.getTime(), to: endOfDay, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt), { withDay: false }), remindAt: reminderTime(a.startsAt) })),
+      // Los cuatro números de arriba. Se calculan aquí y no en el navegador porque las listas de abajo van
+      // recortadas a 20 por sitio: contar sobre ellas daría «20 calientes» en un negocio con cuarenta.
+      resumen: {
+        activas: open.length,
+        nuevos: all.filter((x) => (x.firstSeen ?? 0) >= startOfDay.getTime()).length,
+        calientes: open.filter((x) => x.score >= 60).length,
+        citasHoy: citasHoy.length,
+      },
+      appointments: citasHoy.map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt), { withDay: false }), remindAt: reminderTime(a.startsAt) })),
       // Citas que ya pasaron y siguen "confirmadas": su resultado (vino, no vino, compró) es lo que calibra el puntaje.
       past: listAppointments({ from: now - 14 * 86400_000, to: now, status: 'confirmada' })
         .filter((a) => a.endsAt < now)
