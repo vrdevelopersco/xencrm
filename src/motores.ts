@@ -9,7 +9,8 @@
 // reinicio. Fingir que se aplicó en caliente sería peor que pedir el reinicio, porque entonces nadie entiende
 // por qué sigue contestando el motor de antes.
 import { env } from './config.js';
-import { setEnvValues } from './envfile.js';
+import { quitarEnvValues, setEnvValues } from './envfile.js';
+import { readFileSync } from 'node:fs';
 import { ENGINES, ROLES, engineStatus, probarMotor, type Engine, type Role } from './llm/engines.js';
 
 /** Cómo se llama cada rol para quien no escribió el programa. */
@@ -167,4 +168,71 @@ export async function guardarMotores(cambio: CambioMotores, sondeo: Sondeo = pro
   // setEnvValues ya dejó esto en process.env, pero `env` se congeló al arrancar: lo que devolvemos sigue siendo
   // lo que CORRE, no lo que se acaba de guardar. Es a propósito, y por eso va con `hayQueReiniciar`.
   return { motores: motoresDe(), hayQueReiniciar: true };
+}
+
+// ── La clave de OpenAI de cada cliente ──────────────────────────────────────
+//
+// Un cliente puede traer la suya y pagar lo que gasta. Es lo que hace que esto sea un producto y no una cuenta
+// de OpenAI compartida: sin esto, cada negocio nuevo que entra es más factura para quien monta el sistema.
+//
+// Ya funcionaba —el `.env` del cliente gana sobre el de la raíz— pero solo editando archivos en el servidor.
+
+/** Lo que se puede contar de la clave de un cliente. NUNCA la clave. */
+export interface ClaveDelCliente {
+  /** true = tiene la suya y paga él. false = usa la de la casa. */
+  propia: boolean;
+  /** Para reconocerla sin enseñarla: «sk-proj…f2a9». */
+  pista: string;
+}
+
+const pistaDe = (k: string): string => (k.length < 12 ? '' : `${k.slice(0, 7)}…${k.slice(-4)}`);
+
+/**
+ * 🪤 Se mira el ARCHIVO del cliente, no `process.env`. En `process.env` ya está resuelta la herencia: si el
+ * cliente no tiene la suya, ahí aparece la de la casa y el tablero diría «tiene la suya» de todos los clientes
+ * a la vez. La pregunta no es qué clave se está usando, es de quién es.
+ */
+export function claveDelCliente(): ClaveDelCliente {
+  const archivo = process.env.AIVA_ENV_FILE || '.env';
+  try {
+    const propia = readFileSync(archivo, 'utf8')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith('OPENAI_API_KEY='))
+      .map((l) => l.slice('OPENAI_API_KEY='.length).trim().replace(/^["']|["']$/g, ''))
+      .filter(Boolean)[0];
+    return propia ? { propia: true, pista: pistaDe(propia) } : { propia: false, pista: pistaDe(env.openaiApiKey) };
+  } catch {
+    return { propia: false, pista: pistaDe(env.openaiApiKey) };
+  }
+}
+
+/**
+ * Guarda la clave de este cliente, después de comprobar que sirve.
+ *
+ * 🪤 Se prueba contra OpenAI ANTES de escribirla. Una clave mal copiada, caducada o sin saldo se guarda igual de
+ * bien que una buena y no se nota hasta que un cliente escribe —o hasta que uno está enseñando el producto
+ * delante de gente—. Treinta segundos de comprobación aquí valen más que cualquier mensaje de error de allá.
+ */
+export async function ponerClaveDelCliente(clave: string): Promise<ClaveDelCliente> {
+  const k = clave.trim();
+  if (!k.startsWith('sk-')) throw new Error('una clave de OpenAI empieza por "sk-"');
+  if (/[\s#"']/.test(k)) throw new Error('esa clave lleva espacios o comillas: cópiala otra vez');
+  let r: Response;
+  try {
+    r = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${k}` }, signal: AbortSignal.timeout(15_000) });
+  } catch {
+    throw new Error('no pude hablar con OpenAI para comprobarla. Mira la conexión y vuelve a intentar.');
+  }
+  if (r.status === 401) throw new Error('OpenAI dice que esa clave no vale');
+  if (r.status === 429) throw new Error('la clave es válida pero no tiene saldo: cárgale antes de usarla');
+  if (!r.ok) throw new Error(`OpenAI contestó ${r.status} al comprobarla`);
+  setEnvValues({ OPENAI_API_KEY: k });
+  return { propia: true, pista: pistaDe(k) };
+}
+
+/** Vuelve a la clave de la casa. */
+export function quitarClaveDelCliente(): ClaveDelCliente {
+  quitarEnvValues(['OPENAI_API_KEY']);
+  return { propia: false, pista: pistaDe(env.openaiApiKey) };
 }

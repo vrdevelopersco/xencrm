@@ -406,6 +406,9 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
 .lib textarea{width:100%;min-height:90px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-input);
   background:var(--panel);color:var(--tinta);font:inherit;box-shadow:inset 0 1px 2px rgba(20,17,12,.05);resize:vertical}
 .lib textarea:focus-visible{outline:2px solid var(--oro-claro);outline-offset:1px}
+.clave{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;background:var(--panel)}
+.clave code{font-size:12px;background:var(--baja-soft);border-radius:6px;padding:2px 7px}
+.clave input{width:100%}
 .pista{font-size:13px;color:var(--media);background:var(--media-soft);border-radius:10px;padding:10px 12px}
 .lib .dos{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media (max-width:640px){.lib .dos{grid-template-columns:1fr}}
@@ -1769,6 +1772,9 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     };
 
     cuerpo.innerHTML =
+      // Quién paga lo que gasta este cliente. Va arriba del todo porque es lo primero que uno quiere saber al
+      // abrir un cliente, y porque es la diferencia entre un producto y una cuenta de OpenAI compartida.
+      '<div class="clave" id="cl-' + esc(slug) + '"><div class="small muted">Cargando la clave…</div></div>' +
       '<div class="small muted" style="margin:10px 0 2px">Lo que corre ahora. Guardar deja el archivo listo, pero hace falta reiniciar ese cliente para que lo tome.</div>' +
       (d.roles || []).map(function (r) {
         var meta = ROLES_UI.filter(function (x) { return x[0] === r.rol; })[0] || [r.rol, r.rol, ''];
@@ -1787,6 +1793,8 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
           : '<span class="small muted">Aquí nadie lo volvería a levantar, así que no te ofrezco reiniciarlo: hazlo tú.</span>') +
         '<span class="grow"></span><span class="small" id="mot-msg-' + esc(slug) + '" role="status"></span>' +
       '</div>';
+
+    pintarClave(slug);
 
     // El campo del modelo solo cuenta con OpenAI: con los otros se apaga en vez de aceptar algo que se ignora.
     Array.prototype.forEach.call(cuerpo.querySelectorAll('.m-motor'), function (sel) {
@@ -1826,6 +1834,52 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         }, 5000);
       });
     };
+  }
+
+  // Quién paga el consumo de este cliente.
+  //
+  // 🪤 La clave NO viaja al navegador, ni la suya ni la de la casa: solo si la tiene y una pista para
+  // reconocerla. Una clave que sale a una pantalla queda en el historial, en la caché y en cualquier captura.
+  function pintarClave(slug) {
+    var caja = $('cl-' + slug);
+    if (!caja) return;
+    cli(slug + '/clave').then(function (d) {
+      if (!$('cl-' + slug)) return;
+      if (d.error) { $('cl-' + slug).innerHTML = '<div class="small muted">' + esc(d.error) + '</div>'; return; }
+      $('cl-' + slug).innerHTML =
+        '<div class="fila" style="align-items:center;gap:10px;flex-wrap:wrap">' +
+          (d.propia
+            ? '<span class="chip ok">Paga él</span><span class="small">Tiene su propia clave de OpenAI · <code>' + esc(d.pista) + '</code></span>'
+            : '<span class="chip media">Lo pagas tú</span><span class="small">Usa la clave de la casa' + (d.pista ? ' · <code>' + esc(d.pista) + '</code>' : '') + '</span>') +
+          '<span class="grow"></span>' +
+          (d.propia ? '<button class="btn sm cl-quitar">Volver a la de la casa</button>' : '') +
+          '<button class="btn sm cl-poner">' + (d.propia ? 'Cambiarla' : 'Poner la suya') + '</button>' +
+        '</div>' +
+        '<div class="cl-form" hidden style="margin-top:10px">' +
+          '<label class="small" for="cl-k-' + esc(slug) + '">Su clave de OpenAI</label>' +
+          '<input type="password" id="cl-k-' + esc(slug) + '" placeholder="sk-..." autocomplete="off" spellcheck="false">' +
+          '<div class="small muted" style="margin-top:4px">La compruebo contra OpenAI antes de guardarla: si no vale o no tiene saldo, te lo digo ahora y no al primer cliente que escriba.</div>' +
+          '<div class="fila" style="gap:8px;margin-top:8px"><button class="btn primary cl-guardar">Comprobar y guardar</button>' +
+          '<span class="grow"></span><span class="small cl-msg" role="status"></span></div>' +
+        '</div>';
+      var c2 = $('cl-' + slug), form = c2.querySelector('.cl-form'), msg = c2.querySelector('.cl-msg');
+      c2.querySelector('.cl-poner').onclick = function () { form.hidden = !form.hidden; if (!form.hidden) $('cl-k-' + slug).focus(); };
+      var q = c2.querySelector('.cl-quitar');
+      if (q) q.onclick = function () {
+        if (!confirm('¿Que vuelva a usar la clave de la casa? A partir de ahí lo que gaste lo pagas tú.')) return;
+        cli(slug + '/clave', { method: 'POST', body: {} }).then(function () { pintarClave(slug); });
+      };
+      c2.querySelector('.cl-guardar').onclick = function () {
+        var k = $('cl-k-' + slug).value.trim();
+        if (!k) { msg.textContent = 'Pega la clave.'; return; }
+        msg.textContent = 'Comprobándola con OpenAI…';
+        cli(slug + '/clave', { method: 'POST', body: { clave: k } }).then(function (r) {
+          if (r.error) { msg.textContent = r.error; return; }
+          $('cl-k-' + slug).value = '';
+          pintarClave(slug);
+        });
+      };
+    });
   }
 
   // ── Modo prueba ───────────────────────────────────────────────────────────

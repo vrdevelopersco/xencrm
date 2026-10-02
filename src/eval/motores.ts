@@ -96,6 +96,31 @@ check('ni los comentarios', leer().includes('# el archivo de este cliente'));
 const vacio = await motores.guardarMotores({}, sondeo);
 check('sin cambios, no reescribe ni pide reiniciar', vacio.hayQueReiniciar === false);
 
+
+// ── De quién es la clave de OpenAI ──
+// Es lo que separa un producto de una cuenta de OpenAI compartida: cada negocio puede traer la suya y pagar lo
+// que gasta. Ya funcionaba por herencia del .env; lo que se prueba aquí es que quitarla no rompa esa herencia.
+const { quitarEnvValues } = await import('../envfile.js');
+const { setEnvValues } = await import('../envfile.js');
+
+setEnvValues({ OPENAI_API_KEY: 'sk-la-suya-de-mentira' });
+check('la clave del cliente se escribe en SU archivo', leer().includes('OPENAI_API_KEY=sk-la-suya-de-mentira'));
+
+// 🪤 Quitar NO es vaciar, y la diferencia se paga cara. El .env del cliente se lee ANTES que el de la raíz y lo
+// que ya esté definido no se vuelve a tocar: una línea `OPENAI_API_KEY=` deja la clave en cadena vacía —que sí
+// está definida— así que el cliente deja de heredar la de la casa y se queda SIN NINGUNA. No falla al guardar:
+// falla la próxima vez que alguien escriba.
+quitarEnvValues(['OPENAI_API_KEY']);
+check('🪤 quitarla BORRA la línea, no la deja vacía', !/OPENAI_API_KEY=/.test(leer()), leer());
+check('y no deja una línea en blanco suelta', !/^\s*$/m.test(leer().replace(/\n$/, '')) || leer().split('\n\n\n').length === 1);
+check('🪤 lo demás del archivo sigue intacto', leer().includes('ADMIN_TOKEN=noloquiteses') && leer().includes('# el archivo de este cliente'));
+
+// Y la forma de la clave se mira antes de hablar con nadie.
+const { ponerClaveDelCliente } = await import('../motores.js');
+check('una clave que no empieza por sk- se rechaza', (await falla(() => ponerClaveDelCliente('hola mundo'))).includes('sk-'));
+check('y una con espacios también', (await falla(() => ponerClaveDelCliente('sk-con espacio'))).includes('espacios'));
+check('🪤 y ninguna de las dos llegó a escribirse', !/OPENAI_API_KEY/.test(leer()));
+
 rmSync(dir, { recursive: true, force: true });
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

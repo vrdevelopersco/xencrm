@@ -36,7 +36,7 @@ import { cuantas as cuantasImportadas, importarChat, importarMensajes, quitar as
 import { armar as armarRespaldo, restaurar as restaurarRespaldo, revisar as revisarRespaldo } from '../crm/respaldo.js';
 import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
-import { guardarMotores, motoresDe } from '../motores.js';
+import { claveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente } from '../motores.js';
 import { borrarDocumento, documentosDelNegocio, guardarCatalogo, guardarDocumento } from '../rag/documentos.js';
 import { leerAdjunto } from '../crm/adjuntos.js';
 import { borrarRespuestaRapida, buscarRespuestaRapida, guardarRespuestaRapida, respuestasRapidas } from '../crm/respuestas-rapidas.js';
@@ -394,6 +394,25 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       return c.json({ ok: true, ...r });
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'no pude guardar los motores' }, 400);
+    }
+  });
+
+  /**
+   * La clave de OpenAI de este cliente: la suya o la de la casa.
+   *
+   * 🪤 NUNCA devuelve la clave, ni la propia ni la de la casa: solo si la tiene y una pista para reconocerla.
+   * Una clave que sale al navegador queda en el historial, en la caché y en cualquier captura de pantalla que
+   * alguien haga del tablero.
+   */
+  app.get('/admin/api/clave', (c) => c.json(claveDelCliente()));
+
+  app.post('/admin/api/clave', async (c) => {
+    try {
+      const b = (await c.req.json()) as { clave?: string };
+      if (!b.clave) return c.json(quitarClaveDelCliente());
+      return c.json(await ponerClaveDelCliente(String(b.clave)));
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'no pude guardarla' }, 400);
     }
   });
 

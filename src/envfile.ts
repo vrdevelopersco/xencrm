@@ -18,3 +18,24 @@ export function setEnvValues(values: Record<string, string>, path = ENV_FILE): v
   }
   writeFileSync(path, lines.join('\n').replace(/\n{3,}/g, '\n\n'), { mode: 0o600 });
 }
+
+/**
+ * Borra claves del `.env`, en vez de dejarlas vacías.
+ *
+ * 🪤 Vaciar NO es lo mismo que quitar, y la diferencia se paga cara. El `.env` de un cliente se lee ANTES que el
+ * de la raíz y lo que ya esté definido no se vuelve a tocar: una línea `OPENAI_API_KEY=` deja la clave en cadena
+ * vacía, que sí está definida, así que el cliente deja de heredar la de la casa y se queda SIN NINGUNA. No da
+ * error al guardar; da error la próxima vez que alguien escriba.
+ */
+export function quitarEnvValues(keys: string[], path = ENV_FILE): void {
+  if (!existsSync(path) || !keys.length) return;
+  const fuera = new Set(keys);
+  const lines = readFileSync(path, 'utf8')
+    .split('\n')
+    .filter((l) => {
+      const eq = l.indexOf('=');
+      return eq === -1 || !fuera.has(l.slice(0, eq).trim());
+    });
+  for (const k of keys) delete process.env[k];
+  writeFileSync(path, lines.join('\n').replace(/\n{3,}/g, '\n\n'), { mode: 0o600 });
+}
