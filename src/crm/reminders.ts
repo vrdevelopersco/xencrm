@@ -12,12 +12,32 @@ import { canDeliver, canSendTemplate, replyWindow, sendTemplateToContact, sendTo
 const cfg = business.appointments;
 const HOUR = 3600_000;
 
-/** Cuándo se recuerda: el día anterior a la hora configurada (hora local del negocio). */
+/**
+ * Cuándo se recuerda: el día anterior a la hora configurada, pero NUNCA un día que el negocio no trabaja.
+ *
+ * 🪤 Un recordatorio no es un aviso de una sola dirección: casi siempre alguien contesta. «Confirmo», «¿lo puedo
+ * pasar al jueves?», «ya no voy». Mandarlo un domingo a las cinco de la tarde, con el negocio cerrado, significa
+ * que esa respuesta se queda sin leer hasta el lunes —y si era para cancelar, el lunes ya es tarde: la hora se
+ * perdió igual—. Lo vio Luigi en el tablero: una cita de lunes decía «se recuerda domingo a las 5pm», y DUNOR no
+ * abre los domingos.
+ *
+ * Así que si cae en día cerrado, se va hacia ATRÁS al último día que sí se trabaja. Hacia atrás y no hacia
+ * delante por lo mismo: un recordatorio que llega después de la cita no es un recordatorio.
+ *
+ * Y se topa a 7 días hacia atrás por si alguien configura un negocio que abre un solo día: mejor recordar con
+ * mucha antelación que entrar en un bucle buscando un día que no existe.
+ */
 export function reminderTime(startsAt: number): number {
   const p = tzParts(new Date(startsAt));
-  const dayBefore = tzParts(new Date(zoned(p.y, p.m, p.d, 12, 0).getTime() - 24 * HOUR));
   const [hh, mm] = cfg.reminder.at.split(':').map(Number) as [number, number];
-  return zoned(dayBefore.y, dayBefore.m, dayBefore.d, hh, mm).getTime();
+  const dias = cfg.days ?? [1, 2, 3, 4, 5];
+  let cuando = tzParts(new Date(zoned(p.y, p.m, p.d, 12, 0).getTime() - 24 * HOUR));
+  for (let i = 0; i < 7; i++) {
+    const t = zoned(cuando.y, cuando.m, cuando.d, hh, mm);
+    if (dias.includes(t.getDay())) return t.getTime();
+    cuando = tzParts(new Date(zoned(cuando.y, cuando.m, cuando.d, 12, 0).getTime() - 24 * HOUR));
+  }
+  return zoned(cuando.y, cuando.m, cuando.d, hh, mm).getTime();
 }
 
 /** El texto del recordatorio, el mismo que se envía solo o que el equipo manda a mano. */

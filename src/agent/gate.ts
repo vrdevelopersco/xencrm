@@ -19,8 +19,20 @@ export const GREETING_RE = new RegExp(`^(?:(?:${COURTESY_TOKEN})[,!. 🙂😊�
 const CITA_RE =
   // "agenda" como verbo ("agenda la cita"), no como sustantivo ("déjame revisar mi agenda").
   /\b(cita|agendar|(?<!\b(?:mi|tu|su|la|una)\s)agenda|agendemos|agéndame|reservar|reserva|programar|tomar(me)? (las )?medidas|medirme|pasar (por|a) (la tienda|el local|la boutique|el taller|el atelier)|ir a (la tienda|el local|la boutique|el taller|el atelier|medirme)|visitarlos|puedo ir)\b/i;
+/**
+ * Cuándo alguien PIDE una persona. Solo cuando lo pide.
+ *
+ * 🪤 Aquí estaban «queja», «reclamo» y «pqr» sueltas, y era un error de concepto que costó caro en una
+ * demostración en vivo. Quien escribe «tengo un reclamo con mi pedido» no está pidiendo que le pasen con
+ * alguien: está diciendo cuál es su problema y espera que se lo resuelvan. Mandarlo a una persona por esa
+ * palabra hace dos cosas malas a la vez: no le atiende, y deja al asistente callado el resto de la
+ * conversación —el traspaso apaga el bot hasta que el equipo lo devuelva—.
+ *
+ * Un reclamo es justo donde más falta hace atender rápido y bien. Si de verdad hace falta una persona, el
+ * modelo lo dirá o la pedirán con todas las letras, y entonces sí.
+ */
 const HUMAN_RE =
-  /\b(hablar|comunicar(me)?|contactar|pasar(me)?|atender(me)?)\b.{0,25}\b(persona|humano|asesor|agente|alguien|encargado)\b|\b(queja|reclamo|pqr)\b/i;
+  /\b(hablar|comunicar(me)?|contactar|pasar(me)?|atender(me)?)\b.{0,25}\b(persona|humano|asesor|agente|alguien|encargado|ser humano)\b|\bno (quiero|deseo) (hablar con un |hablar con el )?(bot|robot|m[aá]quina)\b/i;
 
 // ---------- Preguntas típicas que no necesitan modelo ----------
 // Temas de la tienda (lo genérico del español); cada negocio suma los suyos en aiva.config.json > dictionary.topics.
