@@ -2579,9 +2579,122 @@
 
   function enganchaClientes() {
     Array.prototype.forEach.call($('cli-tabla').querySelectorAll('.quien'), function (b) {
-      b.onclick = function () { go('inbox'); openContact(b.dataset.id); };
+      // 🪤 Abre la FICHA, no el chat. Ir de golpe a la conversación obliga a leerse veinte mensajes para saber
+      // quién es; lo que uno quiere al buscar a alguien es verlo de un vistazo, y el chat a un botón.
+      b.onclick = function () { abrirPerfil(b.dataset.id); };
     });
   }
+
+
+  // ---------- la ficha de una persona ----------
+  var PF = null;
+
+  function abrirPerfil(id) {
+    $('pf-nombre').textContent = '…';
+    $('pf-sub').textContent = '';
+    $('pf-cuerpo').innerHTML = '<div class="small muted">Cargando…</div>';
+    $('dlg-perfil').showModal();
+    api('/contacts/' + encodeURIComponent(id)).then(function (d) {
+      if (d.error) { $('pf-cuerpo').innerHTML = '<div class="empty">' + esc(d.error) + '</div>'; return; }
+      PF = d;
+      pintarPerfil(d);
+    });
+  }
+
+  function pintarPerfil(d) {
+    var c = d.contact, h = d.historia || {}, v = d.valor || {};
+    $('pf-nombre').textContent = nameOf(c);
+    $('pf-sub').textContent = [channelIcon(c.channel), c.phone || '', h.frase || ''].filter(Boolean).join(' · ');
+
+    var ver = verdict(c);
+    $('pf-cuerpo').innerHTML =
+      // 🪤 Lo primero, lo accionable: si se le fue una venta, eso manda sobre cualquier otro dato de la ficha.
+      (h.amago ? '<div class="pf-amago">⚠ Se le fue una venta: tuvo cita y no acabó en compra, y no tiene otra agendada.</div>' : '') +
+      '<div class="pf-grid">' +
+        dato('Etapa', etiquetaEtapa(c.stage)) +
+        dato('Puntaje', (c.score == null ? '—' : c.score) + (ver && ver.label ? ' · ' + ver.label : '')) +
+        dato('Valor', v.valor ? plata(v.valor) + (v.origen ? ' (' + esc(v.origen) + ')' : '') : 'sin precio') +
+        dato('Volvió', h.volvio ? h.volvio + (h.volvio === 1 ? ' vez' : ' veces') : 'no ha vuelto') +
+        dato('Citas', (h.citas ? h.citas.total : 0) + (h.citas && h.citas.cumplidas ? ' · ' + h.citas.cumplidas + ' cumplidas' : '') + (h.citas && h.citas.falto ? ' · ' + h.citas.falto + ' faltó' : '')) +
+        dato('Desde', h.desde ? new Date(h.desde).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—') +
+      '</div>' +
+      (c.summary ? '<div class="pf-bloque"><h4>Qué quiere</h4><p>' + esc(c.summary) + '</p></div>' : '') +
+      ((d.appointments || []).length ? '<div class="pf-bloque"><h4>Sus citas</h4>' +
+        d.appointments.map(function (a) {
+          return '<div class="appt ' + a.status + '"><span class="t">' + esc(a.label || '') + '</span>' +
+            '<span class="grow small muted">' + esc(a.service || '') + '</span><span class="chip">' + esc(a.status) + '</span></div>';
+        }).join('') + '</div>' : '') +
+      '<div class="pf-bloque"><h4>Corregir</h4><div class="pf-campos">' +
+        '<div><label for="pf-f-nombre">Nombre</label><input id="pf-f-nombre" value="' + esc(c.name || '') + '"></div>' +
+        '<div><label for="pf-f-tel">Teléfono</label><input id="pf-f-tel" value="' + esc(c.phone || '') + '"></div>' +
+        '<div><label for="pf-f-etapa">Etapa</label><select id="pf-f-etapa">' +
+          (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '"' + (e.id === c.stage ? ' selected' : '') + '>' + esc(e.label) + '</option>'; }).join('') +
+        '</select></div>' +
+        // 🪤 El valor a mano manda sobre el del catálogo, y se dice aquí: si no, quien lo escriba no sabrá por
+        // qué su número sobrevive a un reindexado y el deducido no.
+        '<div><label for="pf-f-valor">Valor (manda sobre el del catálogo)</label><input id="pf-f-valor" type="number" min="0" value="' + (v.origen === 'a mano' ? v.valor : '') + '" placeholder="' + (v.valor ? v.valor : 'sin precio') + '"></div>' +
+        '<div class="ancho"><label for="pf-f-notas">Notas del equipo</label><textarea id="pf-f-notas" rows="2">' + esc(c.notes || '') + '</textarea></div>' +
+      '</div>' +
+      '<div class="fila" style="gap:8px;margin-top:10px"><button class="btn primary" id="pf-guardar">Guardar</button>' +
+      '<span class="grow"></span><span class="small" id="pf-msg" role="status"></span></div></div>';
+
+    $('pf-guardar').onclick = function () {
+      var valor = Number($('pf-f-valor').value);
+      var cuerpo = {
+        name: $('pf-f-nombre').value.trim(),
+        phone: $('pf-f-tel').value.trim(),
+        stage: $('pf-f-etapa').value,
+        notes: $('pf-f-notas').value.trim(),
+        data: Object.assign({}, c.data || {}, { valor: Number.isFinite(valor) && valor > 0 ? valor : undefined }),
+      };
+      $('pf-msg').textContent = 'Guardando…';
+      api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: cuerpo }).then(function (r) {
+        if (r && r.error) { $('pf-msg').textContent = r.error; return; }
+        $('pf-msg').textContent = 'Guardado.';
+        loadClientes();
+        abrirPerfil(c.id);
+      });
+    };
+  }
+
+  function dato(k, v) { return '<div class="pf-dato"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>'; }
+
+  // ---------- dar de alta a alguien a mano ----------
+  $('cli-nuevo').onclick = function () {
+    $('nv-nombre').value = '';
+    $('nv-tel').value = '';
+    $('nv-notas').value = '';
+    $('nv-msg').textContent = '';
+    $('nv-etapa').innerHTML = (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.label) + '</option>'; }).join('');
+    $('dlg-nuevo').showModal();
+    $('nv-nombre').focus();
+  };
+
+  $('nv-crear').onclick = function () {
+    var nombre = $('nv-nombre').value.trim();
+    var tel = $('nv-tel').value.trim();
+    if (!nombre && !tel) { $('nv-msg').textContent = 'Dime al menos el nombre o el teléfono.'; return; }
+    $('nv-msg').textContent = 'Creando…';
+    api('/contacts', { method: 'POST', body: { name: nombre, phone: tel, stage: $('nv-etapa').value, notes: $('nv-notas').value.trim() } })
+      .then(function (r) {
+        if (!r || r.error) { $('nv-msg').textContent = (r && r.error) || 'No se pudo crear.'; return; }
+        $('dlg-nuevo').close();
+        loadClientes();
+        // 🪤 Si ya existía se dice, y se abre la que hay: crear "otra" ficha de la misma persona es precisamente
+        // lo que parte la historia en dos, y quien lo hace no se entera hasta que le falta la mitad.
+        if (r.yaExistia) toast('Esa persona ya tenía ficha: te la abro.');
+        abrirPerfil(r.contact.id);
+      });
+  };
+
+  $('pf-cerrar').onclick = function () { $('dlg-perfil').close(); };
+  $('pf-chat').onclick = function () {
+    if (!PF) return;
+    $('dlg-perfil').close();
+    go('inbox');
+    openContact(PF.contact.id);
+  };
+
 
   function etiquetaEtapa(id) {
     var e = (state.stages || []).find(function (x) { return x.id === id; });

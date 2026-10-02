@@ -520,6 +520,25 @@ const comoLlego = (puerto) => porDondeVa.get(puerto) || { host: '127.0.0.1' };
 const conDestino = (puerta, puerto, resto) =>
   puerta.socketPath ? { socketPath: puerta.socketPath, ...resto } : { host: puerta.host, port: puerto, ...resto };
 
+/**
+ * Las cabeceras con las que se le habla al proceso de adentro.
+ *
+ * El Host tiene que apuntar al puerto interno —es a quien se le está hablando— pero al cambiarlo se pierde el
+ * NOMBRE con el que llamaron desde fuera, y ese nombre hace falta adentro: es contra él que se comprueba que un
+ * POST venga de nuestra propia página (ver cabeceras.ts).
+ *
+ * 🪤 Por eso el nombre original se guarda en x-forwarded-host ANTES de pisarlo. Sin esto, lo único que salva el
+ * login es que el servidor del alojamiento ponga esa cabecera por su cuenta: el día que no la ponga —o que
+ * alguien entre directo al puerto de Node— adentro se compara «https://aiva.midominio» contra «127.0.0.1:4100»,
+ * no coinciden, y TODO lo que no sea abrir una página se cae con un 403. Entrar, contestar, guardar: todo. Y no
+ * se ve en ninguna prueba del código, porque el código está bien; lo que faltaba era el dato.
+ */
+const paraAdentro = (cabeceras, puerto) => ({
+  ...cabeceras,
+  'x-forwarded-host': cabeceras['x-forwarded-host'] || cabeceras.host,
+  host: '127.0.0.1:' + puerto,
+});
+
 // Devuelve el MOTIVO, no un sí o un no. «5 de 5 no contestaron a tiempo» no distingue un proceso que todavía no
 // abrió el puerto (ECONNREFUSED) de uno que abrió y está tan ahogado que no alcanza a contestar, y son dos
 // problemas que no se arreglan igual. Eso obligó a leer el registro del panel línea por línea.
@@ -724,7 +743,7 @@ const servidor = http.createServer((pide, responde) => {
     const sinCuerpo = pide.method === 'GET' || pide.method === 'HEAD';
     const intentar = (quedan) => {
       const salida = http.request(
-        conDestino(comoLlego(puerto), puerto, { path: ruta, method: pide.method, headers: { ...pide.headers, host: '127.0.0.1:' + puerto } }),
+        conDestino(comoLlego(puerto), puerto, { path: ruta, method: pide.method, headers: paraAdentro(pide.headers, puerto) }),
         (r) => {
           // 🪤 Se quita el reloj EN CUANTO contesta. El de arriba es para que una petición no se quede colgada
           // esperando a un proceso que ni rechaza ni responde; pero el chat en vivo se queda abierto a

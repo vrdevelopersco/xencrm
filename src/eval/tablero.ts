@@ -29,8 +29,14 @@ check('y dicen qué son al pasar por encima', (riel.match(/data-tip="/g) || []).
 
 // 🪤 El relieve no puede ser la única señal de en qué sección estás: con el contraste alto del sistema, o para
 // quien no distinga ese matiz, el riel se queda sin decir dónde está uno.
-check('🪤 la sección activa se marca de más de una forma', /\.rail \.rb\.active::before\{content:""/.test(html) && /\.rail \.rb\.active \.ic\{color:var\(--brand\)\}/.test(html),
-  'hace falta la pestaña del borde y el icono en color, no solo el fondo');
+// La regla es que NO baste el fondo: quien no distinga ese tono tiene que seguir viendo dónde está. Se prueba
+// que haya tres señales a la vez, sin atarse a qué color concreto lleva cada una —el riel pasó a oscuro con su
+// propia paleta el 2026-10-02 y la regla sigue valiendo igual.
+check('🪤 la sección activa se marca de más de una forma',
+  /\.rail \.rb\.active::before\{content:""/.test(html) &&
+    /\.rail \.rb\.active \.ic\{color:var\(--[a-z-]+\)\}/.test(html) &&
+    /\.rail \.rb\.active\{[^}]*color:/.test(html),
+  'hacen falta la pestaña del borde, el icono en color y el texto, no solo el fondo');
 
 // El celular: ocho botones en 390 px no caben, y al no caber ensanchan la rejilla y cortan la página entera
 // por la derecha. Se encogen, y el área de toque de 44 px la pone el pseudo-elemento.

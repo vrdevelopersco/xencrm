@@ -57,6 +57,20 @@ check('antes de correrse de puerto se echa a los de la versión anterior', arran
 // cuál abrió; si alguien vuelve a dejar una sola, esto lo dice.
 check('🪤 se prueba más de una puerta para llegar a los de adentro', /puertasDe/.test(arranque) && /socketPath/.test(arranque) && /'::1'/.test(arranque));
 check('y el reparto usa la que abrió, no la que se suponía', /conDestino\(comoLlego\(puerto\)/.test(arranque), 'el proxy volvió a fijar 127.0.0.1');
+
+// 🪤 Al repartir hay que cambiar el Host —se le habla al puerto interno— pero eso BORRA el nombre con el que
+// llamaron desde fuera, y adentro ese nombre es contra lo que se comprueba que un POST venga de nuestra propia
+// página. Sin guardarlo en x-forwarded-host, el login (y contestar, y guardar) solo funciona mientras el
+// servidor del alojamiento ponga esa cabecera por su cuenta; el día que no lo haga, 403 para todo el mundo.
+// Medido el 2026-10-02 contra el paquete de verdad: sin x-forwarded-host, entrar devuelve 403.
+check('🪤 al repartir se guarda el nombre con el que llamaron', /'x-forwarded-host': cabeceras\['x-forwarded-host'\] \|\| cabeceras\.host/.test(arranque),
+  'si se pisa el Host sin guardar el original, adentro compara el Origin del navegador contra 127.0.0.1 y rechaza todo POST');
+check('y se guarda ANTES de pisar el Host', arranque.indexOf("'x-forwarded-host':") < arranque.indexOf("host: '127.0.0.1:' + puerto"),
+  'si se pisa primero, lo que se guarda es ya el puerto interno');
+
+// Y lo de adentro tiene que mirar esa cabecera, o lo anterior no sirve de nada.
+const fuenteCabeceras = readFileSync(new URL('../cabeceras.ts', import.meta.url), 'utf8');
+check('y adentro se compara contra ella', /x-forwarded-host/.test(fuenteCabeceras), 'cabeceras.ts dejó de mirar x-forwarded-host');
 check('se mira lo que dice el sistema, no solo lo que dice cada proceso', /\/proc\/net\/tcp/.test(arranque));
 
 // 🪤 La puerta de servicio se abre antes que el puerto. Estuvo dentro del callback del puerto, que es el único

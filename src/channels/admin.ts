@@ -39,11 +39,13 @@ import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes,
 import { apagarClaveDelCliente, claveDelCliente, encenderClaveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente } from '../motores.js';
 import { borrarDocumento, documentosDelNegocio, guardarCatalogo, guardarDocumento } from '../rag/documentos.js';
 import { leerAdjunto } from '../crm/adjuntos.js';
+import { darDeAlta } from '../crm/alta.js';
 import { borrarRespuestaRapida, buscarRespuestaRapida, guardarRespuestaRapida, respuestasRapidas } from '../crm/respuestas-rapidas.js';
 import { temasDelMaterial } from '../crm/aprender-temas.js';
 import { cuantoLeQueda, HORAS_MAXIMO, ponerPrueba, pruebaActiva, quitarPrueba } from '../crm/modo-prueba.js';
 import { comoVa, gastoDeLaDemo, olvidarTodo } from '../crm/vivo.js';
-import { olvidarPrecios, valorDelEmbudo } from '../crm/valor.js';
+import { olvidarPrecios, valorDe, valorDelEmbudo } from '../crm/valor.js';
+import { enUnaFrase, historiaDe } from '../crm/historia.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
@@ -136,6 +138,18 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     return c.json(q ? board.map((b) => ({ ...b, hit: messageHit(b.id, q) })) : board);
   });
 
+  // Dar de alta a alguien a mano: el que llegó por el local, por una llamada o con una tarjeta. Lo delicado
+  // —qué dirección se le pone para que no nazca duplicada— está en crm/alta.ts, con sus pruebas.
+  app.post('/admin/api/contacts', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { name?: string; phone?: string; stage?: Stage; notes?: string };
+    try {
+      const r = darDeAlta(body);
+      return c.json(r, r.yaExistia ? 200 : 201);
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  });
+
   app.get('/admin/api/contacts/:id', (c) => {
     const id = c.req.param('id');
     const contact = getContact(id);
@@ -160,6 +174,9 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       number: contactNumber(contact), // para escribirle o llamarlo desde el tablero
       presentes: quienesEstan(id), // quién más está metido aquí ahora mismo
       origen: origenDe(id), // por dónde llegó: sirve al atender y para saber qué anuncio trae clientes
+      // Qué ha pasado con esta persona: si volvió, si vino a sus citas, si se le fue una venta. Ver crm/historia.ts.
+      historia: (() => { const h = historiaDe(id, { etapa: contact.stage }); return { ...h, frase: enUnaFrase(h) }; })(),
+      valor: valorDe(contact),
     });
   });
 
@@ -220,7 +237,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   app.patch('/admin/api/contacts/:id', async (c) => {
     const id = c.req.param('id');
-    const body = (await c.req.json().catch(() => ({}))) as { name?: string; phone?: string; stage?: Stage; notes?: string; tags?: string[] };
+    const body = (await c.req.json().catch(() => ({}))) as { name?: string; phone?: string; stage?: Stage; notes?: string; tags?: string[]; data?: Record<string, unknown> };
     if (!getContact(id)) return c.json({ error: 'no existe' }, 404);
     if (body.stage) {
       if (!STAGES.includes(body.stage)) return c.json({ error: 'etapa inválida' }, 400);
@@ -231,6 +248,18 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     if (body.phone !== undefined) patch.phone = body.phone.trim() || null;
     if (body.notes !== undefined) patch.notes = body.notes;
     if (Array.isArray(body.tags)) patch.tags = body.tags.map((t) => String(t).trim()).filter(Boolean);
+    if (body.data && typeof body.data === 'object') {
+      // 🪤 Se mezcla con lo que ya hubiera, no se reemplaza: `data` lleva más cosas que el valor —lo que puso el
+      // análisis, el aplazamiento— y mandar el objeto entero desde una pantalla que solo edita un campo
+      // borraría todo lo demás sin que nadie lo notara hasta echarlo en falta.
+      const antes = (getContact(id)?.data ?? {}) as Record<string, unknown>;
+      const junto: Record<string, unknown> = { ...antes, ...body.data };
+      // Un valor vacío o cero no es «vale cero»: es «no lo sé», y eso se guarda quitando la clave para que
+      // vuelva a mandar lo que diga el catálogo.
+      const v = Number(junto.valor);
+      if (!Number.isFinite(v) || v <= 0) delete junto.valor;
+      patch.data = junto;
+    }
     const contact = updateContact(id, patch);
     return c.json({ contact });
   });

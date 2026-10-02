@@ -991,6 +991,28 @@ dialog#dlg-grupos > b{font-size:17px}
 .kpi .p{display:block;font-size:12px;color:var(--muted)}
 @media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr);gap:8px}.kpi{padding:11px 12px}.kpi .n{font-size:23px}}
+
+/* La ficha de una persona: lo que se sabe de ella, antes de abrir la conversación. */
+dialog.perfil{border:0;padding:0;border-radius:14px;background:var(--panel);color:var(--text);
+  width:min(760px,94vw);max-height:88vh;box-shadow:0 20px 60px rgba(16,24,40,.22)}
+dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
+.perfil-cab{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.perfil-cab b{font-size:18px}
+.perfil-cuerpo{padding:16px 18px;overflow:auto;display:flex;flex-direction:column;gap:16px}
+.pf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.pf-dato{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.pf-dato .k{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.pf-dato .v{display:block;font-size:15px;font-weight:600;margin-top:3px}
+.pf-bloque h4{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.pf-bloque p{margin:0;font-size:14.5px}
+.pf-campos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pf-campos label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:3px}
+.pf-campos input,.pf-campos select,.pf-campos textarea{width:100%}
+.pf-campos .ancho{grid-column:1/-1}
+/* 🪤 «Se le fue una venta» va en ámbar y CON la palabra: es la señal más accionable de la ficha y no puede
+   depender de que alguien distinga un color. */
+.pf-amago{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:600}
+@media(max-width:640px){.pf-campos{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -1212,9 +1234,37 @@ dialog#dlg-grupos > b{font-size:17px}
         <span class="grow"></span>
         <input type="search" id="cli-q" placeholder="Buscar por nombre, teléfono o lo que dijo…">
         <button class="btn sm" id="cli-csv">Bajar en Excel</button>
+        <button class="btn sm primary" id="cli-nuevo">Nuevo contacto</button>
       </div>
       <div class="pad"><div id="cli-tabla"></div></div>
     </section>
+
+    <!-- La ficha de una persona. Se abre desde Clientes; el chat está a un botón, no de golpe. -->
+    <dialog id="dlg-perfil" class="perfil">
+      <div class="perfil-cab">
+        <div><b id="pf-nombre">…</b><div class="small muted" id="pf-sub"></div></div>
+        <span class="grow"></span>
+        <button class="btn sm" id="pf-chat">Ver conversación</button>
+        <button class="btn sm" id="pf-cerrar">Cerrar</button>
+      </div>
+      <div class="perfil-cuerpo" id="pf-cuerpo"></div>
+    </dialog>
+
+    <!-- Alta a mano: el que llegó por el local, por una llamada o con una tarjeta. -->
+    <dialog id="dlg-nuevo" class="perfil" style="width:min(520px,94vw)">
+      <form method="dialog" class="perfil-cab"><div><b>Nuevo contacto</b><div class="small muted">Para quien no llegó por el chat</div></div><span class="grow"></span><button class="btn sm">Cerrar</button></form>
+      <div class="perfil-cuerpo">
+        <div class="pf-campos">
+          <div class="ancho"><label for="nv-nombre">Nombre</label><input id="nv-nombre" placeholder="Cómo se llama"></div>
+          <div class="ancho"><label for="nv-tel">Teléfono (WhatsApp)</label><input id="nv-tel" inputmode="tel" placeholder="300 123 4567">
+            <!-- 🪤 Se explica por qué conviene el número: es lo que hace que la ficha sea la misma el día que escriba. -->
+            <div class="small muted" style="margin-top:4px">Con el número, lo que escriba por WhatsApp cae en esta misma ficha.</div></div>
+          <div class="ancho"><label for="nv-etapa">Etapa</label><select id="nv-etapa"></select></div>
+          <div class="ancho"><label for="nv-notas">Notas</label><textarea id="nv-notas" rows="2" placeholder="De dónde salió, qué quería…"></textarea></div>
+        </div>
+        <div class="fila" style="gap:8px"><button class="btn primary" id="nv-crear">Crear ficha</button><span class="grow"></span><span class="small" id="nv-msg" role="status"></span></div>
+      </div>
+    </dialog>
 
     <!-- Conocimiento -->
     <section class="view" id="view-knowledge">
