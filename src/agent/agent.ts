@@ -7,7 +7,7 @@ import { openaiModel } from '../llm/openai.js';
 import { appendMessage, clearHistory, getHistory, touchUser } from './memory.js';
 import { classify } from './gate.js';
 import { anotarUso, buscarRespuestaRapida } from '../crm/respuestas-rapidas.js';
-import { puedeContestar } from '../crm/modo-prueba.js';
+import { pruebaActiva, puedeContestar } from '../crm/modo-prueba.js';
 import { anotarTurno } from '../crm/vivo.js';
 import { chooseEngine } from './router.js';
 import { claimsBooked, dropRepeatedFacts, isHonest, postProcess, stripRepeatedGreeting, touchesPending, unsupportedAnswer, ungroundedNumbers } from './format.js';
@@ -253,7 +253,14 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   if (gate.intent === 'cita') return finish(await startBooking(msg.userId, text), gate.intent, 'template', { gateVia: gate.via, route: 'flujo de cita' });
   if (gate.intent === 'humano') {
     const reply = finish(pick(HUMAN_REPLIES), gate.intent, 'template', { gateVia: gate.via, route: 'traspaso a humano' });
-    setHumanMode(msg.userId, true, 'bot'); // a partir de aquí el bot se calla hasta que el equipo lo devuelva
+    // 🪤 En una demostración NO se traspasa, porque no hay nadie a quien traspasarle.
+    //
+    // Fuera de la demo esto está bien: alguien pide una persona, el bot se aparta y no vuelve a hablar hasta que
+    // el equipo le devuelva la conversación. Pero en una demostración el equipo no está mirando, así que lo que
+    // pasa es que el asistente se queda mudo para siempre a mitad de la prueba —y desde fuera no se ve «pidió
+    // una persona», se ve «esto no funciona»—. Pasó, en vivo. Se contesta la frase de traspaso, que suena bien,
+    // y se sigue atendiendo.
+    if (!pruebaActiva()) setHumanMode(msg.userId, true, 'bot');
     return reply;
   }
 
