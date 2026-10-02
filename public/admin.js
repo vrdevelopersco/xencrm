@@ -46,6 +46,9 @@
     help: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
     store: '<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/>',
     sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h10M18 18h2"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
+    // Dos personas: el directorio de clientes. Aparte de `user`, que es «mi cuenta» — el mismo dibujo para dos
+    // cosas distintas hace dudar un segundo cada vez que se mira el riel.
+    users: '<circle cx="9" cy="8" r="3.2"/><path d="M2.6 19.4a6.6 6.6 0 0 1 12.8 0"/><path d="M16.5 5.5a3.2 3.2 0 0 1 0 6"/><path d="M18 14.2a6.6 6.6 0 0 1 3.4 5.2"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
     salir: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
     check: '<path d="M20 6L9 17l-5-5"/>',
@@ -379,7 +382,7 @@
   var CFG_VIEWS = { agent: 1, channels: 1, knowledge: 1, help: 1 };
   // 🪤 En las pantallas de configuración el panel decía lo mismo que el título de la página, dos veces en la
   // misma fila. Aquí dice el ÁREA —dónde estás— y la lista de abajo dice la pantalla: cada uno aporta algo.
-  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Prospectos', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración' };
+  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Prospectos', clientes: 'Clientes', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración' };
   function pintarPanel(view) {
     var panel = $('subnav');
     if (!panel) return;
@@ -412,6 +415,7 @@
     if (view === 'today') loadToday();
     if (view === 'inbox') { if (opts && opts.filter) setFilter(opts.filter); else loadContacts(); }
     if (view === 'pipeline') loadPipeline();
+    if (view === 'clientes') loadClientes();
     if (view === 'calendar') loadCalendar();
     if (view === 'analysis') loadAnalysis();
     if (view === 'agent') loadAgent();
@@ -2462,6 +2466,92 @@
       $('k-list').innerHTML = docs.map(function (d) { return '<div class="doc"><h4>' + esc(d.title) + (d.url ? ' · <a href="' + esc(d.url) + '" target="_blank">enlace</a>' : '') + '</h4><p>' + esc(d.content) + '</p></div>'; }).join('') || '<div class="empty">Nada indexado con ese texto.</div>';
     });
   }
+
+
+  // ---------- Clientes: el directorio de personas ----------
+  //
+  // Otra cosa que Prospectos. Aquel es un tablero para MOVER fichas de etapa; esto es para ENCONTRAR a alguien y
+  // ver quién es de un vistazo — lo que uno hace cuando suena el teléfono, o cuando quiere saber a quién llamar.
+  // Por eso es una tabla y no tarjetas: una tabla se recorre con la vista, un tablero se recorre con el ratón.
+  var cli = { grupo: 'todos', q: '', lista: [] };
+
+  // 🪤 El grupo sale del ROL de la etapa, no de su nombre. Cada negocio tiene su embudo: una boutique tiene
+  // «Vendido» y una financiera «Resuelto», y una lista de nombres fijos dejaría media cartera sin clasificar.
+  function grupoDe(c) {
+    var r = rol(c.stage);
+    if (r === 'ganado') return 'cliente';
+    if (r === 'perdido') return 'perdido';
+    return 'prospecto';
+  }
+
+  function loadClientes() {
+    var params = cli.q ? '?q=' + encodeURIComponent(cli.q) + '&limit=500' : '?limit=500';
+    return api('/contacts' + params).then(function (list) { cli.lista = list; renderClientes(); });
+  }
+
+  function renderClientes() {
+    var list = cli.lista.filter(function (c) { return cli.grupo === 'todos' || grupoDe(c) === cli.grupo; });
+    // De más caliente a más frío, y a igual puntaje el más reciente: así arriba está siempre a quien llamar.
+    list.sort(function (a, b) { return (b.score || 0) - (a.score || 0) || (b.lastMessageAt || 0) - (a.lastMessageAt || 0); });
+
+    var cuenta = { cliente: 0, prospecto: 0, perdido: 0 };
+    cli.lista.forEach(function (c) { cuenta[grupoDe(c)]++; });
+    var resumen = cuenta.cliente + ' clientes · ' + cuenta.prospecto + ' prospectos · ' + cuenta.perdido + ' perdidos';
+
+    if (!list.length) {
+      $('cli-tabla').innerHTML = '<div class="cli-resumen">' + resumen + '</div><div class="empty">Nadie por aquí con ese filtro.</div>';
+      enganchaClientes();
+      return;
+    }
+
+    $('cli-tabla').innerHTML = '<div class="cli-resumen">' + esc(resumen) + (cli.q ? ' · buscando «' + esc(cli.q) + '»' : '') + '</div>' +
+      '<table class="cli-tabla"><thead><tr>' +
+        '<th>Quién</th><th>Dónde</th><th>Etapa</th><th class="num">Puntaje</th><th>Qué quiere</th><th class="num">Última vez</th>' +
+      '</tr></thead><tbody>' +
+      list.map(function (c) {
+        var v = verdict(c);
+        return '<tr>' +
+          '<td data-rot="Quién"><button class="quien" data-id="' + esc(c.id) + '">' + esc(nameOf(c)) + '</button>' +
+            (c.phone ? '<div class="dato">' + esc(c.phone) + '</div>' : '') + '</td>' +
+          '<td data-rot="Dónde" class="dato">' + esc(channelIcon(c.channel)) + '</td>' +
+          '<td data-rot="Etapa"><span class="chip ' + esc(rol(c.stage) || '') + '">' + esc(etiquetaEtapa(c.stage)) + '</span></td>' +
+          // El puntaje nunca solo: va con su veredicto en palabras, que es la regla de siempre.
+          '<td data-rot="Puntaje" class="num">' + (c.score == null ? '—' : c.score) +
+            '<div class="dato">' + esc(v && v.label ? v.label : '') + '</div></td>' +
+          '<td data-rot="Qué quiere" class="quiere">' + esc(c.summary || c.recap || '') + '</td>' +
+          '<td data-rot="Última vez" class="num dato">' + esc(rel(c.lastMessageAt)) + '</td>' +
+        '</tr>';
+      }).join('') + '</tbody></table>';
+    enganchaClientes();
+  }
+
+  function enganchaClientes() {
+    Array.prototype.forEach.call($('cli-tabla').querySelectorAll('.quien'), function (b) {
+      b.onclick = function () { go('inbox'); openContact(b.dataset.id); };
+    });
+  }
+
+  function etiquetaEtapa(id) {
+    var e = (state.stages || []).find(function (x) { return x.id === id; });
+    return (e && e.label) || id || '';
+  }
+
+  document.querySelectorAll('#cli-filtros button').forEach(function (b) {
+    b.onclick = function () {
+      cli.grupo = b.dataset.g;
+      document.querySelectorAll('#cli-filtros button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      renderClientes();
+    };
+  });
+  var cliTimer;
+  $('cli-q').oninput = function () {
+    clearTimeout(cliTimer);
+    var v = this.value.trim();
+    // Se espera a que deje de teclear: una consulta por letra castiga al servidor y hace parpadear la tabla.
+    cliTimer = setTimeout(function () { cli.q = v; loadClientes(); }, 300);
+  };
+  $('cli-csv').onclick = function () { download('/export/contactos', 'clientes.csv'); };
+
 
   // ---------- eventos en vivo ----------
   function connect() {

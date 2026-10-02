@@ -99,8 +99,18 @@ textarea{resize:vertical;min-height:70px}
 .list{border-right:1px solid var(--glass-border);display:flex;flex-direction:column;min-height:0;background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%)}
 .list .tools{padding:10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
 .filters{display:flex;gap:6px;flex-wrap:wrap}
-.filters button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer}
-.filters button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+/* Se ven poco y se tocan peor: eran de 12 px con 3 de alto y sin ningún hover, así que no parecían botones.
+   🪤 Y el elegido llevaba `color:#fff` a pelo sobre la marca, que es la regla que este documento prohíbe desde
+   el primer día: todo relleno de color lleva su `--on-*` medido. Con una marca clara, el blanco desaparece. */
+.filters button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 13px;
+  min-height:32px;font:inherit;font-size:12.5px;color:var(--text);cursor:pointer;
+  transition:background .15s,border-color .15s,box-shadow .15s}
+.filters button:hover{background:var(--row-hover);border-color:var(--muted)}
+.filters button:focus-visible{outline:none;box-shadow:var(--ring)}
+.filters button.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand);font-weight:700;
+  box-shadow:0 2px 8px color-mix(in srgb,var(--brand) 35%,transparent)}
+.filters button.on:hover{background:color-mix(in srgb,var(--brand) 88%,var(--text))}
+@media (pointer:coarse){.filters button{min-height:40px;padding:8px 15px}}
 .rows{overflow-y:auto;flex:1}
 .row{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px 8px}
 .row:hover{background:var(--bg)}.row.sel{background:color-mix(in srgb,var(--brand) 14%,transparent)}
@@ -960,6 +970,32 @@ dialog#dlg-grupos > b{font-size:17px}
 .mes .cita.cancelada{text-decoration:line-through;color:var(--muted);background:var(--row-hover)}
 .mes .mas{font-size:11px;color:var(--muted);text-align:left}
 @media (max-width:760px){.mes .dia{min-height:62px;padding:4px}.mes .cita{font-size:10.5px}}
+
+/* Clientes: una tabla que se escanea, no tarjetas. Aquí se viene a encontrar a alguien. */
+#view-clientes .topbar{flex-wrap:wrap;gap:10px}
+#cli-q{min-width:240px;flex:0 1 320px}
+.cli-tabla{width:100%;border-collapse:separate;border-spacing:0}
+.cli-tabla th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+  font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:1}
+.cli-tabla td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+.cli-tabla tr:hover td{background:var(--row-hover)}
+.cli-tabla .quien{font-weight:600;cursor:pointer;background:none;border:0;padding:0;font:inherit;font-weight:600;
+  color:var(--text);text-align:left}
+.cli-tabla .quien:hover{color:var(--brand);text-decoration:underline}
+.cli-tabla .dato{color:var(--muted);font-size:12.5px}
+.cli-tabla .quiere{color:var(--muted);font-size:12.5px;max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cli-tabla .num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.cli-resumen{color:var(--muted);font-size:12.5px;margin-bottom:10px}
+@media (max-width:760px){
+  /* 🪤 En teléfono una tabla no se encoge: se parte. Cada fila pasa a ser una ficha con sus rótulos delante. */
+  .cli-tabla thead{display:none}
+  .cli-tabla,.cli-tabla tbody,.cli-tabla tr,.cli-tabla td{display:block;width:100%}
+  .cli-tabla tr{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;padding:4px;background:var(--panel)}
+  .cli-tabla td{border:0;padding:4px 8px}
+  .cli-tabla td[data-rot]::before{content:attr(data-rot) ' ';color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+  .cli-tabla .num{text-align:left}
+  .cli-tabla .quiere{max-width:none;white-space:normal}
+}
 </style>
 </head>
 <body>
@@ -982,6 +1018,7 @@ dialog#dlg-grupos > b{font-size:17px}
       <button class="rb" data-view="inbox" data-tip="Conversaciones" aria-label="Conversaciones"><i class="ic" data-ic="message"></i><span class="badge" id="badge-unread"></span></button>
       <button class="rb" data-view="calendar" data-tip="Calendario" aria-label="Calendario"><i class="ic" data-ic="calendar"></i><span class="badge" id="badge-cal"></span></button>
       <button class="rb" data-view="pipeline" data-tip="Prospectos" aria-label="Prospectos"><i class="ic" data-ic="columns"></i></button>
+      <button class="rb" data-view="clientes" data-tip="Clientes" aria-label="Clientes"><i class="ic" data-ic="users"></i></button>
       <button class="rb" data-view="analysis" data-tip="Análisis" aria-label="Análisis"><i class="ic" data-ic="chart"></i></button>
     </nav>
     <div class="spacer"></div>
@@ -1162,6 +1199,27 @@ dialog#dlg-grupos > b{font-size:17px}
         <div class="panel" style="margin-top:12px"><b>Avisarme cuando nadie conteste</b><div id="avisos"></div></div>
       </div>
     </section>
+    <!--
+      Clientes: el directorio de personas. Es otra cosa que Prospectos, que es un tablero para mover fichas de
+      etapa; esto es para BUSCAR a alguien y ver quién es de un vistazo, que es lo que uno hace cuando suena el
+      teléfono o cuando quiere saber a quién llamar.
+    -->
+    <section class="view" id="view-clientes">
+      <div class="topbar">
+        <h1>Clientes</h1>
+        <div class="filters" id="cli-filtros">
+          <button data-g="todos" class="on">Todos</button>
+          <button data-g="cliente">Clientes</button>
+          <button data-g="prospecto">Prospectos</button>
+          <button data-g="perdido">Perdidos</button>
+        </div>
+        <span class="grow"></span>
+        <input type="search" id="cli-q" placeholder="Buscar por nombre, teléfono o lo que dijo…">
+        <button class="btn sm" id="cli-csv">Bajar en Excel</button>
+      </div>
+      <div class="pad"><div id="cli-tabla"></div></div>
+    </section>
+
     <!-- Conocimiento -->
     <section class="view" id="view-knowledge">
       <div class="topbar"><h1>Lo que sabe el agente</h1><span class="grow"></span><div class="tabs"><button class="on" data-kind="knowledge" id="k-kn">Información</button><button data-kind="product" id="k-pr">Productos</button><button data-kind="rapidas" id="k-ra">Respuestas rápidas</button><button data-kind="interno" id="k-in">Solo para el equipo</button></div></div>
