@@ -42,6 +42,7 @@ import { leerAdjunto } from '../crm/adjuntos.js';
 import { borrarRespuestaRapida, buscarRespuestaRapida, guardarRespuestaRapida, respuestasRapidas } from '../crm/respuestas-rapidas.js';
 import { temasDelMaterial } from '../crm/aprender-temas.js';
 import { cuantoLeQueda, HORAS_MAXIMO, ponerPrueba, pruebaActiva, quitarPrueba } from '../crm/modo-prueba.js';
+import { comoVa, olvidarTodo } from '../crm/vivo.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
@@ -1136,6 +1137,25 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     quitarPrueba();
     return c.json({ ok: true, activa: false });
   });
+
+  // ── El monitor de una demostración en vivo ────────────────────────────────
+  //
+  // Lo que la conversación no dice: si cada respuesta salió del guion o la improvisó el modelo, cuánto tardó, si
+  // el asistente acaba de admitir que no sabe algo. Ver `crm/vivo.ts`.
+  app.get('/admin/api/vivo', (c) => {
+    const p = pruebaActiva();
+    return c.json({ ...comoVa(Number(c.req.query('turnos')) || 25), prueba: p ? { chats: p.chats, queda: cuantoLeQueda(p) } : null });
+  });
+
+  app.delete('/admin/api/vivo', (c) => {
+    olvidarTodo();
+    return c.json({ ok: true });
+  });
+
+  /** La pantalla del monitor. Va aparte del tablero a propósito: se mira en otro aparato mientras se presenta. */
+  app.get('/admin/monitor', (c) =>
+    c.html(readFileSync(new URL('../../public/monitor.html', import.meta.url), 'utf8').replaceAll('__NEGOCIO__', business.business.name)),
+  );
 
   // ── Respuestas rápidas ────────────────────────────────────────────────────
   //

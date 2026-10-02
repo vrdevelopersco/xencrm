@@ -8,6 +8,7 @@ import { appendMessage, clearHistory, getHistory, touchUser } from './memory.js'
 import { classify } from './gate.js';
 import { anotarUso, buscarRespuestaRapida } from '../crm/respuestas-rapidas.js';
 import { puedeContestar } from '../crm/modo-prueba.js';
+import { anotarTurno } from '../crm/vivo.js';
 import { chooseEngine } from './router.js';
 import { claimsBooked, dropRepeatedFacts, isHonest, postProcess, stripRepeatedGreeting, touchesPending, unsupportedAnswer, ungroundedNumbers } from './format.js';
 import { pendingTopics } from '../profile.js';
@@ -140,6 +141,9 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     recordBotReply(msg.userId, reply);
     scheduleAnalysis(msg.userId);
     const ms = Date.now() - started;
+    // Para el monitor de una demostración en vivo: ver crm/vivo.ts. Va aquí, donde ya se sabe todo del turno, y
+    // no en otro sitio: dos caminos que anotan lo mismo acaban diciendo cosas distintas.
+    anotarTurno({ ts: Date.now(), userId: msg.userId, pregunta: text, respuesta: reply, ruta: extra.route ?? '', motor: engine, modelo: extra.model ?? '', ms, intent });
     console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} intent=${intent}(${extra.gateVia ?? 'rule'}) engine=${engine}${extra.model ? `:${extra.model}` : ''}${extra.route ? ` [${extra.route}]` : ''} ${ms}ms`);
     return { ...base, text: reply, intent, engine, ms, ...extra };
   };

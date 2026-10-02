@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Monitor · __NEGOCIO__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* El monitor de quien está presentando. Fondo oscuro y letra grande a propósito: se mira de reojo, desde lejos y
+   con poca luz, mientras se habla de otra cosa. No es una pantalla para trabajar: es para enterarse de un
+   vistazo y volver a mirar al público. */
+:root{
+  --fondo:#0e0d0a; --panel:#17150f; --linea:rgba(255,255,255,.10);
+  --texto:#f2efe8; --suave:#a09a8e;
+  --bien:#4ade80; --ojo:#fbbf24; --mal:#f87171; --guion:#7dd3fc;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100dvh;background:var(--fondo);color:var(--texto);
+  font:16px/1.5 Figtree,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+header{position:sticky;top:0;z-index:2;background:color-mix(in srgb,var(--fondo) 92%,transparent);
+  backdrop-filter:blur(14px);border-bottom:1px solid var(--linea);padding:14px 20px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header b{font-size:17px}
+.estado{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--suave)}
+.punto{width:9px;height:9px;border-radius:50%;background:var(--bien);box-shadow:0 0 0 4px rgba(74,222,128,.15)}
+.punto.frio{background:var(--suave);box-shadow:0 0 0 4px rgba(160,154,142,.15)}
+.grow{flex:1}
+button{font:inherit;font-size:13.5px;color:var(--suave);background:transparent;border:1px solid var(--linea);
+  border-radius:999px;padding:7px 14px;min-height:40px;cursor:pointer}
+button:hover{color:var(--texto);border-color:var(--suave)}
+
+main{padding:16px 20px 40px;max-width:1100px;margin:0 auto}
+
+/* El resumen de cada conversación: lo que se mira primero. */
+.chats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.chat{background:var(--panel);border:1px solid var(--linea);border-radius:14px;padding:12px 16px;min-width:210px}
+.chat b{display:block;font-size:15px;margin-bottom:6px}
+.chat .d{font-size:13px;color:var(--suave)}
+.chat .d span{color:var(--texto);font-weight:600}
+
+.turno{background:var(--panel);border:1px solid var(--linea);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+.turno .cab{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px;font-size:13px;color:var(--suave)}
+.turno .quien{color:var(--texto);font-weight:600;font-size:14.5px}
+.mia{font-size:15.5px;margin-bottom:8px}
+.suya{font-size:15.5px;color:var(--texto);border-left:3px solid var(--linea);padding-left:12px;white-space:pre-wrap}
+
+/* 🪤 De dónde salió la respuesta, que es lo único que de verdad importa mientras se presenta. Se dice con la
+   PALABRA además del color: a tres metros, con la luz de un proyector encima, un color no se distingue. */
+.via{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:700}
+.via.guion{background:rgba(125,211,252,.15);color:var(--guion)}
+.via.modelo{background:rgba(251,191,36,.15);color:var(--ojo)}
+.via.otra{background:rgba(255,255,255,.07);color:var(--suave)}
+.ms{font-variant-numeric:tabular-nums}
+.ms.lento{color:var(--mal);font-weight:700}
+
+.alarmas{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.alarmas span{font-size:12.5px;background:rgba(251,191,36,.12);color:var(--ojo);border-radius:8px;padding:3px 10px}
+
+.vacio{text-align:center;color:var(--suave);padding:16vh 20px;font-size:15px}
+.vacio b{display:block;color:var(--texto);font-size:18px;margin-bottom:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <b>Monitor</b>
+  <span class="estado" id="estado"><span class="punto frio"></span>conectando…</span>
+  <span class="grow"></span>
+  <button id="limpiar">Empezar limpio</button>
+</header>
+<main>
+  <div class="chats" id="chats"></div>
+  <div id="turnos"></div>
+</main>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  // El token se pasa en la dirección (#) para poder abrirlo de un pegón en otro aparato sin escribir nada.
+  // 🪤 Va en el fragmento y no en la consulta: lo que va después de la almohadilla NO se manda al servidor ni
+  // queda en sus registros, y aquí lo único que hace falta es que llegue al navegador.
+  var token = (location.hash || '').replace(/^#/, '').trim();
+  try { if (token) localStorage.setItem('aiva.monitor.token', token); else token = localStorage.getItem('aiva.monitor.token') || ''; } catch (e) {}
+  if (token) history.replaceState(null, '', location.pathname);
+
+  function hora(ts) {
+    var d = new Date(ts);
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2);
+  }
+
+  function pintar(d) {
+    var p = d.prueba;
+    $('estado').innerHTML = p
+      ? '<span class="punto"></span>En prueba · solo ' + p.chats.length + (p.chats.length === 1 ? ' chat' : ' chats') + ' · quedan ' + esc(p.queda)
+      : '<span class="punto frio"></span>Sin prueba: le contesta a todo el mundo';
+
+    $('chats').innerHTML = (d.conversaciones || []).map(function (c) {
+      return '<div class="chat"><b>' + esc(c.nombre) + '</b>' +
+        '<div class="d"><span>' + c.turnos + '</span> turnos · <span>' + c.porElGuion + '</span> por el guion · <span>' + c.improvisadas + '</span> del modelo</div>' +
+        '<div class="d">' + (c.puntaje == null ? 'sin puntaje aún' : 'puntaje <span>' + c.puntaje + '</span>' + (c.temperatura ? ' · ' + esc(c.temperatura) : '')) +
+        (c.msMedio ? ' · <span>' + (c.msMedio / 1000).toFixed(1) + ' s</span> de media' : '') + '</div></div>';
+    }).join('');
+
+    var ts = (d.turnos || []).slice().reverse(); // lo último arriba: es lo que se mira
+    $('turnos').innerHTML = ts.length ? ts.map(function (t) {
+      var guion = (t.ruta || '').indexOf('respuesta rápida') === 0;
+      var via = guion ? ['guion', '▣ Guion'] : (t.motor === 'template' || t.motor === 'none') ? ['otra', '▪ ' + esc(t.ruta || t.motor)] : ['modelo', '◆ Modelo' + (t.modelo ? ' · ' + esc(t.modelo) : '')];
+      return '<div class="turno">' +
+        '<div class="cab"><span class="quien">' + esc(t.nombre) + '</span>' +
+          '<span class="via ' + via[0] + '">' + via[1] + '</span>' +
+          '<span class="ms' + (t.ms >= 6000 ? ' lento' : '') + '">' + (t.ms / 1000).toFixed(1) + ' s</span>' +
+          '<span>' + hora(t.ts) + '</span></div>' +
+        '<div class="mia">' + esc(t.pregunta) + '</div>' +
+        '<div class="suya">' + esc(t.respuesta || '(no contestó)') + '</div>' +
+        (t.alarmas && t.alarmas.length ? '<div class="alarmas">' + t.alarmas.map(function (a) { return '<span>' + esc(a) + '</span>'; }).join('') + '</div>' : '') +
+      '</div>';
+    }).join('') : '<div class="vacio"><b>Esperando el primer mensaje</b>Escribe desde el número de la prueba y aparecerá aquí, con lo que no se ve en la conversación.</div>';
+  }
+
+  function traer() {
+    return fetch('/admin/api/vivo', { headers: { 'x-admin-token': token } })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(pintar)
+      .catch(function (e) {
+        $('estado').innerHTML = '<span class="punto frio"></span>' + (e === 401 ? 'token inválido: ábrelo con #TOKEN al final' : 'sin conexión, reintentando');
+      });
+  }
+
+  // Se consulta cada dos segundos y no por eventos: es media hora de demostración y lo que importa es que no se
+  // quede colgado si algo se cae. Un reintento tonto cada dos segundos se recupera solo; un canal abierto que se
+  // cierra sin avisar deja la pantalla congelada enseñando algo viejo, que es lo peor que puede hacer un monitor.
+  traer();
+  setInterval(traer, 2000);
+
+  $('limpiar').onclick = function () {
+    fetch('/admin/api/vivo', { method: 'DELETE', headers: { 'x-admin-token': token } }).then(traer);
+  };
+})();
+</script>
+</body>
+</html>
