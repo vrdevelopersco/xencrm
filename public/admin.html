@@ -782,7 +782,7 @@ dialog#dlg-grupos > b{font-size:17px}
    cosas que se tocan una vez al mes compitiendo por atención con las que se usan
    cada minuto. Ahora el riel son los cinco destinos del día y la configuración
    vive en el engranaje, agrupada por de quién es cada cosa. */
-.app{grid-template-columns:64px var(--subnav,212px) 1fr}
+.app{grid-template-columns:var(--riel,194px) var(--subnav,212px) 1fr}
 .app[data-subnav="no"]{--subnav:0px}
 /* 🪤 Con sitio fijo, no por orden de llegada: cuando el panel se esconde, la colocación automática metía el
    contenido en la columna del panel —que mide cero— y la pantalla salía en blanco sin un solo error. */
@@ -791,19 +791,29 @@ dialog#dlg-grupos > b{font-size:17px}
 .app>.main{grid-column:3}
 .rail .rb[hidden]{display:none}
 
+/* 🪤 El rótulo va AL LADO del icono, siempre, no al pasar el ratón. Un icono solo obliga a adivinar o a
+   esperar un tooltip, y con el dedo no hay «pasar por encima»: en una pantalla táctil ese texto no existía.
+   Lo pidieron los que la están usando, y tienen razón: el riel se recorre con la vista, no con el ratón. */
 .rail{background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);
   border-right:1px solid var(--glass-border);box-shadow:var(--rim),var(--glass-shadow);
-  display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0 10px;z-index:30}
-.rail .marca{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-weight:800;font-size:16px;
+  display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:12px 10px 10px;z-index:30}
+.rail .marca{width:40px;height:40px;flex:0 0 40px;align-self:flex-start;border-radius:13px;display:grid;place-items:center;font-weight:800;font-size:16px;
   border:0;cursor:pointer;color:#fff;background:linear-gradient(180deg,color-mix(in srgb,var(--brand) 85%,#fff),var(--brand));
   box-shadow:var(--rim),0 4px 14px color-mix(in srgb,var(--brand) 40%,transparent);overflow:hidden;margin-bottom:6px}
 .rail .marca img{width:100%;height:100%;object-fit:cover}
-.rail .sep{width:28px;height:1px;background:var(--glass-border);margin:2px 0}
-.rail nav{display:flex;flex-direction:column;align-items:center;gap:4px}
+.rail .sep{width:100%;height:1px;background:var(--glass-border);margin:2px 0}
+.rail nav{display:flex;flex-direction:column;align-items:stretch;gap:4px}
 .rail .spacer{flex:1}
-.rail .rb{position:relative;width:46px;height:46px;border-radius:15px;display:grid;place-items:center;border:0;background:none;
+.rail .rb{position:relative;width:100%;min-height:44px;border-radius:13px;display:flex;align-items:center;gap:11px;
+  padding:0 12px;border:0;background:none;text-align:left;font:inherit;font-size:14px;
   cursor:pointer;color:var(--text);transition:background .15s,box-shadow .15s,transform .12s}
 .rail .rb .ic{width:21px;height:21px;flex:0 0 21px}
+/* El rótulo sale de `data-tip`, que es el mismo texto que ya llevaba el aviso flotante y el aria-label: una
+   sola fuente para los tres, así no se desincronizan. */
+.rail .rb::after{content:attr(data-tip);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+/* Con insignia, el rótulo le deja sitio: si no, «Conversaciones» pasa por debajo del número. */
+.rail .rb:has(.badge:not(:empty))::after{padding-right:22px}
+.rail .rb.active{font-weight:700}
 .rail .rb:hover{background:var(--row-hover);box-shadow:var(--rim)}
 .rail .rb:active{transform:translateY(1px)}
 .rail .rb.active{background:var(--glass-strong);box-shadow:var(--rim),0 4px 14px rgba(17,24,39,.10)}
@@ -811,16 +821,11 @@ dialog#dlg-grupos > b{font-size:17px}
 .rail .rb.active .ic{color:var(--brand)}
 /* 🪤 El relieve no es la única señal de dónde estás: también hay una pestaña en el borde y el icono en color.
    Quien no distinga el relieve —o tenga el contraste alto— sigue viendo cuál es la sección activa. */
-.rail .rb.active::before{content:"";position:absolute;left:-9px;top:50%;transform:translateY(-50%);width:4px;height:22px;border-radius:0 4px 4px 0;background:var(--brand)}
-.rail .rb .badge{position:absolute;top:4px;right:4px;background:var(--bad);color:#fff;border-radius:10px;font-size:10px;line-height:16px;padding:0 5px;min-width:16px;text-align:center}
+.rail .rb.active::before{content:"";position:absolute;left:-10px;top:50%;transform:translateY(-50%);width:4px;height:22px;border-radius:0 4px 4px 0;background:var(--brand)}
+.rail .rb .badge{position:absolute;top:50%;transform:translateY(-50%);right:10px;background:var(--bad);color:#fff;border-radius:10px;font-size:10px;line-height:16px;padding:0 5px;min-width:16px;text-align:center}
 .rail .rb .badge:empty{display:none}
-/* Etiqueta al pasar por encima: el icono solo no basta para saber qué es. */
-.rail .rb::after{content:attr(data-tip);position:absolute;left:56px;top:50%;transform:translateY(-50%);white-space:nowrap;
-  background:var(--glass-overlay);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border:1px solid var(--glass-border);
-  box-shadow:var(--rim),var(--lift);border-radius:10px;padding:5px 10px;font-size:12.5px;font-weight:600;color:var(--text);
-  opacity:0;pointer-events:none;transition:opacity .12s .25s;z-index:70}
-.rail .rb:hover::after,.rail .rb:focus-visible::after{opacity:1}
-.rail .avatar-btn{width:38px;height:38px;border-radius:999px;border:1px solid var(--glass-border);box-shadow:var(--rim);
+/* El aviso flotante se fue con el rótulo fijo: tenerlos los dos sería decir lo mismo dos veces. */
+.rail .avatar-btn{width:38px;height:38px;flex:0 0 38px;align-self:flex-start;border-radius:999px;border:1px solid var(--glass-border);box-shadow:var(--rim);
   background:var(--glass-strong);display:grid;place-items:center;font-weight:700;font-size:13px;cursor:pointer;color:var(--text)}
 
 /* El panel de la sección: lo que hay dentro de donde estás. */
@@ -872,10 +877,13 @@ dialog#dlg-grupos > b{font-size:17px}
     overflow:hidden}
   .rail .marca,.rail .sep,.rail .spacer{display:none}
   .rail nav{flex-direction:row;gap:0;flex:1;justify-content:space-between}
-  .rail .rb{width:38px;height:38px;border-radius:12px}
+  /* 🪤 Aquí el rótulo se esconde y los botones vuelven a ser cuadrados: ocho con texto no caben en 390 px, y el
+     riel de abajo se lee por el icono y por la pestañita del activo, no por la palabra. */
+  .rail .rb{width:38px;height:38px;min-height:0;border-radius:12px;padding:0;justify-content:center;gap:0}
   .rail .rb .ic{width:19px;height:19px;flex:0 0 19px}
   .rail .avatar-btn{width:32px;height:32px;flex:0 0 32px}
   .rail .rb::after{display:none}
+  .rail .rb .badge{top:4px;right:4px;transform:none}
   .rail .rb.active::before{left:50%;top:auto;bottom:-6px;transform:translateX(-50%);width:20px;height:3px;border-radius:3px 3px 0 0}
   .subnav{grid-row:1;flex-direction:row;align-items:center;gap:6px;padding:8px 10px;overflow:hidden;
     border-right:0;border-bottom:1px solid var(--glass-border)}
