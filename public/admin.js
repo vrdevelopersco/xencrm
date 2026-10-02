@@ -1035,9 +1035,15 @@
       // 🪤 «Agenda» son LAS PRÓXIMAS CITAS, no las de la semana que estés mirando. Pedía solo el rango de la
       // semana y luego filtraba por ella, así que una cita del lunes siguiente salía como «sin citas» estando
       // a tres días. Quien lo ve no piensa «estoy en otra semana»: piensa que la cita se perdió.
-      var agenda = cal.mode === 'agenda';
-      var from = agenda ? Date.now() - 86400000 : addDays(cal.start, -1).getTime();
-      var to = agenda ? Date.now() + 120 * 86400000 : addDays(cal.start, 8).getTime();
+      var from, to;
+      if (cal.mode === 'agenda') { from = Date.now() - 86400000; to = Date.now() + 120 * 86400000; }
+      else if (cal.mode === 'month') {
+        // El mes entero más el borde: la rejilla enseña días del mes anterior y del siguiente, y si no se piden
+        // esas citas, las primeras y últimas casillas salen vacías aunque haya algo.
+        var m0 = new Date(cal.start.getFullYear(), cal.start.getMonth(), 1);
+        from = addDays(m0, -7).getTime();
+        to = addDays(new Date(cal.start.getFullYear(), cal.start.getMonth() + 1, 1), 7).getTime();
+      } else { from = addDays(cal.start, -1).getTime(); to = addDays(cal.start, 8).getTime(); }
       return Promise.all([api('/appointments?from=' + from + '&to=' + to), api('/busy?from=' + from + '&to=' + to)]);
     }).then(function (r) {
       var list = r[0]; cal.busy = r[1] || [];
@@ -1051,14 +1057,19 @@
     var end = addDays(cal.start, 6);
     var fmt = function (d) { return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }); };
     $('cal-label').textContent = fmt(cal.start) + ' – ' + fmt(end) + ' ' + end.getFullYear();
-    $('cal-grid').hidden = cal.mode !== 'week'; $('cal-list').hidden = cal.mode !== 'agenda';
-    // Las flechas de semana no pintan nada en Agenda, que enseña todo lo que viene.
-    if ($('cal-prev')) $('cal-prev').hidden = cal.mode === 'agenda';
-    if ($('cal-next')) $('cal-next').hidden = cal.mode === 'agenda';
-    $('cal-week-btn').classList.toggle('on', cal.mode === 'week'); $('cal-agenda-btn').classList.toggle('on', cal.mode === 'agenda');
-    $('cal-seg').setAttribute('data-on', cal.mode === 'agenda' ? 'right' : 'left'); // la pastilla sigue al modo
-    $('cal-week-btn').setAttribute('aria-pressed', String(cal.mode === 'week')); $('cal-agenda-btn').setAttribute('aria-pressed', String(cal.mode === 'agenda'));
-    if (cal.mode === 'week') renderWeek(); else renderAgenda();
+    $('cal-grid').hidden = cal.mode !== 'week';
+    $('cal-list').hidden = cal.mode !== 'agenda';
+    if ($('cal-month')) $('cal-month').hidden = cal.mode !== 'month';
+    // Las flechas no pintan nada en Agenda, que enseña todo lo que viene. En Mes mueven de mes en mes.
+    if ($('cal-prev')) { $('cal-prev').hidden = cal.mode === 'agenda'; $('cal-prev').setAttribute('aria-label', cal.mode === 'month' ? 'Mes anterior' : 'Semana anterior'); }
+    if ($('cal-next')) { $('cal-next').hidden = cal.mode === 'agenda'; $('cal-next').setAttribute('aria-label', cal.mode === 'month' ? 'Mes siguiente' : 'Semana siguiente'); }
+    $('cal-week-btn').classList.toggle('on', cal.mode === 'week');
+    $('cal-month-btn').classList.toggle('on', cal.mode === 'month');
+    $('cal-agenda-btn').classList.toggle('on', cal.mode === 'agenda');
+    $('cal-week-btn').setAttribute('aria-pressed', String(cal.mode === 'week'));
+    $('cal-month-btn').setAttribute('aria-pressed', String(cal.mode === 'month'));
+    $('cal-agenda-btn').setAttribute('aria-pressed', String(cal.mode === 'agenda'));
+    if (cal.mode === 'week') renderWeek(); else if (cal.mode === 'month') renderMonth(); else renderAgenda();
   }
   function renderWeek() {
     var cfg = cal.cfg || { days: [1, 2, 3, 4, 5], hours: [['09:00', '18:00']], durationMin: 45, enabled: false };
@@ -1135,6 +1146,46 @@
     pop.querySelector('[data-close]').onclick = function () { pop.hidden = true; };
   }
   document.addEventListener('click', function (e) { var pop = $('cal-pop'); if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('.cal-ev')) pop.hidden = true; });
+
+  /**
+   * El mes, como un calendario de pared: la rejilla manda y las citas son renglones dentro del día.
+   *
+   * 🪤 Se dibujan seis semanas SIEMPRE, no las que haga falta. Un mes ocupa cinco o seis según en qué día caiga
+   * el uno, y una rejilla que cambia de alto hace saltar la pantalla entera cada vez que se pasa de mes.
+   */
+  function renderMonth() {
+    var y = cal.start.getFullYear(), mo = cal.start.getMonth();
+    var cfg = cal.cfg || { days: [1, 2, 3, 4, 5] };
+    $('cal-label').textContent = new Date(y, mo, 1).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+    var primero = new Date(y, mo, 1);
+    var inicio = addDays(primero, -((primero.getDay() + 6) % 7)); // la rejilla arranca en lunes
+    var hoy = new Date();
+    var cab = '<div class="mes-cab">' + ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'].map(function (d) { return '<div>' + d + '</div>'; }).join('') + '</div>';
+    var celdas = [];
+    for (var i = 0; i < 42; i++) {
+      var d = addDays(inicio, i);
+      var delMes = d.getMonth() === mo;
+      var abierto = cfg.days.indexOf(d.getDay()) >= 0;
+      var citas = cal.appts.filter(function (a) { return sameDay(new Date(a.startsAt), d); })
+        .sort(function (a, b) { return a.startsAt - b.startsAt; });
+      var dentro = citas.slice(0, 3).map(function (a) {
+        return '<button class="cita ' + a.status + '" data-id="' + a.id + '" title="' + esc((a.contactName || short(a.userId)) + ' · ' + (a.service || '')) + '">' +
+          hhmm(a.startsAt) + ' ' + esc(a.contactName || short(a.userId)) + '</button>';
+      }).join('');
+      if (citas.length > 3) dentro += '<div class="mas">+' + (citas.length - 3) + ' más</div>';
+      celdas.push('<div class="dia' + (delMes ? '' : ' otro') + (abierto ? '' : ' cerrado') + (sameDay(d, hoy) ? ' hoy' : '') + '">' +
+        '<span class="n">' + d.getDate() + '</span>' + dentro + '</div>');
+    }
+    $('cal-month').innerHTML = cab + '<div class="mes">' + celdas.join('') + '</div>';
+    // Tocar una cita abre su conversación, que es lo que uno quiere hacer desde un calendario.
+    Array.prototype.forEach.call($('cal-month').querySelectorAll('.cita'), function (b) {
+      b.onclick = function () {
+        var a = cal.appts.filter(function (x) { return String(x.id) === b.dataset.id; })[0];
+        if (a) { go('inbox'); openContact(a.userId); }
+      };
+    });
+  }
+
   function renderAgenda() {
     // Todo lo que viene, en orden, sin importar qué semana esté puesta arriba.
     var list = cal.appts.filter(function (a) { return a.startsAt >= Date.now() - 2 * 3600000; })
@@ -1156,8 +1207,23 @@
   // a secas, Agenda enseñaba lo que había traído Semana —una semana— y seguía diciendo que no hay citas.
   $('cal-week-btn').onclick = function () { cal.mode = 'week'; helpSet('aiva.cal.mode', 'week'); loadCalendar(); };
   $('cal-agenda-btn').onclick = function () { cal.mode = 'agenda'; helpSet('aiva.cal.mode', 'agenda'); loadCalendar(); };
-  $('cal-prev').onclick = function () { cal.start = addDays(cal.start, -7); loadCalendar(); };
-  $('cal-next').onclick = function () { cal.start = addDays(cal.start, 7); loadCalendar(); };
+  $('cal-month-btn').onclick = function () {
+    cal.mode = 'month';
+    // 🪤 Se ancla al mes de MITAD de semana, no al del lunes. La semana del 28 de septiembre tiene su lunes en
+    // septiembre y casi toda ella en octubre: entrando desde ahí un 2 de octubre, el mes abría en septiembre y
+    // parecía que el calendario se había ido al pasado.
+    var medio = addDays(cal.start, 3);
+    cal.start = new Date(medio.getFullYear(), medio.getMonth(), 1);
+    helpSet('aiva.cal.mode', 'month');
+    loadCalendar();
+  };
+  var mover = function (signo) {
+    if (cal.mode === 'month') cal.start = new Date(cal.start.getFullYear(), cal.start.getMonth() + signo, 1);
+    else cal.start = addDays(cal.start, 7 * signo);
+    loadCalendar();
+  };
+  $('cal-prev').onclick = function () { mover(-1); };
+  $('cal-next').onclick = function () { mover(1); };
   $('cal-today').onclick = function () { cal.start = startOfWeek(new Date()); loadCalendar(); };
   $('book-btn').onclick = function () {
     var userId = $('book-contact').value, when = $('book-when').value; if (!userId || !when) { $('book-msg').textContent = 'Elige contacto y fecha.'; return; }

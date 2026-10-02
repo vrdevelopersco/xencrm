@@ -937,6 +937,29 @@ dialog#dlg-grupos > b{font-size:17px}
   /* La barra donde viven: en teléfono el título y las pestañas no caben en la misma línea. */
   #view-knowledge .topbar{flex-wrap:wrap;gap:8px}
 }
+
+/* Vista de mes, al estilo de un calendario de pared: la rejilla manda y las citas son renglones dentro del día. */
+#cal-month{overflow:auto;min-height:0}
+.mes-cab{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+.mes-cab div{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center;padding:4px 0}
+.mes{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.mes .dia{min-height:96px;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--panel);
+  display:flex;flex-direction:column;gap:3px}
+/* 🪤 Los días que no son de este mes y los cerrados se distinguen por tono, nunca por opacidad: con opacity el
+   texto baja de 2:1 y desaparece para media población. */
+.mes .dia.otro{background:var(--row-hover);border-color:transparent}
+.mes .dia.otro .n{color:var(--muted)}
+.mes .dia.cerrado{background:repeating-linear-gradient(45deg,transparent,transparent 5px,var(--row-hover) 5px,var(--row-hover) 10px)}
+.mes .dia.hoy{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand)}
+.mes .dia .n{font-size:12.5px;font-weight:700;align-self:flex-end}
+.mes .dia.hoy .n{color:var(--brand)}
+.mes .cita{font-size:11.5px;text-align:left;border:0;border-radius:6px;padding:3px 6px;cursor:pointer;
+  background:color-mix(in srgb,var(--cita) 18%,transparent);color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+.mes .cita:hover{background:color-mix(in srgb,var(--cita) 32%,transparent)}
+.mes .cita.cancelada{text-decoration:line-through;color:var(--muted);background:var(--row-hover)}
+.mes .mas{font-size:11px;color:var(--muted);text-align:left}
+@media (max-width:760px){.mes .dia{min-height:62px;padding:4px}.mes .cita{font-size:10.5px}}
 </style>
 </head>
 <body>
@@ -1073,7 +1096,7 @@ dialog#dlg-grupos > b{font-size:17px}
     <section class="view" id="view-calendar">
       <div class="topbar">
         <h1>Calendario</h1>
-        <div class="seg" id="cal-seg" data-on="left" role="group" aria-label="Vista del calendario"><button class="on" id="cal-week-btn" aria-pressed="true">Semana</button><button id="cal-agenda-btn" aria-pressed="false">Agenda</button></div>
+        <div class="tabs" id="cal-seg" role="group" aria-label="Vista del calendario"><button class="on" id="cal-week-btn" aria-pressed="true">Semana</button><button id="cal-month-btn" aria-pressed="false">Mes</button><button id="cal-agenda-btn" aria-pressed="false">Agenda</button></div>
         <span class="grow"></span>
         <button class="btn sm" id="cal-prev" aria-label="Semana anterior">←</button>
         <button class="btn sm" id="cal-today">Hoy</button>
@@ -1083,6 +1106,7 @@ dialog#dlg-grupos > b{font-size:17px}
       <div class="cal">
         <div id="cal-main" style="min-height:0;display:flex;flex-direction:column">
           <div id="cal-grid" class="grid-wrap"></div>
+          <div id="cal-month" hidden></div>
           <div id="cal-list" hidden><div class="empty">Sin citas próximas.</div></div>
         </div>
         <div class="panel">
