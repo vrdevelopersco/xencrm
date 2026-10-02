@@ -403,6 +403,10 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
 .lib label:first-of-type{margin-top:0}
 .lib select{width:100%;max-width:280px;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-input);
   background:var(--panel);color:var(--tinta);font:inherit}
+.lib textarea{width:100%;min-height:90px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-input);
+  background:var(--panel);color:var(--tinta);font:inherit;box-shadow:inset 0 1px 2px rgba(20,17,12,.05);resize:vertical}
+.lib textarea:focus-visible{outline:2px solid var(--oro-claro);outline-offset:1px}
+.pista{font-size:13px;color:var(--media);background:var(--media-soft);border-radius:10px;padding:10px 12px}
 .lib .dos{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media (max-width:640px){.lib .dos{grid-template-columns:1fr}}
 /* Motores: un rol por fila, con lo que hace a la izquierda y lo que se elige a la derecha. */
@@ -1572,6 +1576,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     ['ventana', 'Ventana de chat'],
     ['libreta', 'La libreta'],
     ['motores', 'Motores'],
+    ['prueba', 'Modo prueba'],
   ];
 
   function cargarConfig() {
@@ -1603,11 +1608,14 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     // que es por cliente enseña a no leerlo, y entonces deja de servir en las tres donde sí importa.
     $('subtitulo').textContent = SECCION === 'motores'
       ? 'Qué modelo hace cada cosa, en cada cliente. Hace falta reiniciarlo para que lo tome'
+      : SECCION === 'prueba'
+        ? 'Para una demostración en vivo: que aiva conteste solo a unos chats y a nadie más'
       : SECCION === 'libreta'
         ? 'Preguntarle algo a aiva sin entrar al tablero. Con llave y desde una dirección permitida'
         : 'Lo que vale para todos tus clientes mientras cada uno no decida otra cosa';
     if (SECCION === 'libreta') return pintarLibreta();
     if (SECCION === 'motores') return pintarMotores();
+    if (SECCION === 'prueba') return pintarPrueba();
     return pintarChat(SECCION);
   }
 
@@ -1817,6 +1825,95 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
           }).catch(function () { msg.textContent = 'Todavía no contesta; dale unos segundos.'; });
         }, 5000);
       });
+    };
+  }
+
+  // ── Modo prueba ───────────────────────────────────────────────────────────
+  //
+  // Para una demostración en vivo. Es por cliente, como los motores: la demostración se hace con UN negocio y
+  // los demás tienen que seguir atendiendo normal.
+  var PRUEBA = {};
+
+  function pintarPrueba() {
+    $('config-cuerpo').innerHTML =
+      '<div class="lib">' +
+        '<div class="lib-estado"><span class="chip">Uno por uno</span>' +
+        '<span class="small">La demostración se hace con un negocio; los demás siguen atendiendo normal. Elige cuál.</span></div>' +
+        LIB.clientes.map(function (c) {
+          return '<section class="tarjeta mot" data-slug="' + esc(c.slug) + '">' +
+            '<div class="fila"><h3 style="margin:0">' + esc(c.nombre) + '</h3><span class="grow"></span>' +
+            '<span class="small" id="pr-res-' + esc(c.slug) + '">…</span>' +
+            '<button class="btn sm mot-ver" aria-expanded="false">Ver</button></div>' +
+            '<div class="mot-cuerpo" hidden></div></section>';
+        }).join('') +
+      '</div>';
+
+    Array.prototype.forEach.call($('config-cuerpo').querySelectorAll('.mot'), function (caja) {
+      var slug = caja.dataset.slug;
+      cli(slug + '/prueba').then(function (d) {
+        PRUEBA[slug] = d;
+        var r = $('pr-res-' + slug);
+        if (!r) return;
+        if (d.error) { r.textContent = 'no contesta'; return; }
+        // 🪤 Que esté encendida se dice con una palabra y un color, no solo con un color: es el estado del que
+        // depende que un cliente de verdad reciba respuesta o silencio.
+        r.innerHTML = d.activa
+          ? '<span class="chip alta">En prueba · ' + esc(d.queda) + '</span>'
+          : '<span class="small muted">atendiendo normal</span>';
+        if (MOT_ABIERTO === slug) abrirPrueba(caja, slug);
+      });
+      caja.querySelector('.mot-ver').onclick = function () {
+        var cuerpo = caja.querySelector('.mot-cuerpo');
+        if (!cuerpo.hidden) { cuerpo.hidden = true; MOT_ABIERTO = null; this.setAttribute('aria-expanded', 'false'); this.textContent = 'Ver'; return; }
+        MOT_ABIERTO = slug; this.setAttribute('aria-expanded', 'true'); this.textContent = 'Cerrar';
+        abrirPrueba(caja, slug);
+      };
+    });
+  }
+
+  function abrirPrueba(caja, slug) {
+    var d = PRUEBA[slug], cuerpo = caja.querySelector('.mot-cuerpo');
+    cuerpo.hidden = false;
+    if (!d) { cuerpo.innerHTML = '<div class="small muted">Cargando…</div>'; return; }
+    if (d.error) { cuerpo.innerHTML = '<div class="small muted">' + esc(d.error) + '</div>'; return; }
+
+    cuerpo.innerHTML =
+      (d.activa
+        ? '<div class="pista" style="margin:10px 0">Ahora mismo <b>solo le contesta a ' + d.chats.length + (d.chats.length === 1 ? ' chat' : ' chats') + '</b>. ' +
+          'A todos los demás les guarda el mensaje y espera a una persona. Se vence en ' + esc(d.queda) + '.' + (d.por ? ' La puso ' + esc(d.por) + '.' : '') + '</div>'
+        : '') +
+      '<label for="pr-chats-' + esc(slug) + '">A quién sí le contesta</label>' +
+      '<textarea id="pr-chats-' + esc(slug) + '" rows="3" placeholder="Un número o un chat por línea&#10;300 123 4567&#10;+57 301 987 6543">' + esc((d.chats || []).join('\n')) + '</textarea>' +
+      '<div class="small muted" style="margin-top:4px">Números de WhatsApp como quieras escribirlos: con espacios, con indicativo o sin él. Todo lo que no esté aquí entra al CRM y lo atiende una persona.</div>' +
+      '<label for="pr-horas-' + esc(slug) + '">Durante</label>' +
+      '<select id="pr-horas-' + esc(slug) + '">' + [1, 2, 4, 8, 12].map(function (h) {
+        return '<option value="' + h + '"' + (h === 2 ? ' selected' : '') + '>' + h + (h === 1 ? ' hora' : ' horas') + '</option>';
+      }).join('') + '</select>' +
+      // 🪤 El motivo de que caduque, dicho donde se decide. Lo que pasa si se queda encendida no se ve: nada se
+      // rompe, simplemente nadie contesta, durante días.
+      '<div class="small muted" style="margin-top:4px">Se apaga sola al terminar. Si se quedara encendida, los clientes de verdad escribirían y nadie les contestaría, sin que nada diera error.</div>' +
+      '<div class="fila" style="margin-top:14px">' +
+        '<button class="btn primary pr-poner">' + (d.activa ? 'Actualizar' : 'Empezar la prueba') + '</button>' +
+        (d.activa ? '<button class="btn pr-quitar">Terminar ahora</button>' : '') +
+        '<span class="grow"></span><span class="small" id="pr-msg-' + esc(slug) + '" role="status"></span>' +
+      '</div>';
+
+    var msg = $('pr-msg-' + slug);
+    cuerpo.querySelector('.pr-poner').onclick = function () {
+      var chats = $('pr-chats-' + slug).value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+      if (!chats.length) { msg.textContent = 'Dime a qué chats sí les puede contestar.'; return; }
+      msg.textContent = 'Poniéndola…';
+      cli(slug + '/prueba', { method: 'POST', body: { chats: chats, horas: Number($('pr-horas-' + slug).value), por: (yo && yo.nombre) || 'la llave maestra' } })
+        .then(function (r) {
+          if (r.error) { msg.textContent = r.error; return; }
+          msg.textContent = 'Lista. Solo le contesta a esos.';
+          pintarPrueba();
+        });
+    };
+    var q = cuerpo.querySelector('.pr-quitar');
+    if (q) q.onclick = function () {
+      msg.textContent = 'Terminando…';
+      cli(slug + '/prueba', { method: 'DELETE' }).then(function () { msg.textContent = 'Terminada: vuelve a atender a todos.'; pintarPrueba(); });
     };
   }
 

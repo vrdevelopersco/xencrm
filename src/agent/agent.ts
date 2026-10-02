@@ -7,6 +7,7 @@ import { openaiModel } from '../llm/openai.js';
 import { appendMessage, clearHistory, getHistory, touchUser } from './memory.js';
 import { classify } from './gate.js';
 import { anotarUso, buscarRespuestaRapida } from '../crm/respuestas-rapidas.js';
+import { puedeContestar } from '../crm/modo-prueba.js';
 import { chooseEngine } from './router.js';
 import { claimsBooked, dropRepeatedFacts, isHonest, postProcess, stripRepeatedGreeting, touchesPending, unsupportedAnswer, ungroundedNumbers } from './format.js';
 import { pendingTopics } from '../profile.js';
@@ -164,6 +165,21 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     scheduleAnalysis(msg.userId);
     console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} canal en solo escuchar, sin respuesta automática`);
     return { ...base, text: '', silent: true, intent: 'humano', engine: 'none', route: 'solo escuchar', ms: Date.now() - started };
+  }
+
+  // Modo prueba: hay una demostración en marcha y este no es de los chats de la demostración.
+  //
+  // Se trata exactamente igual que «Mira»: su mensaje entra al CRM, se analiza y lo atiende una persona. Lo que
+  // NO pasa es que aiva le conteste sola mientras alguien está enseñando el producto en una pantalla.
+  //
+  // 🪤 Va aquí, después de «Mira» y antes de todo lo demás, para que no cueste nada: un cliente que escribe
+  // durante la demostración no debe gastar ni una llamada al modelo. Y `puedeContestar` devuelve true cuando no
+  // hay prueba en marcha, así que esto no cambia nada para quien nunca lo use.
+  if (!puedeContestar(msg.userId)) {
+    recordCustomerMessage(msg.userId, text, 'humano');
+    scheduleAnalysis(msg.userId);
+    console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} fuera de la prueba en curso, sin respuesta automática`);
+    return { ...base, text: '', silent: true, intent: 'humano', engine: 'none', route: 'modo prueba', ms: Date.now() - started };
   }
 
   // Una persona del equipo tiene la conversación: se registra y analiza, pero no se responde.

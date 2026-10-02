@@ -41,6 +41,7 @@ import { borrarDocumento, documentosDelNegocio, guardarCatalogo, guardarDocument
 import { leerAdjunto } from '../crm/adjuntos.js';
 import { borrarRespuestaRapida, guardarRespuestaRapida, respuestasRapidas } from '../crm/respuestas-rapidas.js';
 import { temasDelMaterial } from '../crm/aprender-temas.js';
+import { cuantoLeQueda, HORAS_MAXIMO, ponerPrueba, pruebaActiva, quitarPrueba } from '../crm/modo-prueba.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
@@ -1106,6 +1107,34 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'no pude borrarlo' }, 400);
     }
+  });
+
+  // ── Modo prueba ───────────────────────────────────────────────────────────
+  //
+  // Para una demostración en vivo: que aiva conteste solo a unos chats y a nadie más. Ver `crm/modo-prueba.ts`
+  // para por qué caduca sola y por qué una lista vacía significa apagado.
+  app.get('/admin/api/prueba', (c) => {
+    const p = pruebaActiva();
+    return c.json(p ? { activa: true, ...p, queda: cuantoLeQueda(p), horasMaximo: HORAS_MAXIMO } : { activa: false, horasMaximo: HORAS_MAXIMO });
+  });
+
+  app.post('/admin/api/prueba', async (c) => {
+    try {
+      const b = (await c.req.json()) as { chats?: string[]; horas?: number; por?: string };
+      if (b.chats === null || (Array.isArray(b.chats) && !b.chats.length)) {
+        quitarPrueba();
+        return c.json({ ok: true, activa: false });
+      }
+      const p = ponerPrueba(Array.isArray(b.chats) ? b.chats.map(String) : [], Number(b.horas), String(b.por ?? ''));
+      return c.json({ ok: true, activa: true, ...p, queda: cuantoLeQueda(p) });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'no pude ponerla' }, 400);
+    }
+  });
+
+  app.delete('/admin/api/prueba', (c) => {
+    quitarPrueba();
+    return c.json({ ok: true, activa: false });
   });
 
   // ── Respuestas rápidas ────────────────────────────────────────────────────
