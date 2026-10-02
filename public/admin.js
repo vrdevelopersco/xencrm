@@ -1032,7 +1032,12 @@
   function loadCalendar() {
     var p = cal.cfg ? Promise.resolve(cal.cfg) : api('/agent').then(function (a) { cal.cfg = a.appointments; return cal.cfg; });
     p.then(function () {
-      var from = addDays(cal.start, -1).getTime(), to = addDays(cal.start, 8).getTime();
+      // 🪤 «Agenda» son LAS PRÓXIMAS CITAS, no las de la semana que estés mirando. Pedía solo el rango de la
+      // semana y luego filtraba por ella, así que una cita del lunes siguiente salía como «sin citas» estando
+      // a tres días. Quien lo ve no piensa «estoy en otra semana»: piensa que la cita se perdió.
+      var agenda = cal.mode === 'agenda';
+      var from = agenda ? Date.now() - 86400000 : addDays(cal.start, -1).getTime();
+      var to = agenda ? Date.now() + 120 * 86400000 : addDays(cal.start, 8).getTime();
       return Promise.all([api('/appointments?from=' + from + '&to=' + to), api('/busy?from=' + from + '&to=' + to)]);
     }).then(function (r) {
       var list = r[0]; cal.busy = r[1] || [];
@@ -1047,6 +1052,9 @@
     var fmt = function (d) { return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }); };
     $('cal-label').textContent = fmt(cal.start) + ' – ' + fmt(end) + ' ' + end.getFullYear();
     $('cal-grid').hidden = cal.mode !== 'week'; $('cal-list').hidden = cal.mode !== 'agenda';
+    // Las flechas de semana no pintan nada en Agenda, que enseña todo lo que viene.
+    if ($('cal-prev')) $('cal-prev').hidden = cal.mode === 'agenda';
+    if ($('cal-next')) $('cal-next').hidden = cal.mode === 'agenda';
     $('cal-week-btn').classList.toggle('on', cal.mode === 'week'); $('cal-agenda-btn').classList.toggle('on', cal.mode === 'agenda');
     $('cal-seg').setAttribute('data-on', cal.mode === 'agenda' ? 'right' : 'left'); // la pastilla sigue al modo
     $('cal-week-btn').setAttribute('aria-pressed', String(cal.mode === 'week')); $('cal-agenda-btn').setAttribute('aria-pressed', String(cal.mode === 'agenda'));
@@ -1128,8 +1136,10 @@
   }
   document.addEventListener('click', function (e) { var pop = $('cal-pop'); if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('.cal-ev')) pop.hidden = true; });
   function renderAgenda() {
-    var list = cal.appts.filter(function (a) { return a.startsAt >= cal.start.getTime() && a.startsAt < addDays(cal.start, 7).getTime(); });
-    if (!list.length) { $('cal-list').innerHTML = '<div class="empty">Sin citas esta semana.</div>'; return; }
+    // Todo lo que viene, en orden, sin importar qué semana esté puesta arriba.
+    var list = cal.appts.filter(function (a) { return a.startsAt >= Date.now() - 2 * 3600000; })
+      .sort(function (a, b) { return a.startsAt - b.startsAt; });
+    if (!list.length) { $('cal-list').innerHTML = '<div class="empty">No hay citas próximas.</div>'; return; }
     var byDay = {};
     list.forEach(function (a) { var day = new Date(a.startsAt).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }); (byDay[day] = byDay[day] || []).push(a); });
     $('cal-list').innerHTML = Object.keys(byDay).map(function (day) {
@@ -1142,8 +1152,10 @@
     $('cal-list').querySelectorAll('[data-act]').forEach(function (b) { b.onclick = function () { api('/appointments/' + b.getAttribute('data-id'), { method: 'PATCH', body: { status: b.getAttribute('data-act') } }).then(loadCalendar); }; });
     $('cal-list').querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-open')); }; });
   }
-  $('cal-week-btn').onclick = function () { cal.mode = 'week'; helpSet('aiva.cal.mode', 'week'); renderCalendar(); };
-  $('cal-agenda-btn').onclick = function () { cal.mode = 'agenda'; helpSet('aiva.cal.mode', 'agenda'); renderCalendar(); };
+  // 🪤 Cambiar de modo RECARGA, no solo repinta: Semana pide una semana y Agenda pide cuatro meses. Repintando
+  // a secas, Agenda enseñaba lo que había traído Semana —una semana— y seguía diciendo que no hay citas.
+  $('cal-week-btn').onclick = function () { cal.mode = 'week'; helpSet('aiva.cal.mode', 'week'); loadCalendar(); };
+  $('cal-agenda-btn').onclick = function () { cal.mode = 'agenda'; helpSet('aiva.cal.mode', 'agenda'); loadCalendar(); };
   $('cal-prev').onclick = function () { cal.start = addDays(cal.start, -7); loadCalendar(); };
   $('cal-next').onclick = function () { cal.start = addDays(cal.start, 7); loadCalendar(); };
   $('cal-today').onclick = function () { cal.start = startOfWeek(new Date()); loadCalendar(); };

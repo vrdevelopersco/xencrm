@@ -31,6 +31,18 @@ export function reminderTime(startsAt: number): number {
   const p = tzParts(new Date(startsAt));
   const [hh, mm] = cfg.reminder.at.split(':').map(Number) as [number, number];
   const dias = cfg.days ?? [1, 2, 3, 4, 5];
+
+  // 🪤 PRIMERO se intenta el MISMO día de la cita, a la hora configurada. Es lo que pide un recordatorio: «hoy a
+  // las once tienes tu cita», leído esa mañana. El día anterior a las cinco de la tarde se olvida, y además caía
+  // en domingo para las citas de lunes — con el negocio cerrado, de modo que si alguien contestaba «no puedo»,
+  // nadie lo leía hasta que ya era tarde.
+  const mismoDia = zoned(p.y, p.m, p.d, hh, mm);
+  // Con al menos una hora de margen: un aviso que llega encima de la cita no avisa de nada.
+  if (mismoDia.getTime() <= startsAt - HOUR && dias.includes(mismoDia.getDay())) return mismoDia.getTime();
+
+  // Si no cabe —la hora configurada es posterior a la cita, o ese día no se trabaja— se va hacia ATRÁS, al
+  // último día que sí se trabaja. Hacia atrás y nunca hacia delante: un recordatorio después de la cita no es
+  // un recordatorio.
   let cuando = tzParts(new Date(zoned(p.y, p.m, p.d, 12, 0).getTime() - 24 * HOUR));
   for (let i = 0; i < 7; i++) {
     const t = zoned(cuando.y, cuando.m, cuando.d, hh, mm);
