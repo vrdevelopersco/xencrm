@@ -188,6 +188,30 @@ function socketPara(slug) {
 
 const tokenDe = (slug) => process.env['TOKEN_' + slug.toUpperCase().replace(/[^A-Z0-9]/g, '_')] || '';
 
+// La clave de OpenAI de UN cliente, para que pague lo que gasta.
+//
+// 🪤 Esto hace falta porque una variable del panel le gana a cualquier .env: el cargador solo rellena lo que no
+// esté ya definido, así que con OPENAI_API_KEY puesta arriba, el .env de un cliente no pinta nada y la clave
+// que alguien ponga desde la consola no tendría ningún efecto. No falla ni avisa: simplemente paga la casa.
+//
+// Se mira en dos sitios, y manda el primero:
+//   1. El .env del propio cliente, que es lo que escribe la consola.
+//   2. OPENAI_KEY_<SLUG> en el panel, para dejarlo puesto sin entrar a la consola.
+// Lo que salga de aquí se le pasa al hijo en SU entorno, que gana sobre lo heredado del panel.
+const claveDelCliente = (slug, suEnv) => {
+  try {
+    if (existsSync(suEnv)) {
+      for (const linea of readFileSync(suEnv, 'utf8').split('\n')) {
+        const l = linea.trim();
+        if (!l.startsWith('OPENAI_API_KEY=')) continue;
+        const v = l.slice('OPENAI_API_KEY='.length).trim().replace(/^["']|["']$/g, '');
+        if (v) return v;
+      }
+    }
+  } catch (e) { /* si no se puede leer, se sigue con lo del panel */ }
+  return process.env['OPENAI_KEY_' + slug.toUpperCase().replace(/[^A-Z0-9]/g, '_')] || '';
+};
+
 // ── Un proceso por cliente ──────────────────────────────────────────────────
 const hijos = new Map();
 // A dónde va cada cliente. Es un mapa aparte del de los hijos a propósito: el lanzador que NO tiene el mando no
@@ -345,6 +369,9 @@ clientes.forEach((c, i) => {
     WHATSAPP_AUTH_DIR: join(mio, 'auth'),
     ADMIN_TOKEN: tokenDe(c.slug),
     PUBLIC_URL: 'https://' + dominio + '/' + c.slug,
+    // 🪤 Solo si la tiene. Poner OPENAI_API_KEY en vacío aquí sería peor que no ponerla: una cadena vacía sí
+    // está definida, así que este cliente dejaría de heredar la de la casa y se quedaría sin ninguna.
+    ...(claveDelCliente(c.slug, join(mio, '.env')) ? { OPENAI_API_KEY: claveDelCliente(c.slug, join(mio, '.env')) } : {}),
   } });
 });
 
@@ -890,6 +917,10 @@ const variables = [
   'EMBED_ENGINE=openai',
   'CONSOLA_TOKEN=PONER    # la llave maestra de la consola',
   ...clientes.map((c) => `TOKEN_${c.slug.toUpperCase().replace(/[^A-Z0-9]/g, '_')}=PONER    # el token de ${c.nombre}, en clientes/${c.slug}/.env`),
+  '',
+  '# Opcional: la clave de OpenAI de un cliente concreto, para que pague lo que gasta él y no la casa.',
+  '# Lo mismo se puede poner desde la consola (Configuración > Motores), que es más cómodo y la comprueba antes.',
+  ...clientes.map((c) => `# OPENAI_KEY_${c.slug.toUpperCase().replace(/[^A-Z0-9]/g, '_')}=sk-...    # solo ${c.nombre}`),
 ];
 writeFileSync(
   join(dir, 'LEEME.txt'),
