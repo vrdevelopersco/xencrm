@@ -128,10 +128,23 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // Si venía hablando por otro canal, se le dice una vez (y el historial de allá ya entró en el contexto). Se
   // resuelve al responder: si la conversación la tiene una persona, no hay respuesta y no se da por dicho.
   let crossNote: string | null | undefined;
+  // 🪤 El mensaje del cliente se anota normalmente al FINAL del turno, en `finish()`, cuando ya se sabe su
+  // intención. Pero si en mitad del turno se le manda algo —el aviso de «dame un segundito»— ese algo quedaría
+  // anotado ANTES que la pregunta que lo provocó, y en el tablero y en el chat del sitio se leería así:
+  //     bot      Dame un segundito que lo consulto
+  //     cliente  ¿y para una boda en la playa?
+  // que es justo al revés de lo que pasó. Por eso, quien mande algo a mitad de turno anota primero la pregunta
+  // con `anotarLaPregunta()`, y `finish()` ya no la repite.
+  let preguntaAnotada = false;
+  const anotarLaPregunta = (intent: Intent) => {
+    if (preguntaAnotada) return;
+    preguntaAnotada = true;
+    recordCustomerMessage(msg.userId, text, intent);
+  };
   const finish = (answer: string, intent: Intent, engine: AgentReply['engine'], extra: Partial<AgentReply> = {}): AgentReply => {
     if (crossNote === undefined) crossNote = contact ? crossChannelGreeting(msg.userId) : null;
     const reply = crossNote ? `${crossNote}\n\n${answer}` : answer;
-    recordCustomerMessage(msg.userId, text, intent);
+    anotarLaPregunta(intent);
     // 🪤 En «Propone» NO se anota como dicho por aiva: no se ha dicho. Anotarlo dejaría en el historial —y en
     // lo que el cliente ve si abre el chat del sitio— una respuesta que nadie mandó, y el asistente seguiría la
     // conversación dando por hecho que ya contestó eso.
@@ -323,6 +336,8 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   if (chosen.role === 'heavy' && !propone(msg.channel as ChannelId) && canDeliver(msg.userId)) {
     const aviso = pick(MIENTRAS_CONSULTO.filter((x) => x !== ultimoAviso.get(msg.userId)));
     ultimoAviso.set(msg.userId, aviso);
+    // La pregunta primero: si no, el aviso queda escrito antes de aquello a lo que responde.
+    anotarLaPregunta(gate.intent);
     void sendToContact(msg.userId, aviso, 'bot').catch(() => undefined);
   }
 

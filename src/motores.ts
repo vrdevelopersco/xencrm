@@ -179,11 +179,23 @@ export async function guardarMotores(cambio: CambioMotores, sondeo: Sondeo = pro
 
 /** Lo que se puede contar de la clave de un cliente. NUNCA la clave. */
 export interface ClaveDelCliente {
-  /** true = tiene la suya y paga él. false = usa la de la casa. */
+  /** true = tiene la suya encendida y paga él. false = usa la de la casa. */
   propia: boolean;
+  /** Tiene una suya guardada aunque ahora mismo esté apagada: se puede encender sin volver a pegarla. */
+  guardada: boolean;
   /** Para reconocerla sin enseñarla: «sk-proj…f2a9». */
   pista: string;
 }
+
+/**
+ * Dónde duerme la clave de un cliente mientras está apagada.
+ *
+ * 🪤 Apagar NO puede ser dejar `OPENAI_API_KEY=` vacía: una cadena vacía SÍ está definida, así que el cliente
+ * dejaría de heredar la de la casa y se quedaría sin ninguna. Y tampoco puede ser borrarla, porque entonces hay
+ * que volver a pegarla para encenderla —y una clave que se pega a mano cada vez se acaba pegando mal justo el
+ * día que importa—. Así que se aparca con otro nombre, que aiva no lee, y encender es devolverla a su sitio.
+ */
+const PARQUEADA = 'OPENAI_API_KEY_APAGADA';
 
 const pistaDe = (k: string): string => (k.length < 12 ? '' : `${k.slice(0, 7)}…${k.slice(-4)}`);
 
@@ -192,19 +204,45 @@ const pistaDe = (k: string): string => (k.length < 12 ? '' : `${k.slice(0, 7)}�
  * cliente no tiene la suya, ahí aparece la de la casa y el tablero diría «tiene la suya» de todos los clientes
  * a la vez. La pregunta no es qué clave se está usando, es de quién es.
  */
-export function claveDelCliente(): ClaveDelCliente {
+function delArchivo(clave: string): string {
   const archivo = process.env.AIVA_ENV_FILE || '.env';
   try {
-    const propia = readFileSync(archivo, 'utf8')
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.startsWith('OPENAI_API_KEY='))
-      .map((l) => l.slice('OPENAI_API_KEY='.length).trim().replace(/^["']|["']$/g, ''))
-      .filter(Boolean)[0];
-    return propia ? { propia: true, pista: pistaDe(propia) } : { propia: false, pista: pistaDe(env.openaiApiKey) };
+    return (
+      readFileSync(archivo, 'utf8')
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.startsWith(`${clave}=`))
+        .map((l) => l.slice(clave.length + 1).trim().replace(/^["']|["']$/g, ''))
+        .filter(Boolean)[0] ?? ''
+    );
   } catch {
-    return { propia: false, pista: pistaDe(env.openaiApiKey) };
+    return '';
   }
+}
+
+export function claveDelCliente(): ClaveDelCliente {
+  const encendida = delArchivo('OPENAI_API_KEY');
+  const apagada = delArchivo(PARQUEADA);
+  if (encendida) return { propia: true, guardada: true, pista: pistaDe(encendida) };
+  return { propia: false, guardada: Boolean(apagada), pista: pistaDe(apagada || env.openaiApiKey) };
+}
+
+/** Encender la suya: la aparcada vuelve a su sitio. */
+export function encenderClaveDelCliente(): ClaveDelCliente {
+  const apagada = delArchivo(PARQUEADA);
+  if (!apagada) throw new Error('este cliente no tiene ninguna clave guardada');
+  setEnvValues({ OPENAI_API_KEY: apagada });
+  quitarEnvValues([PARQUEADA]);
+  return { propia: true, guardada: true, pista: pistaDe(apagada) };
+}
+
+/** Apagar la suya: se aparca y vuelve a heredar la de la casa, sin perderla. */
+export function apagarClaveDelCliente(): ClaveDelCliente {
+  const encendida = delArchivo('OPENAI_API_KEY');
+  if (encendida) setEnvValues({ [PARQUEADA]: encendida });
+  // 🪤 Borrar la línea, no vaciarla: una cadena vacía está definida y cortaría la herencia de la de la casa.
+  quitarEnvValues(['OPENAI_API_KEY']);
+  return { propia: false, guardada: Boolean(encendida || delArchivo(PARQUEADA)), pista: pistaDe(encendida || env.openaiApiKey) };
 }
 
 /**
@@ -228,11 +266,12 @@ export async function ponerClaveDelCliente(clave: string): Promise<ClaveDelClien
   if (r.status === 429) throw new Error('la clave es válida pero no tiene saldo: cárgale antes de usarla');
   if (!r.ok) throw new Error(`OpenAI contestó ${r.status} al comprobarla`);
   setEnvValues({ OPENAI_API_KEY: k });
-  return { propia: true, pista: pistaDe(k) };
+  quitarEnvValues([PARQUEADA]); // si había una aparcada, la nueva la reemplaza: dos claves guardadas confunden
+  return { propia: true, guardada: true, pista: pistaDe(k) };
 }
 
-/** Vuelve a la clave de la casa. */
+/** Olvidarla del todo: ni encendida ni aparcada. */
 export function quitarClaveDelCliente(): ClaveDelCliente {
-  quitarEnvValues(['OPENAI_API_KEY']);
-  return { propia: false, pista: pistaDe(env.openaiApiKey) };
+  quitarEnvValues(['OPENAI_API_KEY', PARQUEADA]);
+  return { propia: false, guardada: false, pista: pistaDe(env.openaiApiKey) };
 }

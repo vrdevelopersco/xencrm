@@ -121,6 +121,36 @@ check('una clave que no empieza por sk- se rechaza', (await falla(() => ponerCla
 check('y una con espacios también', (await falla(() => ponerClaveDelCliente('sk-con espacio'))).includes('espacios'));
 check('🪤 y ninguna de las dos llegó a escribirse', !/OPENAI_API_KEY/.test(leer()));
 
+
+// ── Encender y apagar la clave del cliente, sin perderla ──
+// Es lo que hace falta para una demostración: se enciende la clave del día y se apaga al terminar, sin volver a
+// pegarla cada vez (una clave que se pega a mano se acaba pegando mal justo el día que importa).
+const mot = await import('../motores.js');
+setEnvValues({ OPENAI_API_KEY: 'sk-la-del-demo' });
+check('encendida, consta como suya', mot.claveDelCliente().propia === true);
+
+mot.apagarClaveDelCliente();
+const tras = mot.claveDelCliente();
+check('apagada, vuelve a la de la casa', tras.propia === false);
+// 🪤 Pero NO se pierde: guardada queda en true y se puede encender sin volver a pegarla.
+check('🪤 y sigue guardada para encenderla luego', tras.guardada === true, JSON.stringify(tras));
+// 🪤 Y lo crítico: la línea viva se BORRA, no se vacía. Una cadena vacía sí está definida y cortaría la
+// herencia de la clave de la casa, dejando al cliente sin ninguna.
+check('🪤 no queda una OPENAI_API_KEY vacía que corte la herencia', !/^OPENAI_API_KEY=\s*$/m.test(leer()), leer());
+check('la aparcada sí está en el archivo', /OPENAI_API_KEY_APAGADA=sk-la-del-demo/.test(leer()));
+
+mot.encenderClaveDelCliente();
+check('encenderla la devuelve a su sitio', /^OPENAI_API_KEY=sk-la-del-demo$/m.test(leer()) && mot.claveDelCliente().propia === true);
+check('y no deja la aparcada duplicada', !/OPENAI_API_KEY_APAGADA=/.test(leer()), leer());
+
+mot.apagarClaveDelCliente();
+mot.quitarClaveDelCliente();
+const nada = mot.claveDelCliente();
+check('olvidarla la quita de los dos sitios', nada.propia === false && nada.guardada === false);
+check('y el archivo queda sin rastro', !/OPENAI_API_KEY/.test(leer()), leer());
+check('encender sin nada guardado, lo dice', (await falla(async () => mot.encenderClaveDelCliente())).includes('no tiene ninguna clave'));
+check('🪤 y lo demás del archivo sobrevivió a todo el ciclo', leer().includes('ADMIN_TOKEN=noloquiteses') && leer().includes('# el archivo de este cliente'));
+
 rmSync(dir, { recursive: true, force: true });
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

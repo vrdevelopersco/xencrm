@@ -36,13 +36,13 @@ import { cuantas as cuantasImportadas, importarChat, importarMensajes, quitar as
 import { armar as armarRespaldo, restaurar as restaurarRespaldo, revisar as revisarRespaldo } from '../crm/respaldo.js';
 import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
-import { claveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente } from '../motores.js';
+import { apagarClaveDelCliente, claveDelCliente, encenderClaveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente } from '../motores.js';
 import { borrarDocumento, documentosDelNegocio, guardarCatalogo, guardarDocumento } from '../rag/documentos.js';
 import { leerAdjunto } from '../crm/adjuntos.js';
 import { borrarRespuestaRapida, buscarRespuestaRapida, guardarRespuestaRapida, respuestasRapidas } from '../crm/respuestas-rapidas.js';
 import { temasDelMaterial } from '../crm/aprender-temas.js';
 import { cuantoLeQueda, HORAS_MAXIMO, ponerPrueba, pruebaActiva, quitarPrueba } from '../crm/modo-prueba.js';
-import { comoVa, olvidarTodo } from '../crm/vivo.js';
+import { comoVa, gastoDeLaDemo, olvidarTodo } from '../crm/vivo.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
@@ -408,8 +408,13 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   app.post('/admin/api/clave', async (c) => {
     try {
-      const b = (await c.req.json()) as { clave?: string };
-      if (!b.clave) return c.json(quitarClaveDelCliente());
+      const b = (await c.req.json()) as { clave?: string; encender?: boolean; olvidar?: boolean };
+      // Encender y apagar no piden la clave: ya está guardada. Es lo que hace falta para una demostración —se
+      // enciende la del día, se apaga al terminar— sin volver a pegarla cada vez, que es como se pega mal.
+      if (b.encender === true) return c.json(encenderClaveDelCliente());
+      if (b.encender === false) return c.json(apagarClaveDelCliente());
+      if (b.olvidar) return c.json(quitarClaveDelCliente());
+      if (!b.clave) return c.json(apagarClaveDelCliente());
       return c.json(await ponerClaveDelCliente(String(b.clave)));
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'no pude guardarla' }, 400);
@@ -1163,7 +1168,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   // el asistente acaba de admitir que no sabe algo. Ver `crm/vivo.ts`.
   app.get('/admin/api/vivo', (c) => {
     const p = pruebaActiva();
-    return c.json({ ...comoVa(Number(c.req.query('turnos')) || 25), prueba: p ? { chats: p.chats, queda: cuantoLeQueda(p) } : null });
+    return c.json({ ...comoVa(Number(c.req.query('turnos')) || 25), prueba: p ? { chats: p.chats, queda: cuantoLeQueda(p) } : null, gasto: gastoDeLaDemo() });
   });
 
   app.delete('/admin/api/vivo', (c) => {

@@ -10,6 +10,7 @@
 // tomó. Guardarlo sería crear una segunda copia de las conversaciones, con datos de clientes dentro, que nadie
 // pidió y que habría que cuidar. Para lo que sirve, media hora de memoria sobra.
 import { getContact } from './contacts.js';
+import { usageSummary } from '../llm/usage.js';
 
 export interface Turno {
   ts: number;
@@ -30,6 +31,14 @@ export interface Turno {
 /** Cuántos turnos se recuerdan. Una demostración son veinte; cien es de sobra y no pesa nada. */
 const CUANTOS = 100;
 const turnos: Turno[] = [];
+/**
+ * Desde cuándo se cuenta el gasto de esta demostración.
+ *
+ * 🪤 No es «desde que arrancó el proceso»: entonces la cuenta arrastraría lo del ensayo de la mañana y el número
+ * que se enseña al final —«esta demo costó tanto»— sería falso por arriba, que es la peor dirección para
+ * equivocarse delante de un cliente. Se pone a cero con «Empezar limpio», justo antes de salir.
+ */
+let desde = Date.now();
 
 /** Más de esto en una demostración es una pausa que se nota desde la última fila. */
 const LENTO_MS = 6000;
@@ -98,7 +107,32 @@ export function comoVa(cuantos = 25): {
   return { turnos: ultimos, conversaciones };
 }
 
-/** Para empezar limpio antes de salir al escenario. */
+/** Para empezar limpio antes de salir al escenario: también pone el contador de gasto a cero. */
 export function olvidarTodo(): void {
   turnos.length = 0;
+  desde = Date.now();
+}
+
+/**
+ * Lo que lleva gastado esta demostración, en dinero.
+ *
+ * Sale del registro propio de aiva, no de OpenAI: la API de OpenAI solo deja leer el gasto con una clave de
+ * Admin (`sk-admin-…`), y una de proyecto —la que usa un cliente— no puede, por muchos permisos que se le den.
+ * Da igual: aquí está desglosado por tarea y por modelo, que es más de lo que daría allá.
+ */
+export function gastoDeLaDemo(): { usd: number; llamadas: number; desde: number; porTarea: { tarea: string; usd: number; llamadas: number }[] } {
+  const s = usageSummary(desde);
+  const porTarea = new Map<string, { usd: number; llamadas: number }>();
+  for (const r of s.rows) {
+    const a = porTarea.get(r.task) ?? { usd: 0, llamadas: 0 };
+    a.usd += r.costUsd ?? 0;
+    a.llamadas += r.calls;
+    porTarea.set(r.task, a);
+  }
+  return {
+    usd: s.totalUsd ?? 0,
+    llamadas: s.rows.reduce((n, r) => n + r.calls, 0),
+    desde,
+    porTarea: [...porTarea.entries()].map(([tarea, v]) => ({ tarea, ...v })).sort((a, b) => b.usd - a.usd),
+  };
 }

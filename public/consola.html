@@ -1846,14 +1846,21 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     cli(slug + '/clave').then(function (d) {
       if (!$('cl-' + slug)) return;
       if (d.error) { $('cl-' + slug).innerHTML = '<div class="small muted">' + esc(d.error) + '</div>'; return; }
+      // Tres estados, no dos: la suya encendida, la suya guardada pero apagada, o ninguna. El de en medio es el
+      // que hace falta para una demostración —se enciende el día de la prueba y se apaga al terminar— sin
+      // perder la clave ni tener que volver a pegarla.
       $('cl-' + slug).innerHTML =
         '<div class="fila" style="align-items:center;gap:10px;flex-wrap:wrap">' +
           (d.propia
-            ? '<span class="chip ok">Paga él</span><span class="small">Tiene su propia clave de OpenAI · <code>' + esc(d.pista) + '</code></span>'
-            : '<span class="chip media">Lo pagas tú</span><span class="small">Usa la clave de la casa' + (d.pista ? ' · <code>' + esc(d.pista) + '</code>' : '') + '</span>') +
+            ? '<span class="chip ok">Paga él</span><span class="small">Su clave está encendida · <code>' + esc(d.pista) + '</code></span>'
+            : d.guardada
+              ? '<span class="chip media">Lo pagas tú</span><span class="small">Tiene la suya <b>guardada y apagada</b> · <code>' + esc(d.pista) + '</code></span>'
+              : '<span class="chip media">Lo pagas tú</span><span class="small">Usa la clave de la casa' + (d.pista ? ' · <code>' + esc(d.pista) + '</code>' : '') + '</span>') +
           '<span class="grow"></span>' +
-          (d.propia ? '<button class="btn sm cl-quitar">Volver a la de la casa</button>' : '') +
-          '<button class="btn sm cl-poner">' + (d.propia ? 'Cambiarla' : 'Poner la suya') + '</button>' +
+          (d.propia ? '<button class="btn sm cl-apagar">Apagar la suya</button>' : '') +
+          (!d.propia && d.guardada ? '<button class="btn primary sm cl-encender">Encender la suya</button>' : '') +
+          (d.guardada ? '<button class="btn sm cl-olvidar">Olvidarla</button>' : '') +
+          '<button class="btn sm cl-poner">' + (d.guardada ? 'Cambiarla' : 'Poner la suya') + '</button>' +
         '</div>' +
         '<div class="cl-form" hidden style="margin-top:10px">' +
           '<label class="small" for="cl-k-' + esc(slug) + '">Su clave de OpenAI</label>' +
@@ -1864,10 +1871,21 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         '</div>';
       var c2 = $('cl-' + slug), form = c2.querySelector('.cl-form'), msg = c2.querySelector('.cl-msg');
       c2.querySelector('.cl-poner').onclick = function () { form.hidden = !form.hidden; if (!form.hidden) $('cl-k-' + slug).focus(); };
-      var q = c2.querySelector('.cl-quitar');
-      if (q) q.onclick = function () {
-        if (!confirm('¿Que vuelva a usar la clave de la casa? A partir de ahí lo que gaste lo pagas tú.')) return;
-        cli(slug + '/clave', { method: 'POST', body: {} }).then(function () { pintarClave(slug); });
+      var mandar = function (cuerpo) { cli(slug + '/clave', { method: 'POST', body: cuerpo }).then(function (r) {
+        if (r && r.error) { msg.textContent = r.error; return; }
+        pintarClave(slug);
+      }); };
+      var ap = c2.querySelector('.cl-apagar');
+      if (ap) ap.onclick = function () {
+        if (!confirm('¿Apagar su clave? Se queda guardada, pero a partir de ahora lo que gaste lo pagas tú.')) return;
+        mandar({ encender: false });
+      };
+      var en = c2.querySelector('.cl-encender');
+      if (en) en.onclick = function () { mandar({ encender: true }); };
+      var ol = c2.querySelector('.cl-olvidar');
+      if (ol) ol.onclick = function () {
+        if (!confirm('¿Olvidar su clave del todo? Habrá que volver a pegarla para usarla.')) return;
+        mandar({ olvidar: true });
       };
       c2.querySelector('.cl-guardar').onclick = function () {
         var k = $('cl-k-' + slug).value.trim();
