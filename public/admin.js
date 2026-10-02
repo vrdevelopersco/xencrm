@@ -1212,7 +1212,10 @@
     return '<div class="panel"><b>Calendario</b>' +
       '<div class="small">Suscríbete desde Google Calendar, Outlook o Apple Calendar para ver las citas. El enlace es secreto: quien lo tenga ve nombres y teléfonos.</div>' +
       // Secreto de larga vida: enmascarado por defecto; "Copiar" es la acción principal y rara vez hay que verlo.
-      '<div class="feed-row"><input id="feed-url" type="password" readonly value="' + esc(f.https) + '" aria-label="Enlace secreto de suscripción"><button class="btn primary" id="feed-copy">Copiar enlace</button><button class="btn sm" id="feed-show" aria-pressed="false">Mostrar</button><a class="btn sm" href="' + esc(f.webcal) + '">Abrir en Apple Calendar</a></div>' +
+      '<div class="feed-row"><input id="feed-url" type="password" readonly value="' + esc(f.https) + '" aria-label="Enlace secreto de suscripción"><button class="btn primary" id="feed-copy">Copiar enlace</button><button class="btn sm" id="feed-show" aria-pressed="false">Mostrar</button><a class="btn sm" href="' + esc(f.webcal) + '">Apple Calendar</a>' +
+        // Google suscribe por URL, no por archivo: este enlace abre su pantalla de «añadir por dirección» con
+        // el enlace ya puesto. Hay que darle a Añadir allá, que es como Google quiere que se haga.
+        '<a class="btn sm" href="https://calendar.google.com/calendar/r?cid=' + encodeURIComponent(f.https) + '" target="_blank" rel="noopener">Google Calendar</a></div>' +
       (f.public ? '' : '<div class="small muted">Este enlace solo funciona dentro de este equipo. Para verlo en Google o en Outlook hace falta la dirección pública: avísanos y la dejamos lista.</div>') +
       '<b class="small">Calendarios que bloquean la agenda</b>' + busy + '</div>';
   }
@@ -2415,7 +2418,25 @@
     es.addEventListener('contact', function () { if (state.view === 'inbox') loadContacts(); if (state.view === 'pipeline') loadPipeline(); });
     es.addEventListener('analysis', function (e) { var ev = JSON.parse(e.data); if (state.current === ev.userId) openContact(ev.userId); else if (state.view === 'inbox') loadContacts(); });
     es.addEventListener('handoff', function (e) { var ev = JSON.parse(e.data); if (state.current === ev.userId) openContact(ev.userId); if (state.view === 'inbox') loadContacts(); if (state.view === 'today') loadToday(); });
-    es.addEventListener('appointment', function () { if (state.view === 'calendar') loadCalendar(); if (state.view === 'today') loadToday(); if (state.current) openContact(state.current); });
+    // 🪤 Antes esto solo refrescaba las vistas: una cita entraba, el contador se ponía en rojo y NADIE decía qué
+    // se había agendado ni con quién. Quien no estuviera mirando el calendario en ese momento se enteraba de
+    // casualidad. Una cita es la mejor noticia que da este sistema y era la única que no se anunciaba.
+    es.addEventListener('appointment', function (e) {
+      if (state.view === 'calendar') loadCalendar();
+      if (state.view === 'today') loadToday();
+      if (state.current) openContact(state.current);
+      var ev, a;
+      try { ev = JSON.parse(e.data); a = ev.payload && ev.payload.appointment; } catch (err) { return; }
+      if (!a || a.status === 'cancelada') return;
+      // Solo las que vienen: avisar de una cita que ya pasó —al reconstruir el historial, por ejemplo— sería
+      // dar una noticia vieja como si acabara de ocurrir.
+      if (a.startsAt && a.startsAt < Date.now()) return;
+      var c = state.contacts.find(function (x) { return x.id === ev.userId; });
+      var quien = a.contactName || (c ? nameOf(c) : short(ev.userId));
+      var cuando = new Date(a.startsAt).toLocaleString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' });
+      beep();
+      toast(quien + ' · ' + cuando, function () { go('calendar'); }, { titulo: 'Cita agendada', icono: 'calendar' });
+    });
     setInterval(function () { if (state.view === 'calendar' && cal.mode === 'week') renderCalendar(); }, 60000); // mueve la línea de "ahora"
     es.addEventListener('notification', function (e) {
       var ev = JSON.parse(e.data), n = ev.payload.notification;
