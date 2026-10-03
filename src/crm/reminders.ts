@@ -55,9 +55,16 @@ export function reminderTime(startsAt: number): number {
 /** El texto del recordatorio, el mismo que se envía solo o que el equipo manda a mano. */
 export function reminderText(appt: Appointment, contact: Contact | null, now = Date.now()): string {
   const first = (contact?.name ?? '').split(' ')[0];
-  const tomorrow = tzParts(new Date(now + 24 * HOUR));
   const day = tzParts(new Date(appt.startsAt));
-  const when = tomorrow.y === day.y && tomorrow.m === day.m && tomorrow.d === day.d ? `de mañana, ${formatSlot(new Date(appt.startsAt))}` : `del ${formatSlot(new Date(appt.startsAt))}`;
+  const esMismoDia = (p: { y: number; m: number; d: number }) => p.y === day.y && p.m === day.m && p.d === day.d;
+  // 🪤 «Hoy» antes que «mañana». Desde que se recuerda la mañana de la cita, el caso normal es ese; sin esta
+  // rama el mensaje decía «te recordamos tu cita del lunes, 5 de octubre» el propio lunes por la mañana, que es
+  // la forma más fría de decir «hoy a las once» y obliga a mirar el calendario para entender un recordatorio.
+  const when = esMismoDia(tzParts(new Date(now)))
+    ? `de hoy, ${formatSlot(new Date(appt.startsAt), { withDay: false })}`
+    : esMismoDia(tzParts(new Date(now + 24 * HOUR)))
+      ? `de mañana, ${formatSlot(new Date(appt.startsAt))}`
+      : `del ${formatSlot(new Date(appt.startsAt))}`;
   return `Hola${first ? `, ${first}` : ''} 🙂 Te recordamos tu ${appt.service} ${when}${appt.location ? `, en ${appt.location}` : ''}. ¿Nos confirmas que vienes? Si necesitas cambiarla, me dices por aquí.`;
 }
 

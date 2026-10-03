@@ -82,5 +82,21 @@ const { loadBusinessConfig } = await import('../config.js');
 const releido = loadBusinessConfig(join(dir, 'prueba.json'));
 check('lo que quedó guardado se puede volver a cargar', releido.business.name === 'Casa Verde Centro' && releido.appointments.days.join() === '1,3,5', releido.business.name);
 
+// --- 🪤 lo que se guarda, alguien lo tiene que leer ---
+// «Primer saludo» se guardaba en el archivo, se enseñaba en el tablero con su pista, y NINGÚN punto del agente
+// lo miraba. Quien escribía ahí la frase con la que quiere que reciban a sus clientes veía un campo que no
+// hacía nada, sin un error, sin un aviso: creía que ya estaba puesto. Lo encontró una revisión, no una prueba.
+//
+// Un ajuste solo existe si algo lo lee. Esto comprueba justo eso para los del agente, que son los que se
+// escriben a mano y los que nadie nota cuando se caen.
+const fuenteAgente = readFileSync(new URL('../agent/agent.ts', import.meta.url), 'utf8');
+const fuentePrompts = readFileSync(new URL('../agent/prompts.ts', import.meta.url), 'utf8');
+const vivos = fuenteAgente + fuentePrompts;
+// En prompts.ts la configuración entra por un alias (`const a = business.agent`), así que valen las dos formas.
+for (const ajuste of ['greeting', 'style', 'goal', 'verifyPhrase']) {
+  check(`🪤 el ajuste «${ajuste}» lo lee alguien`, new RegExp(`\\b(?:business\\.agent|agent|a)\\.${ajuste}\\b`).test(vivos),
+    `se guarda y se enseña en el tablero, pero nada del agente lo usa: es un control que no hace nada`);
+}
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

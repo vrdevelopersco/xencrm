@@ -321,9 +321,18 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     note = `El cliente pregunta cómo funciona: explica el proceso en 3 o 4 pasos cortos con la "Información de la tienda" (cita, medidas, pruebas, tiempos y pago), menciona la prenda que le interesa si la dijo, y termina ofreciendo agendar${business.appointments.enabled ? ' la cita por aquí mismo' : ''}. Sin listar precios salvo que los pida.`;
   }
   if (gate.intent === 'saludo') {
+    // 🪤 El saludo del negocio (Configuración › Primer saludo) se guardaba, se enseñaba en el tablero con su
+    // pista —«Vacío: saluda con sus propias palabras»— y NADIE lo leía. Quien escribía ahí la frase con la que
+    // quiere que lo reciban a uno veía un campo que no hacía nada, y ni el tablero ni el chat se lo decían.
+    // Un control que no hace nada es peor que no tenerlo: el que lo usa cree que ya quedó.
+    const suyo = (business.agent.greeting ?? '').trim();
     note =
       user.messageCount === 0
-        ? `Es el primer mensaje de este cliente: salúdalo, preséntate en una frase como ${business.agent.name} de ${business.business.name} y pregúntale en qué le puedes ayudar.`
+        ? suyo
+          ? // Se le pasa como el fondo del saludo, no como una línea que copiar: así entra el nombre del cliente
+            // si lo sabemos y no suena idéntico a las otras cien veces que ya lo dijo.
+            `Es el primer mensaje de este cliente. Salúdalo diciendo esto, con tus palabras y sin alargarlo: "${suyo}"`
+          : `Es el primer mensaje de este cliente: salúdalo, preséntate en una frase como ${business.agent.name} de ${business.business.name} y pregúntale en qué le puedes ayudar.`
         : 'El cliente solo saluda, agradece o se despide: responde en una o dos frases, cálido, sin ofrecer productos concretos ni enlaces.';
   }
   // Contexto completo para los motores grandes; recortado para Apple (ventana de 4096 tokens).

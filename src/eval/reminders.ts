@@ -22,14 +22,34 @@ const check = (name: string, ok: boolean, detail = '') => {
 const HOUR = 3600_000;
 business.appointments.enabled = true;
 business.appointments.reminder.enabled = true;
-business.appointments.reminder.at = '17:00';
+business.appointments.reminder.at = '08:00';
+// 🪤 El negocio de esta prueba abre TODOS los días, a propósito. Antes heredaba los días laborales de verdad y
+// el resultado dependía del día en que se corriera: un sábado, la cita de «pasado mañana» caía en lunes, el
+// recordatorio se iba al domingo cerrado y la prueba fallaba sola, sin que nadie hubiera tocado nada. Los días
+// cerrados se prueban aparte, con fechas fijas.
+business.appointments.days = [0, 1, 2, 3, 4, 5, 6];
 
-// Cita pasado mañana a las 10:00 (hora del negocio): el recordatorio es mañana a las 5 p. m.
+// Cita pasado mañana a las 10:00 (hora del negocio): se recuerda ESE MISMO día a las 8 de la mañana.
 const p = tzParts(new Date(Date.now() + 2 * 24 * HOUR));
 const T = zoned(p.y, p.m, p.d, 10, 0).getTime();
 const remindAt = reminderTime(T);
 const before = tzParts(new Date(remindAt));
-check('se recuerda el día antes a las 5 p. m.', before.hh === 17 && before.mm === 0 && T - remindAt === 17 * HOUR, new Date(remindAt).toISOString());
+check('🪤 se recuerda la mañana de la cita, no la tarde anterior', before.hh === 8 && before.mm === 0 && T - remindAt === 2 * HOUR, new Date(remindAt).toISOString());
+check('y el mismo día que la cita', before.d === p.d && before.m === p.m, `${before.d}/${before.m} vs ${p.d}/${p.m}`);
+
+// Si a esa hora la cita ya pasó, se va hacia atrás: nunca después.
+const temprano = zoned(p.y, p.m, p.d, 8, 30).getTime();
+check('una cita muy temprano se recuerda el día antes', reminderTime(temprano) < zoned(p.y, p.m, p.d, 0, 0).getTime(), new Date(reminderTime(temprano)).toISOString());
+
+// 🪤 El caso que lo empezó todo: cita el lunes, y el domingo el negocio está cerrado. Fechas fijas para que no
+// dependa de cuándo se corra. Lunes 5 de octubre de 2026 a las 11:00.
+const soloEntreSemana = [1, 2, 3, 4, 5, 6];
+const lunes = zoned(2026, 10, 5, 11, 0).getTime();
+business.appointments.days = soloEntreSemana;
+const conDomingoCerrado = tzParts(new Date(reminderTime(lunes)));
+check('🪤 la cita del lunes NO se recuerda el domingo cerrado', conDomingoCerrado.wd !== 0, `cayó en el día ${conDomingoCerrado.wd}`);
+check('se recuerda el lunes por la mañana', conDomingoCerrado.d === 5 && conDomingoCerrado.hh === 8, `${conDomingoCerrado.d} a las ${conDomingoCerrado.hh}`);
+business.appointments.days = [0, 1, 2, 3, 4, 5, 6];
 
 const make = (userId: string, channel: string, opts: { name?: string; phone?: string; createdAgoH?: number; status?: string } = {}) => {
   touchUser(userId, channel, opts.name ?? null);
@@ -60,7 +80,9 @@ const sent: { userId: string; text: string }[] = [];
 registerSender('whatsapp', async (userId, text) => void sent.push({ userId, text }));
 const r = await runReminders(remindAt + 5 * 60_000);
 const toLaura = sent.find((s) => s.userId === 'wa:573001112233@s.whatsapp.net');
-check('por WhatsApp: le llega el recordatorio con su nombre y "mañana"', Boolean(toLaura && /Hola, Laura 🙂 Te recordamos tu cita de prueba de mañana/.test(toLaura.text) && /¿Nos confirmas que vienes\?/.test(toLaura.text)), toLaura?.text);
+// 🪤 Dice «de hoy», no la fecha larga: el recordatorio llega la mañana de la cita, y «tu cita del lunes 5 de
+// octubre» leído el propio lunes obliga a mirar el calendario para entender un mensaje que debería ser obvio.
+check('por WhatsApp: le llega con su nombre y dice que es HOY', Boolean(toLaura && /Hola, Laura 🙂 Te recordamos tu cita de prueba de hoy, 10:00/.test(toLaura.text) && /¿Nos confirmas que vienes\?/.test(toLaura.text)), toLaura?.text);
 // Por WhatsApp el cliente ve siempre el mismo número y contestan el asistente y las personas del equipo, así
 // que todo lo que sale va firmado con quién lo manda. Aquí lo manda el asistente.
 check('y firmado por el asistente, no por una persona', Boolean(toLaura && toLaura.text.startsWith('*Aiva:*')), toLaura?.text);
