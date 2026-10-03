@@ -174,11 +174,18 @@ async function flow(name: string, steps: string[], check: (userId: string, apptI
   console.log(`${problem ? '✗' : '✓'} ${name}${problem ? `\n   ${problem}\n   ${replies.map((r) => r.replace(/\n/g, ' ⏎ ').slice(0, 110)).join('\n   ')}` : ''}`);
 }
 const status = (id: number) => getAppointment(id)?.status;
-await flow('cancelar con confirmación', ['quiero cancelar mi cita', 'sí'], (u, id, r) =>
-  /Confirmas que cancelo/.test(r[0]!) && /cancelé/.test(r[1]!) && status(id) === 'cancelada' ? null : `quedó ${status(id)}`,
+// 🪤 Cancelar ya no es un paso: primero se pregunta qué pasó, una sola vez y con la salida escrita en el mismo
+// mensaje. Ver crm/retener.ts, que es donde vive el porqué y donde están las pruebas de que no se acosa.
+await flow('cancelar: pregunta qué pasó y luego cancela', ['quiero cancelar mi cita', 'ya no estoy seguro', 'cancélala'], (u, id, r) =>
+  /no te sirve ese d[ií]a|ya no est[aá]s tan seguro/.test(r[0]!) && /cancel[eé]/.test(r[2]!) && status(id) === 'cancelada' ? null : `quedó ${status(id)}`,
 );
-await flow('arrepentirse de cancelar', ['quiero cancelar mi cita', 'no, mejor no'], (u, id, r) =>
-  /la dejamos como está/.test(r[1]!) && status(id) === 'confirmada' ? null : `quedó ${status(id)}`,
+await flow('arrepentirse de cancelar', ['quiero cancelar mi cita', 'ya no estoy seguro', 'déjala así'], (u, id, r) =>
+  /te esperamos/.test(r[2]!) && status(id) === 'confirmada' ? null : `quedó ${status(id)}`,
+);
+// 🪤 Y «déjalo así» conserva la cita, no la cancela: en una conversación de citas quiere decir «déjala como
+// está». Confundirlo con «no me preguntes más» cancelaba la cita de quien se estaba arrepintiendo de cancelar.
+await flow('«déjalo así» conserva la cita, no la mata', ['quiero cancelar mi cita', 'déjalo así'], (u, id) =>
+  status(id) === 'confirmada' ? null : `quedó ${status(id)}`,
 );
 await flow('mover al jueves en la tarde', ['¿puedo cambiar mi cita para el jueves en la tarde?', 'la 1', 'sí'], (u, id, r) => {
   const all = listAppointments({ userId: u });
@@ -189,8 +196,8 @@ await flow('mover al jueves en la tarde', ['¿puedo cambiar mi cita para el juev
     ? null
     : `vieja ${status(id)} · nueva ${fresh?.status} ${thu ? `día ${thu.wd} ${thu.hh}h` : ''} · etapa ${stage}`;
 });
-await flow('"sobre mi cita" → pregunta → cancelarla', ['hola, sobre mi cita', 'cancelarla', 'sí'], (u, id, r) =>
-  /cambiarla o cancelarla/.test(r[0]!) && /Confirmas/.test(r[1]!) && status(id) === 'cancelada' ? null : `quedó ${status(id)}`,
+await flow('"sobre mi cita" → pregunta → cancelarla', ['hola, sobre mi cita', 'cancelarla', 'ya no estoy seguro', 'cancélala', 'sí'], (u, id, r) =>
+  /cambiarla o cancelarla/.test(r[0]!) && /no te sirve ese d[ií]a|ya no est[aá]s tan seguro/.test(r[1]!) && status(id) === 'cancelada' ? null : `quedó ${status(id)}`,
 );
 await flow('"así está bien" la deja como está', ['hola, sobre mi cita', 'así está bien, gracias'], (u, id, r) =>
   /te esperamos/.test(r[1]!) && status(id) === 'confirmada' ? null : `quedó ${status(id)}`,

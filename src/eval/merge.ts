@@ -77,8 +77,11 @@ check('quien no es la misma persona no hereda citas', nextAppointmentForPerson('
 
 // Si la cancela desde el otro canal, las dos líneas de tiempo lo cuentan (la cita no cambia de ficha).
 const { bookingStep, startBooking } = await import('../crm/booking.js');
+// Cancelar pasa ahora por «¿qué pasó?» (una vez, ver crm/retener.ts); lo que se prueba aquí es que al final la
+// cita de la otra ficha queda cancelada igual.
 await startBooking('wa:573007778899@s.whatsapp.net', 'quiero cancelar mi cita');
-await bookingStep('wa:573007778899@s.whatsapp.net', 'sí');
+await bookingStep('wa:573007778899@s.whatsapp.net', 'ya no estoy seguro');
+await bookingStep('wa:573007778899@s.whatsapp.net', 'cancélala');
 const { getAppointment } = await import('../crm/appointments.js');
 const citaId = suya!.id;
 check('la cita quedó cancelada aunque sea de la otra ficha', getAppointment(citaId)?.status === 'cancelada', String(getAppointment(citaId)?.status));

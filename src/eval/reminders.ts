@@ -119,9 +119,12 @@ check('"sí, ahí estaré" confirma la asistencia', /^¡Perfecto! Te esperamos/.
 check('y cierra el flujo', !getContact('wa:573001112233@s.whatsapp.net')!.data.booking);
 const cant = await say('wa:573002223344@s.whatsapp.net', 'uy no puedo, se me complicó');
 check('"no puedo" pregunta si la pasamos o la cancela', /pasamos para otro día o prefieres cancelarla/.test(cant ?? '') && getAppointment(waCant)!.reply === 'no_puede', cant ?? '');
+// 🪤 «Cancélala» aquí cancela de UNA, sin «¿confirmas?» y sin preguntarle qué pasó. Ya dijo que no podía, ya se
+// le ofreció moverla, y acaba de escoger entre las dos opciones que le dimos: cualquier paso más es fricción
+// puesta a propósito en el camino de salida, que es justo lo que no se debe hacer. Ver crm/retener.ts.
 const cancel = await say('wa:573002223344@s.whatsapp.net', 'cancélala');
-const confirm = await say('wa:573002223344@s.whatsapp.net', 'sí');
-check('"cancélala" y "sí": la cancela', /Confirmas que cancelo/.test(cancel ?? '') && /cancelé/.test(confirm ?? '') && getAppointment(waCant)!.status === 'cancelada', `${cancel} | ${confirm}`);
+check('"cancélala" la cancela de una, sin más vueltas', /cancel[eé]/.test(cancel ?? '') && getAppointment(waCant)!.status === 'cancelada', String(cancel));
+check('y no le vuelve a preguntar por qué', !/pas[oó] algo|ya no est[aá]s tan seguro|Confirmas/.test(cancel ?? ''), String(cancel));
 const move = await say('wa:573003334455@s.whatsapp.net', 'mejor el jueves en la tarde');
 check('"mejor el jueves en la tarde" busca otro espacio', /busquemos otro espacio/.test(move ?? ''), move ?? '');
 

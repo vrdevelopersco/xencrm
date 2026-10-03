@@ -26,11 +26,12 @@ import { addEvent, getContact, updateContact, type Contact } from './contacts.js
 import { customerLinks } from './calendar.js';
 import { askModelWhen, eventDeadline, fold, formatMinutes, mentionsTime, parseWhen, refineWhen, weekdayOfKey } from './when.js';
 import { formatPhone, parsePhone, ruleSignals } from './signals.js';
+import { alCancelar, anotarIntento, diasParaElEvento, motivoDeCancelar, preguntaQuePaso, respuesta, yaSeIntento } from './retener.js';
 
 const cfg = business.appointments;
 
 export interface BookingState {
-  step: 'nombre' | 'elegir' | 'telefono' | 'confirmar' | 'gestionar' | 'cancelar' | 'recordatorio';
+  step: 'nombre' | 'elegir' | 'telefono' | 'confirmar' | 'gestionar' | 'cancelar' | 'porque' | 'recordatorio';
   /** Cita existente que se está cambiando (al confirmar la nueva, esta se cancela) o gestionando. */
   moving?: number;
   manage?: number;
@@ -286,8 +287,15 @@ async function manageExisting(c: Contact, id: number, text: string, userId: stri
       : offerFallback();
   }
   if (intent === 'cancelar') {
-    save(c, { step: 'cancelar', offered: [], manage: id });
-    return `¿Confirmas que cancelo tu ${slotOf(id)}?`;
+    // 🪤 Antes se iba directo a «¿confirmas que cancelo?», y eso pierde citas que no estaban perdidas: mucha
+    // gente escribe «cancélala» cuando lo que quiere es moverla. Ahora se pregunta qué pasó, UNA vez y con la
+    // salida en el mismo mensaje. Si ya se preguntó por esta cita, se cancela sin más vueltas. Ver crm/retener.ts.
+    if (yaSeIntento(c, id)) {
+      save(c, { step: 'cancelar', offered: [], manage: id });
+      return `¿Confirmas que cancelo tu ${slotOf(id)}?`;
+    }
+    save(c, { step: 'porque', offered: [], manage: id });
+    return preguntaQuePaso(slotOf(id));
   }
   // "¿me confirmas la cita del jueves?" nombra el día de su propia cita: pregunta por ella, no la está moviendo.
   const appt = getAppointment(id);
@@ -409,6 +417,10 @@ async function step(userId: string, text: string): Promise<string | null> {
     if (/\b(?:cancel|anul)/.test(t) || (w && !same) || MOVE_APPT_RE.test(text)) return manageExisting(c, appt.id, text, userId);
     if (CANT_RE.test(t) || NO_RE.test(t)) {
       setCustomerReply(appt.id, 'no_puede');
+      // 🪤 Esto YA ES el intento, y se anota como tal: contestando al recordatorio el cliente dijo que no podía
+      // —o sea que ya explicó— y aquí mismo se le ofrece la alternativa. Si no se anotara, un «cancélala» a
+      // continuación le preguntaría «¿y qué pasó?» a alguien que acaba de contarlo. Ver crm/retener.ts.
+      updateContact(userId, { data: anotarIntento(getContact(userId)?.data ?? null, appt.id) }, { silent: true });
       save(getContact(userId)!, { step: 'gestionar', offered: [], manage: appt.id });
       return 'Sin problema. ¿La pasamos para otro día o prefieres cancelarla?';
     }
@@ -421,6 +433,43 @@ async function step(userId: string, text: string): Promise<string | null> {
     return null;
   }
 
+  // Contestó a «¿qué pasó?». Aquí se decide si se le ofrece algo o se le cancela y ya. Ver crm/retener.ts.
+  if (st.step === 'porque') {
+    const appt = st.manage ? getAppointment(st.manage) : null;
+    if (!appt || appt.status !== 'confirmada') {
+      save(c, null);
+      return null;
+    }
+    const slot = formatSlot(new Date(appt.startsAt));
+
+    // Si en vez de un motivo dice una fecha o pide moverla, es lo que queríamos: se mueve y no se insiste.
+    const w = parseWhen(text);
+    if (MOVE_APPT_RE.test(text) || (w && !slotMatches(new Date(appt.startsAt), w))) {
+      save(c, { step: 'elegir', offered: [], moving: appt.id });
+      return `Claro, busquemos otro espacio. ` + offer(getContact(userId)!, w ? { when: w } : {});
+    }
+
+    const motivo = motivoDeCancelar(text, yaSeIntento(c, appt.id));
+    const opciones = availableSlots({ count: 2, spreadDays: true }).map((s) => `el ${formatSlot(s.startsAt)}`);
+    const r = respuesta(motivo, { cita: slot, opciones, diasEvento: diasParaElEvento(c) });
+
+    // 🪤 «Cancélala y ya», «no me insistas»: se cancela en el acto, sin la pregunta de confirmación. Volver a
+    // preguntar «¿seguro?» a quien acaba de decir que no quiere más vueltas es justo lo que no se debe hacer.
+    if (r.cancelar || CANCEL_APPT_RE.test(text)) {
+      noteCrossFicha(appt, userId, 'cancelada');
+      updateAppointment(appt.id, { status: 'cancelada', notes: `${appt.notes ? `${appt.notes} · ` : ''}Cancelada por el cliente desde ${channelName(c)}` }, 'bot');
+      save(getContact(userId)!, null);
+      // Con su propia despedida si la trae: a quien se le murió alguien no se le contesta con la frase de
+      // siempre. Ver crm/retener.ts.
+      return r.texto || alCancelar(appt.service, slot);
+    }
+
+    // El único intento queda anotado en la ficha: no hay un segundo, ni hoy ni dentro de un mes.
+    if (r.gastaIntento) updateContact(userId, { data: anotarIntento(getContact(userId)?.data ?? null, appt.id) }, { silent: true });
+    save(getContact(userId)!, { step: 'gestionar', offered: [], manage: appt.id });
+    return r.texto;
+  }
+
   if (st.step === 'gestionar' || st.step === 'cancelar') {
     const appt = st.manage ? getAppointment(st.manage) : null;
     if (!appt || appt.status !== 'confirmada') {
@@ -428,6 +477,19 @@ async function step(userId: string, text: string): Promise<string | null> {
       return null;
     }
     const slot = formatSlot(new Date(appt.startsAt));
+    // 🪤 Después de que ya se le ofreció algo, pedir cancelar MANDA sobre el sí y el no, y se mira antes que
+    // nada. La respuesta natural a «¿la dejamos o te la cancelo?» es «no, cancélala»: empieza por un no, y leída
+    // como un no a secas se le contestaba «perfecto, te esperamos» a quien acababa de pedir por SEGUNDA vez que
+    // se la cancelaran. Eso es justo la trampa que este flujo existe para no tener.
+    //
+    // Solo con el intento ya gastado. Sin él seguimos en el camino normal, donde «cancélala» pasa por su
+    // confirmación de siempre: es un toque y protege de un mensaje escrito sin querer.
+    if (yaSeIntento(c, appt.id) && CANCEL_APPT_RE.test(text)) {
+      noteCrossFicha(appt, userId, 'cancelada');
+      updateAppointment(appt.id, { status: 'cancelada', notes: `${appt.notes ? `${appt.notes} · ` : ''}Cancelada por el cliente desde ${channelName(c)}` }, 'bot');
+      save(getContact(userId)!, null);
+      return alCancelar(appt.service, slot);
+    }
     if (st.step === 'cancelar') {
       if (YES_RE.test(t) && !CHANGE_RE.test(t)) {
         noteCrossFicha(appt, userId, 'cancelada');
@@ -533,6 +595,7 @@ const EXPECTED: Record<BookingState['step'], string> = {
   confirmar: 'esperaba un sí o un no para confirmar',
   gestionar: 'esperaba si cambia, cancela o deja la cita',
   cancelar: 'esperaba que confirmara la cancelación',
+  porque: 'esperaba saber por qué quiere cancelar, para ofrecerle moverla',
   recordatorio: 'esperaba que confirmara si viene a la cita',
 };
 
