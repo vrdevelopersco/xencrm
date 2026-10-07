@@ -36,10 +36,25 @@ export const WINDOW_CLOSED =
  */
 export type Sender = (userId: string, text: string, medio?: Medio | null) => Promise<void>;
 const senders = new Map<string, Sender>();
+/** Los canales que además saben entregar un archivo. */
+const conMedios = new Set<string>();
 
-/** Cada canal registra cómo entregar un texto a un usuario suyo. */
-export function registerSender(channel: string, fn: Sender) {
+/**
+ * Cada canal registra cómo entregar un texto a un usuario suyo, y si sabe llevar archivos.
+ *
+ * 🪤 Lo de los archivos se declara EXPLÍCITAMENTE y por omisión es que no. Un canal que ignora en silencio el
+ * adjunto deja al tablero diciendo «enviado» con una foto que el cliente nunca recibió, y quien atiende se
+ * entera cuando el cliente pregunta por algo que cree que ya le mandaron. Es mejor no poder que creer que sí.
+ */
+export function registerSender(channel: string, fn: Sender, opts: { medios?: boolean } = {}) {
   senders.set(channel, fn);
+  if (opts.medios) conMedios.add(channel);
+  else conMedios.delete(channel);
+}
+
+/** ¿Este canal sabe llevarle un archivo al cliente? */
+export function llevaArchivos(channel: string): boolean {
+  return conMedios.has(channel);
 }
 
 /**
@@ -121,6 +136,11 @@ export async function sendToContact(
   const send = senders.get(c.channel);
   const by = opts.by?.trim() || undefined;
   const medio = opts.medio ?? null;
+  // 🪤 Se comprueba ANTES de guardar nada. Si se guardara primero, la conversación quedaría con un archivo que
+  // el cliente no tiene y nadie podría distinguirlo de uno que sí llegó.
+  if (medio && !llevaArchivos(c.channel)) {
+    throw new Error(`Por ${c.channel} no puedo mandarle archivos todavía; solo por WhatsApp. El texto sí se puede.`);
+  }
   const id = appendMessage(userId, 'assistant', text, undefined, author, by, medio);
   emitEvent('message', userId, { id, role: 'assistant', author, by: by ?? null, content: text, ts: Date.now(), media: medio });
   updateContact(userId, { unread: 0 }, { silent: true });

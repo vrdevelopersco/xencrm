@@ -665,7 +665,10 @@
     // al revés: uno empieza a escribir. Ahora escribir es la señal, como contestar desde el teléfono.
     $('composer-hint').hidden = human;
     $('composer-hint').innerHTML = 'Contesta Aiva. <b>Si escribes aquí, se queda callada</b> en esta conversación.';
-    $('reply').hidden = false; $('send').hidden = !human; $('adj-btn').hidden = !human;
+    $('reply').hidden = false; $('send').hidden = !human;
+    // 🪤 El botón de adjuntar solo donde el canal sabe entregarlo. Ofrecerlo en el chat del sitio sería prometer
+    // algo que no pasa: el archivo quedaría en la conversación y el cliente no lo recibiría nunca.
+    $('adj-btn').hidden = !human || !(state.detail && state.detail.llevaArchivos);
     $('reply').placeholder = human ? 'Escribe tu respuesta… (Enter envía, Shift+Enter salto)' : 'Escribe para tomar esta conversación…';
     if (human) $('reply').focus();
   }

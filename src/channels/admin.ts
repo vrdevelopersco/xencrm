@@ -15,7 +15,7 @@ import { getMessages } from '../agent/memory.js';
 import { contactNumber, deleteContact, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
 import { availableSlots, bookAppointment, formatSlot, listAppointments, setReminder, updateAppointment } from '../crm/appointments.js';
-import { replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
+import { llevaArchivos, replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
 import { appointmentsCsv, contactsCsv } from '../crm/export.js';
 import { isSnoozed, snoozeFollowup } from '../crm/followup.js';
 import { reminderTime, remindersBoard } from '../crm/reminders.js';
@@ -174,6 +174,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
       number: contactNumber(contact), // para escribirle o llamarlo desde el tablero
       presentes: quienesEstan(id), // quién más está metido aquí ahora mismo
+      // Si por este canal se le pueden mandar archivos. El tablero esconde el botón cuando no.
+      llevaArchivos: llevaArchivos(contact.channel),
       origen: origenDe(id), // por dónde llegó: sirve al atender y para saber qué anuncio trae clientes
       // Qué ha pasado con esta persona: si volvió, si vino a sus citas, si se le fue una venta. Ver crm/historia.ts.
       historia: (() => { const h = historiaDe(id, { etapa: contact.stage }); return { ...h, frase: enUnaFrase(h) }; })(),
@@ -325,6 +327,12 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const texto = String(form?.texto ?? '').trim();
     const by = String(form?.by ?? '').trim().slice(0, 40) || 'equipo';
     if (!replyWindow(id).open) return c.json({ error: WINDOW_CLOSED }, 409);
+    // 🪤 Se mira que el canal sepa llevarlo ANTES de escribir el archivo. Guardándolo primero, cada intento por
+    // un canal que no puede dejaba un archivo huérfano en el disco del cliente —nadie lo ve, nadie lo borra, y
+    // en un alojamiento compartido eso se nota a los meses—.
+    if (!llevaArchivos(contact.channel)) {
+      return c.json({ error: `Por ${contact.channel} no puedo mandarle archivos todavía; solo por WhatsApp. El texto sí se puede.` }, 409);
+    }
     let medio;
     try {
       medio = guardarMedio(new Uint8Array(await f.arrayBuffer()), { mime: f.type, nombre: f.name });

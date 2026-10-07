@@ -117,5 +117,32 @@ getDb().prepare("UPDATE messages SET media = '{roto' WHERE id = ?").run(msgs[0]!
 const tras = getMessages(quien, 10);
 check('🪤 un adjunto ilegible no deja la conversación en blanco', tras.length === 2 && tras[0]?.media === null, JSON.stringify(tras.map((m) => m.media)));
 
+// ---------- 🪤 Un canal que no sabe llevar archivos tiene que DECIRLO ----------
+// Lo peor que puede pasar con esto no es que falle: es que el tablero diga «enviado» y el cliente no tenga
+// nada. Quien atiende se enteraría cuando el cliente pregunte por algo que cree que ya le mandaron.
+const { registerSender, llevaArchivos, sendToContact } = await import('../crm/outbox.js');
+const { updateContact } = await import('../crm/contacts.js');
+registerSender('solo-texto', async () => undefined);
+registerSender('con-archivos', async () => undefined, { medios: true });
+check('🪤 por omisión, un canal NO lleva archivos', !llevaArchivos('solo-texto'));
+check('y el que sí sabe lo declara', llevaArchivos('con-archivos'));
+check('uno que no existe tampoco', !llevaArchivos('inventado'));
+
+touchUser('texto:1', 'solo-texto', 'Quien sea');
+updateContact('texto:1', { phone: '+573001112233' }, { silent: true });
+const otra = guardar(bytes(10), { mime: 'image/png', nombre: 'x.png' });
+const antesDeIntentar = getMessages('texto:1', 10).length;
+let seQuejo = '';
+try {
+  await sendToContact('texto:1', 'te mando esto', 'human', { by: 'Luis', medio: otra });
+} catch (err) {
+  seQuejo = (err as Error).message;
+}
+check('🪤 mandar un archivo por un canal que no sabe se rechaza, y dice por qué', /no puedo mandarle archivos/i.test(seQuejo), seQuejo || 'no se quejó');
+// 🪤 Y no deja rastro: si el mensaje quedara guardado, en la conversación habría un archivo que el cliente no
+// tiene, y nadie podría distinguirlo de uno que sí llegó.
+check('🪤 y no deja el mensaje guardado a medias', getMessages('texto:1', 10).length === antesDeIntentar, 'quedó un mensaje con un archivo que nunca salió');
+check('el texto solo sí pasa por ese canal', await sendToContact('texto:1', 'esto sí', 'human', { by: 'Luis' }).then(() => true).catch(() => false));
+
 console.log(fail ? `\n${fail} fallo(s)` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

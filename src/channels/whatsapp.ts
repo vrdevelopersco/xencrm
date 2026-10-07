@@ -176,9 +176,13 @@ export async function startWhatsApp(): Promise<WASocket> {
   current = sock;
 
   sock.ev.on('creds.update', saveCreds);
-  registerSender('whatsapp', async (userId, text, medio) => {
-    await mandar(sock, userId.replace(/^wa:/, ''), text, medio);
-  });
+  registerSender(
+    'whatsapp',
+    async (userId, text, medio) => {
+      await mandar(sock, userId.replace(/^wa:/, ''), text, medio);
+    },
+    { medios: true }, // Baileys sabe mandar imagen, video, documento y audio
+  );
 
   sock.ev.on('connection.update', (u) => {
     if (sock !== current) return; // un socket viejo (apagado o reemplazado) ya no manda
