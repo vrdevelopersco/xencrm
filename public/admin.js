@@ -540,6 +540,7 @@
         + '<div class="sysline">Desde aquí lo lleva aiva</div>'
       : '') + d.messages.map(bubble).join('');
     if (c.humanMode) m.insertAdjacentHTML('beforeend', '<div class="sysline">Aiva está en pausa: esta conversación la lleva ' + esc(whoHas(c)) + (c.humanSince ? ' desde hace ' + rel(c.humanSince) : '') + '.</div>');
+    pintarAdjuntos(m);
     m.scrollTop = m.scrollHeight;
   }
   // Lo traído del historial se pinta igual pero apagado: es conversación de verdad, pero no pasó por aquí y no
@@ -555,8 +556,61 @@
     // importado sale tal cual del archivo. Sin escapar, quien mandó ese chat ejecuta JavaScript en la pantalla
     // de quien atiende —y de ahí se lleva el token del tablero—. Comprobado: se ejecutaba.
     var label = who === 'customer' ? 'Cliente' : who === 'human' ? (msg.by ? esc(msg.by) + ' (equipo)' : 'Equipo') : 'Aiva';
-    return '<div class="bubble ' + who + '"><span class="who">' + label + '</span>' + esc(msg.content) + '<span class="ts">' + hhmm(msg.ts) + '</span></div>';
+    return '<div class="bubble ' + who + '"><span class="who">' + label + '</span>' + adjunto(msg.media) + esc(msg.content) +
+      '<span class="ts">' + hhmm(msg.ts) + '</span></div>';
   }
+
+  /**
+   * El archivo que vino o se mandó con un mensaje.
+   *
+   * 🪤 La imagen se pide con el token en la cabecera, no con el token en la dirección: una dirección con el
+   * token dentro se va al historial del navegador, a los registros del servidor y al Referer de cualquier sitio
+   * que se abra desde ahí. Por eso se baja a un blob y se enseña desde ahí.
+   */
+  function adjunto(m) {
+    if (!m || !m.id) return '';
+    var nombre = esc(m.nombre || 'archivo');
+    var peso = m.bytes ? ' · ' + (m.bytes > 1048576 ? (m.bytes / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(m.bytes / 1024)) + ' KB') : '';
+    if (m.tipo === 'imagen') {
+      return '<figure class="adj"><img alt="' + nombre + '" data-medio="' + esc(m.id) + '" data-nombre="' + nombre + '">' +
+        '<figcaption>' + nombre + peso + '</figcaption></figure>';
+    }
+    var icono = m.tipo === 'video' ? '🎬' : m.tipo === 'audio' ? '🎤' : '📄';
+    return '<button class="adj-archivo" data-medio="' + esc(m.id) + '" data-nombre="' + nombre + '">' +
+      '<span class="ic-adj">' + icono + '</span><span class="n">' + nombre + '</span><span class="p">' + peso.replace(' · ', '') + '</span></button>';
+  }
+
+  /** Baja un medio con el token puesto y devuelve una dirección temporal que el navegador sí puede abrir. */
+  function traerMedio(id) {
+    return fetch(BASE + '/admin/api/medios/' + encodeURIComponent(id), { headers: { 'x-admin-token': state.token } })
+      .then(function (r) { return r.ok ? r.blob() : Promise.reject(r.status); })
+      .then(function (b) { return URL.createObjectURL(b); });
+  }
+
+  // Las miniaturas se llenan después de pintar: así la conversación aparece de una y las fotos van entrando.
+  function pintarAdjuntos(raiz) {
+    Array.prototype.forEach.call((raiz || document).querySelectorAll('img[data-medio]:not([src])'), function (img) {
+      traerMedio(img.dataset.medio).then(function (url) { img.src = url; }).catch(function () {
+        img.replaceWith(Object.assign(document.createElement('div'), { className: 'adj-roto', textContent: 'No pude cargar la imagen' }));
+      });
+    });
+  }
+
+  // 🪤 La descarga se hace con un enlace temporal que se revoca: sin revocar, cada archivo abierto se queda en
+  // memoria del navegador hasta que se recargue la página, y quien atiende tiene el tablero abierto todo el día.
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.adj-archivo, figure.adj img');
+    if (!b) return;
+    var id = b.dataset.medio;
+    if (!id) return;
+    traerMedio(id).then(function (url) {
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = b.dataset.nombre || 'archivo';
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+    }).catch(function () { toast('No pude bajar el archivo.'); });
+  });
   // ---------- lo que aiva dejó listo ----------
   var propuestaActual = null;
   function pintarPropuesta(p) {
@@ -611,7 +665,7 @@
     // al revés: uno empieza a escribir. Ahora escribir es la señal, como contestar desde el teléfono.
     $('composer-hint').hidden = human;
     $('composer-hint').innerHTML = 'Contesta Aiva. <b>Si escribes aquí, se queda callada</b> en esta conversación.';
-    $('reply').hidden = false; $('send').hidden = !human;
+    $('reply').hidden = false; $('send').hidden = !human; $('adj-btn').hidden = !human;
     $('reply').placeholder = human ? 'Escribe tu respuesta… (Enter envía, Shift+Enter salto)' : 'Escribe para tomar esta conversación…';
     if (human) $('reply').focus();
   }
@@ -639,12 +693,51 @@
     if (!state.current) return;
     api('/contacts/' + encodeURIComponent(state.current) + '/human', { method: 'POST', body: { on: on } }).then(function () { return openContact(state.current); });
   }
+  // ---------- adjuntar una foto o un documento ----------
+  var adjPendiente = null;
+  $('adj-btn').onclick = function () { $('adj-file').click(); };
+  $('adj-file').onchange = function () {
+    var f = $('adj-file').files && $('adj-file').files[0];
+    $('adj-file').value = ''; // así volver a escoger el mismo archivo también cuenta
+    if (!f) return;
+    adjPendiente = f;
+    $('adj-nombre').textContent = f.name + ' · ' + (f.size > 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB');
+    $('adj-listo').hidden = false;
+    $('reply').placeholder = 'Escribe algo para acompañarlo (opcional)…';
+    $('reply').focus();
+  };
+  function quitarAdjunto() {
+    adjPendiente = null;
+    $('adj-listo').hidden = true;
+    $('reply').placeholder = 'Escribe tu respuesta… (Enter envía, Shift+Enter salto)';
+  }
+  $('adj-quitar').onclick = quitarAdjunto;
+
   function sendReply() {
-    var text = $('reply').value.trim(); if (!text || !state.current) return;
+    var text = $('reply').value.trim();
+    if (!state.current) return;
+    // 🪤 Con archivo, el texto es opcional: mandar una foto sola es una respuesta entera. Sin archivo, un
+    // mensaje vacío no se manda.
+    if (!text && !adjPendiente) return;
     $('send').disabled = true;
-    api('/contacts/' + encodeURIComponent(state.current) + '/reply', { method: 'POST', body: { text: text, by: state.name } }).then(function (r) {
-      if (r.error) toast('No se pudo enviar: ' + r.error); else $('reply').value = '';
-    }).finally(function () { $('send').disabled = false; $('reply').focus(); });
+    var envio;
+    if (adjPendiente) {
+      var fd = new FormData();
+      fd.append('archivo', adjPendiente);
+      fd.append('texto', text);
+      fd.append('by', state.name || '');
+      envio = fetch(BASE + '/admin/api/contacts/' + encodeURIComponent(state.current) + '/adjunto', {
+        method: 'POST', headers: { 'x-admin-token': state.token }, body: fd,
+      }).then(function (r) { return r.json(); });
+    } else {
+      envio = api('/contacts/' + encodeURIComponent(state.current) + '/reply', { method: 'POST', body: { text: text, by: state.name } });
+    }
+    envio.then(function (r) {
+      if (r && r.error) { toast('No se pudo enviar: ' + r.error); return; }
+      $('reply').value = '';
+      quitarAdjunto();
+    }).catch(function () { toast('No se pudo enviar.'); })
+      .finally(function () { $('send').disabled = false; $('reply').focus(); });
   }
   $('send').onclick = sendReply;
   $('reply').onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); } };

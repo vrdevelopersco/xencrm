@@ -231,5 +231,16 @@ check('el modelo recibe quién es quién', /gente: quienes/.test(wa) && /Quién 
 check('y quien atiende también lo ve', /genteDelGrupo\(p\.userId/.test(adm) && /g\.nombre \|\| String\(g\.persona\)/.test(js),
   'una respuesta sin saber a quién se le contesta no se puede juzgar');
 
+// 🪤 Lo que se esconde con [hidden] y además lleva display: sin su propia regla, se ve siempre. El navegador
+// pone display:none por [hidden], pero cualquier `display:flex` de una clase le gana. Pasó con el chip del
+// archivo adjunto —salía vacío, con su botón de Quitar, sin que nadie hubiera escogido nada— y se vio en una
+// captura, no en una prueba. Esto lo caza para todos los que vengan.
+for (const clase of ['propuesta', 'login', 'detail-more', 'adj-listo']) {
+  const ponenDisplay = new RegExp(`\\.${clase}\\{[^}]*display:`).test(html);
+  const seApagan = new RegExp(`\\.${clase}\\[hidden\\]\\{display:none`).test(html);
+  check(`🪤 .${clase} se esconde de verdad cuando lleva [hidden]`, !ponenDisplay || seApagan,
+    'tiene display: en su clase, así que [hidden] no lo apaga; hace falta .' + clase + '[hidden]{display:none}');
+}
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

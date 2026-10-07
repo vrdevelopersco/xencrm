@@ -219,12 +219,38 @@ const trozo = (re: RegExp) => fuenteAdmin.match(re)?.[0] ?? '';
 const burbuja = (() => {
   const escSrc = trozo(/function esc\(s\)[\s\S]*?\n  \}/);
   const bubbleSrc = trozo(/function bubble\(msg\)[\s\S]*?\n  \}/);
-  if (!escSrc || !bubbleSrc) return null;
-  return new Function(`${escSrc}\nfunction hhmm(){return '00:00'}\n${bubbleSrc}\nreturn bubble;`)() as (m: Record<string, unknown>) => string;
+  // El adjunto se pinta dentro de la burbuja y trae el NOMBRE DEL ARCHIVO, que lo escoge quien lo manda.
+  const adjSrc = trozo(/function adjunto\(m\)[\s\S]*?\n  \}/);
+  if (!escSrc || !bubbleSrc || !adjSrc) return null;
+  return new Function(`${escSrc}\nfunction hhmm(){return '00:00'}\n${adjSrc}\n${bubbleSrc}\nreturn bubble;`)() as (m: Record<string, unknown>) => string;
 })();
 const pintado = burbuja?.({ role: 'assistant', author: 'human', by: '<img src=x onerror="robar()">', content: 'Ya te ayudo', ts: 0 }) ?? '';
 check('🪤 el nombre de quien contestó no puede meter etiquetas en el tablero', Boolean(burbuja) && !/<img/i.test(pintado), pintado.slice(0, 180) || 'no pude armar la burbuja');
 check('y lo que escribió el cliente, tampoco', !/<img/i.test(burbuja?.({ role: 'user', author: 'customer', content: '<img src=x onerror="robar()">', ts: 0 }) ?? '<img'), 'el contenido se coló');
+
+// 🪤 Y el NOMBRE DEL ARCHIVO menos que nada: lo escoge quien lo manda, y desde el 2026-10-07 se pinta dentro
+// de la burbuja. Un «"><script>» en el nombre de una foto se ejecutaría en la pantalla de quien atiende, con
+// su token del tablero a mano. Se prueba en los dos caminos, porque son dos plantillas distintas.
+for (const [queEs, tipo] of [['una foto', 'imagen'], ['un documento', 'documento']] as const) {
+  const conAdjunto = burbuja?.({
+    role: 'user',
+    author: 'customer',
+    content: 'mira',
+    ts: 0,
+    media: { id: 'a'.repeat(32) + '.jpg', tipo, nombre: '"><img src=x onerror="robar()">', bytes: 10 },
+  }) ?? '<img';
+  // 🪤 Se busca la carga SIN escapar. Una burbuja con foto lleva un <img legítimo y la palabra «onerror»
+  // aparece escapada dentro del texto, así que buscar «<img» u «onerror» a secas daría falso positivo y
+  // acabaría con alguien aflojando la prueba en vez del código. Lo que no puede estar es el `<` que abre
+  // etiqueta ni la comilla que cierra un atributo.
+  check(`🪤 el nombre de ${queEs} no puede meter etiquetas`, !/<img src=x/i.test(conAdjunto) && !/onerror="/i.test(conAdjunto), conAdjunto.slice(0, 200));
+}
+// Y el identificador, que acaba en un atributo y de ahí en una dirección.
+const conIdSucio = burbuja?.({
+  role: 'user', author: 'customer', content: 'x', ts: 0,
+  media: { id: '" onerror="robar()', tipo: 'documento', nombre: 'a', bytes: 1 },
+}) ?? ' onerror=';
+check('🪤 ni el identificador del archivo', !/onerror="/i.test(conIdSucio), conIdSucio.slice(0, 200));
 
 // ---------- Las cabeceras que le quitan alcance a cualquier fallo ----------
 for (const [nombre, r] of [

@@ -39,6 +39,7 @@ import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes,
 import { apagarClaveDelCliente, claveDelCliente, encenderClaveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente } from '../motores.js';
 import { borrarDocumento, documentosDelNegocio, guardarCatalogo, guardarDocumento } from '../rag/documentos.js';
 import { leerAdjunto } from '../crm/adjuntos.js';
+import { cuantoOcupa as cuantoOcupanLosMedios, guardar as guardarMedio, rutaDe as rutaDeMedio, MAXIMO_BYTES, MIMES_ACEPTADOS } from '../crm/medios.js';
 import { darDeAlta } from '../crm/alta.js';
 import { borrarRespuestaRapida, buscarRespuestaRapida, guardarRespuestaRapida, respuestasRapidas } from '../crm/respuestas-rapidas.js';
 import { temasDelMaterial } from '../crm/aprender-temas.js';
@@ -306,6 +307,66 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       return c.json({ error: (err as Error).message }, 500);
     }
   });
+
+  /**
+   * Responder con un archivo: la foto de un traje, el portafolio en PDF.
+   *
+   * Va aparte de `/reply` porque llega como formulario y no como JSON. El archivo se guarda primero —así queda
+   * en la conversación aunque el envío falle— y después se entrega por el canal del cliente.
+   */
+  app.post('/admin/api/contacts/:id/adjunto', async (c) => {
+    const id = c.req.param('id');
+    const contact = getContact(id);
+    if (!contact) return c.json({ error: 'no existe' }, 404);
+    const form = await c.req.parseBody().catch(() => null);
+    const archivo = form?.archivo;
+    if (!archivo || typeof archivo !== 'object' || !('arrayBuffer' in archivo)) return c.json({ error: 'falta el archivo' }, 400);
+    const f = archivo as File;
+    const texto = String(form?.texto ?? '').trim();
+    const by = String(form?.by ?? '').trim().slice(0, 40) || 'equipo';
+    if (!replyWindow(id).open) return c.json({ error: WINDOW_CLOSED }, 409);
+    let medio;
+    try {
+      medio = guardarMedio(new Uint8Array(await f.arrayBuffer()), { mime: f.type, nombre: f.name });
+    } catch (err) {
+      // Lo que rechaza el almacén lo rechaza por una razón que se puede leer: se la pasamos tal cual.
+      return c.json({ error: (err as Error).message }, 400);
+    }
+    if (!contact.humanMode) setHumanMode(id, true, by); // mandar algo a mano toma el control, igual que responder
+    try {
+      await sendToContact(id, texto, 'human', { by, medio });
+      return c.json({ ok: true, medio });
+    } catch (err) {
+      // 🪤 El archivo ya se guardó y el mensaje ya está en la conversación: NO se borra. Que el envío falle no
+      // significa que no haya pasado nada — el equipo tiene que ver qué intentó mandar para poder reintentarlo.
+      return c.json({ error: (err as Error).message, medio }, 500);
+    }
+  });
+
+  /**
+   * Bajar un archivo de la conversación.
+   *
+   * 🪤 Siempre como descarga y con `nosniff`. Servirlo para que se abra dentro del tablero significa que un
+   * archivo que mandó un desconocido se ejecuta en el mismo dominio donde vive la sesión de quien atiende. El
+   * tipo lo ponemos nosotros, nunca el que venía en el archivo.
+   */
+  app.get('/admin/api/medios/:mid', (c) => {
+    const mid = c.req.param('mid');
+    const ruta = rutaDeMedio(mid);
+    if (!ruta) return c.json({ error: 'no existe' }, 404);
+    const nombre = (c.req.query('nombre') || mid).replace(/[^\w.\- ]/g, '').slice(0, 120) || mid;
+    return new Response(new Uint8Array(readFileSync(ruta)), {
+      headers: {
+        'content-type': 'application/octet-stream',
+        'content-disposition': `attachment; filename="${nombre}"`,
+        'x-content-type-options': 'nosniff',
+        'cache-control': 'private, max-age=300',
+      },
+    });
+  });
+
+  /** Cuánto disco llevan los archivos de este cliente: para verlo antes de que sea un problema. */
+  app.get('/admin/api/medios', (c) => c.json({ ...cuantoOcupanLosMedios(), maximoPorArchivo: MAXIMO_BYTES, tipos: MIMES_ACEPTADOS }));
 
   app.post('/admin/api/contacts/:id/analyze', async (c) => {
     const id = c.req.param('id');

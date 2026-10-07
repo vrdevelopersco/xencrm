@@ -3,6 +3,7 @@ import { business } from '../config.js';
 import { aprenderDeLaRespuesta } from './historial.js';
 import { appendMessage, type Author } from '../agent/memory.js';
 import { getContact, updateContact } from './contacts.js';
+import type { Medio } from './medios.js';
 import { emitEvent } from './events.js';
 import { getDb } from '../rag/store.js';
 
@@ -29,7 +30,11 @@ export function replyWindow(userId: string, now = Date.now()): ReplyWindow {
 export const WINDOW_CLOSED =
   'WhatsApp no deja escribirle ahora: pasaron más de 24 horas desde su último mensaje. Para retomar hace falta una plantilla aprobada por Meta, o esperar a que vuelva a escribir.';
 
-export type Sender = (userId: string, text: string) => Promise<void>;
+/**
+ * Cómo un canal entrega un mensaje. El adjunto es opcional: los canales que no sepan mandarlo lo ignoran y el
+ * texto llega igual, que es mejor que no llegar nada.
+ */
+export type Sender = (userId: string, text: string, medio?: Medio | null) => Promise<void>;
 const senders = new Map<string, Sender>();
 
 /** Cada canal registra cómo entregar un texto a un usuario suyo. */
@@ -103,19 +108,27 @@ export function conFirma(text: string, author: Author, canal: string): string {
   return quien ? `*${quien}:* ${text}` : text;
 }
 
-export async function sendToContact(userId: string, text: string, author: Author = 'human', opts: { by?: string } = {}): Promise<void> {
+export async function sendToContact(
+  userId: string,
+  text: string,
+  author: Author = 'human',
+  opts: { by?: string; medio?: Medio | null } = {},
+): Promise<void> {
   const c = getContact(userId);
   if (!c) throw new Error(`contacto ${userId} no existe`);
   // Se revisa antes de guardar nada: un mensaje que Meta va a rechazar no debe aparecer como enviado.
   if (!replyWindow(userId).open) throw new Error(WINDOW_CLOSED);
   const send = senders.get(c.channel);
   const by = opts.by?.trim() || undefined;
-  const id = appendMessage(userId, 'assistant', text, undefined, author, by);
-  emitEvent('message', userId, { id, role: 'assistant', author, by: by ?? null, content: text, ts: Date.now() });
+  const medio = opts.medio ?? null;
+  const id = appendMessage(userId, 'assistant', text, undefined, author, by, medio);
+  emitEvent('message', userId, { id, role: 'assistant', author, by: by ?? null, content: text, ts: Date.now(), media: medio });
   updateContact(userId, { unread: 0 }, { silent: true });
   // Lo que contesta una persona enseña cómo atiende este negocio: entra al material de aprendizaje. Del propio
   // asistente no se aprende nada (ver crm/historial.ts).
-  if (author === 'human') {
+  // 🪤 De un mensaje que es solo un archivo no se aprende nada: el pie «te mando el portafolio» no enseña a
+  // atender, y mete ruido en el material del que sale el estilo del negocio.
+  if (author === 'human' && !medio) {
     try {
       aprenderDeLaRespuesta(userId, text, by ?? '');
     } catch (err) {
@@ -126,5 +139,5 @@ export async function sendToContact(userId: string, text: string, author: Author
     console.warn(`[outbox] el canal ${c.channel} no tiene emisor registrado; el mensaje quedó guardado`);
     return;
   }
-  await send(userId, conFirma(text, author, c.channel));
+  await send(userId, conFirma(text, author, c.channel), medio);
 }

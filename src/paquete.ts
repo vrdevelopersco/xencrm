@@ -310,7 +310,9 @@ let puertoConsola = puertoBase + clientes.length;
 
 clientes.forEach((c, i) => {
   const mio = join(datos, c.slug);
-  for (const sub of ['', 'data', 'auth', 'catalogo', 'conocimiento']) mkdirSync(join(mio, sub), { recursive: true });
+  // 'medios' es donde quedan las fotos y los documentos del chat. Hermano de 'data' a propósito: así sobrevive
+  // a cada despliegue igual que la base, y el respaldo —que es un JSON— no carga con megas de archivos.
+  for (const sub of ['', 'data', 'auth', 'catalogo', 'conocimiento', 'medios']) mkdirSync(join(mio, sub), { recursive: true });
   // La configuración viaja en el paquete con las rutas de la máquina donde se armó: aquí se reescriben.
   //
   // 🪤 Si el cliente ya tiene la suya en los datos, manda ESA: ahí están los cambios que hicieron desde el

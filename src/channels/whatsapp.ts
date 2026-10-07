@@ -1,6 +1,7 @@
 import makeWASocket, {
   Browsers,
   DisconnectReason,
+  downloadMediaMessage,
   isJidGroup,
   isJidNewsletter,
   isJidStatusBroadcast,
@@ -14,7 +15,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import qrcode from 'qrcode-terminal';
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { business, env } from '../config.js';
 import { aprenderDeLaRespuesta, contactosDelHistorial, guardarImportados, ultimosDeChat } from '../crm/historial.js';
@@ -22,6 +23,7 @@ import { appendMessage, touchUser } from '../agent/memory.js';
 import { getContact, setHumanMode, updateContact } from '../crm/contacts.js';
 import { emitEvent } from '../crm/events.js';
 import { anotarCursor, cursores } from '../crm/wa-cursor.js';
+import { guardar, rutaDe, seAcepta, type Medio } from '../crm/medios.js';
 import { anotarParticipante, quienEsQuien } from '../crm/grupo-gente.js';
 import { handleMessage } from '../agent/agent.js';
 import { conFirma, registerSender } from '../crm/outbox.js';
@@ -50,8 +52,41 @@ let wanted = false;
 // Los mensajes que salieron de aiva por este socket: WhatsApp los devuelve marcados como propios y, sin esta
 // lista, se guardarían otra vez como si los hubiera escrito una persona.
 const enviadosPorAiva = new Set<string>();
-async function mandar(sock: WASocket, jid: string, texto: string): Promise<void> {
-  const enviado = await sock.sendMessage(jid, { text: texto });
+/**
+ * Qué se le entrega a Baileys según lo que haya que mandar.
+ *
+ * 🪤 Una imagen o un video llevan el texto como PIE, no como mensaje aparte. Mandar dos mensajes —la foto y
+ * luego el texto— le llega al cliente como dos notificaciones y en WhatsApp se ven desparejados; peor aún, si
+ * el segundo falla se queda con una foto sin explicación. Un documento sí lleva su nombre, porque es lo que se
+ * ve antes de abrirlo.
+ */
+function contenidoPara(texto: string, medio?: Medio | null): Parameters<WASocket['sendMessage']>[1] {
+  if (!medio) return { text: texto };
+  const ruta = rutaDe(medio.id);
+  // 🪤 Si el archivo ya no está, se manda el texto igual. Quedarse callado porque falta un adjunto deja al
+  // cliente esperando una respuesta que una persona ya escribió.
+  if (!ruta) {
+    console.error('[whatsapp] el archivo', medio.id, 'ya no está en disco; va solo el texto');
+    return { text: texto };
+  }
+  const datos = readFileSync(ruta);
+  const pie = texto?.trim() ? { caption: texto } : {};
+  if (medio.tipo === 'imagen') return { image: datos, mimetype: medio.mime, ...pie };
+  if (medio.tipo === 'video') return { video: datos, mimetype: medio.mime, ...pie };
+  if (medio.tipo === 'audio') return { audio: datos, mimetype: medio.mime };
+  return { document: datos, mimetype: medio.mime, fileName: medio.nombre, ...pie };
+}
+
+/**
+ * Manda un mensaje, con archivo o sin él.
+ *
+ * 🪤 El archivo se lee de disco AQUÍ y se manda como bytes, no como una dirección. Baileys también acepta una
+ * URL y sería menos código, pero eso hace que WhatsApp entre a buscarla a nuestro servidor: dejaría de haber
+ * medios privados, porque cualquiera con el enlace los bajaría sin pasar por el tablero.
+ */
+async function mandar(sock: WASocket, jid: string, texto: string, medio?: Medio | null): Promise<void> {
+  const contenido = contenidoPara(texto, medio);
+  const enviado = await sock.sendMessage(jid, contenido);
   const id = enviado?.key?.id;
   if (id) {
     enviadosPorAiva.add(id);
@@ -141,8 +176,8 @@ export async function startWhatsApp(): Promise<WASocket> {
   current = sock;
 
   sock.ev.on('creds.update', saveCreds);
-  registerSender('whatsapp', async (userId, text) => {
-    await mandar(sock, userId.replace(/^wa:/, ''), text);
+  registerSender('whatsapp', async (userId, text, medio) => {
+    await mandar(sock, userId.replace(/^wa:/, ''), text, medio);
   });
 
   sock.ev.on('connection.update', (u) => {
@@ -201,7 +236,12 @@ export async function startWhatsApp(): Promise<WASocket> {
 
   sock.ev.on('messages.upsert', ({ messages, type }) => {
     if (type !== 'notify') return;
-    for (const m of messages) onMessage(sock, m);
+    // 🪤 En serie y esperando cada uno: ahora onMessage baja archivos, y dos mensajes a la vez del mismo chat
+    // se adelantarían el uno al otro —la foto quedaría anotada después del texto que la acompañaba—. El orden
+    // de una conversación es parte de lo que significa.
+    void (async () => {
+      for (const m of messages) await onMessage(sock, m);
+    })();
   });
 
   // Lo que ya estaba conversado cuando vincularon el número. Solo se lee y se guarda aparte: no se responde nada,
@@ -382,7 +422,7 @@ async function proponerEnGrupo(sock: WASocket, m: WAMessage, jid: string, texto:
   }
 }
 
-function onMessage(sock: WASocket, m: WAMessage) {
+async function onMessage(sock: WASocket, m: WAMessage) {
   if (!m.message) return;
   const losGrupos = grupos('whatsapp');
   if (m.key.fromMe) {
@@ -421,10 +461,19 @@ function onMessage(sock: WASocket, m: WAMessage) {
   const key = m.key;
   const name = m.pushName ?? undefined;
 
+  // Un archivo: foto, documento, nota de voz, video. Se guarda y queda en la conversación para el equipo.
+  //
+  // 🪤 Esto va ANTES de rendirse con «solo leo texto». Esa frase se la llevaba el cliente que mandaba la foto
+  // de referencia que el propio asistente le acababa de pedir, y era la peor secuencia posible: pedir algo y
+  // contestar que no se sabe recibir. Ahora el archivo se guarda aunque el asistente no sepa mirarlo: el equipo
+  // sí lo ve en el tablero, que es lo que hace falta para atender.
+  const conArchivo = await recibirArchivo(sock, m, jid, text, name);
+  if (conArchivo) return;
+
   if (text === null) {
-    // 🪤 Audio, imagen sin texto, sticker… Esto contestaba SIEMPRE, incluso con el canal en «solo escuchar»,
-    // porque estaba antes de mirarlo. Y en un negocio de verdad media clientela manda notas de voz: el modo
-    // aprendizaje se delataba justo ahí, con un mensaje de robot en una conversación que llevaba una persona.
+    // 🪤 Lo que queda aquí es lo que no sabemos guardar: pegatinas, contactos, ubicaciones. Y esto contestaba
+    // SIEMPRE, incluso con el canal en «solo escuchar», porque estaba antes de mirarlo — el modo aprendizaje se
+    // delataba justo ahí, con un mensaje de robot en una conversación que llevaba una persona.
     if (soloEscucha('whatsapp')) return;
     void sock.readMessages([key]);
     void mandar(sock, jid, 'Por ahora solo puedo leer mensajes de texto 🙂 ¿Me lo escribes?');
@@ -472,6 +521,65 @@ async function flush(sock: WASocket, jid: string) {
 }
 
 /** Devuelve el texto del mensaje, o null si no es un mensaje de texto (audio, sticker...). */
+/**
+ * El trozo del mensaje que trae un archivo, si lo trae, con su tipo y su nombre.
+ *
+ * 🪤 Se mira dentro de los sobres (efímero, ver una vez, documento con pie). Un archivo que llega en un chat
+ * con mensajes temporales es un archivo igual, y si no se desenvuelve se pierde sin que nadie se entere.
+ */
+function archivoDe(message: proto.IMessage): { mime: string; nombre: string } | null {
+  const inner =
+    message.ephemeralMessage?.message ??
+    message.viewOnceMessage?.message ??
+    message.viewOnceMessageV2?.message ??
+    message.documentWithCaptionMessage?.message ??
+    message;
+  const img = inner.imageMessage;
+  if (img?.mimetype) return { mime: img.mimetype, nombre: `foto-${new Date().toISOString().slice(0, 10)}` };
+  const doc = inner.documentMessage;
+  if (doc?.mimetype) return { mime: doc.mimetype, nombre: doc.fileName ?? 'documento' };
+  const vid = inner.videoMessage;
+  if (vid?.mimetype) return { mime: vid.mimetype, nombre: `video-${new Date().toISOString().slice(0, 10)}` };
+  const aud = inner.audioMessage;
+  if (aud?.mimetype) return { mime: aud.mimetype, nombre: aud.ptt ? 'nota de voz' : 'audio' };
+  return null;
+}
+
+/**
+ * Baja el archivo que vino, lo guarda y lo deja anotado en la conversación.
+ *
+ * Devuelve true si el mensaje era un archivo y ya quedó atendido.
+ *
+ * 🪤 Si el archivo trae texto —el pie de la foto, «mira este que me gustó»— ese texto SIGUE su camino normal y
+ * el asistente lo contesta. Lo que no puede pasar es que por guardar la foto se pierda lo que la acompañaba:
+ * ahí suele estar lo que de verdad pidió el cliente.
+ */
+async function recibirArchivo(sock: WASocket, m: WAMessage, jid: string, texto: string | null, nombreDeQuien?: string): Promise<boolean> {
+  const info = m.message ? archivoDe(m.message) : null;
+  if (!info) return false;
+  const userId = `wa:${jid}`;
+  if (!seAcepta(info.mime)) {
+    // Una pegatina o un tipo que no manejamos: que siga el camino de siempre.
+    return false;
+  }
+  try {
+    const datos = (await downloadMediaMessage(m, 'buffer', {})) as Buffer;
+    const medio = guardar(datos, { mime: info.mime, nombre: info.nombre });
+    touchUser(userId, 'whatsapp', nombreDeQuien ?? null);
+    const descripcion = texto?.trim() || `[${medio.tipo}] ${medio.nombre}`;
+    const id = appendMessage(userId, 'user', descripcion, undefined, 'customer', undefined, medio);
+    emitEvent('message', userId, { id, role: 'user', author: 'customer', content: descripcion, ts: Date.now(), media: medio });
+    console.log(`[whatsapp] archivo recibido de ${jid}: ${medio.tipo} ${medio.bytes} bytes`);
+  } catch (err) {
+    // 🪤 Que falle la descarga no puede dejar al cliente sin respuesta ni romper el flujo: se anota que llegó
+    // algo y que no se pudo bajar, para que el equipo lo pida de nuevo sabiendo qué pasó.
+    console.error('[whatsapp] no pude bajar el archivo:', err);
+    appendMessage(userId, 'user', '[llegó un archivo que no se pudo descargar]', undefined, 'customer');
+  }
+  // Con pie de foto, el texto sigue su curso y lo contesta el asistente. Sin pie, ya está todo hecho.
+  return texto === null;
+}
+
 function extractText(message: proto.IMessage): string | null {
   const inner =
     message.ephemeralMessage?.message ??

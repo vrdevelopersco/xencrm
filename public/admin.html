@@ -141,6 +141,30 @@ textarea{resize:vertical;min-height:70px}
 .bubble.bot{align-self:flex-end;background:var(--bot);border-bottom-right-radius:4px}
 .bubble.human{align-self:flex-end;background:var(--human);border-bottom-right-radius:4px}
 .bubble .who{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+
+/* Los archivos del chat: la foto que mandó el cliente y el documento que le mandó el equipo. */
+figure.adj{margin:0 0 6px;max-width:260px}
+figure.adj img{display:block;width:100%;height:auto;max-height:280px;object-fit:cover;border-radius:10px;
+  border:1px solid var(--line);background:var(--bg);cursor:zoom-in;min-height:60px}
+figure.adj figcaption{font-size:11.5px;color:var(--muted);margin-top:4px;word-break:break-word}
+.adj-roto{font-size:12.5px;color:var(--muted);padding:10px 12px;border:1px dashed var(--line);border-radius:10px;margin-bottom:6px}
+/* Un documento es un botón: se baja al tocarlo, y se ve que se puede tocar. */
+.adj-archivo{display:flex;align-items:center;gap:9px;width:100%;margin-bottom:6px;text-align:left;
+  background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;
+  font:inherit;color:inherit;min-height:44px}
+.adj-archivo:hover{border-color:var(--brand)}
+.adj-archivo .ic-adj{font-size:17px;line-height:1}
+.adj-archivo .n{flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adj-archivo .p{font-size:11.5px;color:var(--muted);white-space:nowrap}
+/* Lo que está a punto de mandarse, antes de darle a Enviar. */
+.adj-listo{display:flex;align-items:center;gap:9px;background:var(--bg);border:1px solid var(--line);
+  border-radius:10px;padding:7px 10px;margin-bottom:6px;font-size:13px}
+/* 🪤 `display:flex` le gana a lo que el navegador hace con [hidden], así que sin esta línea el chip del archivo
+   se ve siempre —vacío y con su botón de Quitar— aunque nadie haya escogido nada. Pasó, y se vio en la captura
+   antes que en ninguna prueba: es el mismo tropiezo que ya está arriba en .propuesta y .login. */
+.adj-listo[hidden]{display:none}
+.adj-listo .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#adj-btn{min-height:44px}
 .bubble .ts{display:block;font-size:10px;color:var(--muted);margin-top:4px;text-align:right}
 .sysline{align-self:center;font-size:12px;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:999px;padding:3px 10px}
 /* La propuesta: se lee como lo que es —algo escrito y todavía no dicho—, con el color del asistente. */
@@ -1135,6 +1159,13 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
             <div class="ch-warn" id="window-warn" role="status" hidden></div>
             <div class="hint" id="composer-hint">Aiva está respondiendo esta conversación. Cambia a <b>Tú</b> para escribir.</div>
             <textarea id="reply" placeholder="Escribe tu respuesta… (Enter envía, Shift+Enter salto)" hidden></textarea>
+            <!-- Lo que se va a mandar con el mensaje, si escogieron algo. Se ve antes de enviar y se puede quitar. -->
+            <div class="adj-listo" id="adj-listo" hidden>
+              <span class="ic-adj">📎</span><span class="n" id="adj-nombre"></span>
+              <button class="btn sm" id="adj-quitar" title="Quitar el archivo">Quitar</button>
+            </div>
+            <input type="file" id="adj-file" hidden>
+            <button class="btn sm" id="adj-btn" hidden title="Adjuntar una foto o un documento">📎 Adjuntar</button>
             <button class="btn primary" id="send" hidden>Enviar</button>
           </div>
         </div>

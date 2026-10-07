@@ -260,6 +260,9 @@ function migrate(d: DatabaseSync) {
   const messages = cols('messages');
   if (!messages.has('author')) d.exec("ALTER TABLE messages ADD COLUMN author TEXT NOT NULL DEFAULT 'bot'");
   if (!messages.has('by')) d.exec('ALTER TABLE messages ADD COLUMN by TEXT');
+  // El archivo que acompaña a un mensaje (una foto, un PDF). Aquí solo va a cuál apunta —identificador, tipo,
+  // nombre y tamaño—; el archivo vive en la carpeta del cliente. Ver crm/medios.ts.
+  if (!messages.has('media')) d.exec('ALTER TABLE messages ADD COLUMN media TEXT');
 }
 
 function loadVectors() {
