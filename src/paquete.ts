@@ -614,6 +614,16 @@ function quienEscucha() {
   return Object.keys(visto).length ? visto : 'no se pudo mirar (no es Linux) o no hay nada abierto en esos puertos';
 }
 
+/** Lo que se espera a que el de adentro ACEPTE la conexión. Eso sí es inmediato: o está o no está. */
+const CONECTAR_MS = 4000;
+/**
+ * Lo que se le deja para contestar una vez conectado.
+ *
+ * Dos minutos es mucho más de lo que tarda cualquier modelo y sigue siendo finito: un proceso de verdad
+ * colgado libera la petición en vez de retenerla para siempre, que era lo que el reloj original evitaba.
+ */
+const PENSAR_MS = 120000;
+
 /** Lo último que se supo de cada puerto de adentro, para /_salud. */
 let ultimoSondeo = null;
 
@@ -810,9 +820,23 @@ const servidor = http.createServer(async (pide, responde) => {
           r.pipe(responde); // sin buffer: así el chat en vivo (SSE) sigue llegando mensaje a mensaje
         },
       );
-      // Un proceso que no rechaza pero tampoco contesta dejaba la petición esperando para siempre: el navegador
-      // en blanco y nada en los registros. Cuatro segundos y se da por fallido, que es lo que ya sabemos tratar.
-      salida.setTimeout(4000, () => salida.destroy(new Error('no contestó a tiempo')));
+      // 🪤 Dos relojes, y la diferencia es la que rompió una prueba con un cliente delante.
+      //
+      // Había uno solo, de cuatro segundos, para que un proceso que acepta la conexión y luego no dice nada no
+      // dejara la petición colgada para siempre. El problema: ese reloj también corría mientras el asistente
+      // PENSABA. Un saludo lo contesta el modelo liviano en menos de dos segundos y pasaba; una pregunta
+      // concreta —"necesito un esmoquin verde"— va al modelo pesado, tarda más de cuatro, y el enrutador
+      // cortaba la conexión. El cliente veía "No pude conectar", y lo peor: la respuesta SÍ se generó y se
+      // pagó. En el registro de gasto quedaba la llamada; en el chat, un error.
+      //
+      // Así que el reloj corto se queda para CONECTAR —que es lo único que debe ser inmediato— y en cuanto la
+      // conexión está hecha se le da al de adentro el tiempo que de verdad necesita para pensar.
+      salida.setTimeout(CONECTAR_MS, () => salida.destroy(new Error('no contestó a tiempo')));
+      salida.on('socket', (enchufe) => {
+        const yaConecto = () => salida.setTimeout(PENSAR_MS);
+        if (enchufe.connecting) enchufe.once('connect', yaConecto);
+        else yaConecto();
+      });
       salida.on('error', () => {
         if (quedan > 0 && sinCuerpo) {
           setTimeout(() => intentar(quedan - 1), 400);

@@ -109,7 +109,14 @@ check('🪤 se reintenta antes de rendirse', /const intentar = \(quedan\)/.test(
 check('🪤 solo se reintenta lo que no lleva cuerpo', /const sinCuerpo = pide\.method === 'GET' \|\| pide\.method === 'HEAD';/.test(arranque));
 check('y lo que se ve es una pantalla, no texto pelado', /const ARRANCANDO = \[/.test(arranque) && /text\/html; charset=utf-8'/.test(arranque));
 // 🪤 Un proceso que ni rechaza ni contesta dejaba la petición esperando para siempre.
-check('🪤 el reparto tiene reloj…', /salida\.setTimeout\(4000/.test(arranque));
+// 🪤 DOS relojes, y la diferencia costó una prueba con un cliente delante. Con uno solo de cuatro segundos,
+// ese reloj corría también mientras el asistente pensaba: un saludo pasaba y «necesito un esmoquin verde» —que
+// va al modelo pesado— se cortaba. El cliente veía «No pude conectar» y la respuesta se había generado y
+// pagado igual. El corto es para conectar; el largo, para pensar.
+check('🪤 el reparto tiene reloj para CONECTAR…', /salida\.setTimeout\(CONECTAR_MS/.test(arranque) && /CONECTAR_MS = 4000/.test(arranque));
+check('🪤 …y otro, mucho mayor, para PENSAR', /salida\.setTimeout\(PENSAR_MS\)/.test(arranque) && /PENSAR_MS = 120000/.test(arranque),
+  'volvió a haber un solo reloj: el modelo pesado no cabe en cuatro segundos');
+check('y el largo arranca cuando la conexión está hecha, no antes', /enchufe\.once\('connect', yaConecto\)/.test(arranque));
 // …pero se quita al contestar: el chat en vivo se queda abierto a propósito.
 check('…y se le quita en cuanto contesta, por el chat en vivo', /salida\.setTimeout\(0\);/.test(arranque));
 
