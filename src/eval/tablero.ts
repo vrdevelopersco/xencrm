@@ -253,5 +253,21 @@ check('y el rol sale de quien entró por la consola', /window\.AIVA_ROL/.test(me
 // esconder el botón no protegería nada. Es orden de pantalla, no un cerrojo.
 check('sin rol (token a secas) se ve todo', /return !r \|\| r === 'super' \|\| r === 'admin'/.test(menus), 'cambió la regla de quién es admin');
 
+// 🪤 Ninguna clase nueva puede repetir el nombre de una que ya exista en esta hoja. Pasó con `.paleta`: la
+// búsqueda global y los colores de la marca compartían nombre, y el `flex-wrap:wrap` del segundo mandaba los
+// resultados a una columna nueva, FUERA del diálogo. Se veía una caja en blanco con todo medido y «visible»
+// según el DOM. Una colisión de nombres no da error: da una pantalla que miente.
+//
+// Repetir una clase a propósito sí vale —el mismo componente se reestiliza en capas, como `.seg`: la base, la
+// piel de vidrio y la versión final—. Lo que no vale es que DOS COSAS DISTINTAS compartan nombre. Como eso no
+// se distingue leyendo el archivo, las intencionales van en esta lista: añadir una obliga a pensar si de
+// verdad es la misma cosa, que es justo la pregunta que no se hizo con `.paleta`.
+const ENCAPAS = new Set(['seg']);
+const clasesConDisplay = [...html.matchAll(/^\.([a-z][a-z0-9-]*)\{[^}]*display:/gm)].map((m) => m[1]!);
+const repetidas = [...new Set(clasesConDisplay.filter((c, i) => clasesConDisplay.indexOf(c) !== i))].filter((c) => !ENCAPAS.has(c));
+check('🪤 ninguna clase nueva repite el nombre de otra', repetidas.length === 0,
+  `se repiten: ${repetidas.join(', ')} — si son el mismo componente en capas, ponlo en ENCAPAS; si no, cámbiale el nombre a uno`);
+check('la búsqueda global no se llama como los colores de la marca', /dialog\.buscador\{/.test(html) && !/dialog\.paleta\{/.test(html));
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

@@ -164,6 +164,39 @@ figure.adj figcaption{font-size:11.5px;color:var(--muted);margin-top:4px;word-br
    antes que en ninguna prueba: es el mismo tropiezo que ya está arriba en .propuesta y .login. */
 .adj-listo[hidden]{display:none}
 
+/* La búsqueda global. Lleva el vidrio de la casa: es lo que la hace nuestra y no de una plantilla.
+   🪤 Se llama «buscador» y NO «paleta» porque ya existe un `.paleta` en esta hoja —los colores de la marca—
+   definido más abajo. Compartir nombre le colaba un `flex-wrap:wrap`, y en una columna eso no envuelve: manda
+   los hijos a una COLUMNA NUEVA, fuera del diálogo. El resultado era una caja en blanco con los resultados
+   medidos, visibles y con color correcto según el DOM, pero dibujados a 600 px a la derecha. */
+/* 🪤 Columna flex, no bloque. Con el bloque, el pie quedaba flotando a media altura en cuanto la lista llegaba
+   a su tope de alto: se vio en una captura y no lo habría dicho ninguna prueba.
+   🪤 Y SIN overflow:hidden aquí. Un elemento con backdrop-filter y overflow:hidden a la vez deja de pintar su
+   contenido en Chrome —el diálogo salía en blanco con los resultados dentro, medidos y visibles según el DOM—.
+   El recorte no hace falta: lo que podía desbordar ya se recorta solo (la lista scrollea, y las esquinas las
+   redondean el campo de arriba y el pie de abajo). Comprobado con y sin aceleración: no era cosa del headless. */
+dialog.buscador{border:0;padding:0;border-radius:16px;width:min(620px,94vw);margin-top:12vh;
+  display:flex;flex-direction:column;max-height:76vh;
+  background:var(--glass-strong);border:1px solid var(--glass-border);
+  box-shadow:var(--glass-shadow),var(--rim);backdrop-filter:blur(18px) saturate(1.3);color:var(--text)}
+dialog.buscador:not([open]){display:none}
+dialog.buscador::backdrop{background:rgba(16,24,40,.42);backdrop-filter:blur(2px)}
+#pal-q{flex:0 0 auto;width:100%;border:0;border-bottom:1px solid var(--glass-border);background:transparent;color:var(--text);
+  font:inherit;font-size:17px;padding:16px 18px;outline:none;border-radius:16px 16px 0 0}
+#pal-q::placeholder{color:var(--muted)}
+#pal-res{flex:1;min-height:0;overflow:auto;padding:6px}
+#pal-res:empty{display:none}
+.pal-i{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;border:0;color:inherit;
+  font:inherit;padding:10px 12px;border-radius:10px;cursor:pointer;min-height:44px}
+.pal-i:hover,.pal-i[aria-selected="true"]{background:var(--glass)}
+.pal-i .n{font-weight:600;font-size:14.5px}
+.pal-i .d{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pal-i .col{flex:1;min-width:0}
+.pal-i mark{background:var(--brand-soft,rgba(37,99,235,.18));color:inherit;border-radius:3px;padding:0 2px}
+.pal-grupo{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 12px 4px}
+.pal-pie{flex:0 0 auto;border-top:1px solid var(--glass-border);border-radius:0 0 16px 16px;padding:8px 14px;font-size:11.5px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pal-pie kbd{font:inherit;font-size:11px;border:1px solid var(--glass-border);border-radius:5px;padding:1px 5px;background:var(--glass)}
+
 /* Trazabilidad */
 #view-trazas .sec{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:22px 0 10px}
 .tz-tabla{width:100%;border-collapse:collapse;font-size:14px}
@@ -1069,6 +1102,8 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
       <button class="rb" data-view="calendar" data-tip="Calendario" aria-label="Calendario"><i class="ic" data-ic="calendar"></i><span class="badge" id="badge-cal"></span></button>
       <button class="rb" data-view="pipeline" data-tip="Prospectos" aria-label="Prospectos"><i class="ic" data-ic="columns"></i></button>
       <button class="rb" data-view="clientes" data-tip="Clientes" aria-label="Clientes"><i class="ic" data-ic="users"></i></button>
+      <button class="rb" data-view="ventas" data-tip="Ventas" aria-label="Ventas"><i class="ic" data-ic="venta"></i></button>
+      <button class="rb" data-view="seguimientos" data-tip="Seguimientos" aria-label="Seguimientos"><i class="ic" data-ic="volver"></i><span class="badge" id="badge-seg"></span></button>
       <button class="rb" data-view="analysis" data-tip="Análisis" aria-label="Análisis"><i class="ic" data-ic="chart"></i></button>
     </nav>
     <div class="spacer"></div>
@@ -1308,6 +1343,25 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
 
     <!-- Conocimiento -->
     <!-- Trazabilidad: lo que cuesta y por dónde se va. Fuera del día a día a propósito. -->
+    <!-- Búsqueda global: Ctrl/Cmd + K desde cualquier pantalla. -->
+    <dialog id="dlg-buscar" class="buscador">
+      <input id="pal-q" type="search" placeholder="Buscar a alguien, o algo que haya dicho…" autocomplete="off" aria-label="Buscar">
+      <div id="pal-res" role="listbox"></div>
+      <div class="pal-pie"><kbd>↑</kbd><kbd>↓</kbd> moverse · <kbd>Enter</kbd> abrir · <kbd>Esc</kbd> cerrar</div>
+    </dialog>
+
+    <section class="view" id="view-ventas">
+      <div class="topbar"><h1>Ventas</h1><span class="grow"></span>
+        <div class="tabs" id="ven-dias"><button data-d="30">30 días</button><button class="on" data-d="90">90 días</button><button data-d="365">Un año</button></div>
+      </div>
+      <div class="pad"><div class="kpis" id="ven-kpis"></div><div id="ven-lista"></div></div>
+    </section>
+
+    <section class="view" id="view-seguimientos">
+      <div class="topbar"><h1>Seguimientos</h1><span class="grow"></span><span class="small muted" id="seg-resumen"></span></div>
+      <div class="pad"><div id="seg-lista"></div></div>
+    </section>
+
     <section class="view" id="view-trazas">
       <div class="topbar"><h1>Trazabilidad</h1><span class="grow"></span>
         <div class="tabs" id="tz-dias"><button data-d="1">Hoy</button><button class="on" data-d="7">7 días</button><button data-d="30">30 días</button><button data-d="90">90 días</button></div>

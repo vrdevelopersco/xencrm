@@ -12,7 +12,7 @@ import { retratoDelNegocio } from '../rag/retrato.js';
 import { cerrarPropuesta, propuestaDe, propuestasPendientes, verPropuesta } from '../crm/propuestas.js';
 import { genteDelGrupo } from '../crm/grupo-gente.js';
 import { getMessages } from '../agent/memory.js';
-import { contactNumber, deleteContact, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
+import { contactNumber, deleteContact, rolDe, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
 import { availableSlots, bookAppointment, formatSlot, listAppointments, setReminder, updateAppointment } from '../crm/appointments.js';
 import { llevaArchivos, replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
@@ -381,6 +381,69 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     if (!getContact(id)) return c.json({ error: 'no existe' }, 404);
     await analyzeContact(id, { full: true });
     return c.json({ contact: getContact(id), analyses: listAnalyses(id, 1) });
+  });
+
+  /**
+   * Ventas: quién compró, por cuánto y cuándo.
+   *
+   * 🪤 El «cuándo» sale del EVENTO que movió la ficha a ganado, no de la última vez que escribió. Son cosas
+   * distintas y se notan en cuanto alguien mira un mes: quien compró en agosto y volvió a escribir ayer
+   * aparecería como venta de ayer, y el mes cerraría mal.
+   */
+  app.get('/admin/api/ventas', (c) => {
+    const dias = Math.min(365, Math.max(1, Number(c.req.query('days') ?? 90)));
+    const desde = Date.now() - dias * 86400_000;
+    const ganadas = listContacts({ limit: 2000 }).filter((x) => !x.archived && rolDe(x.stage) === 'ganado');
+    const filas = ganadas
+      .map((x) => {
+        const cerro = listEvents(x.id, 200)
+          .filter((e) => e.type === 'stage' && rolDe(String(e.payload.to ?? '') as Stage) === 'ganado')
+          .pop();
+        const cuando = cerro?.ts ?? x.lastSeen ?? x.firstSeen ?? 0;
+        return { id: x.id, nombre: x.name, phone: contactNumber(x), canal: x.channel, cuando, valor: valorDe(x), resumen: x.summary };
+      })
+      .filter((v) => v.cuando >= desde)
+      .sort((a, b) => b.cuando - a.cuando);
+    const total = filas.reduce((a, v) => a + v.valor.valor, 0);
+    return c.json({
+      dias,
+      total,
+      cuantas: filas.length,
+      // 🪤 Cuántas no tienen precio se dice aparte: un total que calla eso parece el total de verdad.
+      sinPrecio: filas.filter((v) => !v.valor.valor).length,
+      promedio: filas.length ? total / filas.filter((v) => v.valor.valor).length || 0 : 0,
+      ventas: filas.slice(0, 200),
+    });
+  });
+
+  /**
+   * Seguimientos: a quién hay que escribirle y por qué.
+   *
+   * Es la misma lista que sale en Hoy, pero entera y con el motivo. En Hoy va recortada a veinte porque ahí
+   * compite con todo lo demás; aquí es lo único que hay que mirar.
+   */
+  app.get('/admin/api/seguimientos', (c) => {
+    const now = Date.now();
+    const abiertos = listContacts({ limit: 2000 }).filter((x) => !x.archived && !estaCerrada(x.stage));
+    const conCita = new Set(
+      listAppointments({ from: now, status: 'confirmada', limit: 1000 }).map((a) => a.userId),
+    );
+    const esperandoResultado = new Set(
+      listAppointments({ from: now - 14 * 86400_000, to: now, status: 'confirmada', limit: 1000 })
+        .filter((a) => a.endsAt < now)
+        .map((a) => a.userId),
+    );
+    const filas = abiertos
+      .filter((x) => !conCita.has(x.id) && !esperandoResultado.has(x.id) && (x.lastMessageAt ?? 0) < now - 24 * 3600_000 && !isSnoozed(x, now))
+      .map((x) => {
+        const callado = Math.round((now - (x.lastMessageAt ?? x.lastSeen ?? now)) / 86400_000);
+        // El motivo en una frase: sin esto la lista es un montón de nombres y nadie sabe por cuál empezar.
+        const porque = x.scoreBase >= 60 ? `Puntaje ${x.scoreBase} y lleva ${callado} día${callado === 1 ? '' : 's'} callado` : `Lleva ${callado} día${callado === 1 ? '' : 's'} sin escribir`;
+        return { id: x.id, nombre: x.name, phone: contactNumber(x), canal: x.channel, etapa: x.stage, puntaje: x.scoreBase, callado, porque, resumen: x.summary, valor: valorDe(x) };
+      })
+      // Primero los que más valen la pena: puntaje alto y poco tiempo callados se enfrían rápido.
+      .sort((a, b) => b.puntaje - a.puntaje || a.callado - b.callado);
+    return c.json({ cuantos: filas.length, calientes: filas.filter((f) => f.puntaje >= 60).length, seguimientos: filas.slice(0, 200) });
   });
 
   app.get('/admin/api/appointments', (c) => {

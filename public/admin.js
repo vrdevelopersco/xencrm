@@ -33,6 +33,9 @@
 
   // ---------- íconos (monocromos, el color de estado queda para los chips) ----------
   var ICONS = {
+    // Ventas: un billete. Seguimientos: una flecha que vuelve, que es justo lo que es.
+    venta: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
+    volver: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
     message: '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/>',
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
@@ -404,7 +407,7 @@
   var CFG_VIEWS = { agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1 };
   // 🪤 En las pantallas de configuración el panel decía lo mismo que el título de la página, dos veces en la
   // misma fila. Aquí dice el ÁREA —dónde estás— y la lista de abajo dice la pantalla: cada uno aporta algo.
-  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Prospectos', clientes: 'Clientes', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración', trazas: 'Configuración' };
+  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Prospectos', clientes: 'Clientes', ventas: 'Ventas', seguimientos: 'Seguimientos', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración', trazas: 'Configuración' };
   function pintarPanel(view) {
     var panel = $('subnav');
     if (!panel) return;
@@ -448,6 +451,8 @@
     // pestaña «Información» marcada pero sin su caja de cargar documentos, que es justo lo que se viene a hacer.
     if (view === 'knowledge') pestanaSabe(state.kind || 'knowledge');
     if (view === 'trazas') cargarTrazas(state.tzDias || 7);
+    if (view === 'ventas') cargarVentas(state.venDias || 90);
+    if (view === 'seguimientos') cargarSeguimientos();
   }
 
   // ---------- bandeja ----------
@@ -2815,6 +2820,169 @@
   };
 
 
+  // ---------- Búsqueda global (Ctrl/Cmd + K) ----------
+  //
+  // 🪤 Busca lo mismo que la lista de Conversaciones —nombre, teléfono y lo que dijeron— y por eso reutiliza su
+  // ruta en vez de inventar otra. Dos búsquedas distintas en el mismo producto acaban dando resultados
+  // distintos para lo mismo, y el día que pasa nadie vuelve a confiar en ninguna de las dos.
+  var palSel = 0;
+  var palItems = [];
+  var palTimer = null;
+
+  function abrirPaleta() {
+    var d = $('dlg-buscar');
+    if (d.open) return;
+    $('pal-q').value = '';
+    $('pal-res').innerHTML = '';
+    palItems = [];
+    d.showModal();
+    $('pal-q').focus();
+  }
+
+  function pintarPaleta(lista, q) {
+    palItems = lista;
+    palSel = 0;
+    if (!lista.length) {
+      $('pal-res').innerHTML = '<div class="pal-grupo">' + (q ? 'Nadie con eso' : '') + '</div>';
+      return;
+    }
+    $('pal-res').innerHTML = '<div class="pal-grupo">' + lista.length + (lista.length === 1 ? ' resultado' : ' resultados') + '</div>' +
+      lista.map(function (c, i) {
+        // 🪤 `hit` es el mensaje donde apareció lo buscado —{role, content, ts}—, no una cadena. Pintarlo tal
+        // cual dejaba un «[object Object]» en cada fila: se ve en cuanto se abre y aun así hay que mirarlo.
+        var trozo = c.hit && c.hit.content ? c.hit.content : c.summary || '';
+        var sub = [c.phone ? '+' + c.phone : '', resaltar(trozo, q)].filter(Boolean).join(' · ');
+        return '<button class="pal-i" role="option" data-i="' + i + '" aria-selected="' + (i === 0) + '">' +
+          '<i class="ic" data-ic="' + (c.channel === 'whatsapp' ? 'message' : 'user') + '"></i>' +
+          '<span class="col"><span class="n">' + esc(nameOf(c)) + '</span><span class="d">' + sub + '</span></span></button>';
+      }).join('');
+    iconos($('pal-res'));
+    Array.prototype.forEach.call($('pal-res').querySelectorAll('.pal-i'), function (b) {
+      b.onclick = function () { abrirDeLaPaleta(Number(b.dataset.i)); };
+    });
+  }
+
+  /**
+   * Lo buscado, marcado dentro del trozo donde apareció.
+   *
+   * 🪤 Se escapa PRIMERO y se marca después, sobre el texto ya escapado. Al revés —marcar y luego escapar— el
+   * propio <mark> saldría escrito en pantalla; y marcar sin escapar deja que el mensaje de un cliente meta
+   * etiquetas en el tablero, que es el agujero que esta casa ya tapó una vez.
+   */
+  function resaltar(texto, q) {
+    var limpio = esc(String(texto || '').slice(0, 120));
+    if (!q) return limpio;
+    var aguja = esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return limpio.replace(new RegExp('(' + aguja + ')', 'ig'), '<mark>$1</mark>');
+  }
+
+  function abrirDeLaPaleta(i) {
+    var c = palItems[i];
+    if (!c) return;
+    $('dlg-buscar').close();
+    go('inbox');
+    openContact(c.id);
+  }
+
+  function moverPaleta(paso) {
+    if (!palItems.length) return;
+    palSel = (palSel + paso + palItems.length) % palItems.length;
+    Array.prototype.forEach.call($('pal-res').querySelectorAll('.pal-i'), function (b, i) {
+      b.setAttribute('aria-selected', String(i === palSel));
+      if (i === palSel) b.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  $('pal-q').addEventListener('input', function () {
+    var q = $('pal-q').value.trim();
+    clearTimeout(palTimer);
+    if (q.length < 2) { pintarPaleta([], ''); return; }
+    // Se espera a que deje de escribir: una consulta por tecla satura al servidor y hace parpadear la lista.
+    palTimer = setTimeout(function () {
+      api('/contacts?q=' + encodeURIComponent(q)).then(function (r) {
+        if ($('pal-q').value.trim() !== q) return; // llegó tarde: ya escribió otra cosa
+        pintarPaleta((r || []).slice(0, 12), q);
+      });
+    }, 180);
+  });
+
+  $('pal-q').addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); moverPaleta(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); moverPaleta(-1); }
+    else if (e.key === 'Enter') { e.preventDefault(); abrirDeLaPaleta(palSel); }
+  });
+
+  // 🪤 El atajo se escucha en captura y comprueba que no haya un diálogo encima: sin eso, Cmd+K dentro de la
+  // ficha abriría la búsqueda por detrás del modal y quedaría escribiendo en un campo que no se ve.
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      var abierto = document.querySelector('dialog[open]');
+      if (abierto && abierto.id !== 'dlg-buscar') return;
+      abrirPaleta();
+    }
+  }, true);
+
+  // ---------- Ventas ----------
+  function cargarVentas(dias) {
+    state.venDias = dias;
+    Array.prototype.forEach.call($('ven-dias').children, function (b) { b.classList.toggle('on', Number(b.dataset.d) === dias); });
+    $('ven-lista').innerHTML = '<div class="small muted">Cargando…</div>';
+    api('/ventas?days=' + dias).then(function (d) {
+      $('ven-kpis').innerHTML =
+        tarjeta(plata(d.total || 0), 'vendido en ' + (dias === 365 ? 'un año' : dias + ' días')) +
+        tarjeta(String(d.cuantas || 0), d.cuantas === 1 ? 'venta' : 'ventas') +
+        tarjeta(d.promedio ? plata(Math.round(d.promedio)) : '—', 'promedio por venta') +
+        // 🪤 Cuántas no tienen precio se enseña al lado del total. Sin esto, un total bajo parece un mal mes
+        // cuando lo que pasa es que al catálogo le faltan precios: dos problemas muy distintos.
+        tarjeta(String(d.sinPrecio || 0), 'sin precio todavía');
+      $('ven-lista').innerHTML = (d.ventas || []).length
+        ? '<div class="envoltura"><table class="tz-tabla"><thead><tr><th>Quién</th><th>Qué quería</th><th>Cuándo</th><th class="num">Valor</th></tr></thead><tbody>' +
+          d.ventas.map(function (v) {
+            return '<tr><td><button class="quien" data-id="' + esc(v.id) + '">' + esc(nameOf({ id: v.id, name: v.nombre, channel: v.canal })) + '</button>' +
+              (v.phone ? '<div class="dato">+' + esc(v.phone) + '</div>' : '') + '</td>' +
+              '<td class="quiere">' + esc(v.resumen || '—') + '</td>' +
+              '<td class="small muted">' + (v.cuando ? new Date(v.cuando).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '—') + '</td>' +
+              '<td class="num">' + (v.valor && v.valor.valor ? plata(v.valor.valor) : '<span class="muted">sin precio</span>') + '</td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<div class="empty">Todavía no hay ventas en este periodo. Una ficha cuenta como venta cuando pasa a la etapa de ganado.</div>';
+      engancharFichas($('ven-lista'));
+    });
+  }
+
+  // ---------- Seguimientos ----------
+  function cargarSeguimientos() {
+    $('seg-lista').innerHTML = '<div class="small muted">Cargando…</div>';
+    api('/seguimientos').then(function (d) {
+      var n = d.cuantos || 0;
+      $('seg-resumen').textContent = n ? n + (n === 1 ? ' persona esperando' : ' personas esperando') + (d.calientes ? ' · ' + d.calientes + ' calientes' : '') : '';
+      var badge = $('badge-seg');
+      if (badge) { badge.textContent = d.calientes || ''; badge.style.display = d.calientes ? '' : 'none'; }
+      $('seg-lista').innerHTML = (d.seguimientos || []).length
+        ? '<div class="envoltura"><table class="tz-tabla"><thead><tr><th>Quién</th><th>Por qué</th><th>Qué quería</th><th class="num">Puntaje</th><th></th></tr></thead><tbody>' +
+          d.seguimientos.map(function (f) {
+            return '<tr><td><button class="quien" data-id="' + esc(f.id) + '">' + esc(nameOf({ id: f.id, name: f.nombre, channel: f.canal })) + '</button>' +
+              (f.phone ? '<div class="dato">+' + esc(f.phone) + '</div>' : '') + '</td>' +
+              '<td class="small">' + esc(f.porque) + '</td>' +
+              '<td class="quiere">' + esc(f.resumen || '—') + '</td>' +
+              '<td class="num">' + (f.puntaje || 0) + '</td>' +
+              '<td><button class="btn sm" data-escribir="' + esc(f.id) + '">Escribirle</button></td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<div class="empty">Nadie esperando. Todo el mundo tiene cita, acaba de escribir, o ya está pospuesto.</div>';
+      engancharFichas($('seg-lista'));
+      Array.prototype.forEach.call($('seg-lista').querySelectorAll('[data-escribir]'), function (b) {
+        b.onclick = function () { go('inbox'); openContact(b.dataset.escribir); };
+      });
+    });
+  }
+
+  /** Abrir la ficha desde cualquier tabla que liste gente. */
+  function engancharFichas(raiz) {
+    Array.prototype.forEach.call(raiz.querySelectorAll('.quien[data-id]'), function (b) {
+      b.onclick = function () { abrirPerfil(b.dataset.id); };
+    });
+  }
+
   // ---------- Trazabilidad ----------
   var TAREAS = {
     light: 'Responder (liviano)', heavy: 'Responder (pesado)', gate: 'Clasificar la entrada',
@@ -2859,6 +3027,9 @@
   function tarjeta(n, p) { return '<div class="kpi"><span class="n">' + esc(n) + '</span><span class="p">' + esc(p) + '</span></div>'; }
   Array.prototype.forEach.call($('tz-dias').children, function (b) {
     b.onclick = function () { cargarTrazas(Number(b.dataset.d)); };
+  });
+  Array.prototype.forEach.call($('ven-dias').children, function (b) {
+    b.onclick = function () { cargarVentas(Number(b.dataset.d)); };
   });
 
   function etiquetaEtapa(id) {
