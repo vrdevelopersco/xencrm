@@ -224,7 +224,7 @@ const PUERTO_MANDO = puertoBase - 1;
 let soyElDueno = false;
 let mandoDe = '';
 let cerrando = false;
-function levantar(slug, guion, env, puerto) {
+function levantar(slug, guion, env, puerto, esLaConsola) {
   if (cerrando) return;
   const antes = hijos.get(slug);
   // 🪤 Además del puerto, un socket de archivo. Es la puerta que no pasa por la red: en el servidor los cuatro
@@ -244,12 +244,17 @@ function levantar(slug, guion, env, puerto) {
       h.ultimaCaida = Date.now();
     }
     console.error('[aiva] ' + slug + ' se cayó (' + code + '); lo levanto en 5 s');
-    setTimeout(() => levantar(slug, guion, env, puerto), 5000);
+    // 🪤 Se vuelve a pasar esLaConsola. Sin esto, la bandera se perdía en el primer reinicio: el proceso
+    // volvía igual de bien pero /_salud empezaba a preguntarle por un servicio que no tiene, y a partir de ahí
+    // enseñaba una alarma permanente por algo que funcionaba. Una bandera que no sobrevive al reinicio es una
+    // bandera que miente justo después de la primera avería.
+    setTimeout(() => levantar(slug, guion, env, puerto, esLaConsola), 5000);
   });
   rutas.set(slug, puerto);
   hijos.set(slug, {
     puerto,
     hijo,
+    esLaConsola: Boolean(esLaConsola),
     pid: hijo.pid,
     desde: Date.now(),
     arranques: (antes && antes.arranques ? antes.arranques : 0) + 1,
@@ -612,6 +617,35 @@ function quienEscucha() {
 /** Lo último que se supo de cada puerto de adentro, para /_salud. */
 let ultimoSondeo = null;
 
+/**
+ * Le pregunta a un cliente si SIRVE, no si respira.
+ *
+ * 🪤 Con reloj corto y sin tumbar nada si no contesta. Esto se pide justo cuando algo va mal, y un /_salud que
+ * se cuelga esperando al proceso averiguado es exactamente el diagnóstico que no se puede hacer. Si no hay
+ * respuesta en dos segundos, se dice eso mismo y se sigue con los demás: saber que uno no contesta ya es un
+ * dato, y es mejor que no tener ninguno.
+ */
+function preguntarServicio(puerto) {
+  return new Promise((res) => {
+    const puerta = comoLlego(puerto);
+    const r = http.request(conDestino(puerta, puerto, { path: '/_servicio', method: 'GET' }), (resp) => {
+      let cuerpo = '';
+      resp.setEncoding('utf8');
+      resp.on('data', (t) => { if (cuerpo.length < 20000) cuerpo += t; });
+      resp.on('end', () => {
+        try {
+          res(JSON.parse(cuerpo));
+        } catch {
+          res({ veredicto: 'contestó algo que no entiendo', avisos: [] });
+        }
+      });
+    });
+    r.setTimeout(2000, () => { r.destroy(); res({ veredicto: 'no contestó a tiempo', avisos: ['El proceso vive pero no contesta: puede estar ahogado.'] }); });
+    r.on('error', (e) => res({ veredicto: 'no se le llega (' + (e.code || e.message) + ')', avisos: [] }));
+    r.end();
+  });
+}
+
 const losDeAdentro = () =>
   // Sin repetidos: la consola estaba dos veces en esta lista (por su puerto y como hijo), así que el recuento
   // decía «5 de 5» cuando adentro hay cuatro. Un número que no cuadra hace dudar del diagnóstico entero.
@@ -645,7 +679,7 @@ async function esperarALosDeAdentro(maxMs = 30000) {
   }
 }
 
-const servidor = http.createServer((pide, responde) => {
+const servidor = http.createServer(async (pide, responde) => {
     const camino = (pide.url || '/').split('?')[0];
     if (PORTADA && (camino === '/' || camino === '/index.html')) {
       responde.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' });
@@ -699,7 +733,9 @@ const servidor = http.createServer((pide, responde) => {
               slug,
               por: porDondeVa.has(puerto) ? nombreDePuerta(porDondeVa.get(puerto)) : 'no se le llega',
             })),
-        adentro: [...hijos.entries()].map(([slug, h]) => ({
+        // 🪤 Se le pregunta a cada uno EN PARALELO y con reloj. En serie, cuatro clientes ahogados son ocho
+        // segundos de espera para quien está intentando averiguar por qué el sitio no va.
+        adentro: await Promise.all([...hijos.entries()].map(async ([slug, h]) => ({
           slug,
           puerto: conToken ? h.puerto : undefined,
           pid: conToken ? h.pid : undefined,
@@ -710,7 +746,14 @@ const servidor = http.createServer((pide, responde) => {
           caidas: h.caidas,
           ultimoCodigo: h.ultimoCodigo === undefined ? null : h.ultimoCodigo,
           ultimaCaida: h.ultimaCaida ? new Date(h.ultimaCaida).toISOString() : null,
-        })),
+          // Si de verdad está atendiendo: WhatsApp, los motores, por dónde entrega y cuándo entró el último
+          // mensaje. Un proceso vivo con el número desvinculado contesta a todo menos a los clientes.
+          // 🪤 A la consola NO se le pregunta: es la pantalla de quien administra, no un cliente que atiende,
+          // y no tiene esa puerta. Preguntándole salía «contestó algo que no entiendo» en cada /_salud — una
+          // línea de alarma permanente por algo que funciona bien, que es la forma más rápida de que la gente
+          // deje de leer el diagnóstico entero.
+          servicio: h.esLaConsola || !(h.hijo && h.hijo.exitCode === null) ? null : await preguntarServicio(h.puerto),
+        }))),
       };
       // Una línea que diga qué mirar primero, para no tener que interpretar el resto.
       const muertos = cuerpo.adentro.filter((x) => !x.vivo);
@@ -725,7 +768,14 @@ const servidor = http.createServer((pide, responde) => {
             ? 'Hay procesos reiniciándose en bucle (' + reinician.map((x) => x.slug).join(', ') + '). Suele ser memoria o un error al arrancar.'
             : muertos.length
               ? 'Falta ' + muertos.map((x) => x.slug).join(', ') + '.'
-              : 'Todo arriba.';
+              // 🪤 «Todo arriba» con un cliente que no puede atender es la frase que costó una mañana. Los
+              // procesos pueden estar perfectos y el negocio llevar días sin recibir un mensaje: si alguno
+              // avisa de algo, eso es lo que hay que leer, no el recuento de procesos.
+              : (function () {
+                  const conAvisos = cuerpo.adentro.filter((x) => x.servicio && x.servicio.avisos && x.servicio.avisos.length);
+                  if (!conAvisos.length) return 'Todo arriba y atendiendo.';
+                  return 'Los procesos están bien, pero ' + conAvisos.map((x) => x.slug + ': ' + x.servicio.avisos[0]).join(' · ');
+                })();
       responde.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
       responde.end(JSON.stringify(cuerpo, null, 2));
       return;
@@ -808,7 +858,7 @@ async function levantarALosMios() {
   paraLevantar.forEach((h, i) => {
     const puerto = h.esLaConsola ? puertoConsola : puertoInterno + i;
     const env = h.esLaConsola ? { ...h.env, CONSOLA_PORT: String(puerto) } : h.env;
-    levantar(h.slug, h.guion, env, puerto);
+    levantar(h.slug, h.guion, env, puerto, Boolean(h.esLaConsola));
   });
   // El índice que usa la consola para hablarles tiene que apuntar a los puertos de verdad, no a los de ayer.
   escribirIndiceDeClientes();

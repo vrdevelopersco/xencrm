@@ -80,6 +80,24 @@ check('🪤 la puerta de servicio se abre antes que el puerto', fuenteWeb.indexO
   'dentro del callback de serve() solo existe cuando el puerto funciona, que es justo cuando no hace falta');
 check('y no abrir el puerto ya no tumba al proceso', /servidor\.on\('error'/.test(fuenteWeb));
 
+// 🪤 /_salud tiene que decir si los clientes SIRVEN, no solo si respiran. «Todo arriba» con un número de
+// WhatsApp desvinculado es la frase que deja a un negocio una semana sin atender a nadie mientras por fuera
+// todo se ve perfecto. Se le pregunta a cada hijo, y lo que diga manda sobre el recuento de procesos.
+check('🪤 /_salud le pregunta a cada cliente si está atendiendo', /function preguntarServicio/.test(arranque) && /servicio: h\.esLaConsola/.test(arranque),
+  'volvió a reportar solo procesos vivos');
+// 🪤 Pero a la consola no: no es un cliente que atiende y no tiene esa puerta. Preguntándole, cada /_salud
+// salía con una línea de alarma permanente por algo que funciona bien.
+check('y a la consola no, que no es un cliente', /h\.esLaConsola \|\|/.test(arranque), 'le pregunta también a la consola');
+// 🪤 Y la bandera sobrevive al reinicio. Se perdía en el respawn, así que tras la primera caída /_salud
+// empezaba a quejarse de la consola para siempre.
+check('🪤 y esa marca sobrevive a un reinicio del proceso', /levantar\(slug, guion, env, puerto, esLaConsola\)/.test(arranque),
+  'el respawn la pierde: tras la primera caída vuelve a preguntarle a la consola');
+check('y con reloj, para no colgarse esperando al que está averiado', /r\.setTimeout\(2000/.test(arranque));
+check('🪤 y el veredicto deja de decir «todo arriba» si alguno avisa', /Todo arriba y atendiendo/.test(arranque) && /conAvisos/.test(arranque),
+  'el recuento de procesos volvió a mandar sobre lo que dicen los clientes');
+const fuenteSalud = readFileSync(new URL('../salud.ts', import.meta.url), 'utf8');
+check('y lo que contesta cada cliente sale de medirlo, no de declararlo', /MAX\(ts\)/.test(fuenteSalud) && /accessSync/.test(fuenteSalud));
+
 // El sondeo tiene que decir POR QUÉ no contestan: «5 de 5 no contestaron» costó una mañana de registros.
 check('el sondeo dice el motivo de cada puerto que falla', /res\(e\.code \|\| e\.message/.test(arranque));
 

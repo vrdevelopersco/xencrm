@@ -14,6 +14,7 @@ import { getMessages } from '../agent/memory.js';
 import { getContact } from '../crm/contacts.js';
 import { onEvent } from '../crm/events.js';
 import { registerSender } from '../crm/outbox.js';
+import { saludDelCliente } from '../salud.js';
 import { anotarOrigen, deLaUrl } from '../crm/origen.js';
 import { atendiendoAhora } from '../crm/tiempos.js';
 import { burbujaDe, paraCadenaJs, ventanaDe } from '../crm/chat-config.js';
@@ -61,6 +62,15 @@ function clientIp(c: { req: { header: (h: string) => string | undefined }; env: 
 app.get('/health', (c) =>
   c.json({ ok: true, instance: INSTANCE, agent: business.agent.name, store: business.business.name, model: env.chatModel, mode: env.llmEngine, engines: engineStatus(), docs: countDocs() }),
 );
+
+/**
+ * Si este cliente SIRVE, para que el lanzador lo recoja en /_salud.
+ *
+ * 🪤 Sin token, igual que /_salud, y por eso lo que sale de aquí está elegido para que no le sirva a nadie
+ * para entrar: estados, cuentas y cuánto hace. Ni un número de teléfono, ni un trozo de conversación, ni una
+ * pista de la llave. Ver salud.ts, que es quien decide qué se puede contar.
+ */
+app.get('/_servicio', (c) => c.json(saludDelCliente()));
 
 /**
  * Para meter texto del negocio dentro del HTML de una página.

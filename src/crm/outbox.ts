@@ -57,6 +57,15 @@ export function llevaArchivos(channel: string): boolean {
   return conMedios.has(channel);
 }
 
+/** Por dónde se puede entregar algo ahora mismo, y quién además lleva archivos. Para el reporte de salud. */
+export function canalesQueEntregan(): { id: string; entrega: boolean; archivos: boolean }[] {
+  return [...new Set([...senders.keys(), ...conMedios])].sort().map((id) => ({
+    id,
+    entrega: senders.has(id),
+    archivos: conMedios.has(id),
+  }));
+}
+
 /**
  * Manda un texto por un canal **sin pasar por el CRM**: no crea ficha, no guarda el mensaje, no analiza nada.
  * Es para avisar al propio equipo (ver `crm/vigilante.ts`), no para hablar con clientes. Devuelve si salió.
