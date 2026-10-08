@@ -195,6 +195,31 @@ check('un identificador inventado no devuelve conversación de nadie', cuerpoAje
 const streamMalo = await publico.request('/api/stream?sessionId=x');
 check('ni se puede escuchar en vivo con uno inválido', streamMalo.status === 400, `dio ${streamMalo.status}`);
 
+// 🪤 Y los ARCHIVOS del chat del sitio, que es lo mismo pero peor: ahí va la foto que mandó un cliente o el
+// documento que le mandó el negocio. La sesión es lo único que identifica a cada quien —no hay cuenta ni
+// contraseña—, así que sin comprobar que ese archivo está en SU conversación, cualquiera con una sesión válida
+// probaría identificadores hasta bajarse los de los demás clientes del negocio.
+const { guardar: guardarMedio } = await import('../crm/medios.js');
+const { touchUser: tocar, appendMessage: anotar } = await import('../agent/memory.js');
+const miSesion = 'sesion-mia-' + Date.now();
+const suSesion = 'sesion-suya-' + Date.now();
+tocar('web:' + miSesion, 'web', 'Yo');
+tocar('web:' + suSesion, 'web', 'Otro');
+const suArchivo = guardarMedio(new Uint8Array(16).fill(7), { mime: 'image/png', nombre: 'lo suyo.png' });
+anotar('web:' + suSesion, 'assistant', 'te mando esto', undefined, 'human', 'equipo', suArchivo);
+
+const conSuSesion = await publico.request(`/api/medio/${suArchivo.id}?sessionId=${suSesion}`);
+check('el dueño sí puede bajar su archivo', conSuSesion.status === 200, `dio ${conSuSesion.status}`);
+const conMiSesion = await publico.request(`/api/medio/${suArchivo.id}?sessionId=${miSesion}`);
+check('🪤 con OTRA sesión válida, el archivo ajeno no existe', conMiSesion.status === 404, `dio ${conMiSesion.status}`);
+const sinSesion = await publico.request(`/api/medio/${suArchivo.id}`);
+check('y sin sesión, tampoco', sinSesion.status === 404, `dio ${sinSesion.status}`);
+const inventado = await publico.request(`/api/medio/${'a'.repeat(32)}.png?sessionId=${suSesion}`);
+check('un identificador inventado no devuelve nada', inventado.status === 404, `dio ${inventado.status}`);
+// 🪤 Y se entrega como descarga: un archivo que mandó un desconocido no se abre dentro de la página del negocio.
+check('🪤 el archivo se baja, no se abre en la página', conSuSesion.headers.get('x-content-type-options') === 'nosniff' && /attachment/.test(conSuSesion.headers.get('content-disposition') ?? ''),
+  `${conSuSesion.headers.get('content-disposition')} · ${conSuSesion.headers.get('x-content-type-options')}`);
+
 // ---------- 🪤 Lo que escribe un desconocido, en la pantalla de quien atiende ----------
 // El tablero pinta nombres, mensajes y resúmenes que escribió cualquiera por WhatsApp. Si eso llegara al DOM sin
 // escapar, un cliente cualquiera ejecutaría JavaScript en la sesión de quien atiende y se llevaría su token.

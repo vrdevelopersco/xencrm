@@ -15,6 +15,7 @@ import { getContact } from '../crm/contacts.js';
 import { onEvent } from '../crm/events.js';
 import { registerSender } from '../crm/outbox.js';
 import { saludDelCliente } from '../salud.js';
+import { rutaDe as rutaDeMedio } from '../crm/medios.js';
 import { anotarOrigen, deLaUrl } from '../crm/origen.js';
 import { atendiendoAhora } from '../crm/tiempos.js';
 import { burbujaDe, paraCadenaJs, ventanaDe } from '../crm/chat-config.js';
@@ -189,6 +190,34 @@ app.post('/api/chat', async (c) => {
 
 const SESSION_RE = /^[\w-]{8,64}$/;
 
+/**
+ * El archivo de un mensaje, para el cliente que está en el chat del sitio.
+ *
+ * 🪤 Solo se entrega si ese archivo está en SU conversación. La sesión es lo único que hay para identificarlo
+ * —no hay cuenta ni contraseña—, así que sin esta comprobación bastaría con tener cualquier sesión válida y
+ * probar identificadores para bajarse los archivos de otros clientes del negocio. Se pregunta a la base si ese
+ * medio aparece en un mensaje suyo; si no, no existe.
+ */
+app.get('/api/medio/:mid', (c) => {
+  const sessionId = c.req.query('sessionId') ?? '';
+  const mid = c.req.param('mid');
+  if (!SESSION_RE.test(sessionId)) return c.json({ error: 'no existe' }, 404);
+  const suyo = getMessages(`web:${sessionId}`, 200).some((m) => m.media?.id === mid);
+  if (!suyo) return c.json({ error: 'no existe' }, 404);
+  const ruta = rutaDeMedio(mid);
+  if (!ruta) return c.json({ error: 'ya no está' }, 404);
+  return new Response(new Uint8Array(readFileSync(ruta)), {
+    headers: {
+      // Como descarga y sin adivinar el tipo, igual que en el tablero: un archivo que mandó un desconocido no
+      // se abre dentro de la página del negocio.
+      'content-type': 'application/octet-stream',
+      'content-disposition': 'attachment',
+      'x-content-type-options': 'nosniff',
+      'cache-control': 'private, max-age=300',
+    },
+  });
+});
+
 // Historial de la conversación (el widget lo carga al abrir) y estado de atención.
 app.get('/api/history', (c) => {
   const sessionId = c.req.query('sessionId') ?? '';
@@ -197,7 +226,8 @@ app.get('/api/history', (c) => {
   const contact = getContact(userId);
   return c.json({
     human: Boolean(contact?.humanMode),
-    messages: getMessages(userId, 40).map((m) => ({ role: m.role, author: m.author, by: m.by, content: m.content, ts: m.ts })),
+    // El adjunto va con su mensaje: sin esto, el equipo manda una foto y el cliente ve un mensaje vacío.
+    messages: getMessages(userId, 40).map((m) => ({ role: m.role, author: m.author, by: m.by, content: m.content, ts: m.ts, media: m.media ?? null })),
   });
 });
 
@@ -228,7 +258,10 @@ app.get('/api/stream', (c) => {
 });
 
 // Las respuestas humanas al widget viajan por el stream; si el cliente no está conectado quedan en el historial.
-registerSender('web', async () => undefined);
+// 🪤 El chat del sitio no «envía»: el widget recoge lo que haya en la conversación. Por eso el emisor no hace
+// nada y aun así DECLARA que lleva archivos — lo que importa no es quién los empuja, es si el cliente acaba
+// viéndolos. Sin declararlo, el tablero escondía el botón de adjuntar en todas las conversaciones del sitio.
+registerSender('web', async () => undefined, { medios: true });
 
 mountAdmin(app);
 mountMeta(app);

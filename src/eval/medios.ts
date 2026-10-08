@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const base = mkdtempSync(join(tmpdir(), 'aiva-medios-'));
 process.env.DB_PATH = join(base, 'data', 'aiva.db');
-const { guardar, rutaDe, borrar, tipoDe, seAcepta, carpeta, cuantoOcupa, huella, MedioRechazado, MAXIMO_BYTES, MIMES_ACEPTADOS } =
+const { guardar, rutaDe, borrar, tipoDe, seAcepta, carpeta, cuantoOcupa, limpiar, MedioRechazado, MAXIMO_BYTES, MIMES_ACEPTADOS } =
   await import('../crm/medios.js');
 const { touchUser, appendMessage, getMessages } = await import('../agent/memory.js');
 
@@ -98,8 +98,26 @@ check('y no se deja engañar para borrar fuera', !borrar('../secreto.txt') && ex
 check('borrar dos veces no se queja', !borrar(a.id));
 check('la cuenta baja', cuantoOcupa().archivos === antes.archivos - 1);
 
-// La huella sirve para no guardar dos veces el mismo portafolio.
-check('el mismo contenido da la misma huella', huella(bytes(100)) === huella(bytes(100)) && huella(bytes(100)) !== huella(bytes(101)));
+// ---------- La escoba ----------
+// 🪤 Nadie borra estos archivos y nadie los mira: cada foto que manda un cliente se queda para siempre. En
+// disco compartido eso no falla esta semana, falla de golpe dentro de unos meses — y cuando el disco se llena
+// no se cae esto, se cae todo.
+const { utimesSync } = await import('node:fs');
+const viejo = guardar(bytes(300), { mime: 'image/png', nombre: 'de hace mucho.png' });
+const nuevo = guardar(bytes(300), { mime: 'image/png', nombre: 'de ayer.png' });
+const hace = (dias: number) => new Date(Date.now() - dias * 86400_000);
+utimesSync(rutaDe(viejo.id)!, hace(120), hace(120));
+utimesSync(rutaDe(nuevo.id)!, hace(3), hace(3));
+const barrido = limpiar(90);
+check('🪤 lo más viejo que el plazo se borra', barrido.borrados === 1 && rutaDe(viejo.id) === null, JSON.stringify(barrido));
+check('y lo reciente se queda', rutaDe(nuevo.id) !== null);
+check('dice cuánto liberó', barrido.bytes === 300, String(barrido.bytes));
+// 🪤 Se borra el archivo y se deja el mensaje: la conversación es el registro de lo que pasó y no se reescribe
+// para ahorrar disco. Quien abra ese mensaje verá que el archivo ya no está, que es la verdad.
+touchUser('wa:573009998877@s.whatsapp.net', 'whatsapp', 'Con archivo viejo');
+appendMessage('wa:573009998877@s.whatsapp.net', 'user', '[imagen] de hace mucho.png', undefined, 'customer', undefined, viejo);
+check('🪤 el mensaje sobrevive al archivo', getMessages('wa:573009998877@s.whatsapp.net', 10).some((m) => m.media?.id === viejo.id));
+check('un plazo de cero no borra nada', limpiar(0).borrados === 0 && rutaDe(nuevo.id) !== null);
 
 // ---------- En la conversación ----------
 const quien = 'wa:573001112233@s.whatsapp.net';

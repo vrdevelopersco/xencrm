@@ -60,6 +60,9 @@
   .aiva-close{margin-left:auto;background:none;border:0;color:' + ON + ';font-size:22px;cursor:pointer;line-height:1}\
   .aiva-msgs{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:8px;background:rgba(246,247,249,.6)}\
   .aiva-m{max-width:85%;padding:9px 12px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word}\
+  .aiva-adj{display:block;max-width:100%;max-height:260px;border-radius:10px;margin-bottom:6px;background:rgba(0,0,0,.06);min-height:48px}\
+  .aiva-adj-f{display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:9px 11px;border-radius:10px;\
+    background:rgba(0,0,0,.06);color:inherit;text-decoration:none;font-weight:600;font-size:13.5px;min-height:44px}\
   .aiva-m.bot{background:#fff;border-bottom-left-radius:4px;align-self:flex-start;box-shadow:0 1px 2px rgba(0,0,0,.08)}\
   .aiva-m.me{background:' + COLOR + ';color:' + ON + ';border-bottom-right-radius:4px;align-self:flex-end}\
   .aiva-m.human{border-left:3px solid ' + EDGE + '}\
@@ -147,7 +150,7 @@
     return fetch(BASE + '/api/history?sessionId=' + encodeURIComponent(sessionId))
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        (d.messages || []).forEach(function (m) { addMsg(m.content, m.role === 'user' ? 'me' : 'bot', m.author, m.by); });
+        (d.messages || []).forEach(function (m) { addMsg(m.content, m.role === 'user' ? 'me' : 'bot', m.author, m.by, m.media); });
         setHuman(!!d.human);
         return (d.messages || []).length > 0;
       })
@@ -182,15 +185,49 @@
       return '<a href="' + clean + '" target="_blank" rel="noopener">' + clean + '</a>' + u.slice(clean.length);
     }).replace(/\*([^*\n]+)\*/g, '<b>$1</b>');
   }
-  function addMsg(text, who, author, by) {
+  function addMsg(text, who, author, by, media) {
     var d = document.createElement('div');
     d.className = 'aiva-m ' + who + (author === 'human' ? ' human' : '');
-    d.innerHTML = who === 'bot' ? linkify(text) : esc(text);
+    d.innerHTML = (media ? adjunto(media) : '') + (who === 'bot' ? linkify(text) : esc(text));
+    if (media) ponerAdjunto(d, media);
     if (author === 'human') d.setAttribute('data-author', by ? by + ' · ' + STORE : 'Equipo · ' + STORE);
     msgs.appendChild(d);
     msgs.scrollTop = msgs.scrollHeight;
     return d;
   }
+  /**
+   * El archivo que mandó el negocio. Se pide con la sesión, que es lo único que identifica a este cliente.
+   *
+   * El nombre va escapado: lo escogió quien mandó el archivo, y aquí se pinta dentro de la página del negocio.
+   */
+  function adjunto(m) {
+    if (!m || !m.id) return '';
+    var n = esc(m.nombre || 'archivo');
+    if (m.tipo === 'imagen') return '<img class="aiva-adj" alt="' + n + '" data-mid="' + esc(m.id) + '">';
+    return '<a class="aiva-adj-f" href="#" data-mid="' + esc(m.id) + '">📄 ' + n + '</a>';
+  }
+  function urlDelMedio(id) {
+    return BASE + '/api/medio/' + encodeURIComponent(id) + '?sessionId=' + encodeURIComponent(sessionId);
+  }
+  function ponerAdjunto(d, m) {
+    var el = d.querySelector('[data-mid]');
+    if (!el) return;
+    // 🪤 Se baja a un blob en vez de poner la dirección en el src. La dirección lleva la sesión dentro, y una
+    // imagen con la sesión en su src se va al historial del navegador y al Referer de cualquier enlace que
+    // abra el cliente desde el chat. La sesión es lo único que protege su conversación.
+    fetch(urlDelMedio(m.id)).then(function (r) { return r.ok ? r.blob() : Promise.reject(r.status); })
+      .then(function (b) {
+        var u = URL.createObjectURL(b);
+        if (el.tagName === 'IMG') { el.src = u; return; }
+        el.onclick = function (e) {
+          e.preventDefault();
+          var a = document.createElement('a');
+          a.href = u; a.download = m.nombre || 'archivo'; a.click();
+        };
+      })
+      .catch(function () { el.replaceWith(document.createTextNode('(el archivo ya no está disponible)')); });
+  }
+
   function typing() {
     var d = document.createElement('div');
     d.className = 'aiva-m bot aiva-typing';

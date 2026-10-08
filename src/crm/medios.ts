@@ -9,7 +9,7 @@
 // propia carpeta, así que el aislamiento no hay que programarlo: es la misma frontera que ya separa sus
 // conversaciones. Poner los medios en un sitio común sería abrir un agujero entre inquilinos para ahorrarse una
 // variable.
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { env } from '../config.js';
@@ -164,7 +164,60 @@ export function cuantoOcupa(): { archivos: number; bytes: number } {
   return { archivos, bytes };
 }
 
-/** La huella de un archivo, para no guardar dos veces el mismo portafolio. */
-export function huella(datos: Uint8Array): string {
-  return createHash('sha256').update(datos).digest('hex').slice(0, 32);
+/**
+ * Borra los archivos más viejos que `dias`.
+ *
+ * Hace falta porque nadie los borra y nadie los mira: cada foto que manda un cliente se queda ahí para
+ * siempre. En un alojamiento compartido con disco contado eso no es un problema esta semana, es un problema
+ * dentro de unos meses y de golpe — y cuando el disco se llena no falla esto, falla todo.
+ *
+ * 🪤 Se borra el ARCHIVO y se deja el mensaje. La conversación es el registro de lo que pasó y no se toca:
+ * sigue diciendo que ese día entró una foto, y quien la abra verá que ya no está. Borrar también el mensaje
+ * sería reescribir la historia del cliente para ahorrar disco.
+ *
+ * 🪤 Y se mide por la fecha del archivo, no por la del mensaje. Son lo mismo casi siempre, pero el archivo es
+ * lo que ocupa, y preguntarle al disco por lo que hay en el disco evita que un desajuste entre la base y la
+ * carpeta deje huérfanos que nadie vuelve a contar.
+ */
+export function limpiar(dias: number, ahora = Date.now()): { borrados: number; bytes: number } {
+  if (!Number.isFinite(dias) || dias <= 0) return { borrados: 0, bytes: 0 };
+  const corte = ahora - dias * 86400_000;
+  const dir = carpeta();
+  let borrados = 0;
+  let bytes = 0;
+  for (const f of readdirSync(dir)) {
+    try {
+      const ruta = join(dir, f);
+      const s = statSync(ruta);
+      if (!s.isFile() || s.mtimeMs >= corte) continue;
+      bytes += s.size;
+      rmSync(ruta, { force: true });
+      borrados++;
+    } catch {
+      /* desapareció o no se deja borrar: no es motivo para abandonar el resto */
+    }
+  }
+  return { borrados, bytes };
+}
+
+/** Cuántos días se guardan los archivos. Se puede cambiar por cliente; 0 o menos = no se borra nada. */
+export const DIAS_QUE_SE_GUARDAN = Number(process.env.MEDIOS_DIAS ?? 90);
+
+let reloj: NodeJS.Timeout | null = null;
+/** Pasa la escoba una vez al día. Se llama al arrancar. */
+export function empezarALimpiar(dias = DIAS_QUE_SE_GUARDAN): void {
+  if (reloj || dias <= 0) return;
+  const barrer = () => {
+    try {
+      const r = limpiar(dias);
+      if (r.borrados) console.log(`[medios] borrados ${r.borrados} archivos de más de ${dias} días (${(r.bytes / 1048576).toFixed(1)} MB)`);
+    } catch (err) {
+      console.warn('[medios] no pude limpiar:', (err as Error).message);
+    }
+  };
+  reloj = setInterval(barrer, 24 * 3600_000);
+  reloj.unref();
+  // 🪤 Al arrancar se espera un minuto, no se barre de una. Lo primero que tiene que hacer el proceso es abrir
+  // el puerto —el alojamiento da tres segundos— y recorrer una carpeta con miles de archivos no cabe ahí.
+  setTimeout(barrer, 60_000).unref();
 }
