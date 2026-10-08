@@ -163,6 +163,15 @@ figure.adj figcaption{font-size:11.5px;color:var(--muted);margin-top:4px;word-br
    se ve siempre —vacío y con su botón de Quitar— aunque nadie haya escogido nada. Pasó, y se vio en la captura
    antes que en ninguna prueba: es el mismo tropiezo que ya está arriba en .propuesta y .login. */
 .adj-listo[hidden]{display:none}
+
+/* Trazabilidad */
+#view-trazas .sec{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:22px 0 10px}
+.tz-tabla{width:100%;border-collapse:collapse;font-size:14px}
+.tz-tabla th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+  font-weight:700;padding:0 10px 8px 0;border-bottom:1px solid var(--line)}
+.tz-tabla td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line)}
+.tz-tabla .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tz-tabla tr:hover td{background:var(--row-hover)}
 .adj-listo .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #adj-btn{min-height:44px}
 .bubble .ts{display:block;font-size:10px;color:var(--muted);margin-top:4px;text-align:right}
@@ -1298,6 +1307,21 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
     </dialog>
 
     <!-- Conocimiento -->
+    <!-- Trazabilidad: lo que cuesta y por dónde se va. Fuera del día a día a propósito. -->
+    <section class="view" id="view-trazas">
+      <div class="topbar"><h1>Trazabilidad</h1><span class="grow"></span>
+        <div class="tabs" id="tz-dias"><button data-d="1">Hoy</button><button class="on" data-d="7">7 días</button><button data-d="30">30 días</button><button data-d="90">90 días</button></div>
+      </div>
+      <div class="pad">
+        <div class="kpis" id="tz-kpis"></div>
+        <h2 class="sec">En qué se va</h2>
+        <div id="tz-tabla"></div>
+        <h2 class="sec">Los archivos del chat</h2>
+        <div id="tz-medios"></div>
+        <p class="small muted" id="tz-nota"></p>
+      </div>
+    </section>
+
     <section class="view" id="view-knowledge">
       <div class="topbar"><h1>Lo que sabe el agente</h1><span class="grow"></span><div class="tabs"><button class="on" data-kind="knowledge" id="k-kn">Información</button><button data-kind="product" id="k-pr">Productos</button><button data-kind="rapidas" id="k-ra">Respuestas rápidas</button><button data-kind="interno" id="k-in">Solo para el equipo</button></div></div>
       <div class="pad">

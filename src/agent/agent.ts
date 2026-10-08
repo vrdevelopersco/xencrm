@@ -21,6 +21,7 @@ import { canDeliver, sendToContact } from '../crm/outbox.js';
 import { emitEvent } from '../crm/events.js';
 import { scheduleAnalysis } from '../crm/analyzer.js';
 import { bookingStep, hasBookingInProgress, manageIntent, startBooking } from '../crm/booking.js';
+import type { Medio } from '../crm/medios.js';
 import { nextAppointmentFor } from '../crm/appointments.js';
 
 export type Channel = 'whatsapp' | 'meta' | 'web' | 'cli' | 'mcp';
@@ -36,6 +37,11 @@ export interface IncomingMessage {
    * Diciembre» se entiende y un número con arroba no.
    */
   grupo?: string;
+  /**
+   * El archivo que vino con el mensaje: la nota de voz que se transcribió, la foto con su pie. Se guarda junto
+   * al mensaje para que en la conversación quede el audio al lado de lo que decía. Ver crm/medios.ts.
+   */
+  media?: Medio | null;
   /**
    * Lo que se venía hablando ahí, con quién lo dijo. En un grupo la pregunta casi nunca se entiende sola: «¿y
    * eso cuánto vale?» depende de lo que otro preguntó tres mensajes antes, y de quién es cada quién.
@@ -97,11 +103,11 @@ export function handleMessage(msg: IncomingMessage): Promise<AgentReply> {
   return next;
 }
 
-function recordCustomerMessage(userId: string, text: string, intent?: string) {
-  const id = appendMessage(userId, 'user', text, intent, 'customer');
+function recordCustomerMessage(userId: string, text: string, intent?: string, media?: Medio | null) {
+  const id = appendMessage(userId, 'user', text, intent, 'customer', undefined, media ?? null);
   const c = getContact(userId);
   if (c) updateContact(userId, { unread: c.unread + 1 }, { silent: true });
-  emitEvent('message', userId, { id, role: 'user', author: 'customer', content: text, intent: intent ?? null, ts: Date.now() });
+  emitEvent('message', userId, { id, role: 'user', author: 'customer', content: text, intent: intent ?? null, ts: Date.now(), media: media ?? null });
 }
 
 function recordBotReply(userId: string, text: string) {
@@ -139,7 +145,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const anotarLaPregunta = (intent: Intent) => {
     if (preguntaAnotada) return;
     preguntaAnotada = true;
-    recordCustomerMessage(msg.userId, text, intent);
+    recordCustomerMessage(msg.userId, text, intent, msg.media);
   };
   const finish = (answer: string, intent: Intent, engine: AgentReply['engine'], extra: Partial<AgentReply> = {}): AgentReply => {
     if (crossNote === undefined) crossNote = contact ? crossChannelGreeting(msg.userId) : null;
@@ -182,7 +188,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // 🪤 Solo «mira» se corta aquí. «Propone» tiene que pasar por el modelo —ese es su trabajo— y se detiene
   // más abajo, en finish(), justo antes de hablar.
   if (modoCanal(msg.channel as ChannelId) === 'mira') {
-    recordCustomerMessage(msg.userId, text, 'humano');
+    recordCustomerMessage(msg.userId, text, 'humano', msg.media);
     scheduleAnalysis(msg.userId);
     console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} canal en solo escuchar, sin respuesta automática`);
     return { ...base, text: '', silent: true, intent: 'humano', engine: 'none', route: 'solo escuchar', ms: Date.now() - started };
@@ -197,7 +203,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // durante la demostración no debe gastar ni una llamada al modelo. Y `puedeContestar` devuelve true cuando no
   // hay prueba en marcha, así que esto no cambia nada para quien nunca lo use.
   if (!puedeContestar(msg.userId)) {
-    recordCustomerMessage(msg.userId, text, 'humano');
+    recordCustomerMessage(msg.userId, text, 'humano', msg.media);
     scheduleAnalysis(msg.userId);
     console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} fuera de la prueba en curso, sin respuesta automática`);
     return { ...base, text: '', silent: true, intent: 'humano', engine: 'none', route: 'modo prueba', ms: Date.now() - started };
@@ -205,7 +211,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
 
   // Una persona del equipo tiene la conversación: se registra y analiza, pero no se responde.
   if (contact?.humanMode) {
-    recordCustomerMessage(msg.userId, text, 'humano');
+    recordCustomerMessage(msg.userId, text, 'humano', msg.media);
     scheduleAnalysis(msg.userId);
     console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} en modo humano, sin respuesta automática`);
     return { ...base, text: '', silent: true, intent: 'humano', engine: 'none', route: 'modo humano', ms: Date.now() - started };

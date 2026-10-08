@@ -28,6 +28,7 @@ import { anotarParticipante, quienEsQuien } from '../crm/grupo-gente.js';
 import { handleMessage } from '../agent/agent.js';
 import { conFirma, registerSender } from '../crm/outbox.js';
 import { pick } from '../agent/prompts.js';
+import { transcribir } from '../llm/transcribir.js';
 import { grupos, propone, soloEscucha } from './switches.js';
 import { cierres, setStatus, status, whatsappStatus, type WhatsAppState } from './whatsapp-estado.js';
 
@@ -40,6 +41,8 @@ interface Pending {
   texts: string[];
   keys: WAMessageKey[];
   name?: string;
+  /** El audio de la nota que se transcribió, para que quede pegado al mensaje en la conversación. */
+  medio?: Medio;
   timer: NodeJS.Timeout;
 }
 // Agrupa mensajes seguidos del mismo cliente ("hola" + "tienen macetas?") en una sola respuesta.
@@ -492,9 +495,11 @@ async function onMessage(sock: WASocket, m: WAMessage) {
   // contestar que no se sabe recibir. Ahora el archivo se guarda aunque el asistente no sepa mirarlo: el equipo
   // sí lo ve en el tablero, que es lo que hace falta para atender.
   const conArchivo = await recibirArchivo(sock, m, jid, text, name);
-  if (conArchivo) return;
+  // Una nota de voz transcrita sigue como si la hubieran escrito: entra al mismo camino que cualquier mensaje.
+  const transcrito = typeof conArchivo === 'object' ? conArchivo : null;
+  if (conArchivo && !transcrito) return;
 
-  if (text === null) {
+  if (text === null && !transcrito) {
     // 🪤 Lo que queda aquí es lo que no sabemos guardar: pegatinas, contactos, ubicaciones. Y esto contestaba
     // SIEMPRE, incluso con el canal en «solo escuchar», porque estaba antes de mirarlo — el modo aprendizaje se
     // delataba justo ahí, con un mensaje de robot en una conversación que llevaba una persona.
@@ -504,14 +509,17 @@ async function onMessage(sock: WASocket, m: WAMessage) {
     return;
   }
 
+  // Lo que sigue: lo que escribió, o lo que dijo en la nota de voz.
+  const loDicho = transcrito ? transcrito.texto : (text as string);
   const p = pending.get(jid);
   if (p) {
     clearTimeout(p.timer);
-    p.texts.push(text);
+    p.texts.push(loDicho);
     p.keys.push(key);
+    if (transcrito) p.medio = transcrito.medio;
     p.timer = setTimeout(() => void flush(sock, jid), env.debounceMs);
   } else {
-    pending.set(jid, { texts: [text], keys: [key], name, timer: setTimeout(() => void flush(sock, jid), env.debounceMs) });
+    pending.set(jid, { texts: [loDicho], keys: [key], name, medio: transcrito?.medio, timer: setTimeout(() => void flush(sock, jid), env.debounceMs) });
   }
 }
 
@@ -533,6 +541,7 @@ async function flush(sock: WASocket, jid: string) {
       channel: 'whatsapp',
       text: p.texts.join('\n'),
       userName: p.name ?? null,
+      media: p.medio ?? null,
     });
     if (!callado) await sock.sendPresenceUpdate('paused', jid);
     if (reply.silent || !reply.text) return; // una persona del equipo responderá desde el tablero
@@ -551,7 +560,7 @@ async function flush(sock: WASocket, jid: string) {
  * 🪤 Se mira dentro de los sobres (efímero, ver una vez, documento con pie). Un archivo que llega en un chat
  * con mensajes temporales es un archivo igual, y si no se desenvuelve se pierde sin que nadie se entere.
  */
-function archivoDe(message: proto.IMessage): { mime: string; nombre: string } | null {
+function archivoDe(message: proto.IMessage): { mime: string; nombre: string; segundos?: number } | null {
   const inner =
     message.ephemeralMessage?.message ??
     message.viewOnceMessage?.message ??
@@ -565,7 +574,9 @@ function archivoDe(message: proto.IMessage): { mime: string; nombre: string } | 
   const vid = inner.videoMessage;
   if (vid?.mimetype) return { mime: vid.mimetype, nombre: `video-${new Date().toISOString().slice(0, 10)}` };
   const aud = inner.audioMessage;
-  if (aud?.mimetype) return { mime: aud.mimetype, nombre: aud.ptt ? 'nota de voz' : 'audio' };
+  // La duración la declara WhatsApp aquí: se mira ANTES de gastar nada, que es lo único que hace que el tope
+  // del minuto sirva de algo.
+  if (aud?.mimetype) return { mime: aud.mimetype, nombre: aud.ptt ? 'nota de voz' : 'audio', segundos: Number(aud.seconds ?? 0) };
   return null;
 }
 
@@ -578,7 +589,13 @@ function archivoDe(message: proto.IMessage): { mime: string; nombre: string } | 
  * el asistente lo contesta. Lo que no puede pasar es que por guardar la foto se pierda lo que la acompañaba:
  * ahí suele estar lo que de verdad pidió el cliente.
  */
-async function recibirArchivo(sock: WASocket, m: WAMessage, jid: string, texto: string | null, nombreDeQuien?: string): Promise<boolean> {
+async function recibirArchivo(
+  sock: WASocket,
+  m: WAMessage,
+  jid: string,
+  texto: string | null,
+  nombreDeQuien?: string,
+): Promise<boolean | { texto: string; medio: Medio }> {
   const info = m.message ? archivoDe(m.message) : null;
   if (!info) return false;
   const userId = `wa:${jid}`;
@@ -590,6 +607,23 @@ async function recibirArchivo(sock: WASocket, m: WAMessage, jid: string, texto: 
     const datos = (await downloadMediaMessage(m, 'buffer', {})) as Buffer;
     const medio = guardar(datos, { mime: info.mime, nombre: info.nombre });
     touchUser(userId, 'whatsapp', nombreDeQuien ?? null);
+    // Una nota de voz se pasa a texto: así deja de ser un callejón sin salida y entra en la máquina como
+    // cualquier mensaje. Ver llm/transcribir.ts — transcribe, no interpreta.
+    let dicho = '';
+    if (medio.tipo === 'audio' && !texto) {
+      try {
+        dicho = await transcribir(rutaDe(medio.id) ?? '', { segundos: info.segundos, userId });
+        console.log(`[whatsapp] nota de voz de ${jid} transcrita (${info.segundos ?? '?'} s)`);
+      } catch (err) {
+        // 🪤 Que no se pueda transcribir no es un fallo que deba ver el cliente: la nota quedó guardada y el
+        // equipo la escucha. Se sigue con el acuse de siempre.
+        console.warn('[whatsapp] no pude transcribir:', (err as Error).message);
+      }
+    }
+    // 🪤 Con la nota transcrita NO se anota aquí: el texto sigue al asistente y es ÉL quien lo anota, con el
+    // audio pegado. Anotándolo en los dos sitios, la conversación mostraría la misma frase dos veces —una con
+    // el audio y otra sin— y quien atiende no sabría cuál es cuál.
+    if (dicho) return { texto: dicho, medio };
     const descripcion = texto?.trim() || `[${medio.tipo}] ${medio.nombre}`;
     const id = appendMessage(userId, 'user', descripcion, undefined, 'customer', undefined, medio);
     // Sin leer, como cualquier mensaje suyo. Sin esto, una foto entraba sin mover el contador y la conversación
@@ -605,6 +639,9 @@ async function recibirArchivo(sock: WASocket, m: WAMessage, jid: string, texto: 
     // 🪤 Es una frase FIJA, no del modelo. Al modelo habría que contarle que llegó una foto, y entonces diría
     // lo que no sabe: «¡qué elegante ese azul!» de una imagen que nadie miró. Aquí no se interpreta nada; se
     // acusa recibo y se dice la verdad: lo va a ver una persona.
+    // 🪤 Con la nota transcrita NO se acusa recibo y se sigue: el texto pasa al asistente y lo contesta como
+    // si lo hubieran escrito. Mandar «ya la recibí» y además la respuesta serían dos mensajes para una sola
+    // nota de voz, y el primero sobra en cuanto el segundo existe.
     if (!texto && !soloEscucha('whatsapp') && !getContact(userId)?.humanMode) {
       void mandar(sock, jid, pick(ACUSE[medio.tipo]));
     }

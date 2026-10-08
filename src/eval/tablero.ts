@@ -242,5 +242,16 @@ for (const clase of ['propuesta', 'login', 'detail-more', 'adj-listo']) {
     'tiene display: en su clase, así que [hidden] no lo apaga; hace falta .' + clase + '[hidden]{display:none}');
 }
 
+// 🪤 Trazabilidad se esconde para quien solo atiende, y el menú de Configuración se pinta en TRES sitios: el
+// desplegable, la lista de la sección y el del celular. Filtrarlo en uno dejaba la entrada visible en los
+// otros dos — un filtro repartido por tres sitios es un filtro que algún día se aplica en dos.
+const menus = readFileSync('public/admin.js', 'utf8');
+check('🪤 lo de solo-admin se filtra en TODOS los menús, no en uno', (menus.match(/\.filter\(visiblePara\)/g) || []).length >= 3,
+  `solo ${(menus.match(/\.filter\(visiblePara\)/g) || []).length} de 3 sitios lo filtran`);
+check('y el rol sale de quien entró por la consola', /window\.AIVA_ROL/.test(menus));
+// Con el token a secas no hay rol y se ve todo: con ese token se puede llamar a la ruta igual, así que
+// esconder el botón no protegería nada. Es orden de pantalla, no un cerrojo.
+check('sin rol (token a secas) se ve todo', /return !r \|\| r === 'super' \|\| r === 'admin'/.test(menus), 'cambió la regla de quién es admin');
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

@@ -263,6 +263,9 @@ function migrate(d: DatabaseSync) {
   // El archivo que acompaña a un mensaje (una foto, un PDF). Aquí solo va a cuál apunta —identificador, tipo,
   // nombre y tamaño—; el archivo vive en la carpeta del cliente. Ver crm/medios.ts.
   if (!messages.has('media')) d.exec('ALTER TABLE messages ADD COLUMN media TEXT');
+  // Los segundos de audio de una transcripción. Va aparte de los tokens porque se cobra por minuto: meterlo en
+  // la columna de tokens daría una cifra falsa justo en el informe que se mira para decidir qué dejar encendido.
+  if (!cols('llm_usage').has('segundos')) d.exec('ALTER TABLE llm_usage ADD COLUMN segundos INTEGER NOT NULL DEFAULT 0');
 }
 
 function loadVectors() {

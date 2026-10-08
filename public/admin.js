@@ -283,7 +283,12 @@
     { view: 'negocio', ic: 'sliders', lbl: 'El negocio' },
     { view: 'agent', ic: 'bot', lbl: 'El asistente' },
     { view: 'channels', ic: 'plug', lbl: 'Canales' },
-    { view: 'knowledge', ic: 'book', lbl: 'Lo que sabe' }
+    { view: 'knowledge', ic: 'book', lbl: 'Lo que sabe' },
+    // 🪤 Solo para quien administra, y es por RUIDO, no por secreto. Quien atiende todo el día no necesita ver
+    // llamadas al modelo ni centavos en cada pantalla; mezclarlo con lo del día a día hace que se deje de leer
+    // todo. Quien entra con el token a secas lo ve igual: con ese token puede llamar a la ruta directamente, y
+    // esconder un botón no protege nada — creerse protegido por eso sí hace daño.
+    { view: 'trazas', ic: 'chart', lbl: 'Trazabilidad', soloAdmin: true }
   ];
   var CFG_TUYO = [
     { proxy: 'foot-user', ic: 'user', lbl: 'Con qué nombre respondes' },
@@ -291,6 +296,23 @@
     { proxy: 'sound-btn', ic: 'bell', lbl: 'Sonido de avisos' },
     { proxy: 'logout-btn', ic: 'salir', lbl: 'Salir' }
   ];
+  /**
+   * Quién entró. Por la consola llega su rol; con el token a secas no hay rol y se ve todo, que es lo correcto:
+   * ese token ya abre cualquier ruta.
+   */
+  function esAdmin() {
+    var r = typeof window.AIVA_ROL === 'string' ? window.AIVA_ROL : '';
+    return !r || r === 'super' || r === 'admin';
+  }
+
+  // 🪤 El menú de Configuración se pinta en TRES sitios —el desplegable, la lista de la sección y el menú del
+  // celular—. Filtrar en uno solo dejaba la entrada visible en los otros dos: lo descubrió una sonda que
+  // buscaba el botón antes de abrir ningún menú y lo encontró igual. Un filtro repartido por tres sitios es un
+  // filtro que algún día se aplica en dos.
+  function visiblePara(d) {
+    return !d.soloAdmin || esAdmin();
+  }
+
   function itemCfg(d, clase) {
     var b = document.createElement('button');
     b.className = clase;
@@ -321,7 +343,7 @@
       pop.appendChild(document.createElement('hr'));
     }
     pop.appendChild(grupo('Este cliente', 'cfg-biz'));
-    CFG_CLIENTE.forEach(function (d) { pop.appendChild(itemCfg(d, 'item')); });
+    CFG_CLIENTE.filter(visiblePara).forEach(function (d) { pop.appendChild(itemCfg(d, 'item')); });
     pop.appendChild(document.createElement('hr'));
     pop.appendChild(grupo('Tú', 'cfg-yo'));
     CFG_TUYO.forEach(function (d) { pop.appendChild(itemCfg(d, 'item')); });
@@ -337,7 +359,7 @@
     if (conn) { conn.hidden = false; pie.appendChild(conn); }
     pop.appendChild(pie);
     // El mismo contenido sirve en el celular, donde el popover se abre abajo.
-    CFG_CLIENTE.concat([{ view: 'help', ic: 'help', lbl: 'Ayuda' }]).forEach(function (d) {
+    CFG_CLIENTE.concat([{ view: 'help', ic: 'help', lbl: 'Ayuda' }]).filter(visiblePara).forEach(function (d) {
       $('more-grid').appendChild(itemCfg(d, ''));
     });
   })();
@@ -379,10 +401,10 @@
   // ---------- el panel de la sección ----------
   // 🪤 Solo aparece donde tiene algo que decir. Un panel vacío a la izquierda «para que se vea simétrico» es
   // espacio robado a lo único que importa en esta pantalla, que es la conversación.
-  var CFG_VIEWS = { agent: 1, channels: 1, knowledge: 1, help: 1 };
+  var CFG_VIEWS = { agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1 };
   // 🪤 En las pantallas de configuración el panel decía lo mismo que el título de la página, dos veces en la
   // misma fila. Aquí dice el ÁREA —dónde estás— y la lista de abajo dice la pantalla: cada uno aporta algo.
-  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Prospectos', clientes: 'Clientes', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración' };
+  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Prospectos', clientes: 'Clientes', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración', trazas: 'Configuración' };
   function pintarPanel(view) {
     var panel = $('subnav');
     if (!panel) return;
@@ -394,7 +416,7 @@
     var cfg = $('subnav-cfg');
     cfg.hidden = !CFG_VIEWS[view];
     if (CFG_VIEWS[view] && !cfg.childElementCount) {
-      CFG_CLIENTE.concat([{ view: 'help', ic: 'help', lbl: 'Ayuda' }]).forEach(function (d) { cfg.appendChild(itemCfg(d, 'item')); });
+      CFG_CLIENTE.concat([{ view: 'help', ic: 'help', lbl: 'Ayuda' }]).filter(visiblePara).forEach(function (d) { cfg.appendChild(itemCfg(d, 'item')); });
       iconos(cfg);
     }
     cfg.querySelectorAll('[data-view]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
@@ -425,6 +447,7 @@
     // pestaña está puesta y qué se enseña con ella. Llamando solo a loadKnowledge, la pantalla salía con la
     // pestaña «Información» marcada pero sin su caja de cargar documentos, que es justo lo que se viene a hacer.
     if (view === 'knowledge') pestanaSabe(state.kind || 'knowledge');
+    if (view === 'trazas') cargarTrazas(state.tzDias || 7);
   }
 
   // ---------- bandeja ----------
@@ -2791,6 +2814,52 @@
     openContact(PF.contact.id);
   };
 
+
+  // ---------- Trazabilidad ----------
+  var TAREAS = {
+    light: 'Responder (liviano)', heavy: 'Responder (pesado)', gate: 'Clasificar la entrada',
+    analysis: 'Analizar la conversación', when: 'Entender fechas', embeddings: 'Búsqueda',
+    consulta: 'Consulta del equipo', transcripcion: 'Transcribir notas de voz',
+  };
+  function plataFina(n) { return '$' + (n < 0.01 && n > 0 ? n.toFixed(4) : n.toFixed(2)); }
+
+  function cargarTrazas(dias) {
+    state.tzDias = dias;
+    Array.prototype.forEach.call($('tz-dias').children, function (b) { b.classList.toggle('on', Number(b.dataset.d) === dias); });
+    $('tz-tabla').innerHTML = '<div class="small muted">Cargando…</div>';
+    Promise.all([api('/usage?days=' + dias), api('/medios')]).then(function (r) {
+      var u = r[0] || {}, m = r[1] || {};
+      var filas = (u.rows || []).slice().sort(function (a, b) { return (b.costUsd || 0) - (a.costUsd || 0); });
+      $('tz-kpis').innerHTML =
+        tarjeta(plataFina(u.totalUsd || 0), 'gastado en ' + dias + (dias === 1 ? ' día' : ' días')) +
+        tarjeta(String(u.conversations || 0), 'conversaciones') +
+        tarjeta(plataFina(u.usdPerConversation || 0), 'por conversación') +
+        tarjeta(String(filas.reduce(function (a, f) { return a + (f.calls || 0); }, 0)), 'llamadas al modelo');
+      $('tz-tabla').innerHTML = filas.length
+        ? '<div class="envoltura"><table class="tz-tabla"><thead><tr><th>Para qué</th><th>Modelo</th>' +
+          '<th class="num">Llamadas</th><th class="num">Entrada</th><th class="num">Salida</th><th class="num">Segundos</th><th class="num">Costo</th></tr></thead><tbody>' +
+          filas.map(function (f) {
+            return '<tr><td>' + esc(TAREAS[f.task] || f.task) + '</td><td class="small muted">' + esc(f.model) + '</td>' +
+              '<td class="num">' + (f.calls || 0) + '</td><td class="num">' + (f.inputTokens || 0).toLocaleString('es-CO') + '</td>' +
+              '<td class="num">' + (f.outputTokens || 0).toLocaleString('es-CO') + '</td>' +
+              '<td class="num">' + (f.segundos ? f.segundos : '—') + '</td>' +
+              '<td class="num">' + (f.costUsd == null ? 'sin precio' : plataFina(f.costUsd)) + '</td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<div class="empty">Todavía no se ha llamado al modelo en este periodo.</div>';
+      $('tz-medios').innerHTML = '<div class="kpis">' +
+        tarjeta(String(m.archivos || 0), 'archivos guardados') +
+        tarjeta(((m.bytes || 0) / 1048576).toFixed(1) + ' MB', 'en disco') +
+        tarjeta(Math.round((m.maximoPorArchivo || 0) / 1048576) + ' MB', 'tope por archivo') + '</div>';
+      // 🪤 Se dice de dónde sale la cifra y qué NO incluye. Un número de dinero sin su origen acaba en una
+      // reunión como si fuera la factura, y esto cuenta lo que gastó ESTE cliente, no lo que cobra OpenAI.
+      $('tz-nota').textContent = 'Lo que este cliente le pidió al modelo, contado aquí mismo. La factura de OpenAI puede incluir otros clientes y otros servicios si comparten la misma llave.' +
+        (u.unpriced ? ' Hay modelos sin precio conocido: su costo no está sumado.' : '');
+    });
+  }
+  function tarjeta(n, p) { return '<div class="kpi"><span class="n">' + esc(n) + '</span><span class="p">' + esc(p) + '</span></div>'; }
+  Array.prototype.forEach.call($('tz-dias').children, function (b) {
+    b.onclick = function () { cargarTrazas(Number(b.dataset.d)); };
+  });
 
   function etiquetaEtapa(id) {
     var e = (state.stages || []).find(function (x) { return x.id === id; });

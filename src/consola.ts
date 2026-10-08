@@ -467,9 +467,14 @@ export function mountConsola(app: Hono) {
         // aquí nunca se escribió, así que leerlo daba vacío siempre y el tablero se quedaba sin saber quién
         // atiende — que es justo el fallo que se estaba persiguiendo.
         const soy = quien.usuario?.nombre || (quien.esSuper ? 'Llave maestra' : '');
+        // 🪤 Y su ROL, para que el tablero pueda guardar lo que no es del día a día —el gasto, las llamadas al
+        // modelo— detrás de una sección que solo ve quien administra. Quien entra con el token a secas no pasa
+        // por aquí y lo ve todo: es su token, y con él puede llamar a cualquier ruta igual. Esto ordena la
+        // pantalla de quien atiende, no guarda un secreto; confundir las dos cosas lleva a creerse protegido.
+        const miRol = quien.esSuper ? 'super' : quien.usuario?.rol || 'agente';
         const html = (await r.text()).replace(
           '</head>',
-          `<script>window.AIVA_CONSOLA=${JSON.stringify(slug)};window.AIVA_EQUIPO=${JSON.stringify(equipo)};window.AIVA_QUIEN=${JSON.stringify(soy)}</script></head>`,
+          `<script>window.AIVA_CONSOLA=${JSON.stringify(slug)};window.AIVA_EQUIPO=${JSON.stringify(equipo)};window.AIVA_QUIEN=${JSON.stringify(soy)};window.AIVA_ROL=${JSON.stringify(miRol)}</script></head>`,
         );
         return c.html(html);
       }

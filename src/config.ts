@@ -89,6 +89,8 @@ export const env = {
   // OpenAI (o cualquier API compatible): motor de nube opcional.
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   openaiBaseUrl: (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, ''),
+  /** El idioma de las notas de voz: sin decirlo, una nota corta en español sale transcrita en inglés. */
+  openaiTranscribeLang: process.env.OPENAI_TRANSCRIBE_LANG || 'es',
   openaiModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',
   // Modelo por rol (vacío = OPENAI_MODEL): un mini para responder rápido y uno mayor donde nadie espera (análisis).
   openaiRoleModels: {

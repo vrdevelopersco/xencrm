@@ -5,7 +5,7 @@ import { getDb } from '../rag/store.js';
 /** light/heavy = responder; gate = clasificar; analysis = ficha y puntaje; when = interpretar fechas. */
 // `consulta` es aparte para que se vea cuánto cuesta lo que pregunta el equipo, que no es lo que gasta
 // atendiendo clientes. Mezclarlo escondería las dos cosas: parecería que atender cuesta más de lo que cuesta.
-export type Task = 'light' | 'heavy' | 'gate' | 'analysis' | 'when' | 'embeddings' | 'consulta';
+export type Task = 'light' | 'heavy' | 'gate' | 'analysis' | 'when' | 'embeddings' | 'consulta' | 'transcripcion';
 
 export interface UsageTag {
   task?: Task;
@@ -20,6 +20,8 @@ export interface UsageEntry extends UsageTag {
   cachedTokens?: number;
   outputTokens: number;
   reasoningTokens?: number;
+  /** Segundos de audio, cuando el modelo se cobra por minuto en vez de por tokens. */
+  segundos?: number;
   ms: number;
 }
 
@@ -39,9 +41,25 @@ const PRICES: Record<string, { input: number; cached: number; output: number }> 
 };
 
 /** Costo en USD de una llamada; null si el modelo no tiene precio conocido (los locales cuestan 0). */
-export function costUsd(engine: string, model: string, input: number, cached: number, output: number): number | null {
+/**
+ * Lo que se cobra POR MINUTO, no por tokens. Tabla aparte porque es otra unidad.
+ *
+ * 🪤 Meter esto en la tabla de tokens saldría barato de escribir y daría una cifra falsa en el informe de
+ * gasto, que es justo el sitio donde una cifra falsa hace daño: es la que se mira para decidir si algo se
+ * puede dejar encendido. Consultado el 2026-10-08.
+ */
+const POR_MINUTO: Record<string, number> = {
+  'gpt-4o-mini-transcribe': 0.003,
+  'gpt-4o-transcribe': 0.006,
+  'whisper-1': 0.006,
+};
+
+export function costUsd(engine: string, model: string, input: number, cached: number, output: number, segundos = 0): number | null {
   if (engine !== 'openai') return 0;
-  const p = PRICES[model.replace(/-\d{4}-\d{2}-\d{2}$/, '')];
+  const limpio = model.replace(/-\d{4}-\d{2}-\d{2}$/, '');
+  const porMinuto = POR_MINUTO[limpio];
+  if (porMinuto !== undefined) return (segundos / 60) * porMinuto;
+  const p = PRICES[limpio];
   if (!p) return null;
   return ((input - cached) * p.input + cached * p.cached + output * p.output) / 1_000_000;
 }
@@ -50,9 +68,9 @@ export function recordUsage(e: UsageEntry): void {
   try {
     getDb()
       .prepare(
-        'INSERT INTO llm_usage (ts, user_id, task, engine, model, input_tokens, cached_tokens, output_tokens, reasoning_tokens, ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO llm_usage (ts, user_id, task, engine, model, input_tokens, cached_tokens, output_tokens, reasoning_tokens, segundos, ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       )
-      .run(Date.now(), e.userId ?? null, e.task ?? 'light', e.engine, e.model, e.inputTokens, e.cachedTokens ?? 0, e.outputTokens, e.reasoningTokens ?? 0, e.ms);
+      .run(Date.now(), e.userId ?? null, e.task ?? 'light', e.engine, e.model, e.inputTokens, e.cachedTokens ?? 0, e.outputTokens, e.reasoningTokens ?? 0, e.segundos ?? 0, e.ms);
   } catch (err) {
     console.warn('[usage] no se pudo registrar:', (err as Error).message);
   }
@@ -67,6 +85,8 @@ export interface UsageRow {
   cachedTokens: number;
   outputTokens: number;
   reasoningTokens: number;
+  /** Segundos de audio transcrito, cuando el modelo se cobra por minuto. */
+  segundos: number;
   avgMs: number;
   costUsd: number | null;
 }
@@ -90,14 +110,14 @@ export function usageSummary(since: number, opts: { userPrefix?: string } = {}):
   const raw = db
     .prepare(
       `SELECT task, engine, model, COUNT(*) calls, SUM(input_tokens) input, SUM(cached_tokens) cached, SUM(output_tokens) output,
-              SUM(reasoning_tokens) reasoning, AVG(ms) ms
+              SUM(reasoning_tokens) reasoning, SUM(COALESCE(segundos, 0)) segundos, AVG(ms) ms
        FROM llm_usage WHERE ts >= ? AND COALESCE(user_id, '') LIKE ? GROUP BY task, engine, model ORDER BY task, model`,
     )
-    .all(since, prefix) as { task: string; engine: string; model: string; calls: number; input: number; cached: number; output: number; reasoning: number; ms: number }[];
+    .all(since, prefix) as { task: string; engine: string; model: string; calls: number; input: number; cached: number; output: number; reasoning: number; segundos: number; ms: number }[];
   let totalUsd = 0;
   let unpriced = false;
   const rows: UsageRow[] = raw.map((r) => {
-    const cost = costUsd(r.engine, r.model, r.input, r.cached, r.output);
+    const cost = costUsd(r.engine, r.model, r.input, r.cached, r.output, r.segundos);
     if (cost === null) unpriced = true;
     else totalUsd += cost;
     return {
@@ -106,6 +126,7 @@ export function usageSummary(since: number, opts: { userPrefix?: string } = {}):
       model: r.model,
       calls: r.calls,
       inputTokens: r.input,
+      segundos: r.segundos ?? 0,
       cachedTokens: r.cached,
       outputTokens: r.output,
       reasoningTokens: r.reasoning,
