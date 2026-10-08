@@ -285,6 +285,14 @@ const ponerGalleta = (c: Context, sesion: string) =>
 const quitarGalleta = (c: Context) => deleteCookie(c, GALLETA, { path: '/' });
 
 /** Quién hace la petición, por cabecera o por galleta. `usuario` null con la llave maestra: alcanza a todos. */
+/**
+ * Lo que solo puede tocar quien administra aiva, aunque el cliente sea suyo.
+ *
+ * La llave de OpenAI y el reparto de motores deciden a quién se le factura y cuánto: no son de la operación
+ * del negocio. Todo lo demás —sus contactos, sus citas, su conocimiento, su configuración— sí es suyo.
+ */
+const SOLO_SUPER = /^(clave|motores)(\/|$)/;
+
 function quienEs(c: Context): { usuario: UsuarioPublico | null; esSuper: boolean } | null {
   if ((c.req.header('x-consola-token') ?? c.req.query('token')) === CONSOLA_TOKEN) return { usuario: null, esSuper: true };
   const usuario = sesionDe(c.req.header('x-consola-sesion') ?? galletaDe(c));
@@ -657,6 +665,14 @@ export function mountConsola(app: Hono) {
   app.all('/api/c/:slug/:ruta{.+}', async (c) => {
     const slug = c.req.param('slug');
     if (!alcanza(c.get('usuario' as never) as UsuarioPublico | null, slug)) return c.json({ error: 'ese cliente no es tuyo' }, 403);
+    // 🪤 Hay rutas que NO son del negocio aunque sean de su cliente: la llave de OpenAI y qué modelos se usan.
+    // Eso es nuestra infraestructura y nuestro costo, no su operación. La pantalla ya las escondía —la pestaña
+    // de Configuración solo la ve el super—, pero esconder un botón no protege nada: por aquí pasaba cualquier
+    // ruta con el token del cliente ya puesto, así que al darle cuenta a un cliente le estábamos dando también
+    // la posibilidad de leerse y cambiarse la llave con una llamada. Se cierra donde se decide, no donde se pinta.
+    if (!c.get('esSuper' as never) && SOLO_SUPER.test(c.req.param('ruta'))) {
+      return c.json({ error: 'eso lo lleva quien administra aiva, no el negocio' }, 403);
+    }
     const cliente = leerIndice().find((x) => x.slug === slug);
     const token = cliente ? tokenDe(slug) : '';
     if (!cliente || !token) return c.json({ error: 'ese cliente no existe' }, 404);

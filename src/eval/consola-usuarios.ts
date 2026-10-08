@@ -75,6 +75,24 @@ check('por el suyo sí lo intenta (la instancia está apagada)', (await comoAna(
 check('no da de alta clientes', (await comoAna('/api/clientes', { method: 'POST', body: JSON.stringify({ nombre: 'Otro' }) })).status === 403);
 check('no ve el equipo', (await comoAna('/api/usuarios')).status === 403);
 check('ni se copia los tokens de los tableros', (await comoAna('/api/clientes/confia/token')).status === 403);
+
+// 🪤 Y NO puede tocar la llave de OpenAI ni los motores de SU PROPIO cliente. Eso decide a quién se le factura
+// y cuánto: es infraestructura nuestra, no su operación. La consola ya escondía esa pestaña, pero esconder un
+// botón no protege nada — por el proxy pasaba cualquier ruta con el token del cliente ya puesto, así que darle
+// cuenta a un negocio era darle también su llave. Se prueba por donde se decide.
+for (const ruta of ['clave', 'motores']) {
+  const leer = await comoAna(`/api/c/confia/${ruta}`);
+  check(`🪤 no puede LEER ${ruta} ni de su propio cliente`, leer.status === 403, `dio ${leer.status}`);
+  const escribir = await comoAna(`/api/c/confia/${ruta}`, { method: 'POST', body: JSON.stringify({ clave: 'sk-robada' }) });
+  check(`🪤 ni CAMBIAR ${ruta}`, escribir.status === 403, `dio ${escribir.status}`);
+}
+// Y el mensaje dice de quién es ese asunto, en vez de un «403» pelado que parece un fallo.
+const porQue = (await (await comoAna('/api/c/confia/clave')).json()) as { error?: string };
+check('y se explica de quién es ese asunto', /administra aiva/.test(porQue.error ?? ''), String(porQue.error));
+// 🪤 Lo suyo sigue siendo suyo: el freno es para dos rutas, no para su tablero entero.
+check('lo demás de su cliente lo sigue manejando', (await comoAna('/api/c/confia/contacts')).status === 502, 'se frenó algo que sí es del negocio');
+// La llave maestra sí puede: alguien tiene que poder ponerla.
+check('la llave maestra sí llega a la clave', (await maestra('/api/c/confia/clave')).status === 502, 'se frenó al super-admin');
 check('el super-admin sí ve el equipo', (await (await maestra('/api/usuarios')).json() as { usuarios: unknown[] }).usuarios.length === leerUsuarios().length);
 
 // --- un cliente puede vivir en otra máquina: la consola le habla por su URL ---
