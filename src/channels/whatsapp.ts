@@ -27,6 +27,7 @@ import { guardar, rutaDe, seAcepta, type Medio } from '../crm/medios.js';
 import { anotarParticipante, quienEsQuien } from '../crm/grupo-gente.js';
 import { handleMessage } from '../agent/agent.js';
 import { conFirma, registerSender } from '../crm/outbox.js';
+import { pick } from '../agent/prompts.js';
 import { grupos, propone, soloEscucha } from './switches.js';
 import { cierres, setStatus, status, whatsappStatus, type WhatsAppState } from './whatsapp-estado.js';
 
@@ -52,6 +53,25 @@ let wanted = false;
 // Los mensajes que salieron de aiva por este socket: WhatsApp los devuelve marcados como propios y, sin esta
 // lista, se guardarían otra vez como si los hubiera escrito una persona.
 const enviadosPorAiva = new Set<string>();
+
+/**
+ * Lo que se contesta cuando llega un archivo solo, sin texto.
+ *
+ * Varias por tipo y se escoge al azar: quien manda tres fotos seguidas recibiría tres veces la misma frase, y
+ * nada delata más a un robot que eso. Ninguna dice qué hay en el archivo, porque nadie lo ha mirado.
+ */
+const ACUSE: Record<'imagen' | 'video' | 'audio' | 'documento', readonly string[]> = {
+  imagen: [
+    '¡Listo, me llegó la foto! 📸 La está viendo alguien del equipo y te cuenta enseguida.',
+    'Recibida la foto 🙌 Déjame que la mire alguien del equipo y te decimos.',
+  ],
+  video: ['¡Me llegó el video! Lo revisa alguien del equipo y te cuenta.', 'Recibido el video 🙌 Ya lo miramos y te decimos.'],
+  audio: [
+    'Me llegó tu nota de voz 🎤 La escucha alguien del equipo y te responde. Si prefieres, también me lo puedes escribir.',
+    'Recibida la nota de voz. Alguien del equipo la oye y te contesta por aquí.',
+  ],
+  documento: ['¡Listo, me llegó el documento! Lo revisa alguien del equipo y te cuenta.', 'Recibido el archivo 🙌 Lo miramos y te decimos.'],
+};
 /**
  * Qué se le entrega a Baileys según lo que haya que mandar.
  *
@@ -572,8 +592,22 @@ async function recibirArchivo(sock: WASocket, m: WAMessage, jid: string, texto: 
     touchUser(userId, 'whatsapp', nombreDeQuien ?? null);
     const descripcion = texto?.trim() || `[${medio.tipo}] ${medio.nombre}`;
     const id = appendMessage(userId, 'user', descripcion, undefined, 'customer', undefined, medio);
+    // Sin leer, como cualquier mensaje suyo. Sin esto, una foto entraba sin mover el contador y la conversación
+    // se quedaba abajo en la lista: el equipo no se enteraba hasta que el cliente volvía a escribir.
+    const c = getContact(userId);
+    if (c) updateContact(userId, { unread: c.unread + 1 }, { silent: true });
     emitEvent('message', userId, { id, role: 'user', author: 'customer', content: descripcion, ts: Date.now(), media: medio });
     console.log(`[whatsapp] archivo recibido de ${jid}: ${medio.tipo} ${medio.bytes} bytes`);
+    // 🪤 Y se le CONTESTA algo. Sin esto, quien manda una foto sola no recibe nada: se guarda bien, el equipo la
+    // ve, y el cliente se queda mirando el chat sin saber si llegó. Antes al menos le decía «solo leo texto»,
+    // que era falso pero era algo; quedarse callado es peor que equivocarse en voz alta.
+    //
+    // 🪤 Es una frase FIJA, no del modelo. Al modelo habría que contarle que llegó una foto, y entonces diría
+    // lo que no sabe: «¡qué elegante ese azul!» de una imagen que nadie miró. Aquí no se interpreta nada; se
+    // acusa recibo y se dice la verdad: lo va a ver una persona.
+    if (!texto && !soloEscucha('whatsapp') && !getContact(userId)?.humanMode) {
+      void mandar(sock, jid, pick(ACUSE[medio.tipo]));
+    }
   } catch (err) {
     // 🪤 Que falle la descarga no puede dejar al cliente sin respuesta ni romper el flujo: se anota que llegó
     // algo y que no se pudo bajar, para que el equipo lo pida de nuevo sabiendo qué pasó.

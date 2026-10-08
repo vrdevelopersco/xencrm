@@ -162,5 +162,26 @@ check('🪤 mandar un archivo por un canal que no sabe se rechaza, y dice por qu
 check('🪤 y no deja el mensaje guardado a medias', getMessages('texto:1', 10).length === antesDeIntentar, 'quedó un mensaje con un archivo que nunca salió');
 check('el texto solo sí pasa por ese canal', await sendToContact('texto:1', 'esto sí', 'human', { by: 'Luis' }).then(() => true).catch(() => false));
 
+// ---------- 🪤 A quien manda una foto sola hay que contestarle algo ----------
+// Se guarda bien y el equipo la ve, pero el cliente se queda mirando el chat sin saber si llegó. Quedarse
+// callado es peor que la frase equivocada de antes («solo leo texto»): al menos aquella era una respuesta.
+const fuenteWa = (await import('node:fs')).readFileSync('src/channels/whatsapp.ts', 'utf8');
+check('🪤 un archivo sin texto recibe acuse', /const ACUSE/.test(fuenteWa) && /void mandar\(sock, jid, pick\(ACUSE/.test(fuenteWa),
+  'quien manda una foto sola se queda sin respuesta');
+check('y la conversación queda sin leer', /unread: c\.unread \+ 1/.test(fuenteWa), 'la foto entra sin mover el contador y el equipo no se entera');
+
+// 🪤 El acuse es una frase FIJA, no del modelo: contarle al modelo que llegó una foto es invitarlo a decir
+// «qué elegante ese azul» de una imagen que nadie miró. Aquí no se interpreta nada.
+const bloqueAcuse = fuenteWa.slice(fuenteWa.indexOf('const ACUSE'), fuenteWa.indexOf('};', fuenteWa.indexOf('const ACUSE')));
+for (const tipo of ['imagen', 'video', 'audio', 'documento']) {
+  check(`hay acuse para ${tipo}`, new RegExp(`${tipo}: \\[`).test(bloqueAcuse), bloqueAcuse.slice(0, 120));
+}
+// Varias por tipo: tres fotos seguidas con la misma frase delatan al robot.
+check('y más de una frase, para no repetirse', (bloqueAcuse.match(/',\s*$/gm) || []).length >= 4, 'solo hay una frase por tipo');
+// 🪤 Y no se contesta cuando no toca: en «solo escuchar» aiva no le escribe al cliente, y si la conversación
+// la lleva una persona, el acuse se le cruzaría por encima.
+check('🪤 no se acusa en modo aprendizaje ni si la lleva una persona', /!soloEscucha\('whatsapp'\) && !getContact\(userId\)\?\.humanMode/.test(fuenteWa),
+  'el acuse se manda siempre, también cuando aiva debe estar callada');
+
 console.log(fail ? `\n${fail} fallo(s)` : '\ntodo ok');
 process.exit(fail ? 1 : 0);
