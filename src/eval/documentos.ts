@@ -8,6 +8,16 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+// 🪤 Los vectores salen de un Ollama local y esta prueba reindexa de verdad, así que dependía de que ese
+// servicio estuviera encendido: pasaba en la máquina donde lo estaba y se caía en cualquier otra. Lo que se
+// prueba aquí es dónde quedan los archivos, no cómo se calculan los vectores, así que la llamada se
+// intercepta. Mismo patrón que la prueba de embeddings.
+globalThis.fetch = (async (_url: string, init: { body: string }) => {
+  const cuerpo = JSON.parse(init.body) as { input?: string | string[] };
+  const textos = Array.isArray(cuerpo.input) ? cuerpo.input : [String(cuerpo.input ?? '')];
+  return { ok: true, status: 200, json: async () => ({ embeddings: textos.map(() => [0.1, 0.2, 0.3]) }), text: async () => '' };
+}) as unknown as typeof fetch;
+
 const dir = mkdtempSync(join(tmpdir(), 'aiva-docs-'));
 const conocimiento = join(dir, 'conocimiento');
 const catalogo = join(dir, 'catalogo');

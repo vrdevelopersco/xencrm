@@ -476,13 +476,30 @@
     var el = $('rows');
     if (!state.contacts.length) { el.innerHTML = '<div class="empty">Nada por aquí con este filtro.</div>'; return; }
     el.innerHTML = state.contacts.map(function (c) {
+      // 🪤 Dos líneas, no tres. El estado subía a su propia fila y una conversación ocupaba lo mismo que tres
+      // de un chat normal: con doce en pantalla hay que bajar para ver quién lleva esperando. Las etiquetas se
+      // van arriba, al lado de la hora, donde ya se estaba mirando.
+      //
+      // 🪤 Y siguen siendo TEXTO, no un punto de color. Un punto es más compacto y deja fuera a quien no
+      // distinga ese matiz —y con el contraste alto del sistema, a todo el mundo—. Compacto no puede salir a
+      // costa de que deje de leerse.
+      // 🪤 El veredicto solo se enseña cuando DICE algo. Casi todas las conversaciones están en «Sin señales
+      // aún», así que esa etiqueta aparecía en nueve de cada diez filas: una etiqueta que se repite en todas no
+      // informa, ocupa. Quitándola de las que no dicen nada, las que sí —«Prospecto con cita», «Cliente»—
+      // saltan a la vista, y de paso cabe la conversación en dos renglones sin recortar nada.
+      var v = verdict(c);
+      var marcas = (v.cls === 'v-no' ? '' : verdictChip(c)) +
+        (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '');
+      var texto = c.hit
+        ? '<span class="snip hit"><span class="who">' + esc(c.hit.role === 'user' ? nameOf(c) : state.agentName || 'Aiva') + ':</span> ' + mark(c.hit.content, state.q) + '</span>'
+        : '<span class="snip"' + (c.summary ? ' title="' + esc(c.summary) + '"' : '') + '>' + esc(c.recap || c.summary || '') + '</span>';
       return '<div class="row' + (state.current === c.id ? ' sel' : '') + '" data-id="' + esc(c.id) + '">' +
         '<div class="name"><span class="n">' + esc(nameOf(c)) + '</span>' + (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div>' +
         '<div class="time">' + rel(c.lastMessageAt) + '</div>' +
-        (c.hit
-          ? '<div class="snip hit"><span class="who">' + esc(c.hit.role === 'user' ? nameOf(c) : state.agentName || 'Aiva') + ':</span> ' + mark(c.hit.content, state.q) + '</div>'
-          : '<div class="snip"' + (c.summary ? ' title="' + esc(c.summary) + '"' : '') + '>' + esc(c.recap || c.summary || '') + '</div>') +
-        '<div class="meta">' + verdictChip(c) + (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '') + '</div>' +
+        // Segunda línea: lo que dijo, y las marcas que de verdad marcan algo. Las etiquetas no se encogen —una
+        // etiqueta a medias no es una etiqueta—; lo que cede es el texto, que para eso lleva el resumen entero
+        // en el título.
+        '<div class="linea2">' + marcas + texto + '</div>' +
         '</div>';
     }).join('');
     el.querySelectorAll('.row').forEach(function (r) {

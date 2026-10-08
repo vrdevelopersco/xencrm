@@ -112,16 +112,27 @@ textarea{resize:vertical;min-height:70px}
 .filters button.on:hover{background:color-mix(in srgb,var(--brand) 88%,var(--text))}
 @media (pointer:coarse){.filters button{min-height:40px;padding:8px 15px}}
 .rows{overflow-y:auto;flex:1}
-.row{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px 8px}
+.row{padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:1px 8px}
 .row:hover{background:var(--bg)}.row.sel{background:color-mix(in srgb,var(--brand) 14%,transparent)}
 .row .name{font-weight:600;display:flex;align-items:center;gap:6px;min-width:0}
 .row .name span.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Segunda línea: las marcas que dicen algo, y luego lo que dijo. Dos renglones en vez de tres.
+   🪤 Las etiquetas NO se encogen: «Sin seña…» o «el equ…» no son etiquetas, son ruido con forma de etiqueta.
+   Lo que cede es el texto, que además lleva el resumen entero en su título. */
+.row .linea2{grid-column:1/-1;display:flex;align-items:center;gap:6px;min-width:0;margin-top:2px}
+.row .linea2 .chip{flex:0 0 auto}
+.row .linea2 .snip{flex:1 1 auto;min-width:0}
 .row .time{color:var(--muted);font-size:11px;text-align:right}
-.row .snip{grid-column:1/-1;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .snip{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row .snip.hit{color:var(--text)}
 .row .snip .who{color:var(--muted)}
 .row .snip mark{background:var(--find);color:inherit;border-radius:3px;padding:0 2px}
+/* Queda para quien la siga usando fuera de la lista de conversaciones. */
 .row .meta{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+/* 🪤 Una segunda línea sin nada —ni marcas ni texto— no deja renglón vacío: la fila se cierra y cabe una
+   conversación más. Pasa con quien acaba de escribir y todavía no tiene resumen. */
+.row .linea2:empty{display:none}
+.row .snip:empty{display:none}
 .row .acts{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .unread{background:var(--bad);color:#fff;border-radius:10px;font-size:11px;padding:0 6px}
 .chat{display:flex;flex-direction:column;min-height:0;background:transparent}

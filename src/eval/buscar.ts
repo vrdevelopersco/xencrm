@@ -5,6 +5,26 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-buscar-')), 'aiva.db');
+
+// 🪤 Los vectores salen de un Ollama local, y esta prueba dependía de que estuviera encendido: pasaba en la
+// máquina donde lo estaba y se caía en cualquier otra —y se cayó hoy, sin que nadie tocara nada—. Una prueba
+// que depende de un servicio que puede no estar no prueba el código: prueba la máquina. Se intercepta la
+// llamada, como ya hace la prueba de embeddings.
+//
+// El vector se deriva del propio texto, así que dos frases distintas dan vectores distintos y la búsqueda
+// sigue ordenando por parecido de verdad. Un vector fijo haría que todo empatara y la prueba pasaría sin
+// comprobar nada.
+const vectorDe = (texto: string): number[] => {
+  const v = new Array(8).fill(0);
+  for (let i = 0; i < texto.length; i++) v[i % 8] += texto.toLowerCase().charCodeAt(i) / 1000;
+  const norma = Math.hypot(...v) || 1;
+  return v.map((x) => x / norma);
+};
+globalThis.fetch = (async (_url: string, init: { body: string }) => {
+  const cuerpo = JSON.parse(init.body) as { input?: string | string[] };
+  const textos = Array.isArray(cuerpo.input) ? cuerpo.input : [String(cuerpo.input ?? '')];
+  return { ok: true, status: 200, json: async () => ({ embeddings: textos.map(vectorDe) }), text: async () => '' };
+}) as unknown as typeof fetch;
 const { touchUser, appendMessage } = await import('../agent/memory.js');
 const { getContact, listContacts, messageHit, contactNumber, updateContact } = await import('../crm/contacts.js');
 
