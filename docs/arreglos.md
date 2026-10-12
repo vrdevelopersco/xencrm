@@ -9,6 +9,19 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### La consola ya no grita «no contesta» por una dirección que nadie configuró · `9554254`
+Cualquier estado de la dirección pública distinto de «ok» era «Su dirección pública no contesta», urgente: también
+no tenerla configurada y una falla suelta que la instancia todavía no da por caída. Ahora solo «caída» es ese ticket,
+«contesta desde otro servidor» se dice así, y lo demás no es ticket. Cuatro casos nuevos en `pnpm test:consola`.
+
+### A un «hola» no se le contesta «dame un segundito que lo consulto» · `eebcd58`
+El aviso de demora salía siempre que el turno iba al pesado, también cuando iba ahí porque el otro motor estaba
+caído: un saludo recibía «dame un segundito que lo consulto». Ahora sale solo si el pesado es por lo que pidió el
+cliente. Salió en el «¿por qué?» de una conversación de prueba sin OpenAI.
+
+### La fecha del formulario de agendar, como los demás campos · `ff21b08`
+El campo de fecha quedaba suelto al lado de su etiqueta, sin el borde de los selectores. Ahora mide y se ve igual.
+
 ### El recordatorio cuenta los días en la hora del negocio · `bc7771c`
 🪤 El día de la semana salía de `getDay()`, en la hora de la máquina. En un servidor en UTC, un recordatorio a las
 7:30 p. m. de Bogotá ya es el día siguiente, y un domingo cerrado pasaba por un lunes abierto. Ahora se cuenta en la
