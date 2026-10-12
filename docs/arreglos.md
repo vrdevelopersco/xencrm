@@ -9,6 +9,12 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### El calendario de una sede ocupa solo esa, y quien se crea a mano llega a una · `b45bbfb`
+El calendario personal ocupaba todas las sedes. Ahora cada sede puede tener el suyo en `CALENDAR_BUSY_ICS_<SEDE>`,
+que solo ocupa esa; el general sigue ocupando todas. 🪤 En el `.env`, no en la configuración: son direcciones
+secretas. El tablero pinta los bloques de la sede que se mira. Y crear a mano a una persona ahora pregunta a qué sede
+llegó, para que no salga «sin sede» en Prospectos. Visto en Chrome con un calendario de Buenavista servido por HTTP.
+
 ### La consola ya no grita «no contesta» por una dirección que nadie configuró · `9554254`
 Cualquier estado de la dirección pública distinto de «ok» era «Su dirección pública no contesta», urgente: también
 no tenerla configurada y una falla suelta que la instancia todavía no da por caída. Ahora solo «caída» es ese ticket,
