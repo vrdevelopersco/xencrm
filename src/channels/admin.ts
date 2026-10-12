@@ -79,6 +79,7 @@ import { grupos as gruposDe, setGrupos, setModoCanal, setSoloEscucha, soloEscuch
 import type { Contact } from '../crm/contacts.js';
 import { cabecerasDeSiempre, soloDesdeAqui } from '../cabeceras.js';
 import { contextoDelPaso, proximoPaso } from '../crm/proximo.js';
+import { guardarFijados, leerFijados, reemplazarEnFijados } from '../crm/fijados.js';
 
 /**
  * Lo que el tablero enseña de cada contacto además de la ficha: temperatura, recap (hechos de la ficha + próxima
@@ -177,6 +178,20 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     });
   });
 
+  /**
+   * Los fijados de quien mira, por el nombre con el que responde (crm/fijados.ts). En la base y no en el navegador,
+   * para que lo sigan a otro computador.
+   */
+  app.get('/admin/api/fijados', (c) => c.json({ fijados: leerFijados(String(c.req.query('yo') ?? '')) }));
+  app.put('/admin/api/fijados', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { yo?: string; ids?: unknown };
+    try {
+      return c.json({ fijados: guardarFijados(String(body.yo ?? ''), body.ids) });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  });
+
   // Dar de alta a alguien a mano: el que llegó por el local, por una llamada o con una tarjeta. Lo delicado
   // —qué dirección se le pone para que no nazca duplicada— está en crm/alta.ts, con sus pruebas.
   app.post('/admin/api/contacts', async (c) => {
@@ -239,7 +254,12 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const contact = setArchived(c.req.param('id'), body.on !== false);
     return contact ? c.json({ contact }) : c.json({ error: 'no existe' }, 404);
   });
-  app.delete('/admin/api/contacts/:id', (c) => (deleteContact(c.req.param('id')) ? c.json({ ok: true }) : c.json({ error: 'no existe' }, 404)));
+  app.delete('/admin/api/contacts/:id', (c) => {
+    const id = c.req.param('id');
+    if (!deleteContact(id)) return c.json({ error: 'no existe' }, 404);
+    reemplazarEnFijados(id, null); // su identificador es su teléfono: no se queda guardado en los fijados de nadie
+    return c.json({ ok: true });
+  });
 
   // Seguimiento pospuesto: sale de "Calientes sin seguimiento" hasta la fecha (por defecto, una semana).
   app.post('/admin/api/contacts/:id/snooze', async (c) => {
@@ -270,6 +290,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     try {
       const { keep, drop } = keeperOf(me, other);
       const contact = mergeContacts(keep.id, drop.id);
+      reemplazarEnFijados(drop.id, keep.id); // quien la tenía fijada sigue teniéndola, ahora la que quedó
       return c.json({ contact, keptId: keep.id, droppedId: drop.id });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 400);

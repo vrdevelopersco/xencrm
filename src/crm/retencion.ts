@@ -34,6 +34,7 @@ import { backupNow, backupStatus } from '../rag/backup.js';
 import { borrar as borrarMedio } from './medios.js';
 import { getSetting, setSetting } from './settings.js';
 import { emitEvent } from './events.js';
+import { reemplazarEnFijados } from './fijados.js';
 import { forgetSiblings } from './merge.js';
 
 export type Accion = 'anonimizar' | 'borrar';
@@ -157,6 +158,8 @@ export function anonimizar(userId: string): string | null {
     db.prepare('UPDATE turnos SET user_id = ? WHERE user_id = ?').run(nuevo, userId);
     // De dónde vino se queda (la campaña, el anuncio), sin lo que identifica el clic ni la página exacta.
     db.prepare("UPDATE origen SET user_id = ?, clic = '', url = '', referente = '' WHERE user_id = ?").run(nuevo, userId);
+    // 🪤 El identificador viejo es su teléfono: tampoco se queda en los fijados de nadie.
+    reemplazarEnFijados(userId, null);
     db.prepare(
       `UPDATE users SET id = ?, name = NULL, phone = NULL, number = NULL, data = '{}', tags = '[]', notes = '', summary = NULL,
          score_factors = '[]', human_mode = 0, human_by = NULL, human_since = NULL, presentes = '[]', unread = 0, archived = 1
@@ -181,6 +184,7 @@ export function borrarDelTodo(userId: string): boolean {
     for (const t of [...CON_TEXTO, 'appointments', 'events', 'turnos', 'origen']) if (existe(t)) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(userId);
     if (existe('grupo_gente')) db.prepare('DELETE FROM grupo_gente WHERE grupo = ? OR persona = ?').run(userId, userId);
     db.prepare("UPDATE llm_usage SET user_id = 'borrado' WHERE user_id = ?").run(userId);
+    reemplazarEnFijados(userId, null);
     db.prepare('DELETE FROM users WHERE id = ?').run(userId);
     db.exec('COMMIT');
   } catch (err) {

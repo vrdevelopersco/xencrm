@@ -145,14 +145,45 @@
 
 
   // ---------- fijados ----------
-  // Las fichas que alguien quiere tener a mano. Son de quien mira, no del negocio —cada asesor fija a los suyos—,
-  // así que viven en este navegador y con la llave de este cliente.
-  function fijados() { try { return JSON.parse(localStorage.getItem(LLAVE('fijados')) || '[]'); } catch (e) { return []; } }
+  // Las fichas que alguien quiere tener a mano. Son de quien mira, no del negocio: cada asesor fija a los suyos. Se
+  // guardan en la base del cliente con el nombre con el que responde (crm/fijados.ts), así lo siguen a otro
+  // computador o al celular. Sin nombre no hay a quién guardárselos: viven en este navegador hasta que lo ponga.
+  function fijadosLocales() { try { return JSON.parse(localStorage.getItem(LLAVE('fijados')) || '[]'); } catch (e) { return []; } }
+  function fijados() { return state.name ? (state.fijados || []) : fijadosLocales(); }
   function estaFijado(id) { return fijados().some(function (f) { return f.id === id; }); }
+  // El servidor manda el nombre de la ficha tal como está hoy: si alguien le corrigió el nombre, sale el nuevo.
+  function aFijados(l) { return (l || []).map(function (f) { return { id: f.id, nombre: f.nombre || nameOf({ id: f.id, name: f.name }) }; }); }
+  function cargarFijados() {
+    if (!state.name) { pintarListas(); return; }
+    return api('/fijados?yo=' + encodeURIComponent(state.name)).then(function (r) {
+      if (!r || r.error) return;
+      var locales = fijadosLocales();
+      // 🪤 Lo que alguien fijó cuando esto vivía en el navegador no se pierde: la primera vez se sube a la base y
+      // se olvida de aquí. Sin esto, el día del cambio todos amanecían sin fijados.
+      if (!(r.fijados || []).length && locales.length) {
+        return guardarFijadosEn(locales.map(function (f) { return f.id; })).then(function () {
+          try { localStorage.removeItem(LLAVE('fijados')); } catch (e) {}
+        });
+      }
+      state.fijados = aFijados(r.fijados);
+      pintarListas();
+    });
+  }
+  function guardarFijadosEn(ids) {
+    return api('/fijados', { method: 'PUT', body: { yo: state.name, ids: ids } }).then(function (r) {
+      if (!r || r.error) { toast((r && r.error) || 'No pude guardar los fijados'); return; }
+      state.fijados = aFijados(r.fijados);
+      pintarListas();
+      if (state.view === 'clientes') renderClientes();
+    });
+  }
   function fijar(c, on) {
     var l = fijados().filter(function (f) { return f.id !== c.id; });
     if (on) l.unshift({ id: c.id, nombre: nameOf(c) });
-    try { localStorage.setItem(LLAVE('fijados'), JSON.stringify(l.slice(0, 12))); } catch (e) {}
+    l = l.slice(0, 12);
+    // Se pinta ya y se guarda detrás: esperar al servidor para ver la estrella puesta se siente roto.
+    if (state.name) { state.fijados = l; pintarListas(); guardarFijadosEn(l.map(function (f) { return f.id; })); return; }
+    try { localStorage.setItem(LLAVE('fijados'), JSON.stringify(l)); } catch (e) {}
     pintarListas();
   }
   /**
@@ -3706,7 +3737,7 @@
       document.title = me.agent + ' · Tablero';
       return api('/stats');
     }).then(function (s) {
-      state.stageLabels = s.stageLabels; state.stages = s.stages || []; state.moneda = s.moneda || 'COP'; etapasDelNegocio(); pintarListas(); cargarCuentas(); pintarQuienSoy(); connect(); loadNotifs(); loadCalendar();
+      state.stageLabels = s.stageLabels; state.stages = s.stages || []; state.moneda = s.moneda || 'COP'; etapasDelNegocio(); pintarListas(); cargarCuentas(); cargarFijados(); pintarQuienSoy(); connect(); loadNotifs(); loadCalendar();
       // Enlace directo a una conversación (p. ej. desde la cita en Google Calendar): /admin#c=<id>
       var m = /^#c=(.+)$/.exec(location.hash);
       if (m) { go('inbox'); openContact(decodeURIComponent(m[1])); history.replaceState(null, '', location.pathname); } else go('today');
@@ -4074,6 +4105,7 @@
     }
     pintarQuienSoy();
     cargarCuentas(); // «Míos» depende del nombre: con otro nombre son otras
+    cargarFijados(); // y los fijados también son de ese nombre
     setTimeout(function () { $('dlg-yo').close(); }, 900);
   };
 

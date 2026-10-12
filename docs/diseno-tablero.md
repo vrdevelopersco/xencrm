@@ -329,7 +329,7 @@ hoy** y tomar del video las pantallas, las funciones y los detalles. Se tomó el
 | Del video | En aiva |
 |---|---|
 | Números al lado de cada sección | En gris, Prospectos abiertos y Clientes. Las insignias rojas siguen siendo solo para lo que urge |
-| Listas guardadas y favoritos | *Calientes* y *Míos* en la barra, y las fichas **fijadas**, que son de quien mira |
+| Listas guardadas y favoritos | *Calientes* y *Míos* en la barra, y las fichas **fijadas**, que son de quien mira y se guardan en la base con su nombre |
 | Tabla con dueño, valor y próximo paso | Clientes: *La lleva*, *Valor*, *Próximo paso*; pestañas con su número; orden por columna; suma al pie |
 | Kanban con valor por columna | Prospectos: cuatro cifras arriba, barra por etapa, suma por columna, valor y paso en cada tarjeta |
 | Ficha con historia, detalles y «1 de 23» | La ficha en dos columnas, notas con autor y fecha, etapa editable ahí mismo, fijar |

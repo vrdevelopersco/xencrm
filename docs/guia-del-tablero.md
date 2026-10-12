@@ -181,7 +181,7 @@ etapa, citas, traspasos y notas, de lo más nuevo a lo más viejo. Las **notas**
 escribió; la *nota fija* es la de siempre, para lo que nunca hay que olvidar. A la derecha, los detalles: la etapa se
 cambia ahí mismo. Arriba, **3 de 23** pasa a la siguiente de la lista sin volver a ella; también con las flechas del
 teclado. **Fijar** la deja en la barra lateral, debajo de las listas. Los fijados son tuyos: cada quien fija a los
-suyos.
+suyos. Se guardan con el nombre con el que respondes, así que te siguen a otro computador o al celular.
 
 ## Análisis
 
