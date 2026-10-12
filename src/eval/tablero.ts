@@ -299,5 +299,13 @@ check('el menú «⋯» se cierra al hacer clic fuera o con Escape', /details\.m
 check('la hoja de la consola no repite reglas copiadas dos veces', (consola.match(/\.micro\{display:grid/g) || []).length === 1);
 check('la gráfica de la consola tiene dos colores, no el acento dos veces', /--serie-wa:#[0-9a-f]{6}; --serie-sitio:#[0-9a-f]{6}/.test(consola) && !/banda\(function \(p\) \{ return p\.total; \}, 'var\(--oro-claro\)'\)/.test(consola));
 
+// — La portada (2026-10-12): el usuario la sintió con mucho texto. Pasó de 385 palabras a menos de 250, y la vista
+// del tablero dice lo que antes decían los párrafos. Esto avisa si se vuelve a llenar.
+const portada = readFileSync(new URL('../../public/inicio.html', import.meta.url), 'utf8');
+const principal = portada.slice(portada.indexOf('<main>'), portada.indexOf('</main>')).replace(/<!--[\s\S]*?-->/g, ' ').replace(/<[^>]+>/g, ' ');
+const palabras = principal.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+check('la portada no vuelve a llenarse de texto (menos de 260 palabras)', palabras < 260, `tiene ${palabras}`);
+check('la vista del tablero en la portada se lee como una imagen con su descripción', /class="vista" role="img" aria-label="[^"]{30,}"/.test(portada));
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

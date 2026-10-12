@@ -359,3 +359,11 @@ mes de cada cliente pasó a un menú **⋯**.
 `:root` a secas sino en `:root:has(#app:not([hidden]))`: mandan solo con la aplicación a la vista, y así también
 alcanzan a los diálogos, que viven fuera de `#app`. `test:tablero` falla si alguien los sube a `:root`.
 
+
+### La portada, con menos texto (2026-10-12)
+
+El usuario la sintió con mucho texto, y tenía razón: 385 palabras en siete bloques, casi todo párrafos. Ahora cada
+sección dice una cosa en una línea y quedan menos de 250 palabras. Lo que decían los párrafos lo dice una **vista
+del tablero** hecha con HTML, con sus colores de verdad (blanco, azul, barra oscura), aunque la página siga con el
+dorado de la casa: enseña lo que uno va a ver al entrar. Lleva `role="img"` y su descripción, porque para un lector de
+pantalla una tabla de ejemplo sería ruido. `test:tablero` avisa si la portada vuelve a pasar de 260 palabras.

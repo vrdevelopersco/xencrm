@@ -69,7 +69,7 @@ h2 em{font-style:normal;color:var(--oro)}
 .dice{color:var(--suave);font-size:clamp(16px,1.2vw,18px);max-width:40em;margin:0}
 
 /* ── Portada ────────────────────────────────────────────────────────────────── */
-.portada{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+.portada{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
   padding-top:130px;padding-bottom:70px;max-width:none}
 .sello{display:inline-flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--linea);
   border-radius:999px;padding:7px 16px 7px 8px;font-size:13px;color:var(--suave);box-shadow:var(--sombra);margin-bottom:26px}
@@ -106,28 +106,60 @@ h1 em{font-style:normal;background:linear-gradient(100deg,var(--oro) 0%,#b08f12 
 .ficha h3{margin:0 0 7px;font-size:17px;font-weight:600;letter-spacing:-.01em}
 .ficha p{margin:0;color:var(--suave);font-size:15px}
 
-/* ── Pasos ──────────────────────────────────────────────────────────────────── */
-.pasos{margin-top:34px;display:grid;gap:0}
-.paso{display:grid;grid-template-columns:44px 150px 1fr;gap:clamp(12px,2vw,26px);align-items:baseline;
-  padding:20px 4px;border-top:1px solid var(--linea)}
-.paso:last-child{border-bottom:1px solid var(--linea)}
-.paso b{color:var(--oro);font-weight:700;font-variant-numeric:tabular-nums;font-size:14px}
-.paso strong{font-size:17px;font-weight:600}
-.paso span{color:var(--suave);font-size:15px}
-@media (max-width:660px){.paso{grid-template-columns:40px 1fr;row-gap:4px}.paso span{grid-column:2}}
-
-/* ── Nota de multicliente ───────────────────────────────────────────────────── */
-.aparte{background:var(--panel);border:1px solid var(--linea);border-left:4px solid var(--oro-claro);
-  border-radius:8px 20px 20px 8px;padding:26px 28px;box-shadow:var(--sombra);margin-top:34px}
-.aparte p{margin:0;color:var(--suave);max-width:46em}
-.aparte p + p{margin-top:12px}
-.aparte b{color:var(--tinta)}
+/* ── Pasos: cinco verbos en fila. Antes eran cinco renglones, cada uno con su explicación ───────────── */
+.pasos{list-style:none;margin:34px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:0;
+  border-top:1px solid var(--linea);border-bottom:1px solid var(--linea)}
+.pasos li{padding:22px 18px 22px 0;display:flex;flex-direction:column;gap:2px}
+.pasos li + li{padding-left:18px;border-left:1px solid var(--linea)}
+.pasos b{color:var(--oro);font-weight:700;font-variant-numeric:tabular-nums;font-size:13px}
+.pasos strong{font-size:18px;font-weight:600;letter-spacing:-.01em}
+.pasos span{color:var(--suave);font-size:14.5px;line-height:1.4}
+@media (max-width:820px){
+  .pasos{grid-template-columns:1fr}
+  .pasos li,.pasos li + li{padding:14px 0;border-left:0;border-top:1px solid var(--linea);display:grid;grid-template-columns:40px 110px 1fr;align-items:baseline}
+  .pasos li:first-child{border-top:0}
+}
+@media (max-width:420px){.pasos li,.pasos li + li{grid-template-columns:34px 1fr}.pasos li span{grid-column:2}}
 
 /* ── Cierre y pie ───────────────────────────────────────────────────────────── */
 .cierre{text-align:center}
 .cierre h2{margin-left:auto;margin-right:auto}
 .cierre .dice{margin-left:auto;margin-right:auto}
 .cierre .acciones{justify-content:center}
+.cierre .clave{margin:18px 0 0;color:var(--suave);font-size:14px}
+
+/* ── La vista del tablero: el producto, en vez de un párrafo que lo describa ─────────────────────────────
+   Hecha con HTML y con los colores del tablero de verdad (blanco, azul, barra oscura), no con los de esta
+   página: enseña lo que uno va a ver al entrar. Los datos son de ejemplo. */
+.vista{margin-top:52px;width:min(100%,940px);background:#fff;border:1px solid var(--linea);border-radius:16px;overflow:hidden;
+  box-shadow:0 2px 6px rgba(20,17,12,.06),0 30px 70px rgba(20,17,12,.14);text-align:left;font-size:13px;color:#101828}
+.vista-barra{display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid #e4e7ec;background:#f9fafb}
+.vista-barra i{width:10px;height:10px;border-radius:50%;background:#d0d5dd}
+.vista-barra span{margin-left:10px;font-weight:600;color:#475467}
+.vista-cuerpo{display:grid;grid-template-columns:54px 1fr}
+.vista-riel{background:#101828;display:flex;flex-direction:column;align-items:center;gap:12px;padding:14px 0}
+.vista-riel b{width:26px;height:26px;border-radius:8px;background:#2563eb;margin-bottom:6px}
+.vista-riel span{width:22px;height:6px;border-radius:3px;background:#344054}
+.vista-riel span.on{background:#60a5fa}
+.vista-tabla{min-width:0}
+.vf{display:grid;grid-template-columns:1.25fr 1fr .7fr 1.7fr .8fr;gap:12px;align-items:center;padding:11px 16px;border-top:1px solid #eaecf0}
+.vf.cab{border-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#667085;padding-top:12px;padding-bottom:9px}
+.vf > span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vf .n{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.vf.cab .n{font-weight:400}
+.vf .et{font-style:normal;display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600}
+.vf .et::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.vf .et.cita{background:#eff6ff;color:#1d4ed8}
+.vf .et.interes{background:#fffaeb;color:#b54708}
+.vf .et.ganado{background:#ecfdf3;color:#15803d}
+.vf .ps{color:#475467}
+.vf .ps.cita{color:#1d4ed8}
+.vf .ps.urge{color:#b54708;font-weight:600}
+.vf .ll{display:flex;align-items:center;gap:7px}
+.vf .ll i{font-style:normal;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#eff6ff;color:#2563eb;font-size:9.5px;font-weight:700;flex:none}
+.vf .ll i.h{background:#fffaeb;color:#7a5d0c}
+@media (max-width:820px){.vf{grid-template-columns:1.3fr 1fr 1.6fr}.vf .n,.vf .ll{display:none}}
+@media (max-width:520px){.vista-cuerpo{grid-template-columns:1fr}.vista-riel{display:none}.vf{grid-template-columns:1fr 1.3fr;gap:8px;padding:10px 12px}.vf > span:nth-child(2){display:none}}
 footer{border-top:1px solid var(--linea);background:var(--panel);position:relative;z-index:1}
 .pie{max-width:1120px;margin:0 auto;padding:26px var(--gutter) 34px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .pie img{height:22px;width:auto;opacity:.9}
@@ -162,15 +194,32 @@ footer{border-top:1px solid var(--linea);background:var(--panel);position:relati
 
 <main>
 
+  <!-- 🪤 Menos texto, más producto: la portada decía en párrafos lo que el tablero enseña de un vistazo. Cada
+       sección dice una cosa, en una línea; el detalle está adentro. -->
   <section class="portada" id="inicio">
     <span class="sello"><b>✦</b> Un producto de HRC Technologies</span>
-    <h1>Atiende a tus clientes <em>siempre</em>, y te deja solo lo que necesita una persona.</h1>
-    <p class="bajada">aiva contesta por WhatsApp y por el chat de tu sitio, agenda citas de tu agenda real, anota
-    lo que el cliente dijo y te avisa cuándo vale la pena que entres tú.</p>
+    <h1>Tus clientes, atendidos <em>siempre</em>.</h1>
+    <p class="bajada">Por WhatsApp y el chat de tu sitio. Tú entras solo cuando hace falta.</p>
     <div class="acciones">
       <a class="pastilla" href="consola">Entrar a la consola</a>
       <a class="pastilla calma" href="#hace">Ver qué hace</a>
     </div>
+
+    <!-- Así se ve por dentro. Es una ilustración hecha con HTML, no una captura: los datos son de ejemplo. -->
+    <div class="vista" role="img" aria-label="Así se ve el tablero: cada cliente con su etapa, su valor, el próximo paso y quién lo atiende.">
+      <div class="vista-barra" aria-hidden="true"><i></i><i></i><i></i><span>Clientes</span></div>
+      <div class="vista-cuerpo" aria-hidden="true">
+        <div class="vista-riel"><b></b><span class="on"></span><span></span><span></span><span></span></div>
+        <div class="vista-tabla">
+          <div class="vf cab"><span>Quién</span><span>Etapa</span><span class="n">Valor</span><span>Próximo paso</span><span class="ll">La lleva</span></div>
+          <div class="vf"><span><b>Andrés Peña</b> 🔥</span><span><em class="et cita">Cita agendada</em></span><span class="n">$210 mil</span><span class="ps cita">Cita mañana, 10:00 a. m.</span><span class="ll"><i>A</i>Aiva</span></div>
+          <div class="vf"><span><b>Camilo Restrepo</b></span><span><em class="et interes">Interesado</em></span><span class="n">$650 mil</span><span class="ps urge">Contestar: escribió hace 12 min</span><span class="ll"><i class="h">L</i>Laura</span></div>
+          <div class="vf"><span><b>Sebastián Molina</b> 🔥</span><span><em class="et interes">Interesado</em></span><span class="n">$150 mil</span><span class="ps urge">Retomar: 1 día sin escribir</span><span class="ll"><i>A</i>Aiva</span></div>
+          <div class="vf"><span><b>Ricardo Vélez</b></span><span><em class="et ganado">Vendido</em></span><span class="n">$320 mil</span><span class="ps">—</span><span class="ll"><i>A</i>Aiva</span></div>
+        </div>
+      </div>
+    </div>
+
     <div class="cifras">
       <div class="cifra"><b>24/7</b><span>Contesta a cualquier hora</span></div>
       <div class="cifra"><b>2 canales</b><span>WhatsApp y el chat del sitio</span></div>
@@ -182,28 +231,26 @@ footer{border-top:1px solid var(--linea);background:var(--panel);position:relati
   <section id="hace">
     <span class="marca-seccion revela">Qué hace</span>
     <h2 class="revela">Un asistente que <em>no improvisa</em>.</h2>
-    <p class="dice revela">Trabaja con la información de tu negocio. Lo que no está ahí, no lo supone: lo pregunta,
-    y lo que le respondan una vez queda aprendido.</p>
     <div class="rejilla">
       <div class="ficha revela">
         <span class="chip"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 4.5-3.2 7.9-8 9-4.8-1.1-8-4.5-8-9V7z"/><path d="M9.2 12.2l2 2 3.6-3.9"/></svg></span>
         <h3>No inventa</h3>
-        <p>Precios, plazos y medidas salen de lo que cargaste. Si no está, dice que lo verifica y la pregunta te llega.</p>
+        <p>Lo que no está en lo que cargaste, lo verifica.</p>
       </div>
       <div class="ficha revela">
         <span class="chip"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M8 15h3"/></svg></span>
         <h3>Agenda de verdad</h3>
-        <p>Ofrece horarios que existen, confirma, mueve, cancela y recuerda la cita el día antes.</p>
+        <p>Horarios que existen, y recuerda la cita.</p>
       </div>
       <div class="ficha revela">
         <span class="chip"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg></span>
         <h3>Entiende cómo hablamos</h3>
-        <p>«De hoy en quince», «a la hora del almuerzo», «la que sea». Lo que no entienda, se le enseña.</p>
+        <p>«De hoy en quince» también es una fecha.</p>
       </div>
       <div class="ficha revela">
         <span class="chip"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/></svg></span>
         <h3>Un cliente, una ficha</h3>
-        <p>Si escribe por el sitio y después por WhatsApp, llega sabiendo de qué hablaban y no lo deja con dos citas.</p>
+        <p>Por el sitio o por WhatsApp, es la misma persona.</p>
       </div>
     </div>
   </section>
@@ -211,30 +258,25 @@ footer{border-top:1px solid var(--linea);background:var(--panel);position:relati
   <section id="pasos">
     <span class="marca-seccion revela">Cómo trabaja</span>
     <h2 class="revela">De un «hola» a una <em>cita agendada</em>.</h2>
-    <div class="pasos">
-      <div class="paso revela"><b>01</b><strong>Atiende</strong><span>A cualquier hora, con la información del negocio.</span></div>
-      <div class="paso revela"><b>02</b><strong>Anota</strong><span>Qué busca, para cuándo, presupuesto. Sin interrogar a nadie.</span></div>
-      <div class="paso revela"><b>03</b><strong>Agenda</strong><span>La cita, y la recuerda el día antes.</span></div>
-      <div class="paso revela"><b>04</b><strong>Califica</strong><span>Un puntaje que explica por qué sube y por qué baja.</span></div>
-      <div class="paso revela"><b>05</b><strong>Avisa</strong><span>Cuando piden una persona, cuando no supo algo, cuando un prospecto se pone caliente.</span></div>
-    </div>
+    <ol class="pasos revela">
+      <li><b>01</b><strong>Atiende</strong><span>a cualquier hora</span></li>
+      <li><b>02</b><strong>Anota</strong><span>qué busca y para cuándo</span></li>
+      <li><b>03</b><strong>Agenda</strong><span>y recuerda la cita</span></li>
+      <li><b>04</b><strong>Califica</strong><span>con un puntaje que se explica</span></li>
+      <li><b>05</b><strong>Avisa</strong><span>cuando hace falta una persona</span></li>
+    </ol>
   </section>
 
   <section id="aparte">
     <span class="marca-seccion revela">Varios negocios</span>
-    <h2 class="revela">Cada uno, con <em>lo suyo aparte</em>.</h2>
-    <div class="aparte revela">
-      <p>Su información, sus conversaciones, su WhatsApp y su embudo. Una boutique agenda citas; una financiera
-      resuelve solicitudes; una litografía cotiza y produce. <b>Lo que no se mezcla no se puede filtrar.</b></p>
-      <p>Y todo se vigila desde una sola pantalla, con la urgencia de cada quien a la vista.</p>
-    </div>
+    <h2 class="revela">Cada negocio, con <em>lo suyo aparte</em>.</h2>
+    <p class="dice revela">Su información, su WhatsApp y su embudo. Nada se mezcla.</p>
   </section>
 
   <section class="cierre" id="entrar">
     <h2 class="revela">Tu tablero te <em>está esperando</em>.</h2>
-    <p class="dice revela">Cada negocio tiene su propia dirección y su propia clave, la que te entregamos al
-    montarlo. Si la perdiste, escríbenos y te la reponemos.</p>
     <div class="acciones revela"><a class="pastilla" href="consola">Entrar a la consola</a></div>
+    <p class="clave revela">¿Perdiste tu clave? Escríbenos y te la reponemos.</p>
   </section>
 
 </main>
