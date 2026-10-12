@@ -7,6 +7,29 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-10-12
+
+### Lo que las reglas prohíben ya no lo respaldan, y la plata no se promete · `459ea37`
+🪤 Las guardas de «no inventa» medían el respaldo contra la persona entera, y la persona nombra wifi, parqueadero,
+mascotas, descuentos y envíos como ejemplos de lo que no se supone. Esas palabras respaldaban: «¿tienen wifi?»
+contestado con «Sí, tenemos wifi» pasaba en producción desde el primer commit, y las pruebas no lo veían porque
+medían contra la información sola. Ahora el respaldo es lo que se sabe del negocio. Encima, lo que pide el brief
+de agentes sobre inyección de prompt: un descuento, un porcentaje, algo gratis o un precio regateado que la
+información no ofrece no sale, una respuesta que recita las instrucciones se cambia por una fija, y el nombre y la
+información entran como datos. `pnpm test:inyeccion` (65 casos) pasa el recorrido entero con un modelo falso que
+siempre se deja convencer; quitar cualquiera de las cinco defensas la hace fallar. Sobre 93 respuestas reales de
+DUNOR, HRC y CONFIA, ninguna queda marcada de más. Escenarios de DUNOR con Gemma, porque OpenAI no estaba
+disponible: 38 de 40, y los dos que fallan ya fallaban (la retención de citas del 3 de octubre cambió el texto de
+cancelar).
+
+### WhatsApp oficial no atiende dos veces lo que Meta manda dos veces · `2bf1951`
+Meta advierte que una notificación puede llegar más de una vez y reintenta durante días. El mismo «hola» entraba
+dos veces y se contestaba dos veces, o se volvía un «hola\nhola». El id de cada mensaje queda 7 días en la base, no
+en memoria, porque un despliegue es justo cuando Meta reintenta. De paso, en «Mira» y «Propone» el canal ya no
+marca leído, no muestra «escribiendo…» ni contesta «solo puedo leer texto», igual que WhatsApp por QR. Baileys
+queda fuera a propósito: no hay repetidos en las bases y puede entregar el mismo id al descifrar.
+`pnpm test:repetidos` (18 casos, contra la ruta de verdad y con firma de Meta).
+
 ## 2026-09-25
 
 ### Con quién firmas es de cada cliente, y varias personas caben en un chat · `d93506e`
