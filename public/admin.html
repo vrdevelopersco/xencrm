@@ -782,6 +782,9 @@ dialog#dlg-grupos > b{font-size:17px}
 .fila-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0 14px}
 .dias{display:flex;flex-wrap:wrap;gap:6px 14px}
 .franja{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+/* La fecha del formulario de agendar: como los demás campos del panel. El estilo general no incluye datetime-local, y
+   quedaba suelta al lado de su etiqueta, sin borde. Solo este: las franjas de El negocio van en línea a propósito. */
+#book-when{display:block;width:100%;margin-top:4px;border:1px solid var(--glass-border);background:var(--glass-strong);padding:6px 10px}
 /* El selector de sede del calendario: de su tamaño, no del de la barra. */
 #cal-sede,#pip-sede{width:auto;max-width:220px;flex:0 1 auto;min-width:0}
 /* Una sede en El negocio: hermana de las demás, con su borde, sin sombra propia (la tarjeta ya la tiene). */
