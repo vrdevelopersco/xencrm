@@ -9,6 +9,13 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### Una clave o una tarjeta escrita en el chat no se guarda ni llega al modelo · `ce06a07`
+«Mi clave es 4567, no puedo entrar» quedaba en claro en el CRM y se le mandaba a OpenAI; el tapador que existía solo
+corría en los chats importados. Ahora una clave, un PIN, un código de verificación, una llave o una tarjeta se tapan
+antes de que nada los lea, y otra vez al guardar cualquier mensaje. El asistente le pide al cliente, con tacto, que
+no los mande por el chat. 🪤 No sirve el tapador de los importados: también tapa «Correo:» y borraría el correo de
+la cita. Una tarjeta se reconoce por longitud, red y dígito de control juntos. `pnpm test:claves` (21 casos).
+
 ### Cada respuesta con su «¿por qué?», y la versión que corre a la vista · `fa9fb3f`
 «¿Por qué le contestó eso?» se contestaba con logs que se perdían al reiniciar. Ahora cada mensaje corre en un turno
 que se guarda 90 días: qué entendió, la ruta, el motor y el modelo, cuánto tardó, qué guardas saltaron, cuánto costó,
