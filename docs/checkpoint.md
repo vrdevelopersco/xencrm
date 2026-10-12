@@ -10,7 +10,7 @@ checkpoint en su `version.json`. Nada de esto está desplegado todavía, ni lo d
 
 | Comprobación | Resultado |
 |---|---|
-| `pnpm test` (sin modelo) | 1.837 comprobaciones, cero fallos |
+| `pnpm test` (sin modelo) | 1.865 comprobaciones, cero fallos |
 | `pnpm typecheck` | sin errores |
 | Pantallas nuevas, en Chrome | a 1340 y a 390 px, en claro y en oscuro, sin errores de JavaScript |
 | El paquete, descomprimido aparte | la consola entra con un `Origin` y un `Host` de afuera |
@@ -26,6 +26,8 @@ Después pidió también la portada, porque la sentía con mucho texto.
 | Tablero: próximo paso y valor en cada ficha, Clientes con pestañas y orden, cifras y sumas en Prospectos, la ficha en dos columnas con historia y notas, «3 de 23», fijados, listas en la barra, filtros encima de la lista | `b21f93d` |
 | Consola: la misma piel del tablero por dentro, la entrada intacta, y lo de una vez al mes de cada cliente en «⋯» | `8b1a237` |
 | Portada: de 385 a menos de 250 palabras, con una vista del tablero en vez de párrafos | `08ddbb7` |
+| El color de la consola, a gusto de cada quien en Mi cuenta, con el azul por defecto | `95e4964` |
+| Los fijados en la base de cada cliente: siguen a la persona a otro computador | `0f4c870` |
 
 Arreglos que salieron por el camino: la lista de contactos ignoraba el `limit` y devolvía 200 aunque se pidieran 500;
 el dinero salía siempre en pesos; la consola tenía media hoja de estilos copiada dentro de la regla del celular.
@@ -39,16 +41,15 @@ el dinero salía siempre en pesos; la consola tenía media hoja de estilos copia
 ### Pendientes conocidos
 
 - **La clave de OpenAI** del `.env` de la raíz da 401. La buena termina en «MMA».
-- **Los fijados viven en el navegador** de quien los fija. Si alguien cambia de computador, no lo siguen. Pasarlos
-  a la base pediría saber quién mira el tablero, y hoy el tablero no tiene usuarios propios.
-- **«Míos»** funciona por el nombre con el que responde cada quien. Si dos personas firman igual, se ven las mismas.
-- **La consola usa el azul del tablero.** Si se prefiere el dorado de la casa por dentro, es cambiar un color.
+- **«Míos» y los fijados** van por el nombre con el que responde cada quien. Si dos personas firman igual,
+  comparten los dos. El tablero no tiene usuarios propios, y el nombre es lo único que las distingue.
 
 ### Cómo retomar
 
 ```bash
 pnpm test               # todo, sin modelo
 pnpm test:proximo       # el próximo paso, las notas y los números de la barra
+pnpm test:fijados       # los fijados en la base, y que no quede un teléfono guardado ahí
 pnpm test:tablero       # el esqueleto del tablero, la consola y la portada
 pnpm paquete            # el ZIP para Hostinger
 ```

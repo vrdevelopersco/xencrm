@@ -9,6 +9,19 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### Los fijados en la base de cada cliente · `0f4c870`
+Vivían en el navegador y no seguían a nadie a otro computador. Ahora van en `settings` con el nombre con el que
+responde cada quien, como «Míos». Lo que estaba en el navegador se sube solo la primera vez. 🪤 Un identificador de
+WhatsApp es un teléfono: al borrar, anonimizar o unir una ficha se quita de los fijados de todos, o la retención
+dejaría el número guardado en los ajustes. Tres roturas a propósito, tres fallos. Visto en Chrome con dos
+navegadores.
+
+### El color de la consola, a gusto de cada quien · `95e4964`
+El usuario la prefiere en azul y pidió que fuera de cada perfil. En Mi cuenta se escoge entre azul, dorado, grafito
+y morado. Se ve al instante, y si se cierra sin guardar vuelve el que estaba. El azul no se guarda. Los cuatro
+medidos sobre 4.5:1. 🪤 Al guardar Mi cuenta, el botón del perfil se quedaba en texto plano, sin la inicial ni la
+flecha.
+
 ### La portada, con la mitad del texto · `08ddbb7`
 El usuario la sintió con mucho texto: 385 palabras, casi todo párrafos. Ahora cada sección dice una cosa en una
 línea y quedan menos de 250. Lo que decían los párrafos lo enseña una vista del tablero hecha con HTML. Los pasos
