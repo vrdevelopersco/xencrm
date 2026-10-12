@@ -330,7 +330,9 @@ el adaptador se construye cuando haya credenciales de prueba de Meta.
   - el tablero nunca vuelve a mostrar el token completo, solo sus últimos caracteres.
 
   Luego se registra el webhook `https://TU-DOMINIO/webhooks/meta` en Meta, con el token de verificación.
-  Pruebas: `pnpm test:meta`. Requiere negocio verificado y plantillas para escribir fuera de la ventana de
+  Meta puede mandar la misma notificación más de una vez: aiva recuerda el id de cada mensaje durante 7 días y lo
+  repetido no entra ni se contesta dos veces. Con el canal en «Mira» o «Propone» no marca leído ni muestra
+  «escribiendo…». Pruebas: `pnpm test:meta` y `pnpm test:repetidos`. Requiere negocio verificado y plantillas para escribir fuera de la ventana de
   24 horas. aiva respeta esa ventana: si pasaron más de 24 horas desde el último mensaje del
   cliente, no envía (ni guarda como enviado) lo que Meta rechazaría. El tablero lo advierte en la
   conversación y en "Por verificar" (con cuánto tiempo queda cuando faltan menos de 3 horas), y la

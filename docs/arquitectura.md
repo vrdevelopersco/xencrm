@@ -199,6 +199,7 @@ ya guardados (no llama al modelo; `--write` para guardar).
 | `verifications` | preguntas por verificar y sus respuestas |
 | `misses` | frases que las reglas no entendieron, con lo que entendió el modelo |
 | `settings` | decisiones del tablero (qué canales están encendidos) |
+| `entrantes` | el id de cada mensaje que ya entró por WhatsApp oficial, para no atender dos veces lo que Meta repite (se borra a los 7 días; `crm/entrantes.ts`) |
 
 Las columnas nuevas se agregan en `store.ts › migrate()`, porque SQLite no tiene `ADD COLUMN IF NOT EXISTS`.
 Respaldo diario con `VACUUM INTO` a `data/backups/` (`rag/backup.ts`), con las últimas 14 copias y permisos 600.
@@ -335,6 +336,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:historial` | aprender del historial: agrupar preguntas, estilo sin cifras, leer el .txt | no |
 | `pnpm test:backup` | respaldo: la copia trae los datos, permisos 600, conserva las últimas N | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
+| `pnpm test:repetidos` | WhatsApp oficial: lo que Meta manda dos veces entra y se contesta una vez; en «Mira» no marca leído ni contesta | no (Meta simulado) |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |
 | `pnpm replay` | las conversaciones sintéticas con los motores configurados; proyecta el costo | sí |
 

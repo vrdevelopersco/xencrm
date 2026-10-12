@@ -212,6 +212,15 @@ export function getDb(): DatabaseSync {
       entregado_at INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_wa_salida_pend ON wa_salida(entregado_at, id);
+    -- Mensajes que ya entraron por un canal que los puede repetir (Meta reenvía la misma notificación). Solo el id:
+    -- ni contenido ni a quién. Se borran solos a los 7 días. Ver crm/entrantes.ts.
+    CREATE TABLE IF NOT EXISTS entrantes (
+      canal TEXT NOT NULL,
+      id TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      PRIMARY KEY (canal, id)
+    );
+    CREATE INDEX IF NOT EXISTS entrantes_ts ON entrantes(ts);
     -- Decisiones tomadas desde el tablero (p. ej. qué canales están encendidos); los secretos siguen en .env.
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,

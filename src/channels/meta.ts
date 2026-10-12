@@ -9,7 +9,8 @@ import { env } from '../config.js';
 import { handleMessage } from '../agent/agent.js';
 import { conFirma, registerSender, registerTemplateSender, type Template } from '../crm/outbox.js';
 import { anotarOrigen, deMeta } from '../crm/origen.js';
-import { channelOn } from './switches.js';
+import { channelOn, soloEscucha } from './switches.js';
+import { primeraVez } from '../crm/entrantes.js';
 
 export interface MetaCredentials {
   token: string;
@@ -178,7 +179,9 @@ async function flush(waId: string) {
   if (!p) return;
   pending.delete(waId);
   try {
-    await markReadAndTyping(p.lastId);
+    // 🪤 «Leído» y «escribiendo…» solo si va a contestar el asistente, como en WhatsApp por QR. Con el canal en «Mira»
+    // o «Propone» el cliente veía que alguien escribía y no le llegaba nada: contesta una persona, cuando pueda.
+    if (!soloEscucha('meta')) await markReadAndTyping(p.lastId);
     const reply = await handleMessage({ userId: `meta:${waId}`, channel: 'meta', text: p.texts.join('\n'), userName: p.name ?? null });
     if (reply.silent || !reply.text) return;
     // Igual que en WhatsApp por QR: por el mismo número contestan el asistente y las personas, así que se firma.
@@ -232,9 +235,13 @@ export function mountMeta(app: Hono<{ Bindings: HttpBindings }>) {
         const value = change.value ?? {};
         const names = new Map((value.contacts ?? []).map((ct) => [ct.wa_id, ct.profile?.name]));
         for (const m of value.messages ?? []) {
+          // Meta puede mandar la misma notificación más de una vez: lo que ya entró no se atiende otra vez.
+          if (!primeraVez('meta', m.id)) continue;
           const text = extractText(m);
           if (text === null) {
-            void sendMetaText(m.from, 'Por ahora solo puedo leer mensajes de texto 🙂 ¿Me lo escribes?').catch(() => undefined);
+            // 🪤 Igual que en WhatsApp por QR: con el canal en «Mira» o «Propone» no se le contesta nada al cliente,
+            // tampoco esto. Era lo único que se escapaba, y delataba a un robot en una conversación que lleva una persona.
+            if (!soloEscucha('meta')) void sendMetaText(m.from, 'Por ahora solo puedo leer mensajes de texto 🙂 ¿Me lo escribes?').catch(() => undefined);
             continue;
           }
           // Si llegó pulsando un anuncio de «enviar mensaje», el aviso trae cuál y con qué titular. Es lo único
