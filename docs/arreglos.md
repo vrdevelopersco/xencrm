@@ -9,6 +9,12 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### La portada, con la mitad del texto · `08ddbb7`
+El usuario la sintió con mucho texto: 385 palabras, casi todo párrafos. Ahora cada sección dice una cosa en una
+línea y quedan menos de 250. Lo que decían los párrafos lo enseña una vista del tablero hecha con HTML. Los pasos
+pasan a una fila de verbos. `test:tablero` avisa si vuelve a pasar de 260 palabras, y falla con la portada vieja
+(365 contadas así). Vista en Chrome a 1340 y 390 px.
+
 ### La consola, con la misma piel del tablero · `8b1a237`
 La consola seguía con crema, dorado, vidrio y hojas de bloc, y el tablero es blanco y azul desde el 2 de octubre:
 abrir uno desde la otra se sentía como cambiar de producto. Ahora hablan igual por dentro. La fila de cada cliente
