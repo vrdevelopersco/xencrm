@@ -9,6 +9,22 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### Varias sedes con un mismo número · `dba1be5`, `4bc5cf7`
+Un negocio con varias sedes y un solo WhatsApp tenía que escoger entre varios números o un asistente que no sabe a
+cuál mandar a cada quien. Ahora las sedes van en su configuración, con nombre, dirección, apodos y, si cambia, su
+propio horario y cupo. El asistente pregunta en cuál antes de ofrecer horarios, entiende «la del norte» o «la de la
+72», ofrece los espacios de esa sede y, si lo pedido no existe ahí pero sí en otra, lo dice y ofrece la otra. La
+confirmación, el recordatorio y el calendario dicen la dirección, y el modelo ve las sedes para «¿dónde quedan?».
+En el tablero, el calendario filtra por sede, agendar a mano la pide y se editan en El negocio. 🪤 Una sede no es
+otro cliente; si el mensaje nombra dos sedes se vuelve a preguntar, y una sede con citas por delante no se puede
+quitar. Al probarlo en Chrome salió que «la del centro comercial» nombraba también a «la del centro»: ahora vale el
+apodo más largo. `pnpm test:sedes` (49 casos, sin modelo) y visto en escritorio y celular.
+
+### En el celular, el panel de agendar ya no tapa las citas · `ed54349`
+En el calendario del celular, la lista de citas podía quedar más baja que su contenido y el panel de agendar se
+montaba encima: del día se veía la primera cita a medias. Ya pasaba antes de las sedes; salió al revisarlas. Con
+las filas al alto de su contenido, medido en Chrome en Agenda y en Semana, el calendario termina antes del panel.
+
 ### Cada cliente con su tope de gasto de IA, y nadie sin respuesta al llegar · `148e438`
 El gasto se medía pero nada lo frenaba, y es lo primero que pregunta quien pone su propia llave de OpenAI. Ahora cada
 cliente tiene un tope en dólares al mes, que pone el super-admin en Configuración › Motores y se aplica al instante.
