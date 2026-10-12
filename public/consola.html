@@ -1057,7 +1057,9 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         // Con su logo, la lista se lee por la marca y no por dos letras. Si no carga, quedan las iniciales.
         (e.logo
           ? '<span class="sigla con-logo"><img src="/api/marca/' + encodeURIComponent(c.slug) + '" alt="" ' +
-            'onerror="this.parentNode.classList.remove(\'con-logo\');this.parentNode.textContent=' + JSON.stringify(sigla(c.nombre)) + '"></span>'
+            // 🪤 Las comillas de JSON.stringify cerraban el atributo antes de tiempo: el navegador no podía leer el
+            // manejador y, cuando el logo no cargaba, quedaba la imagen rota en vez de la sigla. Escapadas, sí entran.
+            'onerror="this.parentNode.classList.remove(\'con-logo\');this.parentNode.textContent=' + esc(JSON.stringify(sigla(c.nombre))) + '"></span>'
           : '<span class="sigla">' + esc(sigla(c.nombre)) + '</span>') +
         '<div class="quien">' +
           '<div class="fila"><span class="nombre">' + esc(c.nombre) + '</span>' + estado + prio + '</div>' +
