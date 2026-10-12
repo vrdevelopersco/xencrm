@@ -85,6 +85,10 @@ La pestaña **Clientes** es una lista con una fila por cliente. De un vistazo, s
 esperan · por verificar · citas · calientes · contactos**. Lo que está en cero no se pinta, para que el ruido no
 esconda lo que sí pasa.
 
+A la vista quedan solo **Abrir tablero** y **Ver más**. Lo que se usa una vez al mes va en **⋯**: la prioridad y,
+para el super-admin, respaldar, restaurar, copiar el token y dar de baja. Siete botones en fila eran siete cosas
+que leer antes de encontrar la de todos los días.
+
 Arriba, la **franja de todos los clientes** —por atender, mensajes de hoy, conversaciones, calientes, citas,
 efectividad media, gasto de IA e instancias arriba— y la gráfica de **conversaciones nuevas por día**, sumando
 todos. Cada instancia calcula la suya y la consola las suma; un cliente apagado no aporta, en vez de tumbar la
@@ -129,8 +133,8 @@ La **prioridad** de cada cliente se cambia en su fila y es la que pesa en el ord
 
 ### Respaldar y restaurar su configuración
 
-En la fila de cada cliente, **Respaldar** baja un archivo con lo que costó construir: su configuración, su
-perfil, su diccionario, su catálogo, lo que sabe y su marca. **Restaurar** sube uno y lo deja como estaba.
+En la fila de cada cliente, en **⋯ › Respaldar su configuración**, baja un archivo con lo que costó construir: su configuración, su
+perfil, su diccionario, su catálogo, lo que sabe y su marca. **Restaurar un respaldo** sube uno y lo deja como estaba.
 
 Lo que **no** va dentro, a propósito:
 
@@ -169,7 +173,7 @@ usarla desde afuera va detrás del túnel **con autenticación** (Cloudflare Acc
 
 ## Dar de baja un cliente
 
-Desde su tarjeta, **Dar de baja**. Lo que pasa:
+Desde su fila, en **⋯ › Dar de baja**. Lo que pasa:
 
 1. Sale de la consola y deja de aparecer en todo.
 2. Su carpeta se guarda en `clientes/_dados-de-baja/<slug>-<fecha>/`. **No se borra nada**: su base, sus

@@ -288,5 +288,16 @@ check('el dinero sale en la moneda del negocio, no en pesos fijos', /currency: s
 check('🪤 sin valor es «—», nunca «$0»', /function valorHtml\(c, corto\) \{\s*return c\.valor \?/.test(js));
 check('los filtros de Conversaciones van encima de la lista, no en un panel que le quita sitio al chat', /<div class="list">[\s\S]*?id="filters"/.test(html) && /var conPanel = CFG_VIEWS\[view\];/.test(js));
 
+// — La consola, con la piel del tablero (2026-10-12).
+const consola = readFileSync(new URL('../../public/consola.html', import.meta.url), 'utf8');
+const pielNueva = consola.slice(consola.indexOf('La piel del tablero, también aquí'));
+check('🪤 la entrada de la consola no cambia: los colores nuevos solo mandan con la aplicación a la vista',
+  /:root:has\(#app:not\(\[hidden\]\)\)\{/.test(pielNueva) && !/\n:root\{/.test(pielNueva));
+check('lo de una vez al mes va en «⋯» sin perder sus clases, que es por donde se enganchan',
+  ['respaldar', 'restaurar', 'copiar', 'baja', 'prio'].every((k) => new RegExp(`<details class="mas">[\\s\\S]*?class="[^"]*\\b${k}\\b`).test(consola)));
+check('el menú «⋯» se cierra al hacer clic fuera o con Escape', /details\.mas\[open\][\s\S]{0,120}d\.open = false/.test(consola) && /e\.key === 'Escape'[\s\S]{0,120}details\.mas\[open\]/.test(consola));
+check('la hoja de la consola no repite reglas copiadas dos veces', (consola.match(/\.micro\{display:grid/g) || []).length === 1);
+check('la gráfica de la consola tiene dos colores, no el acento dos veces', /--serie-wa:#[0-9a-f]{6}; --serie-sitio:#[0-9a-f]{6}/.test(consola) && !/banda\(function \(p\) \{ return p\.total; \}, 'var\(--oro-claro\)'\)/.test(consola));
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

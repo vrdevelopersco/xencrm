@@ -348,3 +348,14 @@ Las reglas de antes siguen mandando sobre lo nuevo:
 - **La barra de colores de Prospectos va oculta para un lector de pantalla.** Repite lo que dicen las sumas de las
   columnas, que sí se leen.
 
+### La consola, con la misma piel (2026-10-12)
+
+La consola seguía con crema, dorado, vidrio y hojas de bloc: abrir un tablero desde ella se sentía como cambiar de
+producto. Por dentro ahora habla igual que el tablero: barra oscura con rótulos y números, superficies blancas,
+el mismo azul y las tarjetas de Atender lisas con la franja de su urgencia a la izquierda, como Hoy. Lo de una vez al
+mes de cada cliente pasó a un menú **⋯**.
+
+🪤 **La entrada no cambia.** Es el puente desde la portada y se parece a ella. Por eso los colores nuevos no van en
+`:root` a secas sino en `:root:has(#app:not([hidden]))`: mandan solo con la aplicación a la vista, y así también
+alcanzan a los diálogos, que viven fuera de `#app`. `test:tablero` falla si alguien los sube a `:root`.
+
