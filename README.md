@@ -268,7 +268,9 @@ Todo en formato iCalendar estándar, sin cuentas conectadas ni tokens de IA:
 - **Tu calendario bloquea la agenda**: pon en `CALENDAR_BUSY_ICS` la dirección secreta iCal de tu
   calendario personal y el bot no ofrecerá esas horas (se lee cada 5 min; entiende eventos repetidos,
   excepciones, días completos y zonas horarias de Google y Outlook). Desde el tablero sí se puede agendar
-  encima de un evento personal. Pruebas: `pnpm test:calendar`.
+  encima de un evento personal. Con sedes, ese calendario ocupa todas, porque es el del dueño; el de una
+  sola sede va en `CALENDAR_BUSY_ICS_<SEDE>` (por ejemplo `CALENDAR_BUSY_ICS_NORTE`) y solo ocupa esa. Van en
+  el `.env` y no en la configuración: son direcciones secretas. Pruebas: `pnpm test:calendar` y `pnpm test:sedes`.
 
 ### Consumo de IA
 Cada llamada a un modelo queda registrada (tokens de entrada, caché, salida y razonamiento). El

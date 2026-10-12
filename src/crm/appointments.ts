@@ -128,7 +128,8 @@ export function slotMatches(startsAt: Date, w: When): boolean {
  * negocio tuviera sedes— se le cuentan a la primera, que suele ser donde atendía; contarlas en ninguna dejaría ese
  * espacio libre dos veces.
  *
- * El calendario privado sí vale para todas: es el del dueño, y si él está ocupado no puede estar en ninguna.
+ * El calendario privado del dueño (CALENDAR_BUSY_ICS) vale para todas: si él está ocupado no puede estar en ninguna.
+ * El de una sede (CALENDAR_BUSY_ICS_<SEDE>), solo para ella (crm/busy.ts).
  */
 function bookedCount(startsAt: Date, ag: Agenda, opts: { includeBusy?: boolean } = {}): number {
   const start = startsAt.getTime();
@@ -140,7 +141,7 @@ function bookedCount(startsAt: Date, ag: Agenda, opts: { includeBusy?: boolean }
       .prepare(`SELECT COUNT(*) n FROM appointments WHERE status = 'confirmada' AND starts_at < ? AND ends_at > ?${enLaSede}`)
       .get(...(s ? [end, start, s.id] : [end, start])) as { n: number }
   ).n;
-  return booked + (opts.includeBusy === false ? 0 : busyOverlaps(start, end));
+  return booked + (opts.includeBusy === false ? 0 : busyOverlaps(start, end, ag.sede?.id ?? null));
 }
 
 /**

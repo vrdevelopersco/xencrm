@@ -150,7 +150,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   // Dar de alta a alguien a mano: el que llegó por el local, por una llamada o con una tarjeta. Lo delicado
   // —qué dirección se le pone para que no nazca duplicada— está en crm/alta.ts, con sus pruebas.
   app.post('/admin/api/contacts', async (c) => {
-    const body = (await c.req.json().catch(() => ({}))) as { name?: string; phone?: string; stage?: Stage; notes?: string };
+    const body = (await c.req.json().catch(() => ({}))) as { name?: string; phone?: string; stage?: Stage; notes?: string; sede?: string };
     try {
       const r = darDeAlta(body);
       return c.json(r, r.yaExistia ? 200 : 201);
@@ -986,7 +986,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   // Enlace de suscripción y estado de los calendarios del dueño que bloquean la agenda.
   app.get('/admin/api/calendar', (c) => c.json({ feed: feedUrls(), busy: busyStatus() }));
-  app.get('/admin/api/busy', (c) => c.json(busyIntervals(Number(c.req.query('from') ?? Date.now()), Number(c.req.query('to') ?? Date.now() + 7 * 86400_000))));
+  // Con ?sede=, los bloques que ocupan esa sede (los generales y los suyos); sin ella, todos.
+  app.get('/admin/api/busy', (c) => c.json(busyIntervals(Number(c.req.query('from') ?? Date.now()), Number(c.req.query('to') ?? Date.now() + 7 * 86400_000), c.req.query('sede') || undefined)));
 
   app.get('/admin/api/slots', (c) => {
     const weekday = c.req.query('weekday') !== undefined ? Number(c.req.query('weekday')) : undefined;

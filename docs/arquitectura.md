@@ -325,7 +325,8 @@ no entra a los otros ni sabiéndose la dirección.
   que la sede no diga. Sin sedes es la agenda de siempre, así que el caso de casi todos los clientes no se piensa en
   ningún otro sitio. Decisiones:
   - El cupo es por sede. Las citas sin sede, de antes de que el negocio tuviera sedes, se le cuentan a la primera;
-    contarlas en ninguna dejaría ese espacio libre dos veces. El calendario privado del dueño ocupa todas.
+    contarlas en ninguna dejaría ese espacio libre dos veces. El calendario privado del dueño
+    (`CALENDAR_BUSY_ICS`) ocupa todas; el de una sede (`CALENDAR_BUSY_ICS_<SEDE>`), solo esa (`crm/busy.ts`).
   - Con varias sedes, `bookAppointment` no agenda sin sede. Escoger una por defecto mandaría a alguien a la otra punta
     de la ciudad.
   - El flujo tiene el paso `sede`, entre el nombre y los horarios. `sedeEn` reconoce nombre, id y apodos sin tildes;

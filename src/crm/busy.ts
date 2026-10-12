@@ -367,12 +367,44 @@ const perSource: BusyInterval[][] = [];
 export interface BusySource {
   /** URL recortada: la dirección secreta no se muestra completa. */
   label: string;
+  /** La sede que bloquea, si es de una sola (CALENDAR_BUSY_ICS_<SEDE>). Sin sede: bloquea todas. */
+  sede?: string;
   ok: boolean;
   intervals: number;
   syncedAt?: number;
   error?: string;
 }
-const sources: BusySource[] = env.calendarBusyIcs.map((url) => ({ label: maskUrl(url), ok: false, intervals: 0 }));
+/**
+ * De dónde se leen: los de CALENDAR_BUSY_ICS bloquean todas las sedes —es el calendario del dueño, y si él está
+ * ocupado no puede estar en ninguna—, y los de CALENDAR_BUSY_ICS_<SEDE> (CALENDAR_BUSY_ICS_NORTE) solo esa sede.
+ *
+ * 🪤 En el .env y no en aiva.config.json: son direcciones secretas —quien las tenga ve la agenda del dueño— y la
+ * configuración se respalda y se manda por correo.
+ */
+const variableDe = (sede: string) => `CALENDAR_BUSY_ICS_${sede.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
+const fuentes = (): { url: string; sede: string | null }[] => [
+  ...env.calendarBusyIcs.map((url) => ({ url, sede: null })),
+  ...business.sedes.flatMap((s) =>
+    (process.env[variableDe(s.id)] ?? '')
+      .split(',')
+      .map((u) => u.trim())
+      .filter(Boolean)
+      .map((url) => ({ url, sede: s.id })),
+  ),
+];
+let urls: { url: string; sede: string | null }[] = [];
+let sources: BusySource[] = [];
+/**
+ * La lista se arma al usarla y no al cargar el módulo: así la lee igual quien la toque después de arrancar (las
+ * pruebas lo hacen). Si cambió, se empieza de cero: lo leído de una lista no vale para otra.
+ */
+function preparar(): void {
+  const ahora = fuentes();
+  if (JSON.stringify(ahora) === JSON.stringify(urls)) return;
+  urls = ahora;
+  sources = urls.map((u) => ({ label: maskUrl(u.url), ...(u.sede ? { sede: u.sede } : {}), ok: false, intervals: 0 }));
+  perSource.length = 0;
+}
 
 function maskUrl(url: string): string {
   try {
@@ -384,11 +416,12 @@ function maskUrl(url: string): string {
 }
 
 export async function syncBusy(): Promise<void> {
+  preparar();
   const from = Date.now() - 86400_000;
   const to = Date.now() + (business.appointments.maxDaysAhead + 2) * 86400_000;
   await Promise.all(
-    env.calendarBusyIcs.map(async (url, i) => {
-      const s = (sources[i] ??= { label: maskUrl(url), ok: false, intervals: 0 });
+    urls.map(async ({ url }, i) => {
+      const s = sources[i]!;
       try {
         const res = await fetch(url.replace(/^webcal:/i, 'https:'), { signal: AbortSignal.timeout(20_000) });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -406,25 +439,35 @@ export async function syncBusy(): Promise<void> {
 }
 
 export function startBusySync(): void {
-  if (!env.calendarBusyIcs.length) return;
+  if (!fuentes().length) return;
   void syncBusy();
   setInterval(() => void syncBusy(), REFRESH_MS).unref();
 }
 
-/** Cuántos eventos del dueño se cruzan con [start, end). */
-export function busyOverlaps(start: number, end: number): number {
+/** ¿Este calendario cuenta para esa sede? Los generales, para todas; los de una sede, solo para ella. */
+const cuentaPara = (i: number, sede: string | null | undefined) => !urls[i]!.sede || urls[i]!.sede === sede;
+
+/** Cuántos eventos del dueño se cruzan con [start, end) en esa sede (sin sede: los generales). */
+export function busyOverlaps(start: number, end: number, sede?: string | null): number {
+  preparar();
   let n = 0;
-  for (const list of perSource) for (const b of list ?? []) if (b.start < end && b.end > start) n++;
+  perSource.forEach((list, i) => {
+    if (!cuentaPara(i, sede)) return;
+    for (const b of list ?? []) if (b.start < end && b.end > start) n++;
+  });
   return n;
 }
 
-export function busyIntervals(from: number, to: number): BusyInterval[] {
+/** Los bloques ocupados de [from, to). Con sede, los generales y los de esa sede; sin sede, todos. */
+export function busyIntervals(from: number, to: number, sede?: string | null): BusyInterval[] {
+  preparar();
   return perSource
-    .flat()
+    .flatMap((list, i) => (sede === undefined || cuentaPara(i, sede) ? (list ?? []) : []))
     .filter((b) => b.end > from && b.start < to)
     .sort((a, b) => a.start - b.start);
 }
 
 export function busyStatus(): BusySource[] {
+  preparar();
   return sources.map((s) => ({ ...s }));
 }

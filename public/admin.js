@@ -1337,7 +1337,9 @@
         from = addDays(m0, -7).getTime();
         to = addDays(new Date(cal.start.getFullYear(), cal.start.getMonth() + 1, 1), 7).getTime();
       } else { from = addDays(cal.start, -1).getTime(); to = addDays(cal.start, 8).getTime(); }
-      return Promise.all([api('/appointments?from=' + from + '&to=' + to), api('/busy?from=' + from + '&to=' + to)]);
+      // Los bloques ocupados de la sede que se mira: los del dueño y los de su calendario (src/crm/busy.ts).
+      var deLaSede = cal.sede && variasSedes() ? '&sede=' + encodeURIComponent(cal.sede) : '';
+      return Promise.all([api('/appointments?from=' + from + '&to=' + to), api('/busy?from=' + from + '&to=' + to + deLaSede)]);
     }).then(function (r) {
       var list = r[0]; cal.busy = r[1] || [];
       cal.todas = list;
@@ -1522,9 +1524,9 @@
   $('cal-sede').onchange = function () {
     cal.sede = $('cal-sede').value;
     helpSet('aiva.cal.sede', cal.sede);
-    cal.appts = filtrarSede(cal.todas);
     if (cal.sede) $('book-sede').value = cal.sede;
-    renderCalendar();
+    // Se recarga y no solo se repinta: los bloques ocupados también cambian con la sede.
+    loadCalendar();
   };
   $('book-btn').onclick = function () {
     var userId = $('book-contact').value, when = $('book-when').value; if (!userId || !when) { $('book-msg').textContent = 'Elige contacto y fecha.'; return; }
@@ -1600,7 +1602,7 @@
   function calendarPanel(cfg) {
     var f = cfg.feed;
     var busy = cfg.busy.length
-      ? '<ul>' + cfg.busy.map(function (s) { return '<li>' + (s.ok ? '✓ ' : '✗ ') + esc(s.label) + ' · ' + (s.ok ? s.intervals + ' eventos próximos' + (s.syncedAt ? ', leído ' + new Date(s.syncedAt).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }) : '') : esc(s.error || 'sin leer todavía')) + '</li>'; }).join('') + '</ul><div class="small muted">Sus eventos ocupan la agenda: el bot no ofrece esas horas. Se leen cada 5 minutos.</div>'
+      ? '<ul>' + cfg.busy.map(function (s) { return '<li>' + (s.ok ? '✓ ' : '✗ ') + esc(s.label) + (s.sede ? ' · solo ' + esc(nombreSede(s.sede) || s.sede) : '') + ' · ' + (s.ok ? s.intervals + ' eventos próximos' + (s.syncedAt ? ', leído ' + new Date(s.syncedAt).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }) : '') : esc(s.error || 'sin leer todavía')) + '</li>'; }).join('') + '</ul><div class="small muted">Sus eventos ocupan la agenda: el bot no ofrece esas horas. Se leen cada 5 minutos.</div>'
       : '<div class="small muted">' + esc(state.agentName || 'El asistente') + ' todavía no ve tu calendario, así que puede ofrecer horas en las que ya estás ocupado. Se conecta una vez y queda: pídelo y lo dejamos listo.</div>';
     return '<div class="panel"><b>Calendario</b>' +
       '<div class="small">Suscríbete desde Google Calendar, Outlook o Apple Calendar para ver las citas. El enlace es secreto: quien lo tenga ve nombres y teléfonos.</div>' +
@@ -2926,6 +2928,9 @@
     $('nv-notas').value = '';
     $('nv-msg').textContent = '';
     $('nv-etapa').innerHTML = (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.label) + '</option>'; }).join('');
+    // Con varias sedes, a cuál llegó: si no, sale en Prospectos como «sin sede» aunque haya entrado por una.
+    $('nv-sede-l').hidden = !variasSedes();
+    $('nv-sede').innerHTML = '<option value="">Todavía no sé</option>' + (state.sedes || []).map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.nombre) + '</option>'; }).join('');
     $('dlg-nuevo').showModal();
     $('nv-nombre').focus();
   };
@@ -2935,7 +2940,7 @@
     var tel = $('nv-tel').value.trim();
     if (!nombre && !tel) { $('nv-msg').textContent = 'Dime al menos el nombre o el teléfono.'; return; }
     $('nv-msg').textContent = 'Creando…';
-    api('/contacts', { method: 'POST', body: { name: nombre, phone: tel, stage: $('nv-etapa').value, notes: $('nv-notas').value.trim() } })
+    api('/contacts', { method: 'POST', body: { name: nombre, phone: tel, stage: $('nv-etapa').value, notes: $('nv-notas').value.trim(), sede: variasSedes() ? $('nv-sede').value || undefined : undefined } })
       .then(function (r) {
         if (!r || r.error) { $('nv-msg').textContent = (r && r.error) || 'No se pudo crear.'; return; }
         $('dlg-nuevo').close();

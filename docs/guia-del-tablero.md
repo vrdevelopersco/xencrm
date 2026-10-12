@@ -142,6 +142,8 @@ asistente no ofrece esas horas; desde aquí sí puedes agendar encima si hace fa
 Si el negocio tiene **varias sedes**, arriba sale a cuál mirar. Con una escogida ves solo sus citas y su horario;
 con **Todas las sedes** ves todo y lo que abre cualquiera. Cada cita dice en qué sede es, aquí, en Hoy y en la
 ficha, y agendar a mano pide la sede: sin ella la cita no se agenda. La ficha queda en la sede de su última cita.
+Los bloques *Ocupado* también son de la sede que miras: el calendario del dueño ocupa todas, y si una sede tiene el
+suyo, ese solo ocupa esa sede. Al crear una persona a mano en Clientes, se escoge a qué sede llegó.
 
 ## Prospectos
 

@@ -25,9 +25,19 @@ writeFileSync(
   }),
 );
 writeFileSync(join(dir, '.env'), '');
-Object.assign(process.env, { AIVA_CONFIG: join(dir, 'aiva.config.json'), AIVA_ENV_FILE: join(dir, '.env'), DB_PATH: join(dir, 'data', 'aiva.db'), WHATSAPP_ENABLED: 'false' });
-// Si algo llama a un modelo, falla: el flujo de citas es de reglas.
+Object.assign(process.env, {
+  AIVA_CONFIG: join(dir, 'aiva.config.json'),
+  AIVA_ENV_FILE: join(dir, '.env'),
+  DB_PATH: join(dir, 'data', 'aiva.db'),
+  WHATSAPP_ENABLED: 'false',
+  // El calendario del dueño, ninguno; el de la sede del sur, uno de mentira (ver «Calendarios por sede»).
+  CALENDAR_BUSY_ICS: '',
+  CALENDAR_BUSY_ICS_SUR: 'http://cal.prueba/sur.ics',
+});
+// Si algo llama a un modelo, falla: el flujo de citas es de reglas. Solo contesta el calendario de la sede del sur.
+let calendarioSur = '';
 globalThis.fetch = (async (url: string | URL | Request) => {
+  if (String(url) === 'http://cal.prueba/sur.ics') return new Response(calendarioSur, { headers: { 'content-type': 'text/calendar' } });
   throw new Error(`la prueba no sale a la red: ${String(url)}`);
 }) as typeof fetch;
 
@@ -253,6 +263,36 @@ console.log('— Editarlas desde El negocio');
   if (antes.tz === undefined) delete process.env.TZ;
   else process.env.TZ = antes.tz;
   check('🪤 con el servidor en UTC, el recordatorio de la tarde no cae en un día cerrado', dia === 5, `cayó en el día ${dia}`);
+}
+{
+  console.log('— Calendarios por sede');
+  // Un evento en el calendario de la sede del sur, un martes a las 10 en dos semanas: a esa hora abren las dos.
+  const { syncBusy, busyStatus, busyIntervals } = await import('../crm/busy.js');
+  let t = Date.now() + 8 * 86400_000;
+  while (tzParts(new Date(t)).wd !== 2) t += 86400_000;
+  const p = tzParts(new Date(t));
+  const diez = zoned(p.y, p.m, p.d, 10, 0);
+  const ics = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  calendarioSur = `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:sur-1\r\nDTSTART:${ics(diez)}\r\nDTEND:${ics(new Date(diez.getTime() + 3600_000))}\r\nSUMMARY:Ocupado\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`;
+  await syncBusy();
+  check('el calendario de la sede del sur se lee, y dice de qué sede es', busyStatus().some((s) => s.ok && s.sede === 'sur' && s.intervals === 1), JSON.stringify(busyStatus()));
+  check('🪤 su evento ocupa la sede del sur', !isSlotFree(diez, { sede: 'sur' }));
+  check('🪤 y no la del norte, que tiene su propia gente', isSlotFree(diez, { sede: 'norte' }));
+  const desde = diez.getTime() - 3600_000, hasta = diez.getTime() + 2 * 3600_000;
+  check('el calendario del tablero, mirando la del norte, no lo pinta', busyIntervals(desde, hasta, 'norte').length === 0 && busyIntervals(desde, hasta, 'sur').length === 1 && busyIntervals(desde, hasta).length === 1);
+}
+{
+  // Quien llegó al local y se da de alta a mano también es de una sede.
+  const { darDeAlta } = await import('../crm/alta.js');
+  const r = darDeAlta({ name: 'Llegó al Local', phone: '3009998877', sede: 'sur' });
+  check('dar de alta a mano a alguien deja su sede en la ficha', r.contact.data.sede === 'sur', JSON.stringify(r.contact.data));
+  let error = '';
+  try {
+    darDeAlta({ name: 'Otra', sede: 'no-existe' });
+  } catch (e) {
+    error = (e as Error).message;
+  }
+  check('una sede que no existe no se acepta', /no existe/.test(error), error || 'se aceptó');
 }
 check('enseñar una frase sabe leer sedes', bookingReading('la de la 72') === 'Sede Sur', String(bookingReading('la de la 72')));
 
