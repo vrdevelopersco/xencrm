@@ -779,7 +779,7 @@ dialog#dlg-grupos > b{font-size:17px}
 .dias{display:flex;flex-wrap:wrap;gap:6px 14px}
 .franja{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
 /* El selector de sede del calendario: de su tamaño, no del de la barra. */
-#cal-sede{width:auto;max-width:220px;flex:0 1 auto;min-width:0}
+#cal-sede,#pip-sede{width:auto;max-width:220px;flex:0 1 auto;min-width:0}
 /* Una sede en El negocio: hermana de las demás, con su borde, sin sombra propia (la tarjeta ya la tiene). */
 .sede-fila{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
 .franja input[type=time]{min-height:38px}
@@ -1233,7 +1233,7 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
     </section>
     <!-- Pipeline -->
     <section class="view" id="view-pipeline">
-      <div class="topbar"><h1>Prospectos</h1><span class="muted small">Arrastra una tarjeta o usa «Mover a…» para cambiar de etapa</span><span class="grow"></span></div>
+      <div class="topbar"><h1>Prospectos</h1><span class="muted small">Arrastra una tarjeta o usa «Mover a…» para cambiar de etapa</span><span class="grow"></span><select id="pip-sede" aria-label="Qué sede mirar" hidden></select></div>
       <div class="board" id="board"></div>
       <div class="sr-only" id="board-status" role="status"></div>
     </section>

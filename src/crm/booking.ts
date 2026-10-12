@@ -239,12 +239,6 @@ function offer(c: Contact, opts: { when?: When; after?: Date; sede?: string | nu
   return `${intro}\n${listSlots(slots)}\n¿Cuál te sirve? Si prefieres otro día u hora, dime.`;
 }
 
-/** La sede queda en la ficha: la próxima vez se le ofrece esa sin preguntar (y puede cambiarla diciéndolo). */
-function recordarSede(userId: string, sede: string | null) {
-  const c = getContact(userId);
-  if (!c || !sede || c.data.sede === sede) return;
-  updateContact(userId, { data: { ...c.data, sede } }, { silent: true });
-}
 
 async function book(c: Contact, userId: string, chosen: string): Promise<string> {
   const when = new Date(chosen);
@@ -259,7 +253,6 @@ async function book(c: Contact, userId: string, chosen: string): Promise<string>
     return `Ese espacio se acaba de ocupar 😕 ` + offer(c);
   }
   save(getContact(userId)!, null);
-  recordarSede(userId, nueva.sede);
   const en = nueva.location ? ` en ${nueva.location}` : '';
   // Mover: primero se agenda la nueva y solo después se cancela la anterior, así nunca se queda sin cita.
   const old = moving ? getAppointment(moving) : null;

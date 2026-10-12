@@ -1155,8 +1155,28 @@
   $('notif-clear').onclick = function () { state.notifSeen = state.notifs.length ? Math.max.apply(null, state.notifs.map(function (n) { return n.id; })) : 0; try { localStorage.setItem(LLAVE('notifSeen'), String(state.notifSeen)); } catch (e) {} renderNotifs(); };
 
   // ---------- pipeline ----------
+  // Con varias sedes, el equipo de cada una mira sus prospectos. Quien todavía no escogió sede no es de ninguna: sale
+  // en «Todas» y en «Sin sede todavía», que es justo donde hay que ir a preguntarle.
+  var pipSede = helpGet('aiva.pip.sede') || '';
+  function pintarSedesPip() {
+    if (!variasSedes()) { $('pip-sede').hidden = true; return; }
+    if (pipSede && pipSede !== '_ninguna' && !nombreSede(pipSede)) pipSede = '';
+    $('pip-sede').innerHTML = '<option value="">Todas las sedes</option>' +
+      state.sedes.map(function (s) { return '<option value="' + esc(s.id) + '"' + (s.id === pipSede ? ' selected' : '') + '>' + esc(s.nombre) + '</option>'; }).join('') +
+      '<option value="_ninguna"' + (pipSede === '_ninguna' ? ' selected' : '') + '>Sin sede todavía</option>';
+    $('pip-sede').hidden = false;
+  }
+  $('pip-sede').onchange = function () { pipSede = this.value; helpSet('aiva.pip.sede', pipSede); loadPipeline(); };
+  function deLaSede(c) {
+    if (!pipSede || !variasSedes()) return true;
+    var s = c.data && c.data.sede;
+    return pipSede === '_ninguna' ? !s : s === pipSede;
+  }
+
   function loadPipeline(focusId) {
-    api('/contacts?limit=500').then(function (list) {
+    pintarSedesPip();
+    api('/contacts?limit=500').then(function (todos) {
+      var list = todos.filter(deLaSede);
       // Al redibujar (también por un evento en vivo) el foco no se pierde: vuelve a la misma tarjeta.
       var active = document.activeElement && document.activeElement.closest ? document.activeElement.closest('#board .card') : null;
       focusId = focusId || (active && active.getAttribute('data-id'));
@@ -1179,7 +1199,7 @@
               '<div class="t">' + scoreChip(c) + '<span class="grow"></span><span class="cuando">' + esc(c.lastMessageAt ? rel(c.lastMessageAt) : '') + '</span></div>' +
               '<button type="button" class="card-open" title="Abrir la conversación">' + esc(nameOf(c)) + '</button>' +
               '<div class="s">' + esc(c.recap || c.summary || '') + '</div>' +
-              '<div class="pie">' + channelIcon(c.channel) + (c.unread ? '<span class="chip sin-leer">' + c.unread + ' sin leer</span>' : '') +
+              '<div class="pie">' + channelIcon(c.channel) + (variasSedes() && c.data && c.data.sede ? '<span class="chip">' + esc(nombreSede(c.data.sede)) + '</span>' : '') + (c.unread ? '<span class="chip sin-leer">' + c.unread + ' sin leer</span>' : '') +
                 (c.humanMode ? '<span class="chip who">con una persona</span>' : '') + '</div>' +
               moveTo(c) + '</div></div>';
           }).join('') +

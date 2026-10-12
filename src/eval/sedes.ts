@@ -177,6 +177,7 @@ console.log('— Lo que una sede tiene y la otra no');
   const a = cliente();
   bookAppointment(a, lunes, { sede: 'norte', by: 'admin' });
   check('una cita en la del norte ocupa la del norte', !isSlotFree(lunes, { sede: 'norte' }));
+  check('agendada desde el tablero, también deja la sede en la ficha', getContact(a)?.data.sede === 'norte', JSON.stringify(getContact(a)?.data));
   check('🪤 y no la del sur: cada sede tiene su cupo', isSlotFree(lunes, { sede: 'sur' }));
   // Una cita de antes de que hubiera sedes (sin sede guardada) se le cuenta a la primera.
   const despues = new Date(lunes.getTime() + 3600_000);

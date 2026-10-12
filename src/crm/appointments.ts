@@ -245,6 +245,9 @@ export function bookAppointment(userId: string, startsAt: Date, opts: { service?
   const appt = getAppointment(Number(r.lastInsertRowid))!;
   addEvent(userId, 'appointment_booked', { id: appt.id, startsAt: appt.startsAt, by: opts.by ?? 'bot', ...(appt.sede ? { sede: appt.sede } : {}) });
   const c = getContact(userId);
+  // La ficha queda en la sede de su última cita, la agende el asistente o alguien desde el tablero: es la que se le
+  // ofrece la próxima vez y por la que la filtra el equipo.
+  if (c && appt.sede && c.data.sede !== appt.sede) updateContact(userId, { data: { ...c.data, sede: appt.sede } }, { silent: true });
   const conCita = etapaCon('cita');
   if (c && conCita && rolDe(c.stage) !== 'ganado') setStage(userId, conCita, { by: opts.by ?? 'bot' });
   emitEvent('appointment', userId, { appointment: appt });
