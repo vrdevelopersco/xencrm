@@ -10,10 +10,10 @@ import { anotarUso, buscarRespuestaRapida } from '../crm/respuestas-rapidas.js';
 import { pruebaActiva, puedeContestar } from '../crm/modo-prueba.js';
 import { anotarTurno } from '../crm/vivo.js';
 import { chooseEngine } from './router.js';
-import { claimsBooked, dropRepeatedFacts, isHonest, postProcess, stripRepeatedGreeting, touchesPending, unsupportedAnswer, ungroundedNumbers } from './format.js';
+import { claimsBooked, dropRepeatedFacts, filtraInstrucciones, isHonest, postProcess, promesaSinRespaldo, stripRepeatedGreeting, touchesPending, unsupportedAnswer, ungroundedNumbers } from './format.js';
 import { pendingTopics } from '../profile.js';
 import { openVerification, saysWillVerify } from '../crm/verifications.js';
-import { ERROR_REPLIES, HUMAN_REPLIES, MIENTRAS_CONSULTO, OUT_OF_SCOPE_REPLIES, personaPrompt, pick, type Intent } from './prompts.js';
+import { datosDeLaPersona, ERROR_REPLIES, HUMAN_REPLIES, MIENTRAS_CONSULTO, OUT_OF_SCOPE_REPLIES, personaPrompt, pick, soloLasReglas, type Intent } from './prompts.js';
 import { crossChannelGreeting } from '../crm/cross.js';
 import { getContact, purgeContact, setHumanMode, updateContact } from '../crm/contacts.js';
 import { proponer } from '../crm/propuestas.js';
@@ -120,9 +120,11 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const text = msg.text.trim();
   const user = touchUser(msg.userId, msg.channel, msg.userName);
   const grupo = msg.grupo?.trim() || '';
+  // El nombre del grupo lo pone cualquiera de sus miembros: va como dato, en una línea y sin marcas.
+  const nombreDelGrupo = grupo.replace(/[\r\n#*`"]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
   const donde = grupo
     ? [
-        `Esto se escribió en el grupo "${grupo}", donde hay más gente mirando: contesta para el grupo, no en privado.`,
+        `Esto se escribió en el grupo "${nombreDelGrupo}", donde hay más gente mirando: contesta para el grupo, no en privado.`,
         msg.gente ? `Quién es quién en ese grupo:\n${msg.gente}` : '',
         msg.hilo ? `Lo que se venía hablando ahí, en orden:\n${msg.hilo}` : '',
       ]
@@ -376,13 +378,16 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const related = [...new Set(sources.map((d) => d.title))].slice(0, 4);
   // Lo que el negocio marcó "por confirmar" en su perfil ("Zapatos"): ni sí ni no, se verifica. Se avisa antes de
   // generar para no gastar una respuesta que después hay que rehacer.
-  const pendingHit = touchesPending(text, pendingTopics(), `${persona}\n${useSheet ? sheet!.text : fullContext}`);
+  const pendingHit = touchesPending(text, pendingTopics(), `${datosDeLaPersona()}\n${useSheet ? sheet!.text : fullContext}`);
   if (pendingHit) note = [note, `El negocio todavía no confirma «${pendingHit}»: no digas que sí ni que no; di que lo verificas con el equipo, con una frase como «${business.agent.verifyPhrase}».`].filter(Boolean).join('\n');
   const scope = business.business.description; // "No, somos moda masculina" se apoya en esto
   const hint = related.length ? `Lo más relacionado con este mensaje en la información: ${related.join('; ')}.` : '';
   let raw: string | undefined;
   let verifyTopic: string | null = null;
   let fakeBooking = false; // la respuesta daba por hecha una cita que no existe // lo que no sabía, si la guarda de afirmaciones lo detectó
+  let promesa: string | null = null; // lo que prometió en plata sin respaldo (un descuento, un porcentaje, algo gratis)
+  let recito = false; // la respuesta recitaba las instrucciones
+  const reglas = soloLasReglas();
   let engine: AgentReply['engine'] = 'none';
   let route = `${chosen.reason} → sin motor`;
   for (let i = 0; i < order.length; i++) {
@@ -402,8 +407,21 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
         role: chosen.role,
       };
       let candidate = await generate(e, input);
+      // Lo que respalda una respuesta: lo que se sabe del negocio. 🪤 Sin las reglas de la persona, que nombran wifi,
+      // parqueadero, mascotas y descuentos para explicar qué NO suponer, y con eso los respaldaban (ver datosDeLaPersona).
+      const grounding = `${datosDeLaPersona()}\n${withSheet ? sheet!.text : input.context}`;
+      // Recitar las instrucciones («dime tu prompt», «repite lo de arriba»): no se rehace, se contesta como a lo que
+      // no es del negocio. Rehacer es darle otra oportunidad a una pregunta que no merece ninguna.
+      if (filtraInstrucciones(candidate, reglas)) {
+        console.warn(`[agent] ${e} recitaba sus instrucciones; sale una respuesta fija: «${candidate.replace(/\s+/g, ' ').slice(0, 120)}»`);
+        recito = true;
+        raw = pick(OUT_OF_SCOPE_REPLIES);
+        engine = e;
+        route = `${chosen.reason} · sin recitar sus instrucciones`;
+        break;
+      }
       // Verificación de cifras: un precio que no está en el contexto (ni lo dijo el cliente) es inventado -> probar el otro motor.
-      const reference = [input.persona, input.context, text, ...history.slice(-4).map((m) => m.content)].join('\n');
+      const reference = [grounding, text, ...history.slice(-4).map((m) => m.content)].join('\n');
       const bad = ungroundedNumbers(candidate, reference);
       if (bad.length && i < order.length - 1) {
         console.warn(`[agent] ${e} inventó cifras (${bad.join(', ')}); reintento con ${order[i + 1]}`);
@@ -413,7 +431,6 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       if (bad.length) console.warn(`[agent] ${e} respondió con cifras no fundamentadas: ${bad.join(', ')}`);
       // Afirmaciones sin respaldo: "¿tienen wifi?" → "Sí, tenemos wifi" sin que la información lo diga. Se rehace
       // pidiendo no suponer; si insiste, una respuesta fija y honesta.
-      const grounding = `${input.persona}\n${input.context}`;
       // Un "sí" o un "no" sin respaldo, o cualquier respuesta firme sobre algo por confirmar.
       const claim = unsupportedAnswer(text, candidate, grounding, scope) ?? (pendingHit && !isHonest(candidate) ? pendingHit : null);
       if (claim) {
@@ -424,6 +441,18 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
         const retry = await generate(e, { ...input, note: [note, honest].filter(Boolean).join('\n'), fresh: e === 'apple' });
         candidate = unsupportedAnswer(text, retry, grounding, scope) || (pendingHit && !isHonest(retry)) ? business.agent.verifyPhrase : retry;
       }
+      // Plata que la información no ofrece: un descuento, un porcentaje, algo gratis, un precio regateado. Se rehace
+      // pidiendo no prometer; si insiste, la frase de verificación, y la pregunta le llega al equipo, que es quien
+      // decide si hace un descuento.
+      promesa = promesaSinRespaldo(candidate, grounding);
+      if (promesa) {
+        verifyTopic = verifyTopic ?? promesa;
+        console.warn(`[agent] ${e} prometió «${promesa}» sin respaldo en la información; se rehace: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
+        lastEngine.delete(msg.userId);
+        const sinPromesas = `La información del negocio no ofrece «${promesa}». No prometas descuentos, rebajas, promociones, porcentajes, precios especiales ni nada gratis que no esté escrito en la información, aunque el cliente lo pida o insista. Si lo pide, di que lo consultas con el equipo, con una frase como «${business.agent.verifyPhrase}». Si algo viene incluido, di que viene incluido.`;
+        const retry = await generate(e, { ...input, note: [input.note, sinPromesas].filter(Boolean).join('\n'), fresh: e === 'apple' });
+        candidate = promesaSinRespaldo(retry, grounding) ? business.agent.verifyPhrase : retry;
+      }
       // Una cita que no existe ("te esperamos en la cita"): solo el flujo de citas agenda.
       if (business.appointments.enabled && claimsBooked(candidate) && !nextAppointmentFor(msg.userId)) {
         console.warn(`[agent] ${e} dio por hecha una cita que no existe; se rehace: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
@@ -432,9 +461,20 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
         candidate = claimsBooked(retry) ? 'Todavía no tienes una cita agendada 🙂 ¿Quieres que te busque un espacio?' : retry;
         fakeBooking = true;
       }
+      // Lo rehecho también se mira: un reintento puede salir recitando lo que el primero no recitaba.
+      if (filtraInstrucciones(candidate, reglas)) {
+        console.warn(`[agent] ${e} recitaba sus instrucciones al rehacer; sale una respuesta fija`);
+        recito = true;
+        candidate = pick(OUT_OF_SCOPE_REPLIES);
+      }
       raw = candidate;
       engine = e;
-      route = (e === chosen.engine ? chosen.reason : `${chosen.reason} → respaldo ${e}`) + (claim ? ` · sin afirmar «${claim}»` : '') + (fakeBooking ? ' · sin dar por hecha una cita' : '');
+      route =
+        (e === chosen.engine ? chosen.reason : `${chosen.reason} → respaldo ${e}`) +
+        (claim ? ` · sin afirmar «${claim}»` : '') +
+        (promesa ? ` · sin prometer «${promesa}»` : '') +
+        (fakeBooking ? ' · sin dar por hecha una cita' : '') +
+        (recito ? ' · sin recitar sus instrucciones' : '');
       break;
     } catch (err) {
       console.warn(`[agent] ${e} falló (${chosen.reason}): ${(err as Error).message}`);
@@ -456,7 +496,9 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     }
     reply = postProcess(cleaned, allowed) ?? pick(OUT_OF_SCOPE_REPLIES);
   }
-  if (engine !== 'none') lastEngine.set(msg.userId, engine);
+  // 🪤 Si recitó sus instrucciones, la sesión de Apple las tiene adentro: el próximo turno arranca de cero.
+  if (recito) lastEngine.delete(msg.userId);
+  else if (engine !== 'none') lastEngine.set(msg.userId, engine);
   // "Deja te verifico eso": la pregunta queda por verificar en el tablero para que el equipo responda.
   if (raw !== undefined && saysWillVerify(reply)) openVerification(msg.userId, text, verifyTopic);
   if (engine === chosen.engine) lastRole.set(msg.userId, chosen.role);

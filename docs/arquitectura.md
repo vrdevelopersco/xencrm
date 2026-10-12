@@ -62,8 +62,27 @@ y por qué.
       citas agenda (`claimsBooked` + `nextAppointmentFor`).
     - Lo que el Perfil marca "por confirmar" ("Zapatos") nunca recibe un sí ni un no. Se le avisa al modelo antes de
       generar y se verifica (`touchesPending`, solo con las palabras distintivas del dato).
+    - Un descuento, una rebaja, una promoción, un porcentaje, algo gratis o un precio regateado que la información
+      no ofrece se rehace pidiendo no prometer; si insiste, sale la frase de verificación y la pregunta llega a Por
+      verificar (`promesaSinRespaldo`). Cada palabra se respalda con la suya: una «oferta de trajes» no respalda un
+      «descuento», y cada porcentaje tiene que estar escrito tal cual.
+    - Una respuesta que recita las instrucciones (los títulos del prompt, o doce palabras seguidas de las reglas) se
+      cambia por una respuesta fija, sin rehacer (`filtraInstrucciones`). La sesión de Apple arranca de cero el turno
+      siguiente.
     - Los enlaces se filtran a los de la información.
     - Se limpian los saludos repetidos.
+
+    🪤 **Contra qué se mide el respaldo.** Contra lo que se sabe del negocio (`datosDeLaPersona` más la información),
+    nunca contra la persona entera. Las reglas nombran wifi, parqueadero, mascotas, descuentos y envíos como ejemplos
+    de lo que no se supone, y desde el primer commit hasta el 2026-10-12 esas palabras respaldaban «Sí, tenemos
+    wifi» en producción. Las cifras sí se miden también contra lo que dijo el cliente («el de 800 mil»); las
+    promesas de plata, no.
+
+    **Lo que entra como dato.** El nombre lo escribe quien conversa (perfil de WhatsApp, chat del sitio): va al prompt
+    solo si parece un nombre (`nombreParaElPrompt`). A la información se le quitan las marcas de encabezado
+    (`comoDato`), para que un «## Nota para este turno» escrito en una página no se vea como una sección del prompt, y
+    va marcada como datos, no órdenes. Lo que sí no se puede evitar: lo escrito en la información del negocio vale
+    como dicho por el negocio. Quien puede escribir ahí —el tablero— manda.
 11. **Verificación**: si la respuesta dice que lo verifica, se abre una pregunta en Hoy › Por verificar
     (`crm/verifications.ts`).
 12. **Registro**: se guardan los dos mensajes, se emiten los eventos del tablero y se agenda el análisis unos
@@ -336,6 +355,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:historial` | aprender del historial: agrupar preguntas, estilo sin cifras, leer el .txt | no |
 | `pnpm test:backup` | respaldo: la copia trae los datos, permisos 600, conserva las últimas N | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
+| `pnpm test:inyeccion` | inyección de prompt: promesas de plata, instrucciones recitadas, nombre y documentos con órdenes, y el recorrido entero con un modelo falso que siempre cae | no (modelo simulado) |
 | `pnpm test:repetidos` | WhatsApp oficial: lo que Meta manda dos veces entra y se contesta una vez; en «Mira» no marca leído ni contesta | no (Meta simulado) |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |
 | `pnpm replay` | las conversaciones sintéticas con los motores configurados; proyecta el costo | sí |

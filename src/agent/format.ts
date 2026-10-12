@@ -218,6 +218,93 @@ export function claimsBooked(reply: string): boolean {
   return BOOKED_RE.test(foldText(reply));
 }
 
+// ---------- Promesas de plata ----------
+// «¡Listo! Te dejo el traje con 50 % de descuento»: el cliente lo pidió —o lo exigió con un «ignora tus reglas»— y
+// el modelo, por complacer, lo concedió. Es el invento más caro: un negocio que honra lo que dijo su asistente
+// pierde plata, y uno que no lo honra pierde al cliente. Y es lo primero que prueba quien quiere romper un bot.
+//
+// 🪤 Cada palabra se respalda con la SUYA: que la información diga «oferta de trajes» no respalda un «descuento».
+// Con una sola familia, a un negocio que nombre una «promoción» cualquiera se le colaba todo lo demás.
+const PROMESAS: { dice: RegExp; respaldo: RegExp }[] = [
+  { dice: /\bdescuentos?\b/, respaldo: /\bdescuento/ },
+  { dice: /\brebaj\w*/, respaldo: /\brebaj/ },
+  { dice: /\bpromoci\w*|\bpromos?\b/, respaldo: /\bpromo/ },
+  { dice: /\bofertas?\b/, respaldo: /\boferta/ },
+  { dice: /\bcupon\w*/, respaldo: /\bcupon/ },
+  { dice: /\b2\s?x\s?1\b|\bdos por uno\b/, respaldo: /\b2\s?x\s?1\b|\bdos por uno\b/ },
+  { dice: /\bprecios? (?:especial|preferencial)(?:es)?\b/, respaldo: /\bprecios? (?:especial|preferencial)/ },
+  {
+    dice: /\bgratis\b|\bgratuit\w*|\bsin (?:ningun )?(?:costo|cargo)\b|\bno (?:te )?(?:tiene|tienen|cuesta|cuestan) (?:ningun |nada de )?(?:costo|cargo|nada)\b|\bno (?:te )?cobramos\b|\bobsequi\w*|\bde cortesia\b/,
+    respaldo: /\bgratis\b|\bgratuit|\bsin (?:ningun )?(?:costo|cargo)\b|\bno tiene (?:ningun )?(?:costo|cargo)\b|\bobsequi|\bcortesia\b/,
+  },
+];
+// «No manejamos descuentos», «no es gratis»: negar no es prometer.
+const NIEGA_PROMESA_RE =
+  /\b(?:no|tampoco|ni|sin)\s+(?:\w+\s+){0,4}?(?:descuentos?|rebaj\w*|promoci\w*|ofertas?|cupon\w*|gratis|gratuit\w*|2\s?x\s?1|precios? (?:especial|preferencial)(?:es)?)\b/;
+const PORCENTAJE_RE = /(\d{1,3}(?:[.,]\d+)?)\s?(?:%|por ?ciento)/g;
+// «Te lo dejo en 800 mil»: regatear es prometer un precio. Vale solo si ese precio está en la información.
+const REGATEO_RE = /\bte (?:lo|la|los|las) (?:dejo|dejamos|puedo dejar|podemos dejar)\s+(?:en|a|por)\b/;
+const PLATA_RE = /\b(?:precio|valor|pag\w*|abono|anticipo|cuotas?|cobr\w*|descuento\w*)\b/;
+
+/**
+ * Lo que la respuesta promete en plata sin que la información del negocio lo ofrezca: un descuento, una rebaja, una
+ * promoción, un porcentaje, algo gratis o un precio regateado. Devuelve qué prometió («descuento», «50 %»), o null.
+ *
+ * `info` es SOLO lo que se sabe del negocio (datos de la persona + información). Ni las reglas, que nombran los
+ * descuentos para prohibirlos, ni lo que dijo el cliente: «déjamelo en 800» no respalda un 800.
+ */
+export function promesaSinRespaldo(reply: string, info: string): string | null {
+  const ref = foldText(info).replace(/(\d)[.,](?=\d{3}\b)/g, '$1');
+  for (const frase of foldText(reply).split(/(?<=[.!?\n])\s+/)) {
+    // Un porcentaje inventado es inventado aunque venga con un «lo verifico»: ese número ya lo leyó el cliente.
+    for (const m of frase.matchAll(PORCENTAJE_RE)) {
+      const n = m[1]!.replace(',', '.');
+      if (n === '100' && !PLATA_RE.test(frase)) continue; // «100 % a la medida»: una forma de hablar
+      if (!new RegExp(`(?<![\\d.])${n.replace('.', '[.,]')}\\s?(?:%|por ?ciento)`).test(ref)) return `${n} %`;
+    }
+    if (HONEST_RE.test(frase) || NIEGA_PROMESA_RE.test(frase)) continue;
+    for (const p of PROMESAS) {
+      const dicho = p.dice.exec(frase);
+      if (dicho && !p.respaldo.test(ref)) return dicho[0];
+    }
+    if (REGATEO_RE.test(frase)) {
+      const cifras = (frase.replace(/(\d)[.,](?=\d{3}\b)/g, '$1').match(/\d{3,}/g) ?? []).filter((c) => !ref.includes(c));
+      if (cifras.length) return `precio de ${cifras[0]}`;
+    }
+  }
+  return null;
+}
+
+// ---------- Recitar las instrucciones ----------
+// Los títulos con que se arma el prompt. Ninguna respuesta a un cliente los nombra: si aparecen, el modelo está
+// leyendo en voz alta lo que se le dijo.
+const TITULOS_DEL_PROMPT_RE =
+  /\b(?:reglas estrictas|nota para este turno|mensaje del cliente|informacion disponible \(todo el negocio\))\b|^\W*(?:como hablas|que haces|tu objetivo|informacion disponible|el cliente)\W*$/m;
+const PALABRAS_SEGUIDAS = 12;
+const palabrasDe = (s: string) => foldText(s).replace(/[^a-zñ0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+let tramos: { de: string; set: Set<string> } | null = null;
+
+/**
+ * ¿La respuesta recita las instrucciones del asistente? Sí si nombra los títulos del prompt o si copia
+ * {@link PALABRAS_SEGUIDAS} palabras seguidas de las reglas (`reglas`: ver `soloLasReglas`).
+ *
+ * 🪤 Doce y no menos. Las reglas traen ejemplos que una respuesta buena puede decir casi igual —«somos moda
+ * masculina, así que no manejamos vestidos de novia» son diez—, y confundir eso con una filtración cambiaría una
+ * respuesta correcta por una evasiva. Doce palabras seguidas de un reglamento no salen por casualidad.
+ */
+export function filtraInstrucciones(reply: string, reglas: string): boolean {
+  if (TITULOS_DEL_PROMPT_RE.test(foldText(reply))) return true;
+  if (tramos?.de !== reglas) {
+    const w = palabrasDe(reglas);
+    const set = new Set<string>();
+    for (let i = 0; i + PALABRAS_SEGUIDAS <= w.length; i++) set.add(w.slice(i, i + PALABRAS_SEGUIDAS).join(' '));
+    tramos = { de: reglas, set };
+  }
+  const r = palabrasDe(reply);
+  for (let i = 0; i + PALABRAS_SEGUIDAS <= r.length; i++) if (tramos.set.has(r.slice(i, i + PALABRAS_SEGUIDAS).join(' '))) return true;
+  return false;
+}
+
 /**
  * Quita el saludo y la auto-presentación con que los modelos pequeños abren cada mensaje aunque la
  * conversación ya empezó: "¡Hola, Andrés! 😊", "Hola de nuevo 🌿", "Soy Aiva, del equipo de Casa Verde."

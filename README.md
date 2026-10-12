@@ -378,8 +378,12 @@ el contexto se descarta y se regenera con el otro motor), afirmaciones y negativ
 wifi?" → "sí, tenemos wifi", o "¿venden zapatos?" → "no vendemos zapatos", sin que la información lo diga: se
 rehace pidiendo no suponer y, si insiste, se responde que se confirma con el equipo). Un "no" pasa si se apoya en
 el alcance del negocio ("somos moda masculina"), y lo que el Perfil marca "por confirmar" siempre se verifica.
-También limpia los saludos repetidos. Pruebas:
-`pnpm test:guards`.
+Un descuento, un porcentaje, algo gratis o un precio regateado que la información no ofrece tampoco sale: se
+rehace y, si insiste, se verifica con el equipo, que es quien decide si hace un descuento. Una respuesta que recita
+las instrucciones del asistente se cambia por una fija. El respaldo se mide solo contra lo que se sabe del negocio,
+nunca contra las reglas del prompt ni contra lo que dijo el cliente. También limpia los saludos repetidos. Pruebas:
+`pnpm test:guards` y `pnpm test:inyeccion`, que pasa todo el recorrido con un modelo falso que siempre se deja
+convencer.
 
 ## Capacidad y memoria
 
