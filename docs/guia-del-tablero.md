@@ -301,3 +301,5 @@ La información que el asistente tiene (catálogo y textos del negocio), para bu
 - Cancelar o mover una cita sin que el cliente lo confirme.
 - Escribirle por WhatsApp oficial a alguien fuera de las 24 horas sin plantilla.
 - Seguir respondiendo cuando una persona del equipo tomó la conversación.
+- Guardar una clave o una tarjeta. Si alguien la escribe, en la conversación sale «omitido» y el asistente le pide
+  que no la mande por el chat. El correo y el teléfono sí se guardan, que son los que hacen falta para la cita.

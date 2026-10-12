@@ -21,6 +21,11 @@ y por qué.
 
 `src/agent/agent.ts › process()`, en orden:
 
+0. **Claves y tarjetas** (`crm/secretos.ts › taparEnVivo`): una clave, un PIN, un código de verificación, una llave
+   o un número de tarjeta se tapan antes de que nada los lea, y si había alguno se le pide al modelo que le diga al
+   cliente, con tacto, que no los comparta. `appendMessage` vuelve a tapar al guardar, venga de quien venga el
+   mensaje. 🪤 No es `taparSecretos`, el de los chats importados: ese también tapa «Correo:» y «Usuario:», y en vivo
+   borraría el correo que el cliente deja al agendar.
 1. **Contacto**: se crea o se actualiza (`touchUser`).
 2. **Modo humano**: si una persona tiene la conversación, se guarda el mensaje, se agenda el análisis y no se
    responde.
@@ -408,6 +413,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:presupuesto` | tope de gasto: mes del negocio, escalones, avisos una vez, ahorro al 90 % y al 100 % ni una llamada de pago sin dejar a nadie sin respuesta | no (OpenAI y Ollama simulados) |
 | `pnpm test:sedes` | varias sedes: preguntar en cuál, apodos, cambiar a mitad del flujo, cupo por sede, la otra sede cuando la suya no abre, recordatorio y lo que ve el modelo | no |
 | `pnpm test:turnos` | cada respuesta con su turno: ruta, modelo, guardas, costo y versión; llamadas y mensajes unidos; el análisis y lo del equipo fuera | no (OpenAI simulado) |
+| `pnpm test:claves` | claves y tarjetas en vivo: qué se tapa, qué no (correo, teléfono), que no llegue al modelo ni se guarde | no (OpenAI simulado) |
 | `pnpm test:repetidos` | WhatsApp oficial: lo que Meta manda dos veces entra y se contesta una vez; en «Mira» no marca leído ni contesta | no (Meta simulado) |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |
 | `pnpm replay` | las conversaciones sintéticas con los motores configurados; proyecta el costo | sí |

@@ -68,3 +68,55 @@ export function taparSecretos(texto: string): { texto: string; tapados: number }
   });
   return { texto: lineas.join('\n'), tapados };
 }
+
+// ---------- En vivo ----------
+//
+// 🪤 `taparSecretos` es para chats importados de grupos de soporte, y tapa también «Usuario:» y «Correo:». En una
+// conversación en vivo eso borraría el correo que el cliente deja al agendar su cita. Aquí solo se tapa lo que es
+// secreto de verdad: una clave, un PIN, un código de verificación, una llave, un número de tarjeta.
+//
+// Se aplica ANTES de todo: antes de guardar y antes de que lo lea el modelo. Una clave que llega a OpenAI ya salió,
+// aunque después no se guarde.
+
+// «mi clave es 4567», «Contraseña: perrito123», «el código de verificación es 482913».
+const CLAVE_RE =
+  /\b(clave|contrase[ñn]a|password|pass|pin|token|cvv|cvc|otp|c[oó]digo\s+de\s+(?:verificaci[oó]n|seguridad|acceso))\b((?:\s+(?:es|era|ser[ií]a|nueva|actual|temporal|el|la|de\s+(?:acceso|ingreso|la\s+app|internet))\b)*)(\s*[:=]\s*|\s+)([^\s,;.]+)/gi;
+// Un número de tarjeta: 15 o 16 dígitos (con espacios o guiones), de una red conocida y que pase el dígito de control.
+// 🪤 Las tres condiciones juntas, no una: cualquier número largo pasa el dígito de control una de cada diez veces, y
+// un teléfono internacional puede tener quince dígitos.
+const TARJETA_RE = /(?<![+\d])\b[2-6](?:[ -]?\d){14,15}\b/g;
+const luhn = (d: string): boolean => {
+  let suma = 0;
+  for (let i = 0; i < d.length; i++) {
+    let n = Number(d[d.length - 1 - i]);
+    if (i % 2 === 1) n = n * 2 > 9 ? n * 2 - 9 : n * 2;
+    suma += n;
+  }
+  return suma % 10 === 0;
+};
+
+/**
+ * El mensaje sin claves ni tarjetas. El valor de una etiqueta se tapa si trae un número o un signo («perrito123»,
+ * «4567»), o si va con dos puntos («Clave: girasol»): «la clave es que me llegue rápido» no es una clave.
+ */
+export function taparEnVivo(texto: string): { texto: string; tapados: number } {
+  let tapados = 0;
+  let out = texto.replace(CLAVE_RE, (todo, etiqueta: string, enMedio: string, sep: string, valor: string) => {
+    const conDosPuntos = /[:=]/.test(sep);
+    if (!conDosPuntos && !/[\d\W_]/.test(valor.normalize('NFD').replace(/[̀-ͯ]/g, ''))) return todo;
+    tapados++;
+    return `${etiqueta}${enMedio}${sep}«omitido»`;
+  });
+  out = out.replace(TARJETA_RE, (n) => {
+    if (!luhn(n.replace(/\D/g, ''))) return n;
+    tapados++;
+    return '«tarjeta omitida»';
+  });
+  for (const { re, con } of SUELTOS) {
+    out = out.replace(re, () => {
+      tapados++;
+      return con;
+    });
+  }
+  return { texto: out, tapados };
+}

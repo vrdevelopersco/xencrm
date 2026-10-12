@@ -1,4 +1,5 @@
 import { idDelTurno } from '../crm/turnos.js';
+import { taparEnVivo } from '../crm/secretos.js';
 import { guardarNumero, primeraEtapa } from '../crm/contacts.js';
 import { siblingIds } from '../crm/merge.js';
 import { getDb } from '../rag/store.js';
@@ -57,7 +58,8 @@ export function appendMessage(
   const r = getDb()
     .prepare('INSERT INTO messages (user_id, role, content, intent, ts, author, by, media, turno) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
     // El turno en curso, si lo hay (crm/turnos.ts): lo que escribe el equipo o lo importado no sale de uno.
-    .run(userId, role, content, intent ?? null, ts, a, by ?? null, media ? JSON.stringify(media) : null, idDelTurno());
+    // 🪤 Sin claves ni tarjetas, venga de quien venga: lo que no se guarda no se puede filtrar (crm/secretos.ts).
+    .run(userId, role, taparEnVivo(content).texto, intent ?? null, ts, a, by ?? null, media ? JSON.stringify(media) : null, idDelTurno());
   getDb().prepare('UPDATE users SET last_message_at = ? WHERE id = ?').run(ts, userId);
   return Number(r.lastInsertRowid);
 }

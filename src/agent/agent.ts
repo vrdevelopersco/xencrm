@@ -25,6 +25,7 @@ import type { Medio } from '../crm/medios.js';
 import { nextAppointmentFor } from '../crm/appointments.js';
 import { anotarGuarda, enUnTurno, guardarTurno, guardasDelTurno, idDelTurno, nuevoTurno } from '../crm/turnos.js';
 import { createHash } from 'node:crypto';
+import { taparEnVivo } from '../crm/secretos.js';
 
 export type Channel = 'whatsapp' | 'meta' | 'web' | 'cli' | 'mcp';
 
@@ -171,7 +172,11 @@ async function conTraza(msg: IncomingMessage, turno: string): Promise<AgentReply
 
 async function process(msg: IncomingMessage): Promise<AgentReply> {
   const started = Date.now();
-  const text = msg.text.trim();
+  // 🪤 Lo primero: una clave o una tarjeta se tapan ANTES de que nada las lea. Una clave que llega al modelo ya
+  // salió, aunque después no se guarde (crm/secretos.ts).
+  const tapado = taparEnVivo(msg.text.trim());
+  const text = tapado.texto;
+  if (tapado.tapados) anotarGuarda('clave_tapada');
   const user = touchUser(msg.userId, msg.channel, msg.userName);
   const grupo = msg.grupo?.trim() || '';
   // El nombre del grupo lo pone cualquiera de sus miembros: va como dato, en una línea y sin marcas.
@@ -448,6 +453,12 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // generar para no gastar una respuesta que después hay que rehacer.
   const pendingHit = touchesPending(text, pendingTopics(), `${datosDeLaPersona()}\n${useSheet ? sheet!.text : fullContext}`);
   if (pendingHit) note = [note, `El negocio todavía no confirma «${pendingHit}»: no digas que sí ni que no; di que lo verificas con el equipo, con una frase como «${business.agent.verifyPhrase}».`].filter(Boolean).join('\n');
+  // Va al final, sumado: las ramas de arriba reescriben la nota y se lo llevarían por delante.
+  if (tapado.tapados) {
+    note = [note, 'El cliente escribió una clave o un dato de tarjeta y se borró antes de leerlo (sale como «omitido»). Dile con tacto, en una frase, que por seguridad no comparta claves ni datos de tarjeta por este chat, y sigue con lo que necesita.']
+      .filter(Boolean)
+      .join('\n');
+  }
   const scope = business.business.description; // "No, somos moda masculina" se apoya en esto
   const hint = related.length ? `Lo más relacionado con este mensaje en la información: ${related.join('; ')}.` : '';
   let raw: string | undefined;
