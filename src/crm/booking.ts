@@ -27,11 +27,14 @@ import { customerLinks } from './calendar.js';
 import { askModelWhen, eventDeadline, fold, formatMinutes, mentionsTime, parseWhen, refineWhen, weekdayOfKey } from './when.js';
 import { formatPhone, parsePhone, ruleSignals } from './signals.js';
 import { alCancelar, anotarIntento, diasParaElEvento, motivoDeCancelar, preguntaQuePaso, respuesta, yaSeIntento } from './retener.js';
+import { agendaDe, listaDeSedes, sedeEn, sedePorId, sedes, sedesNombradas, variasSedes, type Agenda, type Sede } from './sedes.js';
 
 const cfg = business.appointments;
 
 export interface BookingState {
-  step: 'nombre' | 'elegir' | 'telefono' | 'confirmar' | 'gestionar' | 'cancelar' | 'porque' | 'recordatorio';
+  step: 'nombre' | 'sede' | 'elegir' | 'telefono' | 'confirmar' | 'gestionar' | 'cancelar' | 'porque' | 'recordatorio';
+  /** En qué sede, si el negocio tiene varias (crm/sedes.ts). Los espacios ofrecidos son de esta. */
+  sede?: string;
   /** Cita existente que se está cambiando (al confirmar la nueva, esta se cancela) o gestionando. */
   moving?: number;
   manage?: number;
@@ -86,6 +89,8 @@ export function manageIntent(text: string, opts: { strict?: boolean } = {}): 'ca
 }
 // "la 2" es una opción; "el 2 de octubre" o "el 2/10" es una fecha.
 const OPTION_RE = /^\s*(?:la\s+|el\s+|opci[oó]n\s+)?([1-3])\b(?!\s*(?:de\s+[a-z]|[/-]\d|:\d|a\.?\s?m|p\.?\s?m))/;
+// Lo mismo para escoger sede, que pueden ser más de tres: «la 4», «sede 2».
+const SEDE_NUM_RE = /^\s*(?:la\s+|el\s+|sede\s+|opci[oó]n\s+)?([1-9])\b(?!\s*(?:de\s+[a-z]|[/-]\d|:\d|\d|a\.?\s?m|p\.?\s?m))/;
 // Respuesta a "¿a nombre de quién?" que en realidad es una fecha ("el sábado", "mañana en la tarde").
 const WHEN_START_RE = /^(el|la|para|mejor|este|esta|hoy|manana|pasado|entre|despues|antes|a|de|tipo|en|por|\d)\b/;
 
@@ -111,7 +116,8 @@ const REFUSE_RE = /^(no|nop|prefiero no|mejor no|no quiero|no tengo)\b|\bsin (n[
 function phonePrompt(iso: string): string {
   return `Perfecto, el ${formatSlot(new Date(iso))}. Para confirmarte y avisarte cualquier cambio, ¿a qué número te escribimos?${cfg.askEmail ? ' Si quieres, déjame también tu correo (es opcional).' : ''}`;
 }
-const confirmPrompt = (iso: string, lead = 'Listo:') => `${lead} ${cfg.service} el ${formatSlot(new Date(iso))}${cfg.location ? ` en ${cfg.location}` : ''}. ¿Te la confirmo?`;
+const enLugar = (ag: Agenda) => (ag.lugar ? ` en ${ag.lugar}` : '');
+const confirmPrompt = (iso: string, lead = 'Listo:', sede?: string | null) => `${lead} ${cfg.service} el ${formatSlot(new Date(iso))}${enLugar(agendaDe(sede))}. ¿Te la confirmo?`;
 
 function listSlots(slots: Slot[]): string {
   return slots.map((s, i) => `${i + 1}) ${formatSlot(s.startsAt)}`).join('\n');
@@ -122,54 +128,90 @@ const hhmm = (s: string) => {
   const [h, m] = s.split(':').map(Number) as [number, number];
   return h * 60 + m;
 };
-const hoursText = () => cfg.hours.map(([f, t]) => `de ${formatMinutes(hhmm(f))} a ${formatMinutes(hhmm(t))}`).join(' y ');
+const hoursText = (ag: Agenda) => ag.hours.map(([f, t]) => `de ${formatMinutes(hhmm(f))} a ${formatMinutes(hhmm(t))}`).join(' y ');
 
 /** Por qué no hay espacios para lo que pidió el cliente, dicho como se lo diría una persona. */
-function whyNoSlots(w: When, continuing: boolean): string {
+function whyNoSlots(w: When, continuing: boolean, ag: Agenda = agendaDe()): string {
   const day = cap(w.dayLabel ?? w.label);
   const days = w.days ?? [];
-  if (w.weekdays && !w.weekdays.some((d) => cfg.days.includes(d))) return `${day} no atendemos`;
-  if (days.length && !days.some((k) => cfg.days.includes(weekdayOfKey(k)))) return `${day} no atendemos`;
+  // Con varias sedes se dice en cuál: «el sábado no atendemos» sería falso si la otra sí abre.
+  const aqui = variasSedes() && ag.sede ? ` en ${ag.sede.nombre}` : '';
+  if (w.weekdays && !w.weekdays.some((d) => ag.days.includes(d))) return `${day} no atendemos${aqui}`;
+  if (days.length && !days.some((k) => ag.days.includes(weekdayOfKey(k)))) return `${day} no atendemos${aqui}`;
   if (w.fromMin !== undefined || w.toMin !== undefined) {
     const lo = w.fromMin ?? 0;
     const hi = w.toMin ?? 24 * 60;
-    const fits = cfg.hours.some(([f, t]) => Math.max(lo, hhmm(f)) < Math.min(hi, hhmm(t) - cfg.durationMin + 1));
-    if (!fits) return `${cap(w.timeLabel ?? w.label)} no atendemos (el horario es ${hoursText()})`;
+    const fits = ag.hours.some(([f, t]) => Math.max(lo, hhmm(f)) < Math.min(hi, hhmm(t) - ag.durationMin + 1));
+    if (!fits) return `${cap(w.timeLabel ?? w.label)} no atendemos${aqui} (el horario es ${hoursText(ag)})`;
   }
   const tp = tzParts(new Date());
-  const horizon = new Date(Date.UTC(tp.y, tp.m - 1, tp.d + cfg.maxDaysAhead)).toISOString().slice(0, 10);
+  const horizon = new Date(Date.UTC(tp.y, tp.m - 1, tp.d + ag.maxDaysAhead)).toISOString().slice(0, 10);
   const first = days.length ? days.reduce((a, b) => (a < b ? a : b)) : w.from;
   const last = days.length ? days.reduce((a, b) => (a > b ? a : b)) : w.to;
   if (first && first > horizon) return `${day} todavía no tengo agenda abierta`;
   if (last) {
     const [y, m, d] = last.split('-').map(Number) as [number, number, number];
-    const [ch, cm] = cfg.hours[cfg.hours.length - 1]![1].split(':').map(Number) as [number, number];
-    const lastStart = zoned(y, m, d, ch, cm).getTime() - cfg.durationMin * 60_000;
-    if (lastStart < Date.now() + cfg.minLeadHours * 3600_000) return `${day} ya no alcanzo a agendarte`;
+    const [ch, cm] = ag.hours[ag.hours.length - 1]![1].split(':').map(Number) as [number, number];
+    const lastStart = zoned(y, m, d, ch, cm).getTime() - ag.durationMin * 60_000;
+    if (lastStart < Date.now() + ag.minLeadHours * 3600_000) return `${day} ya no alcanzo a agendarte${aqui}`;
   }
-  return `${cap(w.label)} ${continuing ? 'no me quedan más espacios' : 'ya no me quedan espacios'}`;
+  return `${cap(w.label)}${aqui} ${continuing ? 'no me quedan más espacios' : 'ya no me quedan espacios'}`;
 }
 
-function offer(c: Contact, opts: { when?: When; after?: Date } = {}): string {
+/**
+ * Preguntar en cuál sede. Lo que ya se sabía —la fecha que pidió, la cita que se está moviendo— se guarda para
+ * seguir con eso apenas diga cuál.
+ */
+function askSede(c: Contact, opts: { when?: When; moving?: number; lead?: string } = {}): string {
+  save(c, { step: 'sede', offered: [], ...(opts.when ? { when: opts.when } : {}), ...(opts.moving ? { moving: opts.moving } : {}) });
+  return `${opts.lead ?? ''}¿En cuál de nuestras sedes te queda mejor?\n${listaDeSedes()}`;
+}
+
+/** La sede con el espacio libre más pronto para lo que pidió: para «la que sea» o «cualquiera». */
+function laMasPronta(when?: When): Sede | null {
+  let mejor: { sede: Sede; t: number } | null = null;
+  for (const s of sedes()) {
+    const t = availableSlots({ count: 1, when, sede: s.id })[0]?.startsAt.getTime();
+    if (t !== undefined && (!mejor || t < mejor.t)) mejor = { sede: s, t };
+  }
+  return mejor?.sede ?? null;
+}
+
+function offer(c: Contact, opts: { when?: When; after?: Date; sede?: string | null } = {}): string {
   const { when, after } = opts;
-  let slots = availableSlots({ count: 3, when, after });
+  const prev = state(c);
+  const sedeId = opts.sede !== undefined ? opts.sede : (prev?.sede ?? null);
+  // Con varias sedes, los espacios son de una: sin saber cuál, primero se pregunta.
+  if (variasSedes() && !sedePorId(sedeId)) return askSede(c, { when, moving: prev?.moving });
+  let ag = agendaDe(sedeId);
+  const multi = variasSedes();
+  let slots = availableSlots({ count: 3, when, after, sede: ag.sede?.id });
   let intro: string;
   if (when && slots.length === 0) {
-    // Lo más cercano: el mismo día a otra hora, la misma franja otro día, o lo primero libre.
-    const reason = whyNoSlots(when, Boolean(after));
-    const tries: (When | undefined)[] = [];
-    if (when.fromMin !== undefined || when.toMin !== undefined) tries.push({ ...when, fromMin: undefined, toMin: undefined });
-    if (when.days || when.weekdays || when.from) tries.push({ label: when.label, fromMin: when.fromMin, toMin: when.toMin });
-    tries.push(undefined);
-    for (const t of tries) {
-      slots = availableSlots({ count: 3, when: t, after });
-      if (slots.length) break;
+    const reason = whyNoSlots(when, Boolean(after), ag);
+    // 🪤 Con varias sedes, primero lo que pidió en OTRA sede: si quería el sábado y la suya no abre los sábados,
+    // «la del sur sí tiene el sábado» le sirve más que un martes en la suya. Y se dice, nunca se cambia callado.
+    const otra = multi ? sedes().find((s) => s.id !== ag.sede?.id && availableSlots({ count: 1, when, after, sede: s.id }).length) : undefined;
+    if (otra) {
+      ag = agendaDe(otra.id);
+      slots = availableSlots({ count: 3, when, after, sede: otra.id });
+      intro = `${reason} 😕 En ${otra.nombre} sí tengo ${when.label}:`;
+    } else {
+      // Lo más cercano: el mismo día a otra hora, la misma franja otro día, o lo primero libre.
+      const tries: (When | undefined)[] = [];
+      if (when.fromMin !== undefined || when.toMin !== undefined) tries.push({ ...when, fromMin: undefined, toMin: undefined });
+      if (when.days || when.weekdays || when.from) tries.push({ label: when.label, fromMin: when.fromMin, toMin: when.toMin });
+      tries.push(undefined);
+      for (const t of tries) {
+        slots = availableSlots({ count: 3, when: t, after, sede: ag.sede?.id });
+        if (slots.length) break;
+      }
+      intro = `${reason} 😕 Lo más cercano que tengo${multi && ag.sede ? ` en ${ag.sede.nombre}` : ''}:`;
     }
-    intro = `${reason} 😕 Lo más cercano que tengo:`;
   } else {
-    const where = cfg.location ? ` en ${cfg.location}` : '';
+    const where = multi && ag.sede ? ` en ${ag.sede.nombre}` : cfg.location ? ` en ${cfg.location}` : '';
     intro = when
-      ? pick([`${cap(when.label)} tengo estos espacios:`, `${cap(when.label)} te puedo ofrecer:`] as const)
+      ? pick([`${cap(when.label)}${multi && ag.sede ? ` en ${ag.sede.nombre}` : ''} tengo estos espacios:`, `${cap(when.label)}${multi && ag.sede ? ` en ${ag.sede.nombre}` : ''} te puedo ofrecer:`] as const)
       : pick([
           `Con gusto te agendo la ${cfg.service}${where}. Tengo estos espacios:`,
           `Claro, agendemos tu ${cfg.service}${where}. Te propongo estas opciones:`,
@@ -177,24 +219,48 @@ function offer(c: Contact, opts: { when?: When; after?: Date } = {}): string {
         ] as const);
   }
   if (slots.length === 0) {
+    // En la suya no queda nada en estos días: si otra sede tiene, se le ofrece en vez de mandarlo a llamar.
+    const otra = multi ? sedes().find((s) => s.id !== ag.sede?.id && availableSlots({ count: 1, after, sede: s.id }).length) : undefined;
+    if (otra) {
+      const lleno = `En ${ag.sede!.nombre} no me quedan espacios ${when ? 'por esas fechas' : 'en estos días'} 😕`;
+      return offer(c, { after, sede: otra.id }).replace(/^[^\n]*\n/, `${lleno} En ${otra.nombre} tengo:\n`);
+    }
     save(c, null);
     return `Uy, ${when ? 'por esas fechas' : 'en estos días'} no me quedan espacios libres 😕 ${business.business.humanContact} y te ayudan a buscar un hueco.`;
   }
-  const moving = state(c)?.moving;
-  save(c, { step: 'elegir', offered: slots.map((s) => s.startsAt.toISOString()), ...(when ? { when } : {}), ...(moving ? { moving } : {}) });
+  const moving = prev?.moving;
+  save(c, {
+    step: 'elegir',
+    offered: slots.map((s) => s.startsAt.toISOString()),
+    ...(when ? { when } : {}),
+    ...(moving ? { moving } : {}),
+    ...(ag.sede && sedes().length ? { sede: ag.sede.id } : {}),
+  });
   return `${intro}\n${listSlots(slots)}\n¿Cuál te sirve? Si prefieres otro día u hora, dime.`;
+}
+
+/** La sede queda en la ficha: la próxima vez se le ofrece esa sin preguntar (y puede cambiarla diciéndolo). */
+function recordarSede(userId: string, sede: string | null) {
+  const c = getContact(userId);
+  if (!c || !sede || c.data.sede === sede) return;
+  updateContact(userId, { data: { ...c.data, sede } }, { silent: true });
 }
 
 async function book(c: Contact, userId: string, chosen: string): Promise<string> {
   const when = new Date(chosen);
-  const moving = state(c)?.moving;
+  const st0 = state(c);
+  const moving = st0?.moving;
   let links: ReturnType<typeof customerLinks> = null;
+  let nueva: ReturnType<typeof bookAppointment>;
   try {
-    links = customerLinks(bookAppointment(userId, when, { notes: moving ? `Reprogramada por ${business.agent.name}` : `Agendada por ${business.agent.name}` }));
+    nueva = bookAppointment(userId, when, { notes: moving ? `Reprogramada por ${business.agent.name}` : `Agendada por ${business.agent.name}`, sede: st0?.sede ?? null });
+    links = customerLinks(nueva);
   } catch {
     return `Ese espacio se acaba de ocupar 😕 ` + offer(c);
   }
   save(getContact(userId)!, null);
+  recordarSede(userId, nueva.sede);
+  const en = nueva.location ? ` en ${nueva.location}` : '';
   // Mover: primero se agenda la nueva y solo después se cancela la anterior, así nunca se queda sin cita.
   const old = moving ? getAppointment(moving) : null;
   if (old && old.status === 'confirmada') {
@@ -203,7 +269,7 @@ async function book(c: Contact, userId: string, chosen: string): Promise<string>
     const fresh = getContact(userId);
     const phone = fresh ? contactPhone(fresh) : null;
     return (
-      `¡Listo! Moví tu ${cfg.service} al ${formatSlot(when)}${cfg.location ? ` en ${cfg.location}` : ''}. La del ${formatSlot(new Date(old.startsAt))} quedó cancelada.` +
+      `¡Listo! Moví tu ${cfg.service} al ${formatSlot(when)}${en}. La del ${formatSlot(new Date(old.startsAt))} quedó cancelada.` +
       (phone && !/^(wa|meta):/.test(userId) ? `\nSi hay alguna novedad, te escribimos al ${formatPhone(phone)}.` : '') +
       (links ? `\nPara guardarla en tu calendario: ${links.page}` : '')
     );
@@ -214,8 +280,8 @@ async function book(c: Contact, userId: string, chosen: string): Promise<string>
   const calendarLine = (phone && !/^(wa|meta):/.test(userId) ? `\nSi hay alguna novedad, te escribimos al ${formatPhone(phone)}.` : '') + (links ? `\nPara guardarla en tu calendario: ${links.page}` : '');
   return (
     pick([
-    `¡Agendada${firstName ? `, ${firstName}` : ''}! 🗓️ Te esperamos el ${formatSlot(when)}${cfg.location ? ` en ${cfg.location}` : ''}. Si necesitas cambiarla, me escribes por aquí.`,
-    `¡Listo, quedó! Tu ${cfg.service} es el ${formatSlot(when)}${cfg.location ? ` en ${cfg.location}` : ''}. Cualquier cambio, me avisas por aquí 🙂`,
+    `¡Agendada${firstName ? `, ${firstName}` : ''}! 🗓️ Te esperamos el ${formatSlot(when)}${en}. Si necesitas cambiarla, me escribes por aquí.`,
+    `¡Listo, quedó! Tu ${cfg.service} es el ${formatSlot(when)}${en}. Cualquier cambio, me avisas por aquí 🙂`,
     ] as const) + calendarLine
   );
 }
@@ -244,14 +310,16 @@ async function start(userId: string, text = ''): Promise<string> {
   const existing = nextAppointmentForPerson(userId); // aunque la haya agendado por el otro canal
   if (existing) return manageExisting(c, existing.id, text, userId);
   const when = text ? await interpret(text, { model: true, userId }) : null;
+  // La sede que nombró («quiero una cita en la del norte»), o en la que agendó la última vez.
+  const sede = (text ? sedeEn(text) : null) ?? sedePorId(c.data.sede as string | undefined);
   const name = c.name || (c.data.nombre as string | undefined);
   if (!name) {
-    save(c, { step: 'nombre', offered: [], ...(when ? { when } : {}) });
+    save(c, { step: 'nombre', offered: [], ...(when ? { when } : {}), ...(sede ? { sede: sede.id } : {}) });
     const hello = /^\s*(hola|buenas|buen[oa]s? (d[ií]as?|tardes|noches))\b/i.test(text) ? '¡Hola! ' : '';
     if (when) return `${hello}Con gusto te busco espacio ${when.label}. ¿A nombre de quién agendo la cita?`;
     return hello + pick(['¡Con gusto! ¿A nombre de quién agendo la cita?', 'Claro que sí. Dime tu nombre para agendarla, por favor.'] as const);
   }
-  return offer(c, when ? { when } : {});
+  return offer(c, { ...(when ? { when } : {}), sede: sede?.id ?? null });
 }
 
 // Canal por donde está escribiendo, para que la cita diga desde dónde la tocaron.
@@ -301,12 +369,15 @@ async function manageExisting(c: Contact, id: number, text: string, userId: stri
   const appt = getAppointment(id);
   const said = text ? parseWhen(text) : null;
   const when = said && appt && slotMatches(new Date(appt.startsAt), said) ? null : said;
-  if (intent === 'cambiar' || when) {
-    save(c, { step: 'elegir', offered: [], moving: id });
-    return `Claro, busquemos otro espacio para tu ${slotOf(id)}. ` + offer(getContact(userId)!, when ? { when } : {});
+  // «Mejor en la del sur»: nombrar otra sede también es moverla. Si no nombra ninguna, se queda en la suya.
+  const otraSede = text ? sedeEn(text) : null;
+  const cambiaDeSede = Boolean(otraSede && otraSede.id !== appt?.sede);
+  if (intent === 'cambiar' || when || cambiaDeSede) {
+    save(c, { step: 'elegir', offered: [], moving: id, ...(appt?.sede ? { sede: appt.sede } : {}) });
+    return `Claro, busquemos otro espacio para tu ${slotOf(id)}. ` + offer(getContact(userId)!, { ...(when ? { when } : {}), sede: otraSede?.id ?? appt?.sede ?? null });
   }
   save(c, { step: 'gestionar', offered: [], manage: id });
-  return `Ya tienes tu ${slotOf(id)}${cfg.location ? ` en ${cfg.location}` : ''}. ¿Quieres cambiarla o cancelarla?`;
+  return `Ya tienes tu ${slotOf(id)}${appt?.location ? ` en ${appt.location}` : ''}. ¿Quieres cambiarla o cancelarla?`;
 }
 
 function offerFallback(): string {
@@ -330,6 +401,12 @@ async function step(userId: string, text: string): Promise<string | null> {
       save(c, { ...st, when: w });
       return `Anotado: ${w.label}. ¿A nombre de quién agendo la cita?`;
     }
+    // «En la del norte»: contestó en cuál sede, no cómo se llama.
+    const dicha = sedeEn(text);
+    if (dicha && text.trim().split(/\s+/).length <= 6) {
+      save(c, { ...st, sede: dicha.id });
+      return `Anotado: ${dicha.nombre}. ¿A nombre de quién agendo la cita?`;
+    }
     // "Arnulfo Dominguez 300 123 4567": el número y el correo que vengan con el nombre se guardan aparte.
     const phone = parsePhone(text);
     const email = ruleSignals([text]).correo;
@@ -347,16 +424,41 @@ async function step(userId: string, text: string): Promise<string | null> {
     return `Gracias, ${name.split(' ')[0]}. ` + offer(fresh, st.when ? { when: st.when } : {});
   }
 
+  if (st.step === 'sede') {
+    // «la 2», «la segunda», «la del norte», «la de la 72». Los números aquí son sedes, no horarios: todavía no se
+    // ofreció ninguno.
+    const ordinal = ORDINAL_RE.exec(t)?.[1];
+    const num = SEDE_NUM_RE.exec(t)?.[1] ?? (ordinal ? ORDINALS[ordinal] : undefined);
+    const w = readWhen(text);
+    const when = w ? refineWhen(st.when, w) : st.when;
+    let sede: Sede | null = (num ? sedes()[Number(num) - 1] : undefined) ?? sedeEn(text);
+    // «La que sea», «cualquiera»: la que tenga el espacio más pronto, y se le dice cuál quedó.
+    if (!sede && ANY_RE.test(t)) sede = laMasPronta(when);
+    if (sede) return offer(c, { ...(when ? { when } : {}), sede: sede.id });
+    // Nombró dos («no la de la 72, la del norte»): se pregunta otra vez, sin importar lo largo del mensaje.
+    if (sedesNombradas(text).length > 1) return askSede(c, { when, moving: st.moving, lead: 'No me quedó claro en cuál. ' });
+    if (w) return askSede(c, { when, moving: st.moving, lead: `Anotado: ${w.label}. ` });
+    if (t.split(/\s+/).length <= 6 && !/\?/.test(text)) return askSede(c, { when, moving: st.moving, lead: 'Dime el número o el nombre. ' });
+    save(c, null);
+    return null;
+  }
+
   if (st.step === 'elegir') {
+    // «Mejor en la del sur»: otra sede, con lo mismo que había pedido (y lo nuevo que diga en el mismo mensaje).
+    const otra = sedeEn(text);
+    if (otra && otra.id !== st.sede) {
+      const w = readWhen(text);
+      return offer(c, { ...(w || st.when ? { when: w ? refineWhen(st.when, w) : st.when } : {}), sede: otra.id });
+    }
     const choose = (iso: string | undefined): string => {
       if (!iso) return offer(c, st.when ? { when: st.when } : {});
-      if (!isSlotFree(new Date(iso))) return `Ese espacio se acaba de ocupar 😕 ` + offer(c, st.when ? { when: st.when } : {});
+      if (!isSlotFree(new Date(iso), { sede: st.sede ?? null })) return `Ese espacio se acaba de ocupar 😕 ` + offer(c, st.when ? { when: st.when } : {});
       if (needsPhone(c)) {
         save(c, { ...st, step: 'telefono', chosen: iso });
         return phonePrompt(iso);
       }
       save(c, { ...st, step: 'confirmar', chosen: iso });
-      return confirmPrompt(iso);
+      return confirmPrompt(iso, undefined, st.sede);
     };
     const ordinal = ORDINAL_RE.exec(t)?.[1];
     const num = OPTION_RE.exec(t)?.[1] ?? (ordinal ? ORDINALS[ordinal] : undefined);
@@ -427,7 +529,7 @@ async function step(userId: string, text: string): Promise<string | null> {
     if (YES_RE.test(t) || COMING_RE.test(t) || same) {
       setCustomerReply(appt.id, 'confirmó');
       save(getContact(userId)!, null);
-      return `¡Perfecto! Te esperamos el ${formatSlot(new Date(appt.startsAt))}${cfg.location ? ` en ${cfg.location}` : ''} 🙂`;
+      return `¡Perfecto! Te esperamos el ${formatSlot(new Date(appt.startsAt))}${appt.location ? ` en ${appt.location}` : ''} 🙂`;
     }
     save(c, null);
     return null;
@@ -450,7 +552,7 @@ async function step(userId: string, text: string): Promise<string | null> {
     }
 
     const motivo = motivoDeCancelar(text, yaSeIntento(c, appt.id));
-    const opciones = availableSlots({ count: 2, spreadDays: true }).map((s) => `el ${formatSlot(s.startsAt)}`);
+    const opciones = availableSlots({ count: 2, spreadDays: true, sede: appt.sede }).map((s) => `el ${formatSlot(s.startsAt)}`);
     const r = respuesta(motivo, { cita: slot, opciones, diasEvento: diasParaElEvento(c) });
 
     // 🪤 «Cancélala y ya», «no me insistas»: se cancela en el acto, sin la pregunta de confirmación. Volver a
@@ -525,7 +627,7 @@ async function step(userId: string, text: string): Promise<string | null> {
     if (phone) {
       updateContact(c.id, { phone }, { silent: true });
       save(getContact(userId)!, { ...st, step: 'confirmar' });
-      return confirmPrompt(chosen, '¡Gracias! Entonces:');
+      return confirmPrompt(chosen, '¡Gracias! Entonces:', st.sede);
     }
     if (email) return 'Anotado tu correo. ¿Y a qué número te escribimos para confirmarte?';
     if (/\d{5,}/.test(text.replace(/\D/g, ''))) return 'Ese número no me cuadra 🤔 ¿Me lo pasas completo? Por ejemplo: 300 123 4567';
@@ -543,9 +645,12 @@ async function step(userId: string, text: string): Promise<string | null> {
 
   if (st.step === 'confirmar') {
     const chosen = st.chosen!;
+    // «Sí, pero en la del sur»: el horario elegido era de la otra sede, así que se vuelve a ofrecer en esa.
+    const otra = sedeEn(text);
+    if (otra && otra.id !== st.sede) return offer(c, { ...(st.when ? { when: st.when } : {}), sede: otra.id });
     // "El evento es el viernes": si el horario elegido ya es antes, se vuelve a pedir el sí; si no, se busca antes.
     const ev = eventDeadline(text);
-    if (ev) return slotMatches(new Date(chosen), ev) ? confirmPrompt(chosen, 'Perfecto, queda antes de tu evento.') : offer(c, { when: ev });
+    if (ev) return slotMatches(new Date(chosen), ev) ? confirmPrompt(chosen, 'Perfecto, queda antes de tu evento.', st.sede) : offer(c, { when: ev });
     const w = parseWhen(text);
     // "sí, pero mejor a las 5": pide otra cosa. "sí, el sábado" con el sábado elegido: confirma.
     if (w) return slotMatches(new Date(chosen), w) ? book(c, userId, chosen) : offer(c, { when: refineWhen(st.when, w) });
@@ -590,6 +695,7 @@ export async function bookingStep(userId: string, text: string): Promise<string 
 
 const EXPECTED: Record<BookingState['step'], string> = {
   nombre: 'esperaba el nombre',
+  sede: 'esperaba en cuál sede',
   elegir: 'esperaba que eligiera uno de los horarios',
   telefono: 'esperaba el número de teléfono',
   confirmar: 'esperaba un sí o un no para confirmar',
@@ -617,6 +723,8 @@ export function bookingReading(text: string): string | null {
   if (FIRST_RE.test(t)) return 'la primera opción';
   if (LAST_RE.test(t)) return 'la última opción';
   if (MIDDLE_RE.test(t)) return 'la opción del medio';
+  const sede = sedeEn(text);
+  if (sede) return sede.nombre;
   const w = parseWhen(text);
   if (w) return w.label;
   if (ANY_RE.test(t)) return 'cualquiera: la primera opción';

@@ -102,7 +102,7 @@ Aiva no está amarrada a un negocio: todo lo propio de cada cliente vive en su c
 
 | Dónde | Qué va | Ejemplos |
 |---|---|---|
-| `aiva.config.json` | El negocio y cómo atiende | nombre, descripción, sitio, moneda, país e indicativo telefónico (`phoneCountryCode`, `phoneLocalDigits`), contacto humano; nombre y estilo del agente, su objetivo y lo que dice cuando no sabe algo (`agent.verifyPhrase`); fuentes (catálogo, información, páginas); zona horaria; agenda de citas (servicio, lugar, días, franjas, `askPhone`, `askEmail`); campos que captura el análisis (`crm.fields`); archivo del **diccionario** (`dictionaryFile`) y del **perfil** (`profileFile`); **marca** (`brand.color`, `brand.logo`); escenarios y datos de demostración |
+| `aiva.config.json` | El negocio y cómo atiende | nombre, descripción, sitio, moneda, país e indicativo telefónico (`phoneCountryCode`, `phoneLocalDigits`), contacto humano; nombre y estilo del agente, su objetivo y lo que dice cuando no sabe algo (`agent.verifyPhrase`); fuentes (catálogo, información, páginas); zona horaria; agenda de citas (servicio, lugar, días, franjas, `askPhone`, `askEmail`); **sedes**, si atiende en varios sitios; campos que captura el análisis (`crm.fields`); archivo del **diccionario** (`dictionaryFile`) y del **perfil** (`profileFile`); **marca** (`brand.color`, `brand.logo`); escenarios y datos de demostración |
 | `.env` | La máquina y los secretos | motores y modelos por rol, claves de OpenAI y Meta, puerto, `PUBLIC_URL`, token del tablero, calendarios del dueño, tope de gasto inicial (`TOPE_USD_MES`) |
 | Tablero › Perfil | Lo que el dueño confirma de su negocio | dirección, horarios, zona, contacto, pagos y abono, precios, políticas y datos propios (tallas, tiempos…) |
 | Tablero › Canales | Lo que se decide en el día a día | encender o apagar el chat web, WhatsApp (con su QR), WhatsApp oficial y MCP, sin reiniciar; credenciales de WhatsApp oficial |
@@ -201,6 +201,26 @@ atiende el flujo de citas (nunca el modelo, que podría decir "listo, cancelada"
 cancelar pide confirmación; cambiar ofrece espacios con las mismas reglas de fechas y franjas, agenda
 la nueva y solo después cancela la anterior. Si solo dice "sobre mi cita", pregunta si quiere
 cambiarla o cancelarla. El equipo recibe aviso cuando un cliente cancela o mueve su cita.
+
+**Varias sedes.** Un negocio que atiende en varios sitios con un mismo número las pone en `sedes` de su
+`aiva.config.json`. Cada sede tiene su nombre, su dirección, cómo la llama la gente y, si hace falta, sus propios días,
+franjas y cupo; lo que no diga lo hereda de `appointments`:
+
+```json
+"sedes": [
+  { "id": "norte", "nombre": "Sede Norte", "direccion": "Cra 53 # 82-20", "apodos": ["la del norte", "alto prado"] },
+  { "id": "sur", "nombre": "Sede Sur", "direccion": "Calle 72 # 45-10", "apodos": ["la de la 72"], "days": [1, 2, 3, 4, 5, 6], "hours": [["08:00", "12:00"]] }
+]
+```
+
+Con dos o más, el bot pregunta en cuál antes de ofrecer horarios, o la toma si el cliente ya la nombró ("una cita en
+la del norte el sábado"). Entiende el número de la lista, el nombre y los apodos, y si nombra dos vuelve a preguntar.
+Ofrece los espacios de esa sede, y si lo que pidió no existe ahí pero sí en otra, se lo dice y le ofrece la otra.
+"Mejor en la del sur" cambia de sede a mitad del flujo. Cada sede tiene su cupo, la cita guarda la sede y la
+confirmación, el recordatorio y el calendario del cliente dicen la dirección. La ficha recuerda la sede para la
+próxima vez. Las sedes también van en la información del negocio, así que "¿dónde quedan?" se responde con todas.
+Una sede no es otro cliente: si cada una tiene dueño, número y precios propios, son clientes aparte. Pruebas:
+`pnpm test:sedes`.
 
 **Recordatorio el día antes** (`appointments.reminder`: `at`, por defecto `"17:00"`, y `enabled`).
 Sale solo por el canal del cliente: WhatsApp por QR, o WhatsApp oficial dentro de las 24 horas.

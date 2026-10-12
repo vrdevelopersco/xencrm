@@ -195,6 +195,34 @@ export const BusinessConfigSchema = z.object({
         .prefault({}),
     })
     .prefault({}),
+  /**
+   * Las sedes de un negocio que atiende en varios sitios con un mismo número. Ver src/crm/sedes.ts.
+   *
+   * 🪤 Una sede NO es otro cliente. Un cliente es aislamiento —su base, su WhatsApp, su llave—; dos sedes del mismo
+   * negocio quieren lo contrario: un tablero, los mismos prospectos, el mismo catálogo, y que quien preguntó por la
+   * del norte pueda terminar en la del sur sin que nadie lo pierda. Si cada sede tiene dueño, número y precios
+   * propios, son clientes aparte y eso ya existe.
+   *
+   * Vacío (lo normal): una sola, con el `location`, los días, las franjas y el cupo de `appointments`. Cada sede
+   * puede cambiar sus días, franjas y cupo; lo que no diga, lo hereda de `appointments`.
+   */
+  sedes: z
+    .array(
+      z.object({
+        /** Para guardarla en la cita y en la ficha: corto, en minúsculas, sin espacios («norte»). */
+        id: z.string().regex(/^[a-z0-9-]{1,40}$/, 'el id de una sede va en minúsculas, sin espacios ni tildes («norte»)'),
+        /** Como se le dice al cliente: «Sede Norte», «DUNOR Alto Prado». */
+        nombre: z.string().trim().min(1).max(80),
+        direccion: z.string().trim().max(200).default(''),
+        /** Cómo la llama la gente: «la del norte», «la de la 72», «alto prado». Sin tildes ni mayúsculas que importen. */
+        apodos: z.array(z.string().trim().min(2).max(60)).default([]),
+        days: z.array(z.number().int().min(0).max(6)).optional(),
+        hours: z.array(z.tuple([z.string().regex(/^\d{2}:\d{2}$/), z.string().regex(/^\d{2}:\d{2}$/)])).optional(),
+        capacity: z.number().int().positive().optional(),
+      }),
+    )
+    .default([])
+    .refine((s) => new Set(s.map((x) => x.id)).size === s.length, 'hay dos sedes con el mismo id'),
   /** CRM: campos que el análisis debe capturar además de los básicos. */
   crm: z
     .object({

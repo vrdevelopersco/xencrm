@@ -4,6 +4,7 @@
 import { business } from '../config.js';
 import { formatSlot, getAppointment, listAppointments, setReminder, tzParts, zoned, type Appointment } from './appointments.js';
 import { awaitReminderReply } from './booking.js';
+import { agendaDe } from './sedes.js';
 import { contactNumber, getContact, type Contact } from './contacts.js';
 import { avisarRecordatorio } from './notifications.js';
 import { soloEscucha, type ChannelId } from '../channels/switches.js';
@@ -27,10 +28,12 @@ const HOUR = 3600_000;
  * Y se topa a 7 días hacia atrás por si alguien configura un negocio que abre un solo día: mejor recordar con
  * mucha antelación que entrar en un bucle buscando un día que no existe.
  */
-export function reminderTime(startsAt: number): number {
+export function reminderTime(startsAt: number, sede: string | null = null): number {
   const p = tzParts(new Date(startsAt));
   const [hh, mm] = cfg.reminder.at.split(':').map(Number) as [number, number];
-  const dias = cfg.days ?? [1, 2, 3, 4, 5];
+  // Los días que atiende la sede de la cita: si la del sur abre los domingos y la del norte no, el recordatorio de
+  // una cita del lunes en la del sur puede salir el domingo.
+  const dias = agendaDe(sede).days ?? [1, 2, 3, 4, 5];
 
   // 🪤 PRIMERO se intenta el MISMO día de la cita, a la hora configurada. Es lo que pide un recordatorio: «hoy a
   // las once tienes tu cita», leído esa mañana. El día anterior a las cinco de la tarde se olvida, y además caía
@@ -82,7 +85,7 @@ function manualReason(c: Contact | null): string | null {
 
 /** Las citas a las que ya les toca el recordatorio y aún no lo tienen. */
 export function dueReminders(now = Date.now()): Appointment[] {
-  return listAppointments({ from: now + HOUR, to: now + 3 * 24 * HOUR, status: 'confirmada' }).filter((a) => !a.reminder && reminderTime(a.startsAt) <= now);
+  return listAppointments({ from: now + HOUR, to: now + 3 * 24 * HOUR, status: 'confirmada' }).filter((a) => !a.reminder && reminderTime(a.startsAt, a.sede) <= now);
 }
 
 let running = false;
@@ -97,7 +100,7 @@ export async function runReminders(now = Date.now()): Promise<{ sent: number; ma
       const fresh = getAppointment(a.id);
       if (!fresh || fresh.reminder || fresh.status !== 'confirmada') continue;
       // Agendó poco antes de la hora del recordatorio (o después): acaba de hablar con nosotros, no hace falta.
-      if (a.createdAt > reminderTime(a.startsAt) - 2 * HOUR) {
+      if (a.createdAt > reminderTime(a.startsAt, a.sede) - 2 * HOUR) {
         setReminder(a.id, 'no_hace_falta', 'Agendó hace poco.');
         out.skipped++;
         continue;
@@ -142,7 +145,7 @@ export function remindersBoard(now = Date.now()) {
   if (!cfg.enabled || !cfg.reminder.enabled) return [];
   return listAppointments({ from: now, to: now + 36 * HOUR, status: 'confirmada' }).map((a) => {
     const c = getContact(a.userId);
-    return { ...a, label: formatSlot(new Date(a.startsAt)), remindAt: reminderTime(a.startsAt), text: reminderText(a, c, now), number: contactNumber(c) };
+    return { ...a, label: formatSlot(new Date(a.startsAt)), remindAt: reminderTime(a.startsAt, a.sede), text: reminderText(a, c, now), number: contactNumber(c) };
   });
 }
 

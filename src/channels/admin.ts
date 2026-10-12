@@ -975,15 +975,16 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   app.get('/admin/api/slots', (c) => {
     const weekday = c.req.query('weekday') !== undefined ? Number(c.req.query('weekday')) : undefined;
     const count = Number(c.req.query('count') ?? 8);
-    return c.json(availableSlots({ count, weekday, spreadDays: false }).map((s) => ({ startsAt: s.startsAt.toISOString(), label: formatSlot(s.startsAt) })));
+    const sede = c.req.query('sede') || null;
+    return c.json(availableSlots({ count, weekday, spreadDays: false, sede }).map((s) => ({ startsAt: s.startsAt.toISOString(), label: formatSlot(s.startsAt) })));
   });
 
   app.post('/admin/api/appointments', async (c) => {
-    const body = (await c.req.json().catch(() => ({}))) as { userId?: string; startsAt?: string; notes?: string };
+    const body = (await c.req.json().catch(() => ({}))) as { userId?: string; startsAt?: string; notes?: string; sede?: string };
     if (!body.userId || !body.startsAt) return c.json({ error: 'userId y startsAt requeridos' }, 400);
     if (!getContact(body.userId)) return c.json({ error: 'contacto no existe' }, 404);
     try {
-      const appt = bookAppointment(body.userId, new Date(body.startsAt), { notes: body.notes ?? 'Agendada desde el tablero', by: 'admin' });
+      const appt = bookAppointment(body.userId, new Date(body.startsAt), { notes: body.notes ?? 'Agendada desde el tablero', by: 'admin', sede: body.sede || null });
       return c.json({ appointment: { ...appt, label: formatSlot(new Date(appt.startsAt)) } });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 409);
@@ -1215,7 +1216,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       },
       // Lo que hay en el embudo, en dinero. Ver crm/valor.ts para de dónde sale y por qué 0 no es «no vale».
       embudo: valorDelEmbudo(),
-      appointments: citasHoy.map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt), { withDay: false }), remindAt: reminderTime(a.startsAt) })),
+      appointments: citasHoy.map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt), { withDay: false }), remindAt: reminderTime(a.startsAt, a.sede) })),
       // Citas que ya pasaron y siguen "confirmadas": su resultado (vino, no vino, compró) es lo que calibra el puntaje.
       past: listAppointments({ from: now - 14 * 86400_000, to: now, status: 'confirmada' })
         .filter((a) => a.endsAt < now)
@@ -1233,7 +1234,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
         // prospectos y se enfriaron por falta de seguimiento son los que hay que retomar.
         .filter((x) => x.scoreBase >= 60 && !withUpcoming.has(x.id) && !waitingOutcome.has(x.id) && (x.lastMessageAt ?? 0) < now - 24 * 3600_000 && !isSnoozed(x, now))
         .slice(0, 20),
-      upcoming: listAppointments({ from: endOfDay, to: endOfDay + 3 * 86400_000, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)), remindAt: reminderTime(a.startsAt) })),
+      upcoming: listAppointments({ from: endOfDay, to: endOfDay + 3 * 86400_000, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)), remindAt: reminderTime(a.startsAt, a.sede) })),
       // Lo que el bot no supo y prometió verificar: el cliente espera la respuesta del equipo.
       verifications: listVerifications('pendiente').map((v) => ({ ...v, window: replyWindow(v.userId) })),
       public: publicStatus(),
@@ -1253,6 +1254,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       business: business.business,
       agent: business.agent,
       appointments: business.appointments,
+      // Las sedes, para escoger en cuál al agendar a mano y para filtrar el calendario (crm/sedes.ts).
+      sedes: business.sedes.map((s) => ({ id: s.id, nombre: s.nombre, direccion: s.direccion })),
       crmFields: business.crm.fields,
       timezone: business.timezone,
       engines: engineStatus(),

@@ -214,7 +214,7 @@ un factor más: `contact.score` es el de hoy y `contact.scoreBase` el que llegó
 sin seguimiento" usa el segundo, porque son justo los que se enfriaron. Los pesos son un estimado hecho con las
 primeras conversaciones reales; `pnpm rescore` recalcula las fichas viejas con los pesos de hoy usando los análisis
 ya guardados (no llama al modelo; `--write` para guardar).
-| `appointments` | citas con estado, recordatorio (estado, cuándo, por qué) y respuesta del cliente |
+| `appointments` | citas con estado, sede, recordatorio (estado, cuándo, por qué) y respuesta del cliente |
 | `events` | línea de tiempo de cada contacto |
 | `llm_usage` | cada llamada a un modelo: tarea, modelo, tokens (entrada, caché, salida, razonamiento), milisegundos |
 | `verifications` | preguntas por verificar y sus respuestas |
@@ -315,6 +315,18 @@ no entra a los otros ni sabiéndose la dirección.
   anterior.
 - **Recordatorio** (`crm/reminders.ts`): un temporizador revisa cada minuto qué citas ya tienen su hora de
   recordatorio. Envía por WhatsApp o por plantilla, y si no puede, lo deja a mano con el motivo.
+- **Sedes** (`crm/sedes.ts`): todo lo de la agenda se pide por `agendaDe(sede)`, que hereda de `appointments` lo
+  que la sede no diga. Sin sedes es la agenda de siempre, así que el caso de casi todos los clientes no se piensa en
+  ningún otro sitio. Decisiones:
+  - El cupo es por sede. Las citas sin sede, de antes de que el negocio tuviera sedes, se le cuentan a la primera;
+    contarlas en ninguna dejaría ese espacio libre dos veces. El calendario privado del dueño ocupa todas.
+  - Con varias sedes, `bookAppointment` no agenda sin sede. Escoger una por defecto mandaría a alguien a la otra punta
+    de la ciudad.
+  - El flujo tiene el paso `sede`, entre el nombre y los horarios. `sedeEn` reconoce nombre, id y apodos sin tildes;
+    si el mensaje nombra dos sedes devuelve null y se vuelve a preguntar, porque leer la negación no es de reglas.
+  - La sede se guarda en `users.data.sede` y en `appointments.sede`; `location` lleva el nombre con la dirección,
+    que es lo que ya leían el recordatorio, el calendario y la exportación.
+  - El recordatorio se va al último día que atiende la sede de esa cita, no la agenda general.
 - **Calendario**: iCalendar estándar. Suscripción secreta, página por cita con firma HMAC y calendarios del dueño
   que bloquean la agenda.
 
@@ -373,6 +385,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
 | `pnpm test:inyeccion` | inyección de prompt: promesas de plata, instrucciones recitadas, nombre y documentos con órdenes, y el recorrido entero con un modelo falso que siempre cae | no (modelo simulado) |
 | `pnpm test:presupuesto` | tope de gasto: mes del negocio, escalones, avisos una vez, ahorro al 90 % y al 100 % ni una llamada de pago sin dejar a nadie sin respuesta | no (OpenAI y Ollama simulados) |
+| `pnpm test:sedes` | varias sedes: preguntar en cuál, apodos, cambiar a mitad del flujo, cupo por sede, la otra sede cuando la suya no abre, recordatorio y lo que ve el modelo | no |
 | `pnpm test:repetidos` | WhatsApp oficial: lo que Meta manda dos veces entra y se contesta una vez; en «Mira» no marca leído ni contesta | no (Meta simulado) |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |
 | `pnpm replay` | las conversaciones sintéticas con los motores configurados; proyecta el costo | sí |

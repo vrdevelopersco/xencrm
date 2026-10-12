@@ -5,6 +5,7 @@ import { findDuplicates } from './merge.js';
 import { addEvent, etapaCon, getContact, rolDe, setStage, updateContact } from './contacts.js';
 import { emitEvent } from './events.js';
 import { busyOverlaps } from './busy.js';
+import { agendaDe, esLaPrimera, sedes, type Agenda } from './sedes.js';
 
 const cfg = business.appointments;
 const TZ = business.timezone;
@@ -20,6 +21,8 @@ export interface Appointment {
   endsAt: number;
   service: string;
   location: string | null;
+  /** En qué sede, si el negocio tiene sedes (ver crm/sedes.ts). null: no tiene, o la cita es de antes. */
+  sede: string | null;
   status: 'confirmada' | 'cancelada' | 'completada' | 'no_asistio';
   notes: string;
   createdAt: number;
@@ -117,12 +120,25 @@ export function slotMatches(startsAt: Date, w: When): boolean {
 }
 
 // ---------- Disponibilidad ----------
-/** Citas que se cruzan con ese espacio, más los eventos del calendario privado del dueño (salvo que se excluyan). */
-function bookedCount(startsAt: Date, opts: { includeBusy?: boolean } = {}): number {
+/**
+ * Citas que se cruzan con ese espacio en esa sede, más los eventos del calendario privado del dueño (salvo que se
+ * excluyan).
+ *
+ * 🪤 Cada sede tiene su cupo: una cita en la del norte no ocupa la del sur. Las citas sin sede —de antes de que el
+ * negocio tuviera sedes— se le cuentan a la primera, que suele ser donde atendía; contarlas en ninguna dejaría ese
+ * espacio libre dos veces.
+ *
+ * El calendario privado sí vale para todas: es el del dueño, y si él está ocupado no puede estar en ninguna.
+ */
+function bookedCount(startsAt: Date, ag: Agenda, opts: { includeBusy?: boolean } = {}): number {
   const start = startsAt.getTime();
-  const end = start + cfg.durationMin * 60_000;
+  const end = start + ag.durationMin * 60_000;
+  const s = sedes().length ? ag.sede : null;
+  const enLaSede = !s ? '' : esLaPrimera(s) ? ' AND (sede = ? OR sede IS NULL)' : ' AND sede = ?';
   const booked = (
-    getDb().prepare("SELECT COUNT(*) n FROM appointments WHERE status = 'confirmada' AND starts_at < ? AND ends_at > ?").get(end, start) as { n: number }
+    getDb()
+      .prepare(`SELECT COUNT(*) n FROM appointments WHERE status = 'confirmada' AND starts_at < ? AND ends_at > ?${enLaSede}`)
+      .get(...(s ? [end, start, s.id] : [end, start])) as { n: number }
   ).n;
   return booked + (opts.includeBusy === false ? 0 : busyOverlaps(start, end));
 }
@@ -131,35 +147,36 @@ function bookedCount(startsAt: Date, opts: { includeBusy?: boolean } = {}): numb
  * Espacios libres a partir de ahora (respetando antelación mínima), opcionalmente solo de un día de la semana
  * o de lo que pidió el cliente (`when`). Sin un día fijo, reparte un espacio por día.
  */
-export function availableSlots(opts: { count?: number; weekday?: number; after?: Date; spreadDays?: boolean; when?: When } = {}): Slot[] {
+export function availableSlots(opts: { count?: number; weekday?: number; after?: Date; spreadDays?: boolean; when?: When; sede?: string | null } = {}): Slot[] {
+  const ag = agendaDe(opts.sede);
   const count = opts.count ?? 3;
   const w = opts.when;
   const oneDay = opts.weekday !== undefined || w?.days?.length === 1 || w?.weekdays?.length === 1;
-  const earliest = new Date(Math.max(Date.now() + cfg.minLeadHours * 3600_000, (opts.after ?? new Date(0)).getTime()));
+  const earliest = new Date(Math.max(Date.now() + ag.minLeadHours * 3600_000, (opts.after ?? new Date(0)).getTime()));
   const out: Slot[] = [];
   const perDay = new Map<string, number>();
   const start = tzParts(new Date());
-  for (let dayOffset = 0; dayOffset <= cfg.maxDaysAhead && out.length < count; dayOffset++) {
+  for (let dayOffset = 0; dayOffset <= ag.maxDaysAhead && out.length < count; dayOffset++) {
     const dayDate = new Date(Date.UTC(start.y, start.m - 1, start.d + dayOffset, 12, 0));
     const p = tzParts(dayDate);
-    if (!cfg.days.includes(p.wd)) continue;
+    if (!ag.days.includes(p.wd)) continue;
     if (opts.weekday !== undefined && p.wd !== opts.weekday) continue;
     const key = dayKey(p.y, p.m, p.d);
     if (w && !whenAllowsDay(w, key, p.wd)) continue;
-    for (const [from, to] of cfg.hours) {
+    for (const [from, to] of ag.hours) {
       const [fh, fm] = from.split(':').map(Number) as [number, number];
       const [th, tm] = to.split(':').map(Number) as [number, number];
       let minute = fh * 60 + fm;
       for (
         let t = zoned(p.y, p.m, p.d, fh, fm);
-        t.getTime() + cfg.durationMin * 60_000 <= zoned(p.y, p.m, p.d, th, tm).getTime();
-        t = new Date(t.getTime() + cfg.durationMin * 60_000), minute += cfg.durationMin
+        t.getTime() + ag.durationMin * 60_000 <= zoned(p.y, p.m, p.d, th, tm).getTime();
+        t = new Date(t.getTime() + ag.durationMin * 60_000), minute += ag.durationMin
       ) {
         if (t < earliest) continue;
         if (w && !whenAllowsMinute(w, minute)) continue;
-        if (bookedCount(t) >= cfg.capacity) continue;
+        if (bookedCount(t, ag) >= ag.capacity) continue;
         if (opts.spreadDays !== false && !oneDay && (perDay.get(key) ?? 0) >= 1) break;
-        out.push({ startsAt: t, endsAt: new Date(t.getTime() + cfg.durationMin * 60_000) });
+        out.push({ startsAt: t, endsAt: new Date(t.getTime() + ag.durationMin * 60_000) });
         perDay.set(key, (perDay.get(key) ?? 0) + 1);
         if (out.length >= count) break;
       }
@@ -169,8 +186,9 @@ export function availableSlots(opts: { count?: number; weekday?: number; after?:
   return out;
 }
 
-export function isSlotFree(startsAt: Date, opts: { includeBusy?: boolean } = {}): boolean {
-  return bookedCount(startsAt, opts) < cfg.capacity;
+export function isSlotFree(startsAt: Date, opts: { includeBusy?: boolean; sede?: string | null } = {}): boolean {
+  const ag = agendaDe(opts.sede);
+  return bookedCount(startsAt, ag, opts) < ag.capacity;
 }
 
 // ---------- Reservas ----------
@@ -182,6 +200,7 @@ function rowToAppointment(r: Record<string, unknown>): Appointment {
     endsAt: Number(r.ends_at),
     service: r.service as string,
     location: (r.location as string | null) ?? null,
+    sede: (r.sede as string | null) ?? null,
     status: r.status as Appointment['status'],
     notes: (r.notes as string) ?? '',
     createdAt: Number(r.created_at),
@@ -212,15 +231,19 @@ export function setCustomerReply(id: number, reply: NonNullable<Appointment['rep
   return appt;
 }
 
-export function bookAppointment(userId: string, startsAt: Date, opts: { service?: string; notes?: string; by?: string } = {}): Appointment {
+export function bookAppointment(userId: string, startsAt: Date, opts: { service?: string; notes?: string; by?: string; sede?: string | null } = {}): Appointment {
+  // 🪤 Con varias sedes, la cita dice en cuál o no se agenda. Escoger una por defecto mandaría a alguien a la
+  // otra punta de la ciudad; el flujo de citas siempre la pregunta, y el tablero la pide.
+  if (sedes().length > 1 && !sedes().some((s) => s.id === opts.sede)) throw new Error('falta decir en qué sede');
+  const ag = agendaDe(opts.sede);
   // Desde el tablero se puede agendar encima de un evento personal del dueño: la persona sabe lo que hace.
-  if (!isSlotFree(startsAt, { includeBusy: opts.by !== 'admin' })) throw new Error('ese espacio ya no está disponible');
-  const endsAt = new Date(startsAt.getTime() + cfg.durationMin * 60_000);
+  if (!isSlotFree(startsAt, { includeBusy: opts.by !== 'admin', sede: ag.sede?.id })) throw new Error('ese espacio ya no está disponible');
+  const endsAt = new Date(startsAt.getTime() + ag.durationMin * 60_000);
   const r = getDb()
-    .prepare('INSERT INTO appointments (user_id, starts_at, ends_at, service, location, status, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(userId, startsAt.getTime(), endsAt.getTime(), opts.service ?? cfg.service, cfg.location || null, 'confirmada', opts.notes ?? '', Date.now());
+    .prepare('INSERT INTO appointments (user_id, starts_at, ends_at, service, location, sede, status, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(userId, startsAt.getTime(), endsAt.getTime(), opts.service ?? cfg.service, ag.lugar || null, ag.sede?.id ?? null, 'confirmada', opts.notes ?? '', Date.now());
   const appt = getAppointment(Number(r.lastInsertRowid))!;
-  addEvent(userId, 'appointment_booked', { id: appt.id, startsAt: appt.startsAt, by: opts.by ?? 'bot' });
+  addEvent(userId, 'appointment_booked', { id: appt.id, startsAt: appt.startsAt, by: opts.by ?? 'bot', ...(appt.sede ? { sede: appt.sede } : {}) });
   const c = getContact(userId);
   const conCita = etapaCon('cita');
   if (c && conCita && rolDe(c.stage) !== 'ganado') setStage(userId, conCita, { by: opts.by ?? 'bot' });
