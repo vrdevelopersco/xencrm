@@ -9,6 +9,15 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### Cada respuesta con su «¿por qué?», y la versión que corre a la vista · `fa9fb3f`
+«¿Por qué le contestó eso?» se contestaba con logs que se perdían al reiniciar. Ahora cada mensaje corre en un turno
+que se guarda 90 días: qué entendió, la ruta, el motor y el modelo, cuánto tardó, qué guardas saltaron, cuánto costó,
+la huella del prompt y la versión. Sus llamadas al modelo y sus mensajes llevan el mismo id, que viaja solo con
+AsyncLocalStorage. Quien administra tiene **¿por qué?** debajo de cada respuesta. 🪤 El análisis que deja
+programado un turno corre fuera de él, para que su gasto no se le cargue a esa respuesta. La versión sale de git o
+del `version.json` que ahora deja `pnpm paquete`, y la dicen `/_salud`, el lanzador, la consola y cada turno.
+`pnpm test:turnos` (20 casos) y visto en Chrome con una conversación real contra Gemma.
+
 ### Varias sedes con un mismo número · `dba1be5`, `4bc5cf7`, `387fd4f`
 Un negocio con varias sedes y un solo WhatsApp tenía que escoger entre varios números o un asistente que no sabe a
 cuál mandar a cada quien. Ahora las sedes van en su configuración, con nombre, dirección, apodos y, si cambia, su
