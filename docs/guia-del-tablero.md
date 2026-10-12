@@ -71,6 +71,11 @@ escribir o usar una plantilla aprobada por Meta.
 A la izquierda la lista, con filtros: *Todos*, *Sin leer*, *Con una persona*, *Prospectos*, *Interesados*,
 *Con cita* y *Archivados*. En el centro, el chat. A la derecha, la ficha del cliente.
 
+**¿Por qué contestó eso?** Si administras, debajo de cada respuesta del asistente hay un **¿por qué?**. Dice qué
+entendió, por dónde lo mandó, qué modelo contestó y en cuánto tiempo, qué guardas saltaron (una cifra sin respaldo,
+una promesa de descuento que no salió), cuánto costó y con qué versión. Es lo primero que hay que mirar cuando una
+respuesta te parece rara.
+
 **Buscar.** El buscador de arriba mira el nombre, el teléfono, el resumen y **lo que se dijo en la conversación**:
 escribe "esmoquin azul" y salen las conversaciones donde aparece, cada una con el pedacito donde se dijo y quién lo
 dijo.

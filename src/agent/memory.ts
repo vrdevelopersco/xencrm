@@ -1,3 +1,4 @@
+import { idDelTurno } from '../crm/turnos.js';
 import { guardarNumero, primeraEtapa } from '../crm/contacts.js';
 import { siblingIds } from '../crm/merge.js';
 import { getDb } from '../rag/store.js';
@@ -54,8 +55,9 @@ export function appendMessage(
   const ts = Date.now();
   const a = author ?? (role === 'user' ? 'customer' : 'bot');
   const r = getDb()
-    .prepare('INSERT INTO messages (user_id, role, content, intent, ts, author, by, media) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(userId, role, content, intent ?? null, ts, a, by ?? null, media ? JSON.stringify(media) : null);
+    .prepare('INSERT INTO messages (user_id, role, content, intent, ts, author, by, media, turno) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    // El turno en curso, si lo hay (crm/turnos.ts): lo que escribe el equipo o lo importado no sale de uno.
+    .run(userId, role, content, intent ?? null, ts, a, by ?? null, media ? JSON.stringify(media) : null, idDelTurno());
   getDb().prepare('UPDATE users SET last_message_at = ? WHERE id = ?').run(ts, userId);
   return Number(r.lastInsertRowid);
 }
@@ -70,11 +72,13 @@ export interface StoredMessage {
   ts: number;
   /** El archivo que vino o se mandó con este mensaje, si lo hubo. */
   media?: Medio | null;
+  /** El turno del asistente que lo produjo (crm/turnos.ts): para ver por qué contestó eso. */
+  turno?: string | null;
 }
 
 export function getMessages(userId: string, limit = 50): StoredMessage[] {
   const rows = getDb()
-    .prepare('SELECT id, role, author, by, content, intent, ts, media FROM messages WHERE user_id = ? ORDER BY ts DESC, id DESC LIMIT ?')
+    .prepare('SELECT id, role, author, by, content, intent, ts, media, turno FROM messages WHERE user_id = ? ORDER BY ts DESC, id DESC LIMIT ?')
     .all(userId, limit) as unknown as (StoredMessage & { media: string | null })[];
   // 🪤 Un `media` ilegible no puede tumbar la conversación entera: se enseña el mensaje sin su archivo, que es
   // infinitamente mejor que una pantalla en blanco donde había un historial.

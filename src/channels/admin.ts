@@ -39,6 +39,8 @@ import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes,
 import { apagarClaveDelCliente, claveDelCliente, encenderClaveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente } from '../motores.js';
 import { ponerTope, presupuesto } from '../crm/presupuesto.js';
 import { agendaDe } from '../crm/sedes.js';
+import { turnoDe } from '../crm/turnos.js';
+import { version } from '../version.js';
 import { borrarDocumento, documentosDelNegocio, guardarCatalogo, guardarDocumento } from '../rag/documentos.js';
 import { leerAdjunto } from '../crm/adjuntos.js';
 import { cuantoOcupa as cuantoOcupanLosMedios, guardar as guardarMedio, rutaDe as rutaDeMedio, MAXIMO_BYTES, MIMES_ACEPTADOS } from '../crm/medios.js';
@@ -125,6 +127,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       colorOscuro: accentOn(business.brand.color, '#14120d'),
       // Para decir en qué sede es cada cita, en todo el tablero (crm/sedes.ts). Vacío: no tiene sedes.
       sedes: business.sedes.map((s) => ({ id: s.id, nombre: s.nombre })),
+      // Qué código corre (src/version.ts): lo primero que hay que saber cuando algo cambió tras un despliegue.
+      version: version().commit,
     }),
   );
 
@@ -572,6 +576,15 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * de la operación del negocio. Se aplica al instante, sin reiniciar.
    */
   app.get('/admin/api/presupuesto', (c) => c.json(presupuesto()));
+
+  /**
+   * Un turno del asistente (crm/turnos.ts): por qué contestó lo que contestó, con qué modelo, qué guardas
+   * saltaron, qué costó y con qué versión. Es lo que se abre desde «¿por qué?» en una respuesta.
+   */
+  app.get('/admin/api/turnos/:id', (c) => {
+    const t = turnoDe(c.req.param('id'));
+    return t ? c.json(t) : c.json({ error: 'ese turno no existe o ya pasaron 90 días' }, 404);
+  });
 
   app.put('/admin/api/motores/tope', async (c) => {
     try {

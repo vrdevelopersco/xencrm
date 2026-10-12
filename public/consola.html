@@ -1066,7 +1066,9 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         '<div class="quien">' +
           '<div class="fila"><span class="nombre">' + esc(c.nombre) + '</span>' + estado + prio + '</div>' +
           '<div class="small muted">' + esc(c.slug) + (c.host ? ' · ' + esc(c.host) : '') +
-            (e.gastoMes == null ? '' : ' · $' + Number(e.gastoMes).toFixed(2) + ' en IA (30 días)') + '</div>' +
+            (e.gastoMes == null ? '' : ' · $' + Number(e.gastoMes).toFixed(2) + ' en IA (30 días)') +
+            // Qué código corre en él: lo primero que hay que confirmar si algo cambió después de desplegar.
+            (e.version ? ' · <span title="Versión del código que corre">' + esc(e.version) + '</span>' : '') + '</div>' +
         '</div>' +
         '<div class="vistazo">' + vistazo + '</div>' +
         '<div class="acciones">' +

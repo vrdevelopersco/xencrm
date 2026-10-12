@@ -2,6 +2,7 @@
 // con un puntaje explicable de probabilidad de cita/venta. Corre en segundo plano tras cada respuesta.
 import { business } from '../config.js';
 import { classify, roleEngine, fallbackOrder, iaAgotada } from '../llm/engines.js';
+import { fueraDelTurno } from './turnos.js';
 import { openaiModel } from '../llm/openai.js';
 import type { SchemaSpec } from '../llm/apple.js';
 import { getHistory, getMessages, type StoredMessage } from '../agent/memory.js';
@@ -303,10 +304,14 @@ export function scheduleAnalysis(userId: string) {
   if (prev) clearTimeout(prev.timer);
   const since = prev?.since ?? Date.now();
   const delay = Math.max(0, Math.min(quiet, since + maxWait - Date.now()));
-  const timer = setTimeout(() => {
-    scheduled.delete(userId);
-    void analyzeContact(userId);
-  }, delay);
+  // 🪤 Fuera del turno que lo programó: el análisis corre después y cubre varios mensajes, así que su gasto no es
+  // de esa respuesta (ver crm/turnos.ts).
+  const timer = fueraDelTurno(() =>
+    setTimeout(() => {
+      scheduled.delete(userId);
+      void analyzeContact(userId);
+    }, delay),
+  );
   timer.unref();
   scheduled.set(userId, { timer, since });
 }

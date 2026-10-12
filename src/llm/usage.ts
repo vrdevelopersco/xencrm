@@ -1,6 +1,7 @@
 // Registro de consumo de los modelos: tokens y costo por tarea, modelo y conversación.
 // Cada llamada a OpenAI u Ollama deja una fila en llm_usage; el tablero y `pnpm usage` la resumen.
 import { getDb } from '../rag/store.js';
+import { idDelTurno } from '../crm/turnos.js';
 
 /** light/heavy = responder; gate = clasificar; analysis = ficha y puntaje; when = interpretar fechas. */
 // `consulta` es aparte para que se vea cuánto cuesta lo que pregunta el equipo, que no es lo que gasta
@@ -68,9 +69,9 @@ export function recordUsage(e: UsageEntry): void {
   try {
     getDb()
       .prepare(
-        'INSERT INTO llm_usage (ts, user_id, task, engine, model, input_tokens, cached_tokens, output_tokens, reasoning_tokens, segundos, ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO llm_usage (ts, user_id, task, engine, model, input_tokens, cached_tokens, output_tokens, reasoning_tokens, segundos, ms, turno) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       )
-      .run(Date.now(), e.userId ?? null, e.task ?? 'light', e.engine, e.model, e.inputTokens, e.cachedTokens ?? 0, e.outputTokens, e.reasoningTokens ?? 0, e.segundos ?? 0, e.ms);
+      .run(Date.now(), e.userId ?? null, e.task ?? 'light', e.engine, e.model, e.inputTokens, e.cachedTokens ?? 0, e.outputTokens, e.reasoningTokens ?? 0, e.segundos ?? 0, e.ms, idDelTurno());
   } catch (err) {
     console.warn('[usage] no se pudo registrar:', (err as Error).message);
   }

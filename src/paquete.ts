@@ -720,6 +720,9 @@ const servidor = http.createServer(async (pide, responde) => {
         arrancado: new Date(Date.now() - Math.round(process.uptime() * 1000)).toISOString(),
         enPieDesdeHaceMin: Math.round(process.uptime() / 60),
         node: process.version,
+        // Qué commit va en este paquete (lo deja pnpm paquete en version.json). Lo primero que hay que confirmar
+        // cuando algo cambió después de subir un ZIP, antes de teorizar. (Sin acentos graves: esto es la plantilla.)
+        version: (function () { try { return JSON.parse(readFileSync(join(aqui, 'version.json'), 'utf8')).commit; } catch (e) { return 'desconocida'; } })(),
         // 🪤 Quién es este que contesta. Cuando el alojamiento arrancó dos lanzadores, cada uno veía a sus
         // cuatro hijos perfectos y decía «Todo arriba» — y entre los dos había ocho procesos peleándose el
         // WhatsApp del cliente. Desde fuera no había forma de notarlo. Ahora lo primero que se dice es si este
@@ -985,6 +988,18 @@ writeFileSync(
   `${JSON.stringify({ dominio: DOMINIO, puertoInterno: PUERTO_INTERNO, clientes: clientes.map((c) => ({ slug: c.slug, nombre: c.nombre, prioridad: c.prioridad, desde: c.desde })) }, null, 2)}\n`,
 );
 writeFileSync(join(dir, 'app.js'), ARRANQUE);
+// Qué commit va en este paquete (src/version.ts lo lee al arrancar): con esto, /_salud dice qué está desplegado.
+{
+  const git = (...a: string[]) => execFileSync('git', a, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  let commit = 'desconocida';
+  try {
+    commit = git('rev-parse', '--short', 'HEAD') + (git('status', '--porcelain', '--untracked-files=no') ? '+cambios' : '');
+  } catch {
+    // sin git no se sabe, y se dice así
+  }
+  writeFileSync(join(dir, 'version.json'), `${JSON.stringify({ commit, fecha: new Date().toISOString().slice(0, 10) })}\n`);
+  console.log(`→ versión del paquete: ${commit}`);
+}
 
 const base = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { dependencies: Record<string, string> };
 writeFileSync(

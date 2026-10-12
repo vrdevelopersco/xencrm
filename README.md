@@ -275,6 +275,12 @@ cliente (`seedFile` y `evalFile`) con los motores configurados y proyecta el cos
 conversaciones. Simula un mensaje del cliente cada 30 s (`--gap=`) y corre el análisis con la misma regla que
 en producción; `--fast` manda los mensajes seguidos.
 
+**Cada turno queda guardado.** Cada respuesta del asistente deja su turno: qué entendió, por dónde lo mandó, con qué
+motor y modelo, qué guardas saltaron, cuánto costó y con qué versión del código y del prompt salió. Sus llamadas al
+modelo y sus mensajes llevan el mismo identificador. En la conversación, quien administra tiene **¿por qué?** debajo
+de cada respuesta. Se guardan 90 días. La versión que corre la dicen `/_salud`, la consola y el tablero. Pruebas:
+`pnpm test:turnos`.
+
 **Tope de gasto.** Cada cliente puede tener un tope en dólares al mes, que se pone en la consola (Configuración ›
 Motores, solo el super-admin) o con `TOPE_USD_MES` en su `.env`. Se cuenta el mes calendario en la hora del
 negocio, y solo lo de OpenAI: los motores de la máquina no cuestan. Se aplica al instante, sin reiniciar.

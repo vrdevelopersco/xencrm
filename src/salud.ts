@@ -15,6 +15,7 @@ import { existsSync, accessSync, constants } from 'node:fs';
 import { business, env } from './config.js';
 import { engineStatus, motorSinCosto } from './llm/engines.js';
 import { presupuesto, type Nivel } from './crm/presupuesto.js';
+import { version } from './version.js';
 import { whatsappStatus } from './channels/whatsapp-estado.js';
 import { canalesQueEntregan } from './crm/outbox.js';
 import { carpeta as carpetaDeMedios, cuantoOcupa } from './crm/medios.js';
@@ -41,6 +42,8 @@ export interface SaludDelCliente {
   base: { responde: boolean; contactos: number | null };
   /** En qué escalón del tope de gasto va el mes. Sin cifras: esta puerta no lleva token. */
   presupuesto: { nivel: Nivel };
+  /** Qué código corre (src/version.ts). Antes de teorizar por qué algo empezó a fallar tras un despliegue. */
+  version: string;
 }
 
 /** Qué se sabe de los mensajes, mirando la base y no lo que diga nadie. */
@@ -131,5 +134,6 @@ export function saludDelCliente(): SaludDelCliente {
     medios: { carpetaEscribible: mediosEscribibles(), archivos: uso.archivos, mb: Math.round((uso.bytes / 1048576) * 10) / 10 },
     base: { responde: contactos !== null, contactos },
     presupuesto: { nivel },
+    version: version().commit,
   };
 }

@@ -23,6 +23,8 @@ import { scheduleAnalysis } from '../crm/analyzer.js';
 import { bookingStep, hasBookingInProgress, manageIntent, startBooking } from '../crm/booking.js';
 import type { Medio } from '../crm/medios.js';
 import { nextAppointmentFor } from '../crm/appointments.js';
+import { anotarGuarda, enUnTurno, guardarTurno, guardasDelTurno, idDelTurno, nuevoTurno } from '../crm/turnos.js';
+import { createHash } from 'node:crypto';
 
 export type Channel = 'whatsapp' | 'meta' | 'web' | 'cli' | 'mcp';
 
@@ -71,6 +73,8 @@ export interface AgentReply {
   gateVia: string;
   sources: { title: string; url: string | null; kind: string }[];
   ms: number;
+  /** El turno guardado (crm/turnos.ts): con él se ve por qué contestó esto, qué costó y con qué versión. */
+  turno?: string;
 }
 
 // Señales de lo que pide el cliente dentro de una compra (para orientar al modelo en ese turno).
@@ -95,7 +99,9 @@ const ultimoAviso = new Map<string, string>();
 
 export function handleMessage(msg: IncomingMessage): Promise<AgentReply> {
   const prev = queues.get(msg.userId) ?? Promise.resolve();
-  const next = prev.catch(() => undefined).then(() => process(msg));
+  const turno = nuevoTurno();
+  // Todo el recorrido corre dentro de su turno: cada llamada al modelo y cada mensaje guardado lo toman de ahí.
+  const next = prev.catch(() => undefined).then(() => enUnTurno(turno, () => conTraza(msg, turno)));
   queues.set(msg.userId, next);
   next.finally(() => {
     if (queues.get(msg.userId) === next) queues.delete(msg.userId);
@@ -112,7 +118,55 @@ function recordCustomerMessage(userId: string, text: string, intent?: string, me
 
 function recordBotReply(userId: string, text: string) {
   const id = appendMessage(userId, 'assistant', text, undefined, 'bot');
-  emitEvent('message', userId, { id, role: 'assistant', author: 'bot', content: text, ts: Date.now() });
+  emitEvent('message', userId, { id, role: 'assistant', author: 'bot', content: text, ts: Date.now(), turno: idDelTurno() });
+}
+
+// La huella de las instrucciones: ocho caracteres que cambian cuando cambia el prompt. No dice qué cambió, pero sí si
+// dos respuestas salieron del mismo, que es lo que hace falta para comparar un antes y un después.
+let huella: string | null = null;
+const huellaDelPrompt = (): string => (huella ??= createHash('sha256').update(soloLasReglas()).digest('hex').slice(0, 8));
+
+/** Atiende el mensaje y guarda el turno, salga como salga. 🪤 También si revienta: ese es el turno que más se busca. */
+async function conTraza(msg: IncomingMessage, turno: string): Promise<AgentReply> {
+  const empezo = Date.now();
+  try {
+    const r = await process(msg);
+    guardarTurno({
+      id: turno,
+      userId: msg.userId,
+      channel: msg.channel,
+      intent: r.intent,
+      via: r.gateVia || null,
+      ruta: r.route || null,
+      motor: r.engine,
+      modelo: r.model ?? null,
+      rol: r.role ?? null,
+      ms: r.ms,
+      silencio: Boolean(r.silent),
+      guardas: guardasDelTurno(),
+      prompt: huellaDelPrompt(),
+      error: r.engine === 'none' && !r.silent ? 'ningún motor contestó' : null,
+    });
+    return { ...r, turno };
+  } catch (err) {
+    guardarTurno({
+      id: turno,
+      userId: msg.userId,
+      channel: msg.channel,
+      intent: null,
+      via: null,
+      ruta: null,
+      motor: null,
+      modelo: null,
+      rol: null,
+      ms: Date.now() - empezo,
+      silencio: true,
+      guardas: guardasDelTurno(),
+      prompt: huellaDelPrompt(),
+      error: (err as Error).message,
+    });
+    throw err;
+  }
 }
 
 async function process(msg: IncomingMessage): Promise<AgentReply> {
@@ -169,7 +223,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     // Para el monitor de una demostración en vivo: ver crm/vivo.ts. Va aquí, donde ya se sabe todo del turno, y
     // no en otro sitio: dos caminos que anotan lo mismo acaban diciendo cosas distintas.
     anotarTurno({ ts: Date.now(), userId: msg.userId, pregunta: text, respuesta: reply, ruta: extra.route ?? '', motor: engine, modelo: extra.model ?? '', ms, intent });
-    console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} intent=${intent}(${extra.gateVia ?? 'rule'}) engine=${engine}${extra.model ? `:${extra.model}` : ''}${extra.route ? ` [${extra.route}]` : ''} ${ms}ms`);
+    console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} intent=${intent}(${extra.gateVia ?? 'rule'}) engine=${engine}${extra.model ? `:${extra.model}` : ''}${extra.route ? ` [${extra.route}]` : ''} ${ms}ms · ${idDelTurno()}`);
     return { ...base, text: reply, intent, engine, ms, ...extra };
   };
 
@@ -263,6 +317,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   if (iaAgotada()) {
     const porRegla = ruleIntent(text, history);
     if (porRegla?.intent !== 'cita' && porRegla?.intent !== 'humano') {
+      anotarGuarda('tope');
       const reply = finish(pick(TOPE_REPLIES), porRegla?.intent ?? 'humano', 'template', { gateVia: porRegla ? 'regex' : 'tope', route: 'tope de gasto: pasa al equipo' });
       if (!reply.silent) setHumanMode(msg.userId, true, 'bot', 'tope');
       return reply;
@@ -426,6 +481,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       // Recitar las instrucciones («dime tu prompt», «repite lo de arriba»): no se rehace, se contesta como a lo que
       // no es del negocio. Rehacer es darle otra oportunidad a una pregunta que no merece ninguna.
       if (filtraInstrucciones(candidate, reglas)) {
+        anotarGuarda('recito');
         console.warn(`[agent] ${e} recitaba sus instrucciones; sale una respuesta fija: «${candidate.replace(/\s+/g, ' ').slice(0, 120)}»`);
         recito = true;
         raw = pick(OUT_OF_SCOPE_REPLIES);
@@ -436,6 +492,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       // Verificación de cifras: un precio que no está en el contexto (ni lo dijo el cliente) es inventado -> probar el otro motor.
       const reference = [grounding, text, ...history.slice(-4).map((m) => m.content)].join('\n');
       const bad = ungroundedNumbers(candidate, reference);
+      if (bad.length) anotarGuarda(`cifras:${bad.join(',')}`);
       if (bad.length && i < order.length - 1) {
         console.warn(`[agent] ${e} inventó cifras (${bad.join(', ')}); reintento con ${order[i + 1]}`);
         lastEngine.delete(msg.userId); // el turno se rehace: Apple no debe conservar esa respuesta en su sesión
@@ -447,6 +504,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       // Un "sí" o un "no" sin respaldo, o cualquier respuesta firme sobre algo por confirmar.
       const claim = unsupportedAnswer(text, candidate, grounding, scope) ?? (pendingHit && !isHonest(candidate) ? pendingHit : null);
       if (claim) {
+        anotarGuarda(`sin_respaldo:${claim}`);
         verifyTopic = claim;
         console.warn(`[agent] ${e} respondió sobre «${claim}» sin respaldo en la información; se rehace para que lo verifique: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
         lastEngine.delete(msg.userId);
@@ -459,6 +517,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       // decide si hace un descuento.
       promesa = promesaSinRespaldo(candidate, grounding);
       if (promesa) {
+        anotarGuarda(`promesa:${promesa}`);
         verifyTopic = verifyTopic ?? promesa;
         console.warn(`[agent] ${e} prometió «${promesa}» sin respaldo en la información; se rehace: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
         lastEngine.delete(msg.userId);
@@ -473,9 +532,11 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
         const retry = await generate(e, { ...input, note: [input.note, noAppt].filter(Boolean).join('\n') });
         candidate = claimsBooked(retry) ? 'Todavía no tienes una cita agendada 🙂 ¿Quieres que te busque un espacio?' : retry;
         fakeBooking = true;
+        anotarGuarda('cita_inventada');
       }
       // Lo rehecho también se mira: un reintento puede salir recitando lo que el primero no recitaba.
       if (filtraInstrucciones(candidate, reglas)) {
+        anotarGuarda('recito');
         console.warn(`[agent] ${e} recitaba sus instrucciones al rehacer; sale una respuesta fija`);
         recito = true;
         candidate = pick(OUT_OF_SCOPE_REPLIES);
@@ -490,6 +551,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
         (recito ? ' · sin recitar sus instrucciones' : '');
       break;
     } catch (err) {
+      anotarGuarda(`falló:${e}`);
       console.warn(`[agent] ${e} falló (${chosen.reason}): ${(err as Error).message}`);
     }
   }

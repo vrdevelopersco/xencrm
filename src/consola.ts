@@ -77,6 +77,8 @@ export interface EstadoCliente {
   gastoMes?: number | null;
   /** El tope de gasto de IA del mes calendario: cuánto va y en qué escalón (ver crm/presupuesto.ts). */
   presupuesto?: { tope: number | null; gastado: number; porcentaje: number | null; nivel: string } | null;
+  /** El commit que corre en ese cliente (src/version.ts). */
+  version?: string;
 }
 
 const pesoUrgencia = { alta: 3, media: 2, baja: 1 } as const;
@@ -181,6 +183,7 @@ export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
     arriba: true,
     negocio: String(me.business ?? cliente.nombre),
     agente: String(me.agent ?? ''),
+    version: me.version ? String(me.version) : undefined,
     logo: Boolean(me.logo),
     contactos: Number(stats?.total ?? 0),
     calientes: Number(stats?.hot ?? 0),

@@ -128,7 +128,8 @@ Por eso el enrutador —que sigue vivo aunque sus hijos no— sirve un sitio don
 curl -H "x-consola-token: <CONSOLA_TOKEN>" https://<dominio>/_salud
 ```
 
-Dice, en una llamada: cuánto lleva en pie, qué versión de Node, qué puertos pidió y cuáles usa de verdad, y por
+Dice, en una llamada: qué commit va en el paquete (`version`, del `version.json` que deja `pnpm paquete`), cuánto
+lleva en pie, qué versión de Node, qué puertos pidió y cuáles usa de verdad, y por
 cada proceso de dentro si está vivo, su pid, cuántas veces se ha levantado, cuántas se ha caído, con qué código
 salió la última vez y cuándo. Y una línea de **veredicto** que dice qué mirar primero:
 

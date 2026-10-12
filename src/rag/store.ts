@@ -276,6 +276,33 @@ function migrate(d: DatabaseSync) {
   // Los segundos de audio de una transcripción. Va aparte de los tokens porque se cobra por minuto: meterlo en
   // la columna de tokens daría una cifra falsa justo en el informe que se mira para decidir qué dejar encendido.
   if (!cols('llm_usage').has('segundos')) d.exec('ALTER TABLE llm_usage ADD COLUMN segundos INTEGER NOT NULL DEFAULT 0');
+  // El turno que originó cada llamada y cada mensaje (crm/turnos.ts): lo que une «qué contestó» con «qué costó y
+  // por qué». Vacío en lo que no sale de un turno: el análisis, lo que escribe el equipo, lo importado.
+  if (!cols('llm_usage').has('turno')) d.exec('ALTER TABLE llm_usage ADD COLUMN turno TEXT');
+  if (!messages.has('turno')) d.exec('ALTER TABLE messages ADD COLUMN turno TEXT');
+  d.exec('CREATE INDEX IF NOT EXISTS llm_usage_turno ON llm_usage(turno)');
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS turnos (
+      id TEXT PRIMARY KEY,
+      ts INTEGER NOT NULL,
+      user_id TEXT NOT NULL,
+      channel TEXT,
+      intent TEXT,
+      via TEXT,
+      ruta TEXT,
+      motor TEXT,
+      modelo TEXT,
+      rol TEXT,
+      ms INTEGER,
+      silencio INTEGER NOT NULL DEFAULT 0,
+      guardas TEXT NOT NULL DEFAULT '[]',
+      prompt TEXT,
+      version TEXT,
+      error TEXT
+    );
+    CREATE INDEX IF NOT EXISTS turnos_user_ts ON turnos(user_id, ts);
+    CREATE INDEX IF NOT EXISTS turnos_ts ON turnos(ts);
+  `);
 }
 
 function loadVectors() {

@@ -601,9 +601,53 @@
     // importado sale tal cual del archivo. Sin escapar, quien mandó ese chat ejecuta JavaScript en la pantalla
     // de quien atiende —y de ahí se lleva el token del tablero—. Comprobado: se ejecutaba.
     var label = who === 'customer' ? 'Cliente' : who === 'human' ? (msg.by ? esc(msg.by) + ' (equipo)' : 'Equipo') : 'Aiva';
+    // «¿por qué?»: el turno que produjo esta respuesta (src/crm/turnos.ts). Solo para quien administra, por ruido.
+    var porQue = who === 'bot' && msg.turno && esAdmin()
+      ? '<button class="por-que" type="button" data-turno="' + esc(msg.turno) + '" aria-expanded="false">¿por qué?</button>' : '';
     return '<div class="bubble ' + who + '"><span class="who">' + label + '</span>' + adjunto(msg.media) + esc(msg.content) +
-      '<span class="ts">' + hhmm(msg.ts) + '</span></div>';
+      '<span class="ts">' + hhmm(msg.ts) + porQue + '</span></div>';
   }
+
+  // Las guardas como se dicen: lo que el asistente iba a decir y por qué no salió así.
+  function guardaLegible(g) {
+    var i = g.indexOf(':'), k = i < 0 ? g : g.slice(0, i), v = i < 0 ? '' : g.slice(i + 1);
+    return ({
+      'cifras': 'traía cifras que no están en la información (' + v + ')',
+      'sin_respaldo': 'afirmaba algo sin respaldo («' + v + '»): se pasó a verificar',
+      'promesa': 'prometía plata que el negocio no ofrece («' + v + '»): no salió',
+      'recito': 'recitaba sus instrucciones: salió una respuesta fija',
+      'cita_inventada': 'daba por hecha una cita que no existe',
+      'tope': 'tope de gasto alcanzado: pasó al equipo',
+      'falló': 'falló el motor ' + v
+    })[k] || g;
+  }
+  function trazaHtml(t) {
+    var usd = function (n) { return '$' + (n < 0.01 ? n.toFixed(4) : n.toFixed(3)); };
+    var lineas = [
+      '<b>Entendió</b> ' + esc(t.intent || '—') + (t.via ? ' (' + esc(t.via) + ')' : ''),
+      t.ruta ? '<b>Ruta</b> ' + esc(t.ruta) : '',
+      '<b>Contestó</b> ' + esc(t.motor || '—') + (t.modelo ? ' · ' + esc(t.modelo) : '') + (t.rol ? ' · ' + esc(t.rol) : '') + (t.ms != null ? ' · ' + t.ms + ' ms' : ''),
+      t.guardas && t.guardas.length ? '<b>Guardas</b> ' + t.guardas.map(function (g) { return esc(guardaLegible(g)); }).join(' · ') : '<b>Guardas</b> ninguna saltó',
+      '<b>Costó</b> ' + usd(t.costoUsd || 0) + ' en ' + (t.llamadas || []).length + ' llamada' + ((t.llamadas || []).length === 1 ? '' : 's') + (t.sinPrecio ? ' (hay un modelo sin tarifa: se queda corto)' : ''),
+      '<b>Versión</b> ' + esc(t.version || '—') + (t.prompt ? ' · prompt ' + esc(t.prompt) : ''),
+      t.error ? '<b>Error</b> ' + esc(t.error) : ''
+    ];
+    return lineas.filter(Boolean).join('<br>');
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.por-que');
+    if (!b) return;
+    var burbuja = b.closest('.bubble');
+    var sig = burbuja.nextElementSibling;
+    if (sig && sig.classList.contains('traza')) { sig.remove(); b.setAttribute('aria-expanded', 'false'); return; }
+    b.setAttribute('aria-expanded', 'true');
+    api('/turnos/' + encodeURIComponent(b.getAttribute('data-turno'))).then(function (t) {
+      var div = document.createElement('div');
+      div.className = 'traza';
+      div.innerHTML = t && t.id ? trazaHtml(t) : esc((t && t.error) || 'No encontré ese turno.');
+      burbuja.insertAdjacentElement('afterend', div);
+    }).catch(function () { toast('No pude traer por qué contestó eso.'); });
+  });
 
   /**
    * El archivo que vino o se mandó con un mensaje.

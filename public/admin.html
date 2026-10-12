@@ -219,6 +219,10 @@ dialog.buscador::backdrop{background:rgba(16,24,40,.42);backdrop-filter:blur(2px
 .adj-listo .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #adj-btn{min-height:44px}
 .bubble .ts{display:block;font-size:10px;color:var(--muted);margin-top:4px;text-align:right}
+/* «¿por qué?» en una respuesta del asistente: discreto, al lado de la hora, para quien administra. */
+.bubble .por-que{background:none;border:0;padding:0 0 0 8px;font:inherit;color:var(--muted);text-decoration:underline;cursor:pointer;min-height:0}
+.traza{align-self:flex-end;max-width:72%;font-size:12px;line-height:1.45;color:var(--muted-strong);border-right:2px solid var(--line);padding:2px 10px 2px 0;margin:-2px 2px 8px;text-align:right;white-space:normal}
+.traza b{color:var(--text);font-weight:600}
 .sysline{align-self:center;font-size:12px;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:999px;padding:3px 10px}
 /* La propuesta: se lee como lo que es —algo escrito y todavía no dicho—, con el color del asistente. */
 .propuesta{border-top:1px solid var(--glass-border);background:color-mix(in srgb,var(--brand) 7%,var(--glass));

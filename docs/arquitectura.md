@@ -219,6 +219,7 @@ ya guardados (no llama al modelo; `--write` para guardar).
 | `llm_usage` | cada llamada a un modelo: tarea, modelo, tokens (entrada, caché, salida, razonamiento), milisegundos |
 | `verifications` | preguntas por verificar y sus respuestas |
 | `misses` | frases que las reglas no entendieron, con lo que entendió el modelo |
+| `turnos` | cada turno del asistente: intención, vía, ruta, motor, modelo, rol, ms, guardas que saltaron, huella del prompt, versión y error. Se podan a los 90 días (`crm/turnos.ts`) |
 | `settings` | decisiones del tablero (qué canales están encendidos) y el tope de gasto de IA con su último aviso |
 | `entrantes` | el id de cada mensaje que ya entró por WhatsApp oficial, para no atender dos veces lo que Meta repite (se borra a los 7 días; `crm/entrantes.ts`) |
 
@@ -330,6 +331,26 @@ no entra a los otros ni sabiéndose la dirección.
 - **Calendario**: iCalendar estándar. Suscripción secreta, página por cita con firma HMAC y calendarios del dueño
   que bloquean la agenda.
 
+## Turnos
+
+Cada mensaje que atiende el agente corre dentro de un **turno** (`crm/turnos.ts`), con un identificador que viaja
+solo por AsyncLocalStorage desde `handleMessage` hasta la respuesta. `recordUsage` y `appendMessage` lo toman de
+ahí, así que cada llamada a un modelo (`llm_usage.turno`) y cada mensaje (`messages.turno`) quedan unidos a su
+turno sin pasar el id por ninguna firma. Al terminar, `conTraza` guarda el turno, también si el turno revienta.
+
+- Las guardas se anotan con `anotarGuarda` donde saltan: `cifras`, `sin_respaldo:<tema>`, `promesa:<qué>`,
+  `recito`, `cita_inventada`, `tope`, `falló:<motor>`.
+- 🪤 El análisis que programa un turno corre fuera de él (`fueraDelTurno` en `scheduleAnalysis`): cubre varios
+  mensajes y su gasto no es de esa respuesta.
+- `GET /admin/api/turnos/:id` devuelve el turno con sus llamadas, su costo y sus mensajes. Es lo que abre el
+  **¿por qué?** de cada respuesta en la conversación, solo para quien administra.
+- La huella del prompt son ocho caracteres del SHA-256 de las reglas: no dice qué cambió, pero sí si dos
+  respuestas salieron del mismo prompt.
+
+**La versión** (`src/version.ts`) sale de `AIVA_VERSION`, del `version.json` que deja `pnpm paquete` en la raíz
+del paquete o de git, con `+cambios` si hay cosas sin commitear. La dicen `/_salud` de cada cliente, la del
+lanzador, la fila de cada cliente en la consola y cada turno guardado.
+
 ## En vivo
 
 `crm/events.ts` es un bus en memoria. El tablero lo recibe por SSE (`/admin/api/stream`) y las notificaciones se
@@ -386,6 +407,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:inyeccion` | inyección de prompt: promesas de plata, instrucciones recitadas, nombre y documentos con órdenes, y el recorrido entero con un modelo falso que siempre cae | no (modelo simulado) |
 | `pnpm test:presupuesto` | tope de gasto: mes del negocio, escalones, avisos una vez, ahorro al 90 % y al 100 % ni una llamada de pago sin dejar a nadie sin respuesta | no (OpenAI y Ollama simulados) |
 | `pnpm test:sedes` | varias sedes: preguntar en cuál, apodos, cambiar a mitad del flujo, cupo por sede, la otra sede cuando la suya no abre, recordatorio y lo que ve el modelo | no |
+| `pnpm test:turnos` | cada respuesta con su turno: ruta, modelo, guardas, costo y versión; llamadas y mensajes unidos; el análisis y lo del equipo fuera | no (OpenAI simulado) |
 | `pnpm test:repetidos` | WhatsApp oficial: lo que Meta manda dos veces entra y se contesta una vez; en «Mira» no marca leído ni contesta | no (Meta simulado) |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |
 | `pnpm replay` | las conversaciones sintéticas con los motores configurados; proyecta el costo | sí |

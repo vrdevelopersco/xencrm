@@ -106,7 +106,8 @@ Debajo de cada fila salen los **tickets, que aparecen solos** según el estado:
 9 llegaron a cita · 6 ganadas · 39 % efectividad · $1.42 de IA (30 días)
 ```
 
-Si el cliente tiene tope de gasto, sale además cuánto lleva del tope en el mes.
+Si el cliente tiene tope de gasto, sale además cuánto lleva del tope en el mes. Y en la fila de cada cliente, junto a
+su gasto, sale el **commit que corre** en él: lo primero que hay que confirmar si algo cambió después de desplegar.
 
 La **efectividad** es cuántas de las conversaciones abiertas llegaron a cita o se ganaron. Se calcula por el
 **papel** de las etapas (`cita`, `ganado`), no por su nombre: cada negocio las llama distinto y el papel es lo
