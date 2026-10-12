@@ -96,8 +96,14 @@ export function ticketsDe(cliente: ClienteRef, e: EstadoCliente): Ticket[] {
     t.push({ urgencia: 'alta', titulo: 'Sin conexión con este cliente', detalle: `No estamos alcanzando a ${cliente.nombre} ahora mismo; sus conversaciones están guardadas. Suele ser la red o un reinicio. Si sigue así, revisar con pm2 logs aiva-${cliente.slug}.` });
     return t; // si está caída, lo demás no se sabe
   }
-  if (e.publica && e.publica !== 'ok') {
+  // 🪤 Cada estado con lo que significa (channels/public-check.ts). Antes cualquiera distinto de «ok» era «no
+  // contesta», con urgencia alta: también «sin_url», que es no tener dirección configurada, y «fallando», que es una
+  // falla suelta que la propia instancia todavía no da por caída —necesita tres seguidas—. Una alarma que suena por
+  // lo que no es enseña a no leerla.
+  if (e.publica === 'caida') {
     t.push({ urgencia: 'alta', titulo: 'Su dirección pública no contesta', detalle: 'Mientras tanto no entran el chat del sitio ni WhatsApp oficial. Suele ser la red o el túnel.' });
+  } else if (e.publica === 'otro_servidor') {
+    t.push({ urgencia: 'alta', titulo: 'Su dirección pública contesta desde otro servidor', detalle: 'El túnel o el dominio apunta a otra instancia: lo que entra por ahí no le llega a este cliente. Revisar a dónde apunta.' });
   }
   // El conflicto va aparte y va arriba: es el único estado de WhatsApp en el que el canal no se recupera solo,
   // y mientras dure, el negocio no recibe ni contesta nada por ahí.

@@ -90,7 +90,8 @@ Debajo de cada fila salen los **tickets, que aparecen solos** según el estado:
 | Ticket | Urgencia |
 |---|---|
 | La instancia no responde | alta |
-| La dirección pública no responde | alta |
+| La dirección pública no responde (tres fallas seguidas) | alta |
+| La dirección pública contesta desde otro servidor | alta |
 | WhatsApp pidiendo código | media |
 | Preguntas sin responder | media |
 | Gente esperando respuesta | media |
@@ -98,6 +99,9 @@ Debajo de cada fila salen los **tickets, que aparecen solos** según el estado:
 | Gasto de IA al 90 % del tope: ahorrando | media |
 | Gasto de IA al 80 % del tope | baja |
 | Citas sin resultado | baja |
+
+No tener dirección pública configurada no es un ticket, ni una falla suelta: la instancia necesita tres seguidas para
+darla por caída, y la consola espera lo mismo.
 
 **Ver más** estira la fila con el micro-tablero del negocio:
 

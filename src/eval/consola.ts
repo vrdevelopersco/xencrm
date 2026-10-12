@@ -44,6 +44,14 @@ check('las citas sin resultado son lo menos urgente', vivo.some((t) => t.urgenci
 const tranquilo = ticketsDe(ref('tres', 'baja'), { arriba: true, publica: 'ok', whatsapp: 'conectado', porVerificar: 0, esperanRespuesta: 0, citasSinResultado: 0 });
 check('un cliente al día no genera tickets', tranquilo.length === 0, JSON.stringify(tranquilo));
 check('WhatsApp apagado a propósito no es un problema', ticketsDe(ref('x', 'media'), { arriba: true, whatsapp: 'apagado' }).length === 0);
+// 🪤 La dirección pública: cada estado con lo que significa. Sin dirección configurada, o con una falla suelta que
+// la instancia todavía no da por caída, no hay nada que atender.
+const publica = (estado: string) => ticketsDe(ref('p', 'media'), { arriba: true, publica: estado }).map((t) => `${t.urgencia}:${t.titulo}`);
+check('sin dirección pública configurada no es una alarma', publica('sin_url').length === 0, JSON.stringify(publica('sin_url')));
+check('mientras revisa por primera vez, tampoco', publica('revisando').length === 0);
+check('🪤 una falla suelta tampoco: la instancia necesita tres seguidas para darla por caída', publica('fallando').length === 0, JSON.stringify(publica('fallando')));
+check('caída sí, y urgente', publica('caida').some((t) => t.startsWith('alta:') && /no contesta/.test(t)));
+check('contestando desde otro servidor se dice así, no «no contesta»', publica('otro_servidor').some((t) => t.startsWith('alta:') && /otro servidor/.test(t)), JSON.stringify(publica('otro_servidor')));
 
 // --- el orden es el de atención ---
 const orden = ordenar([
