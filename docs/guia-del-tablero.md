@@ -68,8 +68,10 @@ escribir o usar una plantilla aprobada por Meta.
 
 ## Conversaciones
 
-A la izquierda la lista, con filtros: *Todos*, *Sin leer*, *Con una persona*, *Prospectos*, *Interesados*,
-*Con cita* y *Archivados*. En el centro, el chat. A la derecha, la ficha del cliente.
+A la izquierda la lista, con los filtros encima: *Todos*, *Sin leer*, *Con una persona*, *Prospectos*,
+*Interesados*, *Con cita* y *Archivados*. Al final va **Marcar todo como leído**, para el día que se atendió todo
+desde el teléfono. En el centro, el chat. A la derecha, la ficha: arriba el **próximo paso**, el **valor** y
+**quién la lleva**, y abajo la **historia**, con una caja para dejar una nota sin salir de la conversación.
 
 **¿Por qué contestó eso?** Si administras, debajo de cada respuesta del asistente hay un **¿por qué?**. Dice qué
 entendió, por dónde lo mandó, qué modelo contestó y en cuánto tiempo, qué guardas saltaron (una cifra sin respaldo,
@@ -154,8 +156,32 @@ configuración. Para cambiar a
 alguien de etapa, arrastra la tarjeta o usa **Mover a…**, que también funciona en el celular. Tocar el nombre abre la
 conversación. El asistente mueve las etapas solo según la conversación; lo que muevas tú, él no lo deshace.
 
+Arriba van cuatro cifras: el **embudo abierto**, el mismo **ponderado por puntaje** (cada valor por su
+probabilidad), lo que está **con cita por delante** y lo **vendido en 30 días**. Debajo, una barra con el color de
+cada etapa dice dónde está la plata. Cada columna suma lo suyo, y cada tarjeta dice cuánto vale, qué sigue y quién
+la tiene. Si nada tiene precio, las cifras dicen **Sin precios**: hay que cargarlos en el catálogo o ponerlos a mano
+en la ficha.
+
 Con varias sedes, arriba se escoge cuál mirar, y cada tarjeta dice la suya. **Sin sede todavía** junta a quienes no
 han escogido: es donde hay que ir a preguntarles.
+
+## Clientes
+
+El directorio de todas las personas, para buscar a alguien y saber de un vistazo qué pasa con cada una. Arriba,
+pestañas con su número: *Todos*, *Míos* (las que llevas tú), *🔥 Calientes*, *Prospectos*, *Clientes* y
+*Perdidos*. Cada fila dice la etapa, el puntaje, el **valor**, el **próximo paso** y **quién la lleva**. Un clic en
+la cabecera de una columna ordena por ella. Al pie, cuántas son y cuánto suman.
+
+**El próximo paso** lo escribe aiva sola, con reglas y sin gastar en modelos, en el mismo orden que Hoy:
+*Contestar* si la última palabra es del cliente, *Atender* si la pasaron al equipo, la cita si tiene una,
+*Retomar* si es un caliente que lleva un día callado. En ámbar va lo que espera a alguien del equipo.
+
+**La ficha** se abre con el nombre. A la izquierda, lo que quiere y su **historia**: conversaciones, cambios de
+etapa, citas, traspasos y notas, de lo más nuevo a lo más viejo. Las **notas** quedan con fecha y con quién las
+escribió; la *nota fija* es la de siempre, para lo que nunca hay que olvidar. A la derecha, los detalles: la etapa se
+cambia ahí mismo. Arriba, **3 de 23** pasa a la siguiente de la lista sin volver a ella; también con las flechas del
+teclado. **Fijar** la deja en la barra lateral, debajo de las listas. Los fijados son tuyos: cada quien fija a los
+suyos.
 
 ## Análisis
 

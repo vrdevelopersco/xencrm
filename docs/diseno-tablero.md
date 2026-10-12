@@ -1,5 +1,11 @@
 # Diseño del tablero: decisiones y valores medidos
 
+> **Ojo, 2026-10-12.** Desde el 2026-10-02 el tablero es **blanco, azul y plano**, «al estilo de una herramienta»,
+> porque el cliente pidió que se pareciera al administrador de anuncios de Facebook (`442ce16`). Lo que este
+> documento dice del vidrio, las manchas de luz, la crema con dorado y la hoja de bloc es historia: se quitó. Siguen
+> vigentes las reglas de jerarquía, puntaje, quién habla, contraste, toque y las trampas. Lo último está al final,
+> en «El orden de un CRM». **Antes de describir cómo se ve una pantalla, se toma una captura de la de verdad.**
+
 Revisado con HRCAPOLO (sesión de UX) el 2026-09-11. Todo lo de abajo está medido con contraste WCAG compuesto,
 no a ojo. Si tocas un color, vuelve a medir (el script está en el historial: luminancia relativa + composición alfa).
 
@@ -314,3 +320,31 @@ aparecieron el mismo día:
 
 De ahí la regla ampliada: **una pantalla nueva no está probada hasta que se abre en un navegador de verdad, al
 ancho de un teléfono, y se mide lo que quedó pintado** — no lo que dice la hoja de estilos que debería quedar.
+
+## El orden de un CRM (2026-10-12)
+
+El usuario vio un CRM tipo Attio que le gustó mucho. Se le preguntó si quería ese estilo y eligió **quedarse con el de
+hoy** y tomar del video las pantallas, las funciones y los detalles. Se tomó el orden, no el estilo:
+
+| Del video | En aiva |
+|---|---|
+| Números al lado de cada sección | En gris, Prospectos abiertos y Clientes. Las insignias rojas siguen siendo solo para lo que urge |
+| Listas guardadas y favoritos | *Calientes* y *Míos* en la barra, y las fichas **fijadas**, que son de quien mira |
+| Tabla con dueño, valor y próximo paso | Clientes: *La lleva*, *Valor*, *Próximo paso*; pestañas con su número; orden por columna; suma al pie |
+| Kanban con valor por columna | Prospectos: cuatro cifras arriba, barra por etapa, suma por columna, valor y paso en cada tarjeta |
+| Ficha con historia, detalles y «1 de 23» | La ficha en dos columnas, notas con autor y fecha, etapa editable ahí mismo, fijar |
+| Bandeja de tres paneles | Los filtros pasan encima de la lista; el panel aparte le quitaba 212 px a la conversación |
+
+Las reglas de antes siguen mandando sobre lo nuevo:
+
+- **La etapa es pastilla con punto Y nombre.** El punto solo no lo distingue todo el mundo.
+- **Lo urgente es ámbar Y empieza por un verbo** («Contestar», «Retomar»). El color no es la única señal.
+- **Sin valor es «—», nunca «$0».** Cero diría que no vale nada; lo que pasa es que no se sabe. Si nada tiene
+  precio, las cifras de arriba dicen «Sin precios», como Hoy.
+- **El próximo paso no usa modelo** (`src/crm/proximo.ts`): sigue el orden de Hoy, y «Retomar» o «Escribirle» son
+  exactamente los de Seguimientos. `test:proximo` falla si alguna vez dejan de coincidir.
+- **«bot» y «admin» no son nombres.** En la historia y en *La lleva* salen como el nombre del asistente o «El
+  equipo».
+- **La barra de colores de Prospectos va oculta para un lector de pantalla.** Repite lo que dicen las sumas de las
+  columnas, que sí se leen.
+

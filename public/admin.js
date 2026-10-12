@@ -94,6 +94,67 @@
   function short(id) { var m = /^(wa|meta|web|cli|mcp):(.*)$/.exec(id); if (!m) return id; var v = m[2].replace(/@.*$/, ''); return m[1] === 'web' ? 'web · ' + v.slice(0, 8) : v; }
   function channelIcon(ch) { return { whatsapp: '🟢 WhatsApp', meta: '🟢 WhatsApp', web: '🌐 Web', cli: '⌨️ CLI', mcp: '🔌 MCP' }[ch] || ch; }
   function nameOf(c) { return c.name || short(c.id); }
+
+  // ---------- lo que cada fila dice además del nombre ----------
+  // Etapa, valor, quién la lleva y el próximo paso. El valor y el paso los calcula el servidor (crm/valor.ts y
+  // crm/proximo.ts); aquí solo se pintan, y se pintan IGUAL en Clientes, Prospectos, la ficha y la conversación:
+  // si el mismo dato se viera distinto en dos pantallas, alguien pensaría que son dos datos.
+  function abierta(c) { var r = rol(c.stage); return r !== 'ganado' && r !== 'perdido'; }
+  // Lo mismo que «calientes» en Hoy y en la barra: abierta y con 60 o más.
+  function esCaliente(c) { return abierta(c) && (c.score || 0) >= 60; }
+  // «Míos»: las que tiene quien está mirando, por el nombre con el que responde. Sin nombre no hay «míos».
+  function esMia(c) { return Boolean(state.name) && Boolean(c.humanMode) && c.humanBy === state.name; }
+  /** La etapa como pastilla: punto de color Y el nombre. El punto solo no lo distingue todo el mundo. */
+  function pastillaEtapa(stage) {
+    return '<span class="chip etapa stage-' + esc(rol(stage) || 'activo') + '"><i class="punto" aria-hidden="true"></i>' + esc(etiquetaEtapa(stage)) + '</span>';
+  }
+  /**
+   * Quién la lleva. Mientras conversa solo, el asistente; si la pasó al equipo y nadie la ha tomado, «El equipo».
+   * 🪤 Nunca «bot» ni «admin»: son valores internos de quién la pasó, no nombres de nadie.
+   */
+  function llevaDe(c) {
+    if (!c.humanMode) return { nombre: state.agentName || 'Aiva', es: 'asistente' };
+    var b = c.humanBy;
+    if (!b || b === 'bot' || b === 'admin' || b === 'equipo') return { nombre: 'El equipo', es: 'equipo' };
+    return { nombre: b, es: 'persona' };
+  }
+  function llevaHtml(c) {
+    var l = llevaDe(c);
+    return '<span class="lleva ' + l.es + '"><span class="ini" aria-hidden="true">' + esc(inicialesDe(l.nombre)) + '</span><span class="nom">' + esc(l.nombre) + '</span></span>';
+  }
+  function pasoHtml(p) {
+    if (!p || !p.texto) return '<span class="paso vacio">—</span>';
+    return '<span class="paso t-' + esc(p.tipo) + (p.urgente ? ' urgente' : '') + '">' + esc(p.texto) + '</span>';
+  }
+  // 🪤 Sin valor es «—», no «$0»: cero diría que no vale nada, y lo que pasa es que no se sabe.
+  function valorHtml(c, corto) {
+    return c.valor ? '<span class="valor" title="' + esc(c.valorOrigen === 'a mano' ? 'Puesto a mano' : 'Sacado del catálogo') + '">' + esc(corto ? plataCorta(c.valor) : plata(c.valor)) + '</span>'
+      : '<span class="valor vacio" title="Sin precio: ni puesto a mano ni en el catálogo">—</span>';
+  }
+  /** «$480 mil», «$1,2 M»: para tarjetas y cifras de arriba, donde no cabe el número entero. */
+  // A mano y no con `notation: 'compact'`: según el navegador eso da «480 k» o «480 mil», y aquí se dice «mil».
+  function plataCorta(n) {
+    var simbolo = '$';
+    try { simbolo = (new Intl.NumberFormat('es-CO', { style: 'currency', currency: state.moneda || 'COP' }).formatToParts(0).find(function (p) { return p.type === 'currency'; }) || {}).value || '$'; } catch (e) {}
+    var a = Math.abs(n), cifra;
+    if (a >= 1e6) cifra = (Math.round(n / 1e5) / 10).toLocaleString('es-CO') + ' M';
+    else if (a >= 1e4) cifra = Math.round(n / 1e3).toLocaleString('es-CO') + ' mil';
+    else cifra = Math.round(n).toLocaleString('es-CO');
+    return simbolo + cifra;
+  }
+
+
+  // ---------- fijados ----------
+  // Las fichas que alguien quiere tener a mano. Son de quien mira, no del negocio —cada asesor fija a los suyos—,
+  // así que viven en este navegador y con la llave de este cliente.
+  function fijados() { try { return JSON.parse(localStorage.getItem(LLAVE('fijados')) || '[]'); } catch (e) { return []; } }
+  function estaFijado(id) { return fijados().some(function (f) { return f.id === id; }); }
+  function fijar(c, on) {
+    var l = fijados().filter(function (f) { return f.id !== c.id; });
+    if (on) l.unshift({ id: c.id, nombre: nameOf(c) });
+    try { localStorage.setItem(LLAVE('fijados'), JSON.stringify(l.slice(0, 12))); } catch (e) {}
+    pintarListas();
+  }
   /**
    * Un aviso que aparece abajo a la derecha.
    *
@@ -411,11 +472,10 @@
   function pintarPanel(view) {
     var panel = $('subnav');
     if (!panel) return;
-    var conPanel = view === 'inbox' || CFG_VIEWS[view];
+    var conPanel = CFG_VIEWS[view];
     document.querySelector('.app').setAttribute('data-subnav', conPanel ? 'si' : 'no');
     if (!conPanel) return;
     $('subnav-titulo').textContent = TITULOS[view] || '';
-    $('filters').hidden = view !== 'inbox';
     var cfg = $('subnav-cfg');
     cfg.hidden = !CFG_VIEWS[view];
     if (CFG_VIEWS[view] && !cfg.childElementCount) {
@@ -457,7 +517,14 @@
 
   // ---------- bandeja ----------
   function setFilter(f) { state.filter = f; document.querySelectorAll('#filters button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-f') === f); }); loadContacts(); }
-  document.querySelectorAll('#filters button').forEach(function (b) { b.onclick = function () { setFilter(b.getAttribute('data-f')); }; });
+  document.querySelectorAll('#filters button[data-f]').forEach(function (b) { b.onclick = function () { setFilter(b.getAttribute('data-f')); }; });
+  $('marcar-leidas').onclick = function () {
+    api('/contacts/leidas', { method: 'POST' }).then(function (r) {
+      if (r && r.error) { toast(r.error); return; }
+      toast(r.cuantas ? (r.cuantas === 1 ? 'Una conversación marcada como leída' : r.cuantas + ' conversaciones marcadas como leídas') : 'No había nada sin leer');
+      loadContacts();
+    });
+  };
   var qTimer; $('q').oninput = function () { clearTimeout(qTimer); qTimer = setTimeout(function () { state.q = $('q').value.trim(); loadContacts(); }, 250); };
 
   function loadContacts() {
@@ -899,11 +966,15 @@
     var factors = (c.scoreFactors || []).map(function (f) { return '<li><span>' + esc(f.label) + '</span><span class="' + (f.points >= 0 ? 'pos' : 'neg') + '">' + (f.points >= 0 ? '+' : '') + f.points + '</span></li>'; }).join('') || '<li class="muted">Aún sin análisis.</li>';
     var stages = Object.keys(state.stageLabels).map(function (k) { return '<option value="' + k + '"' + (k === c.stage ? ' selected' : '') + '>' + esc(state.stageLabels[k]) + '</option>'; }).join('');
     var appts = d.appointments.map(function (a) { return '<div class="appt ' + a.status + '"><span class="t">' + esc(a.label || '') + '</span><span class="grow small muted">' + esc(a.service) + ' · ' + a.status + '</span></div>'; }).join('') || '<span class="muted small">Sin citas.</span>';
-    var events = d.events.slice(-12).reverse().map(function (e) { return '<li>' + rel(e.ts) + ' · ' + esc(eventLabel(e)) + '</li>'; }).join('') || '<li>Sin eventos.</li>';
     var v = verdict(c);
     var quick = esc(c.recap || '');
     $('details').innerHTML =
-      '<div id="dup-panel"></div><div class="verdict' + (isStale(c) ? ' stale' : '') + '"><h3>¿Es un prospecto?</h3><div class="big">' + esc(v.label) + '</div><div class="why">' + esc(v.why || '') + (c.summary ? ' ' + esc(c.summary) : '') + '</div>' +
+      // Lo mismo que la ficha dice arriba a la derecha, aquí arriba: qué sigue, cuánto vale y quién la tiene.
+      '<div id="dup-panel"></div><dl class="det det-chat">' +
+        '<dt>Próximo paso</dt><dd>' + pasoHtml(c.proximo) + '</dd>' +
+        '<dt>Valor</dt><dd>' + valorHtml(c) + '</dd>' +
+        '<dt>La lleva</dt><dd>' + llevaHtml(c) + '</dd>' +
+      '</dl><div class="verdict' + (isStale(c) ? ' stale' : '') + '"><h3>¿Es un prospecto?</h3><div class="big">' + esc(v.label) + '</div><div class="why">' + esc(v.why || '') + (c.summary ? ' ' + esc(c.summary) : '') + '</div>' +
         (quick ? '<div class="small">' + quick + '</div>' : '') +
         '<div class="bar' + (isStale(c) ? ' stale' : '') + '" title="Probabilidad ' + c.score + '"><i class="z-' + c.temperature + '" style="width:' + c.score + '%"></i></div><div class="bar-legend"><span>sin señales</span><span>posible</span><span>prospecto</span></div>' +
         '<div class="small muted">Probabilidad ' + c.score + ' (en tarjetas y avisos: ' + esc(tempLabel(c.temperature)) + ')' + (c.scoreBase > c.score ? ' · llegó a ' + c.scoreBase + ' cuando hablaron' : '') + (c.scoreAt ? ' · hace ' + rel(c.scoreAt) : '') + (isStale(c) ? ' · <b style="color:var(--warn)">hay mensajes nuevos, se recalcula solo</b>' : '') + ' · <button class="linkbtn" id="toggle-detail">' + (state.detailOpen ? 'Ocultar detalle' : 'Ver detalle') + '</button></div>' +
@@ -929,13 +1000,27 @@
           : '') +
         '<select id="f-stage">' + stages + '</select>' +
         '<input type="text" id="f-tags" placeholder="Etiquetas separadas por coma" value="' + esc((c.tags || []).join(', ')) + '">' +
-        '<textarea id="f-notes" placeholder="Notas internas">' + esc(c.notes || '') + '</textarea>' +
+        '<textarea id="f-notes" placeholder="Nota fija: lo que siempre hay que saber de esta persona">' + esc(c.notes || '') + '</textarea>' +
         '<div style="display:flex;gap:6px"><button class="btn sm primary" id="f-save">Guardar</button><button class="btn sm" id="f-analyze">Re-analizar</button></div>' +
         '<div class="feed-row" style="margin-top:8px"><button class="btn sm" id="arch-btn">' + (c.archived ? 'Devolver a las listas' : 'Archivar') + '</button><button class="btn sm" id="del-btn">Borrar</button></div><div class="small" id="del-msg" role="status"></div>' +
       '</div></div>' +
       '<div><h3>Citas</h3>' + appts + '</div>' +
-      '<div><h3>Línea de tiempo</h3><ul class="timeline">' + events + '</ul></div>' +
+      // La historia, corta: lo último que pasó y una nota a mano mientras se conversa. Entera, en la ficha.
+      '<div><h3>Historia</h3><div class="nota-nueva"><label class="sr-only" for="chat-nota">Nota nueva</label>' +
+        '<textarea id="chat-nota" rows="2" maxlength="2000" placeholder="Nota para el equipo…"></textarea><button class="btn sm" id="chat-nota-ok">Guardar nota</button></div>' +
+        historiaHtml(d, { max: 8, borrar: true }) +
+        '<button class="linkbtn small" id="chat-ficha">Ver la ficha completa</button></div>' +
       '<div class="small muted">' + esc(channelIcon(c.channel)) + ' · ' + esc(c.id) + '</div>';
+    $('chat-ficha').onclick = function () { abrirPerfil(c.id); };
+    $('chat-nota-ok').onclick = function () {
+      var texto = $('chat-nota').value.trim();
+      if (!texto) { $('chat-nota').focus(); return; }
+      api('/contacts/' + encodeURIComponent(c.id) + '/notas', { method: 'POST', body: { texto: texto, por: state.name || '' } }).then(function (r) {
+        if (r && r.error) { toast(r.error); return; }
+        d.events = r.events || d.events; renderDetails();
+      });
+    };
+    engancharBorrarNotas($('details'), c.id, function (events) { d.events = events; renderDetails(); });
     $('toggle-detail').onclick = function () { state.detailOpen = !state.detailOpen; $('detail-more').hidden = !state.detailOpen; $('toggle-detail').textContent = state.detailOpen ? 'Ocultar detalle' : 'Ver detalle'; };
     $('f-save').onclick = function () {
       api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: { name: $('f-name').value, phone: $('f-phone').value, stage: $('f-stage').value, tags: $('f-tags').value.split(',').map(function (t) { return t.trim(); }).filter(Boolean), notes: $('f-notes').value } })
@@ -943,19 +1028,7 @@
     };
     $('f-analyze').onclick = function () { $('f-analyze').disabled = true; api('/contacts/' + encodeURIComponent(c.id) + '/analyze', { method: 'POST' }).then(function () { openContact(c.id); loadContacts(); }); };
   }
-  function eventLabel(e) {
-    var p = e.payload || {};
-    switch (e.type) {
-      case 'stage': return 'Etapa: ' + (state.stageLabels[p.from] || p.from || '—') + ' → ' + (state.stageLabels[p.to] || p.to) + ' (' + (p.by || 'bot') + ')';
-      case 'human_on': return 'Tomó el control: ' + (p.by === 'admin' ? 'equipo' : 'el cliente pidió una persona');
-      case 'human_off': return 'Aiva retoma la conversación';
-      case 'appointment_booked': return 'Cita agendada';
-      case 'appointment_updated': return 'Cita ' + (p.status || 'actualizada');
-      case 'followup_snooze': return 'Seguimiento pospuesto ' + (p.days || 7) + ' días';
-      case 'appointment_cross': return p.desde ? 'Cita ' + esc(p.what) + ' por el cliente desde ' + esc(p.desde) : 'Cita ' + esc(p.what) + ', de su otra ficha';
-      default: return e.type;
-    }
-  }
+
 
   // ---------- hoy ----------
   // Borrador para retomar a un prospecto caliente: solo con lo que él mismo dijo (prenda, ocasión). Sin precios ni
@@ -1016,7 +1089,8 @@
 
   /** Dinero en pesos, sin decimales y con el punto de los miles, que es como se escribe aquí. */
   function plata(n) {
-    try { return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n); }
+    // La moneda del negocio (business.currency), no la de aquí: un cliente que cobra en dólares no vende en pesos.
+    try { return new Intl.NumberFormat('es-CO', { style: 'currency', currency: state.moneda || 'COP', maximumFractionDigits: 0 }).format(n); }
     catch (e) { return '$' + Math.round(n).toLocaleString('es-CO'); }
   }
   function d2() { return new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }); }
@@ -1217,10 +1291,47 @@
     return pipSede === '_ninguna' ? !s : s === pipSede;
   }
 
+  function sumaColumna(cards) {
+    var n = cards.reduce(function (a, c) { return a + (c.valor || 0); }, 0);
+    return n ? '<span class="suma">' + esc(plataCorta(n)) + '</span>' : '';
+  }
+  /**
+   * Las cifras de arriba de Prospectos: cuánto hay en juego y dónde. Cada una dice de dónde sale, porque un
+   * número sin explicación se lee como el que uno espera y no como el que es.
+   */
+  function pintarCifrasEmbudo(list) {
+    var abiertas = list.filter(abierta);
+    var suma = function (l) { return l.reduce(function (a, c) { return a + (c.valor || 0); }, 0); };
+    var total = suma(abiertas);
+    var conPrecio = abiertas.filter(function (c) { return c.valor; }).length;
+    var ponderado = abiertas.reduce(function (a, c) { return a + (c.valor || 0) * Math.min(100, Math.max(0, c.score || 0)) / 100; }, 0);
+    var conCita = abiertas.filter(function (c) { return c.proximo && c.proximo.tipo === 'cita'; });
+    var cifra = function (k, t, n, p) { return '<div class="pc" data-k="' + k + '"><span class="t">' + t + '</span><span class="n' + (n ? '' : ' flojo') + '">' + esc(n || 'Sin precios') + '</span><span class="p">' + p + '</span></div>'; };
+    // 🪤 Cero no se pinta como «$0»: sin precios lo que falta es cargarlos, y un cero diría que no vale nada.
+    var el = $('pip-cifras');
+    el.innerHTML = cifra('abierto', 'Embudo abierto', total ? plataCorta(total) : '', total ? conPrecio + ' de ' + abiertas.length + ' con precio' : 'Ni el catálogo ni las fichas tienen precios') +
+      cifra('ponderado', 'Ponderado por puntaje', total ? plataCorta(ponderado) : '', 'Cada valor por su probabilidad') +
+      cifra('cita', 'Con cita por delante', suma(conCita) ? plataCorta(suma(conCita)) : (conCita.length ? '' : '—'), conCita.length + (conCita.length === 1 ? ' persona con cita' : ' personas con cita')) +
+      cifra('vendido', 'Vendido en 30 días', '…', variasSedes() && pipSede ? 'todas las sedes' : '&nbsp;') +
+      // La barra reparte el embudo abierto por etapa, con el color de cada una. Es lo mismo que dicen las sumas de
+      // las columnas, de un vistazo: por eso va oculta para un lector de pantalla, que ya tiene las columnas.
+      (total ? '<div class="pc-barra" aria-hidden="true">' + (state.stages || []).filter(function (e) { return e.rol !== 'ganado' && e.rol !== 'perdido'; }).map(function (e) {
+        var n = suma(abiertas.filter(function (c) { return c.stage === e.id; }));
+        return n ? '<i data-rol="' + esc(e.rol || '') + '" style="flex:' + n + '" title="' + esc(e.label + ': ' + plataCorta(n)) + '"></i>' : '';
+      }).join('') + '</div>' : '');
+    api('/ventas?days=30').then(function (v) {
+      var b = el.querySelector('[data-k=vendido]');
+      if (!b || !v || v.error) return;
+      b.querySelector('.n').textContent = v.total ? plataCorta(v.total) : (v.cuantas ? 'Sin precios' : '—');
+      b.querySelector('.n').classList.toggle('flojo', !v.total);
+      b.querySelector('.p').textContent = (v.cuantas || 0) + (v.cuantas === 1 ? ' venta' : ' ventas') + (variasSedes() && pipSede ? ' · todas las sedes' : '');
+    });
+  }
   function loadPipeline(focusId) {
     pintarSedesPip();
-    api('/contacts?limit=500').then(function (todos) {
+    api('/contacts?limit=2000').then(function (todos) {
       var list = todos.filter(deLaSede);
+      pintarCifrasEmbudo(list);
       // Al redibujar (también por un evento en vivo) el foco no se pierde: vuelve a la misma tarjeta.
       var active = document.activeElement && document.activeElement.closest ? document.activeElement.closest('#board .card') : null;
       focusId = focusId || (active && active.getAttribute('data-id'));
@@ -1237,14 +1348,18 @@
         // Una etapa vacía no necesita el mismo ancho que una llena: encogida deja ver más del tablero sin
         // esconderla, que sigue siendo un sitio donde soltar una tarjeta.
         return '<div class="col' + (cards.length ? '' : ' vacia') + '" data-stage="' + s + '" data-rol="' + esc(def.rol || '') + '">' +
-          '<h3>' + esc(state.stageLabels[s]) + '<span class="cuenta">' + cards.length + '</span></h3><div class="cards">' +
+          // Cuántas y cuánto suman: la columna dice dónde está la plata, no solo dónde está la gente.
+          '<h3><span class="nom">' + esc(state.stageLabels[s]) + '</span><span class="cuenta">' + cards.length + '</span>' + sumaColumna(cards) + '</h3><div class="cards">' +
           cards.map(function (c) {
             return '<div class="card" draggable="true" data-id="' + esc(c.id) + '"><div class="body">' +
               '<div class="t">' + scoreChip(c) + '<span class="grow"></span><span class="cuando">' + esc(c.lastMessageAt ? rel(c.lastMessageAt) : '') + '</span></div>' +
               '<button type="button" class="card-open" title="Abrir la conversación">' + esc(nameOf(c)) + '</button>' +
               '<div class="s">' + esc(c.recap || c.summary || '') + '</div>' +
-              '<div class="pie">' + channelIcon(c.channel) + (variasSedes() && c.data && c.data.sede ? '<span class="chip">' + esc(nombreSede(c.data.sede)) + '</span>' : '') + (c.unread ? '<span class="chip sin-leer">' + c.unread + ' sin leer</span>' : '') +
-                (c.humanMode ? '<span class="chip who">con una persona</span>' : '') + '</div>' +
+              // Lo que vale, lo que sigue y quién la tiene: la fila de abajo de cada tarjeta de un CRM.
+              // Una venta cerrada sin precio no tiene nada que decir aquí: dos rayas serían ruido.
+              (c.valor || (c.proximo && c.proximo.texto) ? '<div class="cifra">' + valorHtml(c, true) + '<span class="paso-corto">' + (c.proximo && c.proximo.texto ? pasoHtml(c.proximo) : '') + '</span>' +
+                '<span class="lleva-mini" title="La lleva ' + esc(llevaDe(c).nombre) + '">' + llevaHtml(c) + '</span></div>' : '') +
+              '<div class="pie">' + channelIcon(c.channel) + (variasSedes() && c.data && c.data.sede ? '<span class="chip">' + esc(nombreSede(c.data.sede)) + '</span>' : '') + (c.unread ? '<span class="chip sin-leer">' + c.unread + ' sin leer</span>' : '') + '</div>' +
               moveTo(c) + '</div></div>';
           }).join('') +
           '</div></div>';
@@ -2811,40 +2926,81 @@
     return api('/contacts' + params).then(function (list) { cli.lista = list; renderClientes(); });
   }
 
-  function renderClientes() {
-    var list = cli.lista.filter(function (c) { return cli.grupo === 'todos' || grupoDe(c) === cli.grupo; });
-    // De más caliente a más frío, y a igual puntaje el más reciente: así arriba está siempre a quien llamar.
-    list.sort(function (a, b) { return (b.score || 0) - (a.score || 0) || (b.lastMessageAt || 0) - (a.lastMessageAt || 0); });
+  // Las pestañas de arriba, cada una con su número. «Míos» solo existe si quien mira tiene nombre.
+  var GRUPOS_CLI = [
+    { g: 'todos', t: 'Todos', es: function () { return true; } },
+    { g: 'mios', t: 'Míos', es: esMia, hay: function () { return Boolean(state.name); } },
+    { g: 'calientes', t: '🔥 Calientes', es: esCaliente },
+    { g: 'prospecto', t: 'Prospectos', es: function (c) { return grupoDe(c) === 'prospecto'; } },
+    { g: 'cliente', t: 'Clientes', es: function (c) { return grupoDe(c) === 'cliente'; } },
+    { g: 'perdido', t: 'Perdidos', es: function (c) { return grupoDe(c) === 'perdido'; } },
+  ];
+  // Por qué columna se ordena. Lo de siempre es el puntaje: arriba está a quien llamar.
+  var ORDEN_CLI = {
+    nombre: function (a, b) { return nameOf(a).localeCompare(nameOf(b), 'es'); },
+    puntaje: function (a, b) { return (b.score || 0) - (a.score || 0) || (b.lastMessageAt || 0) - (a.lastMessageAt || 0); },
+    valor: function (a, b) { return (b.valor || 0) - (a.valor || 0) || ORDEN_CLI.puntaje(a, b); },
+    // Primero lo que espera a alguien del equipo; después, lo que tiene fecha, de la más cercana a la más lejana.
+    paso: function (a, b) {
+      var pa = a.proximo || {}, pb = b.proximo || {};
+      return (pb.urgente ? 1 : 0) - (pa.urgente ? 1 : 0) || (pa.cuando || Infinity) - (pb.cuando || Infinity) || ORDEN_CLI.puntaje(a, b);
+    },
+    vez: function (a, b) { return (b.lastMessageAt || 0) - (a.lastMessageAt || 0); },
+  };
 
-    var cuenta = { cliente: 0, prospecto: 0, perdido: 0 };
-    cli.lista.forEach(function (c) { cuenta[grupoDe(c)]++; });
-    var resumen = cuenta.cliente + ' clientes · ' + cuenta.prospecto + ' prospectos · ' + cuenta.perdido + ' perdidos';
+  function renderClientes() {
+    var grupos = GRUPOS_CLI.filter(function (g) { return !g.hay || g.hay(); });
+    if (!grupos.some(function (g) { return g.g === cli.grupo; })) cli.grupo = 'todos';
+    var g = grupos.find(function (x) { return x.g === cli.grupo; });
+    $('cli-filtros').innerHTML = grupos.map(function (x) {
+      var n = cli.lista.filter(x.es).length;
+      return '<button data-g="' + x.g + '" class="' + (x.g === cli.grupo ? 'on' : '') + '" aria-pressed="' + (x.g === cli.grupo) + '">' + esc(x.t) + '<span class="cuenta">' + n + '</span></button>';
+    }).join('');
+    Array.prototype.forEach.call($('cli-filtros').querySelectorAll('button'), function (b) {
+      b.onclick = function () { cli.grupo = b.dataset.g; renderClientes(); };
+    });
+
+    var orden = cli.orden || 'puntaje', al = cli.al || 1;
+    var list = cli.lista.filter(g.es).sort(function (a, b) { return al * ORDEN_CLI[orden](a, b); });
+    cli.ids = list.map(function (c) { return c.id; });
 
     if (!list.length) {
-      $('cli-tabla').innerHTML = '<div class="cli-resumen">' + resumen + '</div><div class="empty">Nadie por aquí con ese filtro.</div>';
-      enganchaClientes();
+      $('cli-tabla').innerHTML = (cli.q ? '<div class="cli-resumen">Buscando «' + esc(cli.q) + '»</div>' : '') + '<div class="empty">Nadie por aquí con ese filtro.</div>';
       return;
     }
-
-    $('cli-tabla').innerHTML = '<div class="cli-resumen">' + esc(resumen) + (cli.q ? ' · buscando «' + esc(cli.q) + '»' : '') + '</div>' +
+    var suma = 0, sinPrecio = 0;
+    list.forEach(function (c) { if (c.valor) suma += c.valor; else sinPrecio++; });
+    // La cabecera se ordena con un clic; el que manda lleva su flecha y `aria-sort`, que es lo que lee un lector.
+    var th = function (k, t, clase) {
+      var on = orden === k;
+      return '<th class="' + (clase || '') + '"' + (on ? ' aria-sort="' + (al === 1 ? 'descending' : 'ascending') + '"' : '') + '><button class="orden' + (on ? ' on' : '') + '" data-orden="' + k + '">' + t + (on ? (al === 1 ? ' ↓' : ' ↑') : '') + '</button></th>';
+    };
+    $('cli-tabla').innerHTML = (cli.q ? '<div class="cli-resumen">Buscando «' + esc(cli.q) + '»</div>' : '') +
       '<table class="cli-tabla"><thead><tr>' +
-        '<th>Quién</th><th>Dónde</th><th>Etapa</th><th class="num">Puntaje</th><th>Qué quiere</th><th class="num">Última vez</th>' +
+        th('nombre', 'Quién') + '<th>Etapa</th>' + th('puntaje', 'Puntaje', 'num') + th('valor', 'Valor', 'num') + th('paso', 'Próximo paso') + '<th>La lleva</th>' + th('vez', 'Última vez', 'num') +
       '</tr></thead><tbody>' +
       list.map(function (c) {
         var v = verdict(c);
         return '<tr>' +
           '<td data-rot="Quién"><button class="quien" data-id="' + esc(c.id) + '">' + esc(nameOf(c)) + '</button>' +
-            (c.phone ? '<div class="dato">' + esc(c.phone) + '</div>' : '') + '</td>' +
-          '<td data-rot="Dónde" class="dato">' + esc(channelIcon(c.channel)) +
-            (variasSedes() && c.data && c.data.sede ? '<div class="dato">' + esc(nombreSede(c.data.sede)) + '</div>' : '') + '</td>' +
-          '<td data-rot="Etapa"><span class="chip ' + esc(rol(c.stage) || '') + '">' + esc(etiquetaEtapa(c.stage)) + '</span></td>' +
+            (esCaliente(c) ? ' <span class="fuego" title="Caliente: puntaje de 60 para arriba">🔥</span>' : '') +
+            (estaFijado(c.id) ? ' <span class="fijo" title="Fijado">★</span>' : '') +
+            '<div class="dato">' + esc([c.phone, channelIcon(c.channel), variasSedes() && c.data && c.data.sede ? nombreSede(c.data.sede) : ''].filter(Boolean).join(' · ')) + '</div></td>' +
+          '<td data-rot="Etapa">' + pastillaEtapa(c.stage) + '</td>' +
           // El puntaje nunca solo: va con su veredicto en palabras, que es la regla de siempre.
-          '<td data-rot="Puntaje" class="num">' + (c.score == null ? '—' : c.score) +
-            '<div class="dato">' + esc(v && v.label ? v.label : '') + '</div></td>' +
-          '<td data-rot="Qué quiere" class="quiere">' + esc(c.summary || c.recap || '') + '</td>' +
+          '<td data-rot="Puntaje" class="num">' + (c.score == null ? '—' : c.score) + '<div class="dato">' + esc(v && v.label ? v.label : '') + '</div></td>' +
+          '<td data-rot="Valor" class="num">' + valorHtml(c) + '</td>' +
+          '<td data-rot="Próximo paso" class="proximo">' + pasoHtml(c.proximo) +
+            (c.summary || c.recap ? '<div class="quiere" title="' + esc(c.summary || c.recap) + '">' + esc(c.summary || c.recap) + '</div>' : '') + '</td>' +
+          '<td data-rot="La lleva">' + llevaHtml(c) + '</td>' +
           '<td data-rot="Última vez" class="num dato">' + esc(rel(c.lastMessageAt)) + '</td>' +
         '</tr>';
-      }).join('') + '</tbody></table>';
+      }).join('') + '</tbody>' +
+      // Al pie, cuántos y cuánto suman. Lo que no tiene precio se dice al lado: una suma baja por falta de precios
+      // y un mes malo son dos problemas muy distintos.
+      '<tfoot><tr><td colspan="3">' + list.length + (list.length === 1 ? ' persona' : ' personas') + '</td>' +
+        '<td class="num">' + (suma ? '<span class="dato">Suma</span> <b>' + esc(plata(suma)) + '</b>' : '') + '</td>' +
+        '<td colspan="3" class="dato">' + (sinPrecio && suma ? sinPrecio + ' sin precio' : '') + '</td></tr></tfoot></table>';
     enganchaClientes();
   }
 
@@ -2852,69 +3008,181 @@
     Array.prototype.forEach.call($('cli-tabla').querySelectorAll('.quien'), function (b) {
       // 🪤 Abre la FICHA, no el chat. Ir de golpe a la conversación obliga a leerse veinte mensajes para saber
       // quién es; lo que uno quiere al buscar a alguien es verlo de un vistazo, y el chat a un botón.
-      b.onclick = function () { abrirPerfil(b.dataset.id); };
+      // Con la lista en el orden en que se ve, para pasar a la siguiente sin volver aquí.
+      b.onclick = function () { abrirPerfil(b.dataset.id, cli.ids); };
+    });
+    Array.prototype.forEach.call($('cli-tabla').querySelectorAll('[data-orden]'), function (b) {
+      b.onclick = function () {
+        var k = b.dataset.orden;
+        if (cli.orden === k || (!cli.orden && k === 'puntaje')) cli.al = -(cli.al || 1); else { cli.orden = k; cli.al = 1; }
+        renderClientes();
+      };
     });
   }
 
 
-  // ---------- la ficha de una persona ----------
-  var PF = null;
 
-  function abrirPerfil(id) {
+  // ---------- la barra: cuántos hay, las listas y los fijados ----------
+  var cuentasTimer = null;
+  function cargarCuentas() {
+    return api('/cuentas' + (state.name ? '?yo=' + encodeURIComponent(state.name) : '')).then(function (n) {
+      if (!n || n.error) return;
+      state.cuentas = n;
+      // En gris y sin fondo: dicen cuántos hay, no que algo urja. Lo que urge va en rojo, en las insignias.
+      $('cuenta-pip').textContent = n.abiertos ? String(n.abiertos) : '';
+      $('cuenta-cli').textContent = n.total ? String(n.total) : '';
+      pintarListas();
+    });
+  }
+  // Se recalcula cuando algo cambia, pero no a cada evento: una conversación viva manda varios por minuto.
+  function cuentasLuego() { clearTimeout(cuentasTimer); cuentasTimer = setTimeout(cargarCuentas, 4000); }
+  function pintarListas() {
+    var el = $('rail-listas');
+    if (!el) return;
+    var n = state.cuentas || {};
+    var listas = [{ k: 'calientes', ic: '🔥', t: 'Calientes', n: n.calientes }];
+    if (state.name) listas.push({ k: 'mios', ic: inicialesDe(state.name), t: 'Míos', n: n.mios, ini: true });
+    var fij = fijados();
+    el.innerHTML = '<div class="rl-t">Listas</div>' +
+      listas.map(function (l) {
+        return '<button class="rl-i" data-lista="' + l.k + '"><span class="rl-ic' + (l.ini ? ' ini' : '') + '" aria-hidden="true">' + esc(l.ic) + '</span>' +
+          '<span class="rl-n">' + esc(l.t) + '</span><span class="cuenta">' + (l.n ? l.n : '') + '</span></button>';
+      }).join('') +
+      (fij.length ? '<div class="rl-t">Fijados</div>' + fij.map(function (f) {
+        return '<button class="rl-i" data-fijado="' + esc(f.id) + '" title="' + esc(f.nombre) + '"><span class="rl-ic ini" aria-hidden="true">' + esc(inicialesDe(f.nombre)) + '</span><span class="rl-n">' + esc(f.nombre) + '</span></button>';
+      }).join('') : '');
+    Array.prototype.forEach.call(el.querySelectorAll('[data-lista]'), function (b) {
+      b.onclick = function () { cli.grupo = b.dataset.lista; go('clientes'); };
+    });
+    Array.prototype.forEach.call(el.querySelectorAll('[data-fijado]'), function (b) {
+      b.onclick = function () { abrirPerfil(b.dataset.fijado, fijados().map(function (f) { return f.id; })); };
+    });
+  }
+
+  // ---------- la ficha de una persona ----------
+  // Dos columnas, como la ficha de un CRM: a la izquierda lo que pasó (historia, citas, notas) y a la derecha los
+  // datos que se consultan de un vistazo. Arriba, «3 de 23» para pasar a la siguiente sin volver a la lista.
+  var PF = null, PF_LISTA = null, PF_TAB = 'historia';
+
+  function abrirPerfil(id, lista) {
+    // La lista viaja con la ficha solo si la contiene: abrir desde un sitio y navegar por la lista de otro sería
+    // pasar a gente que no se estaba mirando.
+    PF_LISTA = lista && lista.indexOf(id) >= 0 && lista.length > 1 ? lista : null;
     $('pf-nombre').textContent = '…';
     $('pf-sub').textContent = '';
+    $('pf-ini').textContent = '';
+    $('pf-nav').hidden = true;
     $('pf-cuerpo').innerHTML = '<div class="small muted">Cargando…</div>';
-    $('dlg-perfil').showModal();
+    if (!$('dlg-perfil').open) $('dlg-perfil').showModal();
     api('/contacts/' + encodeURIComponent(id)).then(function (d) {
       if (d.error) { $('pf-cuerpo').innerHTML = '<div class="empty">' + esc(d.error) + '</div>'; return; }
       PF = d;
       pintarPerfil(d);
     });
   }
+  function moverFicha(paso) {
+    if (!PF_LISTA || !PF) return;
+    var i = PF_LISTA.indexOf(PF.contact.id) + paso;
+    if (i >= 0 && i < PF_LISTA.length) abrirPerfil(PF_LISTA[i], PF_LISTA);
+  }
+  $('pf-ant').onclick = function () { moverFicha(-1); };
+  $('pf-sig').onclick = function () { moverFicha(1); };
+  // Con las flechas del teclado también, salvo mientras se escribe: ahí la flecha mueve el cursor.
+  $('dlg-perfil').addEventListener('keydown', function (e) {
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); moverFicha(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); moverFicha(1); }
+  });
+  $('pf-fijar').onclick = function () {
+    if (!PF) return;
+    fijar(PF.contact, !estaFijado(PF.contact.id));
+    pintarFijar();
+    if (state.view === 'clientes') renderClientes();
+  };
+  function pintarFijar() {
+    var on = PF && estaFijado(PF.contact.id);
+    $('pf-fijar').setAttribute('aria-pressed', String(Boolean(on)));
+    $('pf-fijar').textContent = on ? '★ Fijada' : '☆ Fijar';
+  }
 
   function pintarPerfil(d) {
     var c = d.contact, h = d.historia || {}, v = d.valor || {};
     $('pf-nombre').textContent = nameOf(c);
+    $('pf-ini').textContent = inicialesDe(nameOf(c));
     $('pf-sub').textContent = [channelIcon(c.channel), c.phone || '', h.frase || ''].filter(Boolean).join(' · ');
+    if (PF_LISTA) {
+      var i = PF_LISTA.indexOf(c.id);
+      $('pf-nav').hidden = false;
+      $('pf-pos').textContent = (i + 1) + ' de ' + PF_LISTA.length;
+      $('pf-ant').disabled = i <= 0;
+      $('pf-sig').disabled = i >= PF_LISTA.length - 1;
+    }
+    pintarFijar();
 
     var ver = verdict(c);
+    var notas = (d.events || []).filter(function (e) { return e.type === 'nota' && e.payload && e.payload.texto; });
+    var citas = d.appointments || [];
+    var data = c.data || {};
+    var ocultos = { booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1, pospuesto_desde: 1, valor: 1, sede: 1 };
+    var capturados = Object.keys(data).filter(function (k) { return !ocultos[k] && data[k] !== '' && data[k] != null && typeof data[k] !== 'object'; });
+    var fila = function (k, html) { return '<dt>' + esc(k) + '</dt><dd>' + html + '</dd>'; };
+
     $('pf-cuerpo').innerHTML =
-      // 🪤 Lo primero, lo accionable: si se le fue una venta, eso manda sobre cualquier otro dato de la ficha.
-      (h.amago ? '<div class="pf-amago">⚠ Se le fue una venta: tuvo cita y no acabó en compra, y no tiene otra agendada.</div>' : '') +
-      '<div class="pf-grid">' +
-        dato('Etapa', etiquetaEtapa(c.stage)) +
-        dato('Puntaje', (c.score == null ? '—' : c.score) + (ver && ver.label ? ' · ' + ver.label : '')) +
-        dato('Valor', v.valor ? plata(v.valor) + (v.origen ? ' (' + esc(v.origen) + ')' : '') : 'sin precio') +
-        dato('Volvió', h.volvio ? h.volvio + (h.volvio === 1 ? ' vez' : ' veces') : 'no ha vuelto') +
-        dato('Citas', (h.citas ? h.citas.total : 0) + (h.citas && h.citas.cumplidas ? ' · ' + h.citas.cumplidas + ' cumplidas' : '') + (h.citas && h.citas.falto ? ' · ' + h.citas.falto + ' faltó' : '')) +
-        dato('Desde', h.desde ? new Date(h.desde).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—') +
-      '</div>' +
-      (c.summary ? '<div class="pf-bloque"><h4>Qué quiere</h4><p>' + esc(c.summary) + '</p></div>' : '') +
-      ((d.appointments || []).length ? '<div class="pf-bloque"><h4>Sus citas</h4>' +
-        d.appointments.map(function (a) {
-          return '<div class="appt ' + a.status + '"><span class="t">' + esc(a.label || '') + '</span>' +
-            '<span class="grow small muted">' + esc((a.service || '') + conSede(a)) + '</span><span class="chip">' + esc(a.status) + '</span></div>';
-        }).join('') + '</div>' : '') +
-      '<div class="pf-bloque"><h4>Corregir</h4><div class="pf-campos">' +
-        '<div><label for="pf-f-nombre">Nombre</label><input id="pf-f-nombre" value="' + esc(c.name || '') + '"></div>' +
-        '<div><label for="pf-f-tel">Teléfono</label><input id="pf-f-tel" value="' + esc(c.phone || '') + '"></div>' +
-        '<div><label for="pf-f-etapa">Etapa</label><select id="pf-f-etapa">' +
-          (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '"' + (e.id === c.stage ? ' selected' : '') + '>' + esc(e.label) + '</option>'; }).join('') +
-        '</select></div>' +
+      '<div class="ficha-cols"><div class="ficha-main">' +
+        // 🪤 Lo primero, lo accionable: si se le fue una venta, eso manda sobre cualquier otro dato de la ficha.
+        (h.amago ? '<div class="pf-amago">⚠ Se le fue una venta: tuvo cita y no acabó en compra, y no tiene otra agendada.</div>' : '') +
+        (c.summary ? '<p class="ficha-quiere">' + esc(c.summary) + '</p>' : '') +
+        '<div class="ficha-tabs" role="tablist" aria-label="Qué ver de esta persona">' +
+          [['historia', 'Historia', null], ['citas', 'Citas', citas.length], ['notas', 'Notas', notas.length + (c.notes ? 1 : 0)]].map(function (t) {
+            return '<button role="tab" data-tab="' + t[0] + '" aria-selected="' + (PF_TAB === t[0]) + '" class="' + (PF_TAB === t[0] ? 'on' : '') + '">' + t[1] + (t[2] ? '<span class="cuenta">' + t[2] + '</span>' : '') + '</button>';
+          }).join('') +
+        '</div><div id="pf-tab" role="tabpanel"></div>' +
+      '</div><aside class="ficha-lado"><h4>Detalles</h4><dl class="det">' +
+        fila('Etapa', '<select id="pf-etapa" aria-label="Etapa">' + (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '"' + (e.id === c.stage ? ' selected' : '') + '>' + esc(e.label) + '</option>'; }).join('') + '</select>') +
+        fila('Puntaje', esc((c.score == null ? '—' : c.score) + (ver && ver.label ? ' · ' + ver.label : ''))) +
+        fila('Valor', v.valor ? esc(plata(v.valor)) + ' <span class="muted small">' + esc(v.origen === 'a mano' ? 'a mano' : 'del catálogo') + '</span>' : '<span class="muted">sin precio</span>') +
+        fila('La lleva', llevaHtml(c)) +
+        fila('Próximo paso', pasoHtml(c.proximo)) +
+        fila('Volvió', esc(h.volvio ? h.volvio + (h.volvio === 1 ? ' vez' : ' veces') : 'no ha vuelto')) +
+        fila('Última vez', esc(c.lastMessageAt ? 'hace ' + rel(c.lastMessageAt) : '—')) +
+        fila('Desde', esc(h.desde ? new Date(h.desde).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—')) +
+        (d.origen && d.origen.fuente ? fila('Llegó por', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : ''))) : '') +
+        (variasSedes() && data.sede ? fila('Sede', esc(nombreSede(data.sede))) : '') +
+      '</dl>' +
+      (capturados.length ? '<h4>Lo que contó</h4><dl class="det">' + capturados.map(function (k) { return fila(k.replace(/_/g, ' '), esc(data[k])); }).join('') + '</dl>' : '') +
+      '<details class="corregir"><summary>Corregir datos</summary><div class="pf-campos">' +
+        '<div class="ancho"><label for="pf-f-nombre">Nombre</label><input id="pf-f-nombre" value="' + esc(c.name || '') + '"></div>' +
+        '<div class="ancho"><label for="pf-f-tel">Teléfono</label><input id="pf-f-tel" value="' + esc(c.phone || '') + '"></div>' +
         // 🪤 El valor a mano manda sobre el del catálogo, y se dice aquí: si no, quien lo escriba no sabrá por
         // qué su número sobrevive a un reindexado y el deducido no.
-        '<div><label for="pf-f-valor">Valor (manda sobre el del catálogo)</label><input id="pf-f-valor" type="number" min="0" value="' + (v.origen === 'a mano' ? v.valor : '') + '" placeholder="' + (v.valor ? v.valor : 'sin precio') + '"></div>' +
-        '<div class="ancho"><label for="pf-f-notas">Notas del equipo</label><textarea id="pf-f-notas" rows="2">' + esc(c.notes || '') + '</textarea></div>' +
-      '</div>' +
-      '<div class="fila" style="gap:8px;margin-top:10px"><button class="btn primary" id="pf-guardar">Guardar</button>' +
-      '<span class="grow"></span><span class="small" id="pf-msg" role="status"></span></div></div>';
+        '<div class="ancho"><label for="pf-f-valor">Valor (manda sobre el del catálogo)</label><input id="pf-f-valor" type="number" min="0" value="' + (v.origen === 'a mano' ? v.valor : '') + '" placeholder="' + (v.valor ? v.valor : 'sin precio') + '"></div>' +
+        '<div class="ancho"><label for="pf-f-notas">Nota fija</label><textarea id="pf-f-notas" rows="2" placeholder="Lo que siempre hay que saber de esta persona">' + esc(c.notes || '') + '</textarea></div>' +
+      '</div><div class="fila" style="gap:8px;margin-top:10px"><button class="btn primary sm" id="pf-guardar">Guardar</button>' +
+      '<span class="grow"></span><span class="small" id="pf-msg" role="status"></span></div></details>' +
+      '</aside></div>';
 
+    pintarPestana();
+    Array.prototype.forEach.call($('pf-cuerpo').querySelectorAll('[data-tab]'), function (b) {
+      b.onclick = function () {
+        PF_TAB = b.dataset.tab;
+        Array.prototype.forEach.call($('pf-cuerpo').querySelectorAll('[data-tab]'), function (x) { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', String(x === b)); });
+        pintarPestana();
+      };
+    });
+    // La etapa se cambia aquí mismo, sin pasar por «Corregir»: es lo que más se toca.
+    $('pf-etapa').onchange = function () {
+      api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: { stage: $('pf-etapa').value } }).then(function (r) {
+        if (r && r.error) { toast(r.error); return; }
+        toast('Etapa: ' + etiquetaEtapa($('pf-etapa').value));
+        recargarListas();
+        abrirPerfil(c.id, PF_LISTA);
+      });
+    };
     $('pf-guardar').onclick = function () {
       var valor = Number($('pf-f-valor').value);
       var cuerpo = {
         name: $('pf-f-nombre').value.trim(),
         phone: $('pf-f-tel').value.trim(),
-        stage: $('pf-f-etapa').value,
         notes: $('pf-f-notas').value.trim(),
         data: Object.assign({}, c.data || {}, { valor: Number.isFinite(valor) && valor > 0 ? valor : undefined }),
       };
@@ -2922,13 +3190,137 @@
       api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: cuerpo }).then(function (r) {
         if (r && r.error) { $('pf-msg').textContent = r.error; return; }
         $('pf-msg').textContent = 'Guardado.';
-        loadClientes();
-        abrirPerfil(c.id);
+        recargarListas();
+        abrirPerfil(c.id, PF_LISTA);
       });
     };
   }
 
-  function dato(k, v) { return '<div class="pf-dato"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>'; }
+  /** Lo que haya abierto que muestre esta ficha, para que no quede diciendo lo de antes. */
+  function recargarListas() {
+    if (state.view === 'clientes') loadClientes();
+    if (state.view === 'pipeline') loadPipeline();
+    if (state.view === 'inbox') loadContacts();
+  }
+
+  function pintarPestana() {
+    var d = PF; if (!d) return;
+    var c = d.contact, el = $('pf-tab');
+    if (PF_TAB === 'citas') {
+      el.innerHTML = (d.appointments || []).length ? d.appointments.map(function (a) {
+        return '<div class="appt ' + a.status + '"><span class="t">' + esc(a.label || '') + '</span>' +
+          '<span class="grow small muted">' + esc((a.service || '') + conSede(a)) + '</span><span class="chip">' + esc(estadoCita(a.status)) + '</span></div>';
+      }).join('') : '<div class="empty">Sin citas todavía.</div>';
+      return;
+    }
+    var soloNotas = PF_TAB === 'notas';
+    el.innerHTML = '<div class="nota-nueva"><label class="sr-only" for="pf-nota">Nota nueva</label>' +
+        '<textarea id="pf-nota" rows="2" maxlength="2000" placeholder="Agregar una nota para el equipo…"></textarea>' +
+        '<button class="btn sm primary" id="pf-nota-ok">Guardar nota</button></div>' +
+      (c.notes ? '<div class="h-item nota fija"><div class="h-cab"><b>Nota fija</b><span class="muted small">se cambia en «Corregir datos»</span></div><div class="h-texto">' + esc(c.notes) + '</div></div>' : '') +
+      historiaHtml(d, { soloNotas: soloNotas, borrar: true });
+    $('pf-nota-ok').onclick = function () {
+      var texto = $('pf-nota').value.trim();
+      if (!texto) { $('pf-nota').focus(); return; }
+      $('pf-nota-ok').disabled = true;
+      api('/contacts/' + encodeURIComponent(c.id) + '/notas', { method: 'POST', body: { texto: texto, por: state.name || '' } }).then(function (r) {
+        $('pf-nota-ok').disabled = false;
+        if (r && r.error) { toast(r.error); return; }
+        d.events = r.events || d.events;
+        pintarPerfil(d);
+      });
+    };
+    engancharBorrarNotas(el, c.id, function (events) { d.events = events; pintarPerfil(d); });
+  }
+
+  /** Borrar una nota pide dos clics: el primero pregunta en el mismo botón, sin ventanas encima. */
+  function engancharBorrarNotas(raiz, id, listo) {
+    Array.prototype.forEach.call(raiz.querySelectorAll('[data-borrar-nota]'), function (b) {
+      b.onclick = function () {
+        if (b.dataset.seguro !== '1') {
+          b.dataset.seguro = '1'; b.textContent = '¿Borrarla? Sí';
+          setTimeout(function () { b.dataset.seguro = ''; b.textContent = 'Borrar'; }, 4000);
+          return;
+        }
+        api('/contacts/' + encodeURIComponent(id) + '/notas/' + b.dataset.borrarNota, { method: 'DELETE' }).then(function (r) {
+          if (r && r.error) { toast(r.error); return; }
+          listo(r.events || []);
+        });
+      };
+    });
+  }
+
+  function estadoCita(s) { return { confirmada: 'confirmada', completada: 'cumplida', no_asistio: 'no vino', cancelada: 'cancelada' }[s] || s; }
+
+  /**
+   * La historia de una persona: lo que pasó, de lo más nuevo a lo más viejo y agrupado por día. Junta tres
+   * fuentes —los eventos (etapas, traspasos, citas, notas), las conversaciones y nada más— y las cuenta en
+   * palabras: «Laura la tomó», no «human_on (Laura)».
+   *
+   * 🪤 Lo que no se sabe nombrar no se enseña. Un tipo de evento nuevo saldría aquí como su nombre interno, y
+   * eso es peor que no salir.
+   */
+  function historiaHtml(d, opts) {
+    opts = opts || {};
+    var agente = state.agentName || 'Aiva';
+    var quien = function (by) { return !by || by === 'bot' ? agente : by === 'admin' || by === 'equipo' ? 'El equipo' : by; };
+    var items = [];
+    (d.events || []).forEach(function (e) {
+      var p = e.payload || {}, t = null, tipo = 'evento';
+      switch (e.type) {
+        case 'nota': if (!p.texto) return; items.push({ ts: e.ts, tipo: 'nota', id: e.id, por: p.por || 'El equipo', texto: p.texto }); return;
+        case 'stage': t = quien(p.by) + ' la pasó de ' + (state.stageLabels[p.from] || p.from || '—') + ' a ' + (state.stageLabels[p.to] || p.to); tipo = 'etapa'; break;
+        case 'human_on': t = p.by === 'bot' ? agente + ' la pasó al equipo' + (p.motivo === 'tope' ? ' (se llegó al tope de gasto)' : '') : quien(p.by) + ' tomó la conversación'; tipo = 'traspaso'; break;
+        case 'human_off': t = agente + ' volvió a atenderla'; tipo = 'traspaso'; break;
+        case 'appointment_booked': t = 'Cita agendada' + (p.startsAt ? ' para el ' + new Date(p.startsAt).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }) : '') + (p.by && p.by !== 'bot' ? ' por ' + quien(p.by) : ''); tipo = 'cita'; break;
+        case 'appointment_updated': if (!p.status) return; t = 'La cita quedó ' + estadoCita(p.status); tipo = 'cita'; break;
+        case 'reminder_reply': t = 'Contestó el recordatorio de la cita'; tipo = 'cita'; break;
+        case 'followup_snooze': t = 'Seguimiento pospuesto ' + (p.days || 7) + ' días'; break;
+        case 'archivada': t = 'Se archivó'; break;
+        case 'desarchivada': t = 'Volvió a las listas'; break;
+        case 'contacts_merged': t = 'Se unió con otra ficha de la misma persona'; break;
+        case 'cross_channel': t = 'Escribió también por otro canal'; break;
+        default: return;
+      }
+      items.push({ ts: e.ts, tipo: tipo, texto: t });
+    });
+    if (opts.soloNotas) items = items.filter(function (x) { return x.tipo === 'nota'; });
+    else {
+      // Las conversaciones, una por día: cuántos mensajes y cómo empezó. El chat entero está a un botón.
+      var dias = {};
+      (d.messages || []).forEach(function (m) {
+        var k = new Date(m.ts).toDateString();
+        var x = dias[k] || (dias[k] = { ts: m.ts, suyos: 0, primero: '' });
+        if (m.role === 'user') { x.suyos++; if (!x.primero) x.primero = m.content || ''; }
+      });
+      Object.keys(dias).forEach(function (k) {
+        var x = dias[k];
+        if (!x.suyos) return;
+        items.push({ ts: x.ts, tipo: 'charla', texto: 'Escribió ' + x.suyos + (x.suyos === 1 ? ' mensaje' : ' mensajes'), cita: x.primero });
+      });
+    }
+    items.sort(function (a, b) { return b.ts - a.ts; });
+    if (opts.max) items = items.slice(0, opts.max);
+    if (!items.length) return '<div class="empty">' + (opts.soloNotas ? 'Sin notas. Lo que el equipo deba saber de esta persona, aquí.' : 'Todavía no hay historia.') + '</div>';
+
+    var hoy = new Date().toDateString(), ayer = new Date(Date.now() - 86400000).toDateString(), dia = '';
+    return '<div class="historia">' + items.map(function (x) {
+      var k = new Date(x.ts).toDateString(), cab = '';
+      if (k !== dia) {
+        dia = k;
+        cab = '<div class="h-dia">' + (k === hoy ? 'Hoy' : k === ayer ? 'Ayer' : esc(new Date(x.ts).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }))) + '</div>';
+      }
+      if (x.tipo === 'nota') {
+        return cab + '<div class="h-item nota"><div class="h-cab"><b>' + esc(x.por) + '</b><span class="muted small">dejó una nota · ' + esc(hhmm(x.ts)) + '</span>' +
+          (opts.borrar ? '<span class="grow"></span><button class="linkbtn small" data-borrar-nota="' + x.id + '">Borrar</button>' : '') + '</div>' +
+          '<div class="h-texto">' + esc(x.texto) + '</div></div>';
+      }
+      return cab + '<div class="h-item ' + x.tipo + '"><i class="h-punto" aria-hidden="true"></i><span class="h-linea">' + esc(x.texto) +
+        (x.cita ? '<span class="h-cita">«' + esc(x.cita.length > 140 ? x.cita.slice(0, 140) + '…' : x.cita) + '»</span>' : '') +
+        '</span><span class="muted small">' + esc(hhmm(x.ts)) + '</span></div>';
+    }).join('') + '</div>';
+  }
+
 
   // ---------- dar de alta a alguien a mano ----------
   $('cli-nuevo').onclick = function () {
@@ -3128,8 +3520,10 @@
 
   /** Abrir la ficha desde cualquier tabla que liste gente. */
   function engancharFichas(raiz) {
+    // Con la lista en el orden de la tabla: desde la ficha se pasa a la siguiente sin volver aquí.
+    var ids = Array.prototype.map.call(raiz.querySelectorAll('.quien[data-id]'), function (b) { return b.dataset.id; });
     Array.prototype.forEach.call(raiz.querySelectorAll('.quien[data-id]'), function (b) {
-      b.onclick = function () { abrirPerfil(b.dataset.id); };
+      b.onclick = function () { abrirPerfil(b.dataset.id, ids); };
     });
   }
 
@@ -3187,13 +3581,6 @@
     return (e && e.label) || id || '';
   }
 
-  document.querySelectorAll('#cli-filtros button').forEach(function (b) {
-    b.onclick = function () {
-      cli.grupo = b.dataset.g;
-      document.querySelectorAll('#cli-filtros button').forEach(function (x) { x.classList.toggle('on', x === b); });
-      renderClientes();
-    };
-  });
   var cliTimer;
   $('cli-q').oninput = function () {
     clearTimeout(cliTimer);
@@ -3234,9 +3621,9 @@
         { titulo: 'Lista para ' + (c ? nameOf(c) : short(ev.userId)), icono: 'bot' });
     });
     es.addEventListener('verification', function () { if (state.view === 'today') loadToday(); });
-    es.addEventListener('contact', function () { if (state.view === 'inbox') loadContacts(); if (state.view === 'pipeline') loadPipeline(); });
+    es.addEventListener('contact', function () { cuentasLuego(); if (state.view === 'inbox') loadContacts(); if (state.view === 'pipeline') loadPipeline(); if (state.view === 'clientes') loadClientes(); });
     es.addEventListener('analysis', function (e) { var ev = JSON.parse(e.data); if (state.current === ev.userId) openContact(ev.userId); else if (state.view === 'inbox') loadContacts(); });
-    es.addEventListener('handoff', function (e) { var ev = JSON.parse(e.data); if (state.current === ev.userId) openContact(ev.userId); if (state.view === 'inbox') loadContacts(); if (state.view === 'today') loadToday(); });
+    es.addEventListener('handoff', function (e) { cuentasLuego(); var ev = JSON.parse(e.data); if (state.current === ev.userId) openContact(ev.userId); if (state.view === 'inbox') loadContacts(); if (state.view === 'today') loadToday(); });
     // 🪤 Antes esto solo refrescaba las vistas: una cita entraba, el contador se ponía en rojo y NADIE decía qué
     // se había agendado ni con quién. Quien no estuviera mirando el calendario en ese momento se enteraba de
     // casualidad. Una cita es la mejor noticia que da este sistema y era la única que no se anunciaba.
@@ -3319,7 +3706,7 @@
       document.title = me.agent + ' · Tablero';
       return api('/stats');
     }).then(function (s) {
-      state.stageLabels = s.stageLabels; state.stages = s.stages || []; etapasDelNegocio(); pintarQuienSoy(); connect(); loadNotifs(); loadCalendar();
+      state.stageLabels = s.stageLabels; state.stages = s.stages || []; state.moneda = s.moneda || 'COP'; etapasDelNegocio(); pintarListas(); cargarCuentas(); pintarQuienSoy(); connect(); loadNotifs(); loadCalendar();
       // Enlace directo a una conversación (p. ej. desde la cita en Google Calendar): /admin#c=<id>
       var m = /^#c=(.+)$/.exec(location.hash);
       if (m) { go('inbox'); openContact(decodeURIComponent(m[1])); history.replaceState(null, '', location.pathname); } else go('today');
@@ -3686,6 +4073,7 @@
       $('yo-msg').textContent = 'Listo ✓ · solo en ' + (state.bizName || 'este cliente');
     }
     pintarQuienSoy();
+    cargarCuentas(); // «Míos» depende del nombre: con otro nombre son otras
     setTimeout(function () { $('dlg-yo').close(); }, 900);
   };
 

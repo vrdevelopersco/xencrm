@@ -102,7 +102,7 @@ y por qué.
 | `src/agent/` | `agent.ts` (el recorrido), `gate.ts` (clasificador), `router.ts` (motor por turno), `prompts.ts` (persona y reglas), `format.ts` (guardas y post-proceso), `dictionary.ts` (diccionario y expresiones), `teach.ts` (enseñar una frase), `memory.ts` (historial) |
 | `src/llm/` | `engines.ts` (roles, respaldo y operaciones), `openai.ts` (modelo por rol, razonamiento, caché), `ollama.ts`, `apple.ts` + `sidecar/`, `usage.ts` (consumo y costos) |
 | `src/rag/` | `store.ts` (SQLite: tablas, vectores, FTS5, migraciones), `retriever.ts` (búsqueda y ficha completa), `ingest.ts` (catálogo, markdown, sitio, Shopify, perfil), `profile-index.ts` |
-| `src/crm/` | `contacts.ts`, `merge.ts` (fichas de la misma persona en dos canales), `analyzer.ts` (análisis y puntaje), `score.ts` (el puntaje se enfría solo), `cross.ts` (la misma persona por dos canales), `followup.ts` (posponer seguimiento), `export.ts` (CSV), `signals.ts` (datos exactos por código), `recap.ts`, `appointments.ts` (agenda y zona horaria), `when.ts` (fechas y franjas), `booking.ts` (flujo de citas), `reminders.ts` (recordatorio de la cita), `calendar.ts` + `busy.ts` (iCalendar), `verifications.ts`, `misses.ts` (frases que no entendimos), `outbox.ts` (enviar al cliente, ventana de 24 h, plantillas), `notifications.ts`, `events.ts` (bus en memoria), `settings.ts`, `retencion.ts` (conversaciones viejas) |
+| `src/crm/` | `contacts.ts`, `merge.ts` (fichas de la misma persona en dos canales), `analyzer.ts` (análisis y puntaje), `score.ts` (el puntaje se enfría solo), `cross.ts` (la misma persona por dos canales), `followup.ts` (posponer seguimiento), `export.ts` (CSV), `signals.ts` (datos exactos por código), `recap.ts`, `appointments.ts` (agenda y zona horaria), `when.ts` (fechas y franjas), `booking.ts` (flujo de citas), `reminders.ts` (recordatorio de la cita), `calendar.ts` + `busy.ts` (iCalendar), `verifications.ts`, `misses.ts` (frases que no entendimos), `outbox.ts` (enviar al cliente, ventana de 24 h, plantillas), `notifications.ts`, `events.ts` (bus en memoria), `settings.ts`, `retencion.ts` (conversaciones viejas), `proximo.ts` (el próximo paso de cada ficha, con reglas y sin modelo) |
 | `src/channels/` | `web.ts` (servidor, widget, página demo), `admin.ts` (API del tablero y SSE), `whatsapp.ts` (Baileys), `meta.ts` (Cloud API) + `meta-credentials.ts`, `registry.ts` + `switches.ts` (Canales), `calendar.ts` (rutas públicas), `public-check.ts` (¿responde la dirección pública?) |
 | `src/` | `config.ts` (esquemas y variables), `profile.ts` (perfil del negocio), `ajustes.ts` (lo editable de la configuración desde el tablero), `brand.ts` (color, contraste y logo), `envfile.ts` (escribir `.env`), `index.ts` (arranque), `onboard.ts`, `cli.ts`, `seed.ts` |
 | `src/` (varios clientes) | `clientes.ts` (alta, baja, índice, tokens), `consola.ts` (tickets, bandeja, proxy del tablero), `consola-usuarios.ts` (quién entra: claves, roles, sesiones), `paquete.ts` (el ZIP del despliegue) |
@@ -220,7 +220,7 @@ sin seguimiento" usa el segundo, porque son justo los que se enfriaron. Los peso
 primeras conversaciones reales; `pnpm rescore` recalcula las fichas viejas con los pesos de hoy usando los análisis
 ya guardados (no llama al modelo; `--write` para guardar).
 | `appointments` | citas con estado, sede, recordatorio (estado, cuándo, por qué) y respuesta del cliente |
-| `events` | línea de tiempo de cada contacto |
+| `events` | línea de tiempo de cada contacto: etapas, traspasos, citas y las **notas del equipo** (tipo `nota`, con texto y autor). `users.notes` es aparte: una sola nota fija que se sobrescribe |
 | `llm_usage` | cada llamada a un modelo: tarea, modelo, tokens (entrada, caché, salida, razonamiento), milisegundos |
 | `verifications` | preguntas por verificar y sus respuestas |
 | `misses` | frases que las reglas no entendieron, con lo que entendió el modelo |
@@ -416,6 +416,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:merge` | unir fichas: detección por número y que no se pierda nada | no |
 | `pnpm test:buscar` | buscar dentro de la conversación y el número para escribir o llamar | no |
 | `pnpm test:followup` | posponer el seguimiento de un caliente y su regreso a la lista | no |
+| `pnpm test:proximo` | el próximo paso regla por regla, que coincida con Seguimientos, el valor en la lista, las notas y los números de la barra | no |
 | `pnpm test:export` | contactos y citas en CSV: columnas, comillas y archivados fuera | no |
 | `pnpm test:score` | pesos del puntaje y el descuento por silencio al leer la ficha | no |
 | `pnpm test:cross` | la misma persona por dos canales: contexto, aviso y fichas separadas | no |

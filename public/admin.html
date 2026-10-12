@@ -900,13 +900,7 @@ dialog#dlg-grupos > b{font-size:17px}
 .subnav .item.on,.subnav .item.active{background:var(--glass-strong);box-shadow:var(--rim),0 4px 14px rgba(17,24,39,.08);font-weight:600}
 .subnav .item.on .ic,.subnav .item.active .ic{color:var(--brand)}
 .subnav .item .cuenta{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-/* Los filtros de conversaciones viven aquí: son categorías, no botones de barra. */
-.subnav #filters{display:flex;flex-direction:column;gap:2px}
-.subnav #filters[hidden],.subnav [hidden]{display:none}
-.subnav #filters button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;background:none;
-  padding:9px 10px;border-radius:999px;font-size:14px;color:var(--text);cursor:pointer;box-shadow:none;transition:background .15s,box-shadow .15s}
-.subnav #filters button:hover{background:var(--row-hover);box-shadow:var(--rim)}
-.subnav #filters button.on{background:var(--glass-strong);box-shadow:var(--rim),0 4px 14px rgba(17,24,39,.08);color:var(--text);font-weight:600;border-color:transparent}
+.subnav [hidden]{display:none}
 
 /* El engranaje: de quién es cada cosa. Organización, cliente y tú, que son los tres
    sitios donde vive un ajuste y donde más se confundía la gente. */
@@ -949,12 +943,12 @@ dialog#dlg-grupos > b{font-size:17px}
   .subnav h2,.subnav .biz,.subnav .group{display:none}
   .subnav #subnav-cuerpo{display:contents}
   /* En una sola fila que se desliza: partidos en dos líneas se cortaban por arriba y por abajo. */
-  .subnav #filters,.subnav #subnav-cfg{flex-direction:row;flex-wrap:nowrap;flex:1;min-width:0;gap:6px;
+  .subnav #subnav-cfg{flex-direction:row;flex-wrap:nowrap;flex:1;min-width:0;gap:6px;
     overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-  .subnav #filters::-webkit-scrollbar,.subnav #subnav-cfg::-webkit-scrollbar{display:none}
+  .subnav #subnav-cfg::-webkit-scrollbar{display:none}
   .subnav #subnav-cfg{display:flex}
   .subnav #subnav-cfg[hidden]{display:none}
-  .subnav .item,.subnav #filters button{width:auto;white-space:nowrap;padding:7px 12px}
+  .subnav .item{width:auto;white-space:nowrap;padding:7px 12px}
   .app[data-subnav="no"] .subnav{display:none}
   .cfg-pop{left:8px;right:8px;width:auto;bottom:74px}
 }
@@ -1087,12 +1081,6 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
 .perfil-cab{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .perfil-cab b{font-size:18px}
 .perfil-cuerpo{padding:16px 18px;overflow:auto;display:flex;flex-direction:column;gap:16px}
-.pf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
-.pf-dato{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.pf-dato .k{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
-.pf-dato .v{display:block;font-size:15px;font-weight:600;margin-top:3px}
-.pf-bloque h4{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
-.pf-bloque p{margin:0;font-size:14.5px}
 .pf-campos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pf-campos label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:3px}
 .pf-campos input,.pf-campos select,.pf-campos textarea{width:100%}
@@ -1101,6 +1089,156 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
    depender de que alguien distinga un color. */
 .pf-amago{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:600}
 @media(max-width:640px){.pf-campos{grid-template-columns:1fr}}
+
+/* ===== El orden de un CRM (2026-10-12) =====
+   Lo que se tomó de un CRM tipo Attio que le gustó al usuario: números en la barra, listas y fijados, tablas con
+   valor, quién la lleva y próximo paso, cifras arriba de Prospectos y la ficha en dos columnas con su historia.
+   Sobre la piel de siempre (blanco, azul, plano): se tomó el orden, no el estilo. Va al final de la hoja a
+   propósito: entre dos reglas iguales gana la última, y estas tienen que ganar a las de antes. */
+
+/* La etapa como pastilla: punto de color Y nombre. El punto solo no lo distingue todo el mundo. */
+.chip.etapa{gap:6px;font-weight:600;white-space:nowrap;background-color:color-mix(in srgb,var(--tone) 9%,var(--panel));
+  border-color:color-mix(in srgb,var(--tone) 24%,transparent);color:color-mix(in srgb,var(--tone) 78%,var(--text))}
+.chip.etapa.stage-activo{--tone:var(--brand)}
+.chip.etapa.stage-inicio{--tone:var(--muted)}
+.chip.etapa .punto{width:6px;height:6px;flex:0 0 6px;border-radius:50%;background:var(--tone)}
+
+/* Valor, próximo paso y quién la lleva: se pintan igual en todas partes. */
+.valor{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.valor.vacio,.paso.vacio{color:var(--muted);font-weight:400}
+.paso{font-size:13.5px}
+/* 🪤 Urgente es ámbar Y la frase empieza por lo que hay que hacer («Contestar», «Retomar»): el color no es la única señal. */
+.paso.urgente{color:var(--warn);font-weight:600}
+.paso.t-cita{color:color-mix(in srgb,var(--cita) 80%,var(--text))}
+.lleva{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;white-space:nowrap;max-width:100%}
+.lleva .nom{overflow:hidden;text-overflow:ellipsis}
+.lleva .ini{width:22px;height:22px;flex:0 0 22px;border-radius:50%;display:grid;place-items:center;font-size:9.5px;font-weight:700;
+  background:var(--bg);color:var(--muted-strong);border:1px solid var(--line)}
+.lleva.asistente .ini{background:var(--brand-soft);color:var(--brand);border-color:transparent}
+.lleva.equipo .ini,.lleva.persona .ini{background:var(--human);color:var(--human-edge);border-color:color-mix(in srgb,var(--human-edge) 30%,transparent)}
+
+/* La barra: cuántos hay en cada sección (en gris: no urge; lo que urge va en rojo, en la insignia). */
+.rail .rb .cuenta{position:absolute;top:50%;right:12px;transform:translateY(-50%);font-size:12px;color:#8b94a5;font-variant-numeric:tabular-nums}
+.rail .rb .cuenta:empty{display:none}
+.rail .rb:has(.cuenta:not(:empty))::after{padding-right:28px}
+.rail-listas{display:flex;flex-direction:column;gap:2px;margin-top:8px;flex:0 1 auto;min-height:0;overflow:auto;scrollbar-width:thin}
+.rail-listas .rl-t{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8b94a5;padding:10px 12px 4px}
+.rail-listas .rl-i{display:flex;align-items:center;gap:11px;width:100%;min-height:36px;padding:0 12px;border:0;background:none;border-radius:9px;
+  color:var(--riel-texto);font:inherit;font-size:13.5px;cursor:pointer;text-align:left}
+.rail-listas .rl-i:hover{background:var(--riel-activo);color:#fff}
+.rail-listas .rl-ic{width:21px;flex:0 0 21px;text-align:center;font-size:14px;line-height:1}
+.rail-listas .rl-ic.ini{height:21px;border-radius:50%;background:#1d2939;color:var(--riel-texto);font-size:9px;font-weight:700;display:grid;place-items:center}
+.rail-listas .rl-n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-listas .cuenta{font-size:12px;color:#8b94a5;font-variant-numeric:tabular-nums}
+@media(max-width:900px){.rail-listas,.rail .rb .cuenta{display:none}}
+
+/* Clientes: pestañas con su número, cabecera que ordena, y al pie cuántos y cuánto suman. */
+.cli-pestanas{padding:10px 20px 0 20px}
+.cli-pestanas .filters{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.cli-pestanas .filters::-webkit-scrollbar{display:none}
+.cli-pestanas .filters button{flex:0 0 auto;white-space:nowrap}
+#view-clientes .topbar input[type=search]{flex:0 1 320px;min-width:0}
+.ficha .perfil-cab .grow{flex:1}
+@media(max-width:900px){.cli-pestanas{padding:8px 12px 0}}
+#cli-filtros button .cuenta{margin-left:7px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+#cli-filtros button.on .cuenta{color:inherit}
+.cli-tabla th .orden{background:none;border:0;padding:0;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer;white-space:nowrap}
+.cli-tabla th .orden:hover,.cli-tabla th .orden.on{color:var(--text)}
+.cli-tabla td{vertical-align:middle}
+.cli-tabla .fuego,.cli-tabla .fijo{font-size:12px}
+.cli-tabla .fijo{color:var(--warn)}
+.cli-tabla .proximo{min-width:190px;max-width:300px}
+.cli-tabla .proximo .quiere{max-width:none;margin-top:2px}
+.cli-tabla tfoot td{border-bottom:0;padding-top:12px;font-size:13px;color:var(--muted)}
+.cli-tabla tfoot b{color:var(--text);font-variant-numeric:tabular-nums}
+
+/* Prospectos: cuánto hay en juego, y cuánto suma cada columna. */
+.pip-cifras{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 24px;padding:14px 20px 0 16px}
+.pip-cifras:empty{display:none}
+.pip-cifras .t{display:block;font-size:12.5px;color:var(--muted)}
+.pip-cifras .n{display:block;font-size:22px;font-weight:700;line-height:1.25;font-variant-numeric:tabular-nums}
+/* Cuando la cifra no es una cifra —«Sin precios»— va más pequeña y en gris, como en Hoy. */
+.pip-cifras .n.flojo{font-size:15px;line-height:1.9;color:var(--muted);font-weight:600}
+.pip-cifras .p{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-barra{grid-column:1/-1;display:flex;gap:3px;height:6px;margin-top:10px}
+.pc-barra i{--tone:var(--muted);border-radius:3px;background:var(--tone);min-width:6px}
+.pc-barra i[data-rol=activo]{--tone:var(--brand)}
+.pc-barra i[data-rol=interes]{--tone:var(--warn)}
+.pc-barra i[data-rol=cita]{--tone:var(--cita)}
+.col h3{gap:8px;justify-content:flex-start}
+.col h3 .nom{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.col h3 .suma{font-size:12.5px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.card .cifra{display:flex;align-items:center;gap:8px;margin-top:6px;min-width:0}
+.card .cifra .valor{font-size:13.5px}
+.card .cifra .paso-corto{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:12px}
+.card .cifra .paso{font-size:12px}
+.card .lleva-mini .nom{display:none}
+@media(max-width:900px){.pip-cifras{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;padding:10px 12px 0}.pip-cifras .n{font-size:19px}}
+
+/* La ficha en dos columnas: lo que pasó a la izquierda, los datos a la derecha. */
+dialog.perfil.ficha{width:min(1080px,96vw);height:min(88vh,880px);max-height:none}
+/* 🪤 El display va en [open], nunca suelto: suelto deja el diálogo a la vista cerrado (trampa 2 de diseno-tablero.md). */
+dialog.perfil.ficha[open]{display:flex;flex-direction:column}
+.ficha .perfil-cab{gap:12px}
+.ficha-ini{width:40px;height:40px;flex:0 0 40px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:15px;background:var(--brand-soft);color:var(--brand)}
+.ficha-ini:empty{display:none}
+.ficha-titulo{min-width:0}
+.ficha-nav{display:flex;align-items:center;gap:6px}
+.ficha-nav[hidden]{display:none}
+.ficha-nav .btn{min-width:34px;font-size:16px;line-height:1}
+.ficha .perfil-cuerpo{padding:0;flex:1;min-height:0;overflow:hidden}
+.ficha-cols{display:grid;grid-template-columns:minmax(0,1fr) 330px;height:100%;min-height:0}
+.ficha-main{padding:16px 20px 20px;overflow:auto;min-width:0;display:flex;flex-direction:column;gap:14px}
+.ficha-lado{border-left:1px solid var(--line);padding:16px 18px 20px;overflow:auto;background:color-mix(in srgb,var(--bg) 55%,var(--panel))}
+.ficha-lado h4{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.ficha-lado h4:not(:first-child){margin-top:20px}
+.ficha-quiere{margin:0;font-size:14.5px;line-height:1.5}
+.det{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 14px;margin:0;font-size:13.5px;align-items:center}
+.det dt{color:var(--muted);white-space:nowrap}
+.det dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.det select{width:100%}
+.det-chat{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.ficha-tabs{display:flex;gap:20px;border-bottom:1px solid var(--line)}
+.ficha-tabs button{display:flex;align-items:center;gap:6px;border:0;background:none;padding:8px 0;margin-bottom:-1px;font:inherit;font-size:14px;
+  color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.ficha-tabs button.on{color:var(--text);font-weight:600;border-bottom-color:var(--brand)}
+.ficha-tabs .cuenta{font-size:12px;color:var(--muted);font-weight:400}
+.nota-nueva{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
+.nota-nueva textarea{flex:1;min-width:0;min-height:42px;resize:vertical}
+.historia{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+.h-dia{font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 0}
+.h-dia:first-child{margin-top:4px}
+.h-item{display:flex;align-items:baseline;gap:10px;font-size:13.5px;line-height:1.45}
+.h-item .h-punto{--tone:var(--muted);width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:var(--tone);transform:translateY(-1px)}
+.h-item.etapa .h-punto{--tone:var(--brand)}
+.h-item.cita .h-punto{--tone:var(--cita)}
+.h-item.traspaso .h-punto{--tone:var(--warn)}
+.h-item .h-linea{flex:1;min-width:0}
+.h-item .h-cita{display:block;color:var(--muted);font-size:13px}
+.h-item.nota{display:block;background:var(--human);border:1px solid color-mix(in srgb,var(--human-edge) 25%,transparent);border-radius:10px;padding:9px 12px}
+.h-item.nota .h-cab{display:flex;align-items:baseline;gap:8px;margin-bottom:3px;flex-wrap:wrap}
+.h-item.nota .h-texto{white-space:pre-wrap;overflow-wrap:anywhere}
+.h-item.nota.fija{background:var(--brand-soft);border-color:color-mix(in srgb,var(--brand) 22%,transparent)}
+.corregir{margin-top:20px;border-top:1px solid var(--line);padding-top:12px}
+.corregir summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)}
+.corregir .pf-campos{grid-template-columns:1fr;margin-top:10px}
+@media(max-width:900px){
+  dialog.perfil.ficha{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
+  .ficha .perfil-cuerpo{overflow:auto}
+  .ficha-cols{grid-template-columns:1fr;height:auto}
+  .ficha-main{overflow:visible}
+  .ficha-lado{border-left:0;border-top:1px solid var(--line)}
+}
+
+/* Conversaciones: «Marcar todo como leído» va con los filtros, pero no es uno: se distingue por el color. */
+.list .tools .filters{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.list .tools .filters::-webkit-scrollbar{display:none}
+.list .tools .filters[hidden],.list .tools .filters [hidden]{display:none}
+.list .tools .filters button{flex:0 0 auto;white-space:nowrap;border:1px solid var(--line);background:var(--panel);color:var(--text);
+  border-radius:999px;padding:5px 11px;font:inherit;font-size:12.5px;cursor:pointer}
+.list .tools .filters button:hover{background:var(--row-hover)}
+.list .tools .filters button.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+.list .tools .filters button.leidas{border-color:transparent;background:none;color:var(--brand)}
 </style>
 </head>
 <body>
@@ -1122,12 +1260,15 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
       <button class="rb active" data-view="today" data-tip="Hoy" aria-label="Hoy"><i class="ic" data-ic="sun"></i></button>
       <button class="rb" data-view="inbox" data-tip="Conversaciones" aria-label="Conversaciones"><i class="ic" data-ic="message"></i><span class="badge" id="badge-unread"></span></button>
       <button class="rb" data-view="calendar" data-tip="Calendario" aria-label="Calendario"><i class="ic" data-ic="calendar"></i><span class="badge" id="badge-cal"></span></button>
-      <button class="rb" data-view="pipeline" data-tip="Prospectos" aria-label="Prospectos"><i class="ic" data-ic="columns"></i></button>
-      <button class="rb" data-view="clientes" data-tip="Clientes" aria-label="Clientes"><i class="ic" data-ic="users"></i></button>
+      <button class="rb" data-view="pipeline" data-tip="Prospectos" aria-label="Prospectos"><i class="ic" data-ic="columns"></i><span class="cuenta" id="cuenta-pip"></span></button>
+      <button class="rb" data-view="clientes" data-tip="Clientes" aria-label="Clientes"><i class="ic" data-ic="users"></i><span class="cuenta" id="cuenta-cli"></span></button>
       <button class="rb" data-view="ventas" data-tip="Ventas" aria-label="Ventas"><i class="ic" data-ic="venta"></i></button>
       <button class="rb" data-view="seguimientos" data-tip="Seguimientos" aria-label="Seguimientos"><i class="ic" data-ic="volver"></i><span class="badge" id="badge-seg"></span></button>
       <button class="rb" data-view="analysis" data-tip="Análisis" aria-label="Análisis"><i class="ic" data-ic="chart"></i></button>
     </nav>
+    <!-- Listas guardadas (calientes, las mías) y las fichas fijadas: lo que se quiere a un clic. Se llena desde
+         pintarListas(); en el celular no va, porque el riel de abajo no tiene sitio. -->
+    <div class="rail-listas" id="rail-listas"></div>
     <div class="spacer"></div>
     <div class="sep"></div>
     <button class="rb bell" id="bell-btn" data-tip="Notificaciones" aria-label="Notificaciones"><i class="ic" data-ic="bell"></i><span class="badge" id="badge-notif"></span></button>
@@ -1146,15 +1287,6 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
     <h2 id="subnav-titulo">Conversaciones</h2>
     <div class="biz" id="subnav-biz"></div>
     <div id="subnav-cuerpo">
-      <div class="filters" id="filters">
-        <button data-f="all" class="on">Todos</button>
-        <button data-f="unread">Sin leer</button>
-        <button data-f="human">Con una persona</button>
-        <button data-f="hot">Prospectos</button>
-        <button data-rol="interes" data-f="stage:interesado" hidden>Interesados</button>
-        <button data-rol="cita" data-f="stage:cita_agendada" hidden>Con cita</button>
-        <button data-f="archived">Archivados</button>
-      </div>
       <div id="subnav-cfg" hidden></div>
     </div>
   </aside>
@@ -1185,6 +1317,19 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
         <div class="list">
           <div class="tools">
             <input type="search" id="q" placeholder="Buscar por nombre, teléfono o lo que se dijo…">
+            <!-- Los filtros, como pestañas encima de la lista y no en un panel aparte: ese panel le quitaba 212 px a
+                 la conversación, que es lo único que importa en esta pantalla. -->
+            <div class="filters" id="filters">
+              <button data-f="all" class="on">Todos</button>
+              <button data-f="unread">Sin leer</button>
+              <button data-f="human">Con una persona</button>
+              <button data-f="hot">Prospectos</button>
+              <button data-rol="interes" data-f="stage:interesado" hidden>Interesados</button>
+              <button data-rol="cita" data-f="stage:cita_agendada" hidden>Con cita</button>
+              <button data-f="archived">Archivados</button>
+              <!-- Para el día que se atendió todo desde el teléfono y el tablero sigue en rojo. -->
+              <button class="leidas" id="marcar-leidas">Marcar todo como leído</button>
+            </div>
           </div>
           <div class="rows" id="rows"><div class="empty">Sin conversaciones todavía.</div></div>
         </div>
@@ -1241,6 +1386,8 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
     <!-- Pipeline -->
     <section class="view" id="view-pipeline">
       <div class="topbar"><h1>Prospectos</h1><span class="muted small">Arrastra una tarjeta o usa «Mover a…» para cambiar de etapa</span><span class="grow"></span><select id="pip-sede" aria-label="Qué sede mirar" hidden></select></div>
+      <!-- Cuánto hay en juego y dónde: las cifras de arriba y la barra por etapa. Ver pintarCifrasEmbudo(). -->
+      <div class="pip-cifras" id="pip-cifras"></div>
       <div class="board" id="board"></div>
       <div class="sr-only" id="board-status" role="status"></div>
     </section>
@@ -1324,25 +1471,29 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
     <section class="view" id="view-clientes">
       <div class="topbar">
         <h1>Clientes</h1>
-        <div class="filters" id="cli-filtros">
-          <button data-g="todos" class="on">Todos</button>
-          <button data-g="cliente">Clientes</button>
-          <button data-g="prospecto">Prospectos</button>
-          <button data-g="perdido">Perdidos</button>
-        </div>
         <span class="grow"></span>
         <input type="search" id="cli-q" placeholder="Buscar por nombre, teléfono o lo que dijo…">
         <button class="btn sm" id="cli-csv">Bajar en Excel</button>
         <button class="btn sm primary" id="cli-nuevo">Nuevo contacto</button>
       </div>
+      <!-- Las pestañas, cada una con su número: se pintan en renderClientes(). -->
+      <div class="cli-pestanas"><div class="filters" id="cli-filtros"></div></div>
       <div class="pad"><div id="cli-tabla"></div></div>
     </section>
 
     <!-- La ficha de una persona. Se abre desde Clientes; el chat está a un botón, no de golpe. -->
-    <dialog id="dlg-perfil" class="perfil">
+    <dialog id="dlg-perfil" class="perfil ficha" aria-labelledby="pf-nombre">
       <div class="perfil-cab">
-        <div><b id="pf-nombre">…</b><div class="small muted" id="pf-sub"></div></div>
+        <span class="ficha-ini" id="pf-ini" aria-hidden="true"></span>
+        <div class="ficha-titulo"><b id="pf-nombre">…</b><div class="small muted" id="pf-sub"></div></div>
         <span class="grow"></span>
+        <!-- «3 de 23»: pasar a la siguiente de la lista desde la que se abrió, sin volver a ella. -->
+        <div class="ficha-nav" id="pf-nav" hidden>
+          <button class="btn sm" id="pf-ant" aria-label="Ficha anterior">‹</button>
+          <span class="small muted" id="pf-pos"></span>
+          <button class="btn sm" id="pf-sig" aria-label="Ficha siguiente">›</button>
+        </div>
+        <button class="btn sm" id="pf-fijar" aria-pressed="false">☆ Fijar</button>
         <button class="btn sm" id="pf-chat">Ver conversación</button>
         <button class="btn sm" id="pf-cerrar">Cerrar</button>
       </div>

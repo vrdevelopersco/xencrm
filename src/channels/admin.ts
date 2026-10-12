@@ -12,14 +12,14 @@ import { retratoDelNegocio } from '../rag/retrato.js';
 import { cerrarPropuesta, propuestaDe, propuestasPendientes, verPropuesta } from '../crm/propuestas.js';
 import { genteDelGrupo } from '../crm/grupo-gente.js';
 import { getMessages } from '../agent/memory.js';
-import { contactNumber, deleteContact, rolDe, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
+import { addEvent, contactNumber, deleteContact, rolDe, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
 import { availableSlots, bookAppointment, formatSlot, listAppointments, setReminder, updateAppointment } from '../crm/appointments.js';
 import { llevaArchivos, replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
 import { appointmentsCsv, contactsCsv } from '../crm/export.js';
 import { isSnoozed, snoozeFollowup } from '../crm/followup.js';
 import { reminderTime, remindersBoard } from '../crm/reminders.js';
-import { onEvent } from '../crm/events.js';
+import { emitEvent, onEvent } from '../crm/events.js';
 import { listNotifications, startNotifications } from '../crm/notifications.js';
 import { usageSummary } from '../llm/usage.js';
 import { entrar as entrarALaConversacion, salir as salirDeLaConversacion, quienesEstan } from '../crm/presencia.js';
@@ -78,12 +78,21 @@ import { answerVerification, dismissVerification, listVerifications } from '../c
 import { grupos as gruposDe, setGrupos, setModoCanal, setSoloEscucha, soloEscucha as soloEscuchaDe, type ChannelId } from './switches.js';
 import type { Contact } from '../crm/contacts.js';
 import { cabecerasDeSiempre, soloDesdeAqui } from '../cabeceras.js';
+import { contextoDelPaso, proximoPaso } from '../crm/proximo.js';
 
-/** Temperatura y recap (hechos de la ficha + próxima cita) para cada contacto que ve el tablero. */
+/**
+ * Lo que el tablero enseña de cada contacto además de la ficha: temperatura, recap (hechos de la ficha + próxima
+ * cita), cuánto vale (crm/valor.ts) y el próximo paso (crm/proximo.ts). Va en la lista y no se calcula en el
+ * navegador porque el valor necesita el catálogo y el paso necesita citas y mensajes de todas las fichas.
+ */
 function forBoard<T extends Contact>(list: T[]) {
   const next = new Map<string, ReturnType<typeof listAppointments>[number]>();
   for (const a of listAppointments({ from: Date.now(), status: 'confirmada', limit: 5000 })) if (!next.has(a.userId)) next.set(a.userId, a);
-  return list.map((x) => ({ ...x, temperature: temperature(x.score), recap: recap(x, next.get(x.id) ?? null) }));
+  const ctx = contextoDelPaso();
+  return list.map((x) => {
+    const v = valorDe(x);
+    return { ...x, temperature: temperature(x.score), recap: recap(x, next.get(x.id) ?? null), valor: v.valor, valorOrigen: v.origen, proximo: proximoPaso(x, ctx) };
+  });
 }
 
 export const ADMIN_TOKEN = env.adminToken || randomBytes(12).toString('hex');
@@ -142,10 +151,30 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       q,
       humanMode: human === undefined ? undefined : human === '1',
       archived: c.req.query('archived') === '1',
+      // 🪤 Clientes y Prospectos piden 500, y esto los dejaba en las 200 de siempre sin decir nada: un negocio con
+      // 300 fichas veía 200 y creía que eran todas.
+      limit: Math.min(Math.max(Number(c.req.query('limit')) || 200, 1), 2000),
     });
     const board = forBoard(contacts);
     // Con búsqueda, cada fila trae el pedacito de conversación donde aparece lo buscado.
     return c.json(q ? board.map((b) => ({ ...b, hit: messageHit(b.id, q) })) : board);
+  });
+
+  /**
+   * Los números de la barra lateral: cuántos prospectos abiertos, cuántas fichas, cuántos calientes y cuántas
+   * lleva quien está mirando (`yo`, el nombre con el que responde). «Caliente» es lo mismo que en Hoy: abierto y
+   * con 60 o más, con el descuento por silencio; si aquí contara distinto, la barra y Hoy no cuadrarían.
+   */
+  app.get('/admin/api/cuentas', (c) => {
+    const yo = String(c.req.query('yo') ?? '').trim();
+    const todos = listContacts({ limit: 5000 });
+    const abiertos = todos.filter((x) => !estaCerrada(x.stage));
+    return c.json({
+      total: todos.length,
+      abiertos: abiertos.length,
+      calientes: abiertos.filter((x) => x.score >= 60).length,
+      mios: yo ? todos.filter((x) => x.humanMode && x.humanBy === yo).length : 0,
+    });
   });
 
   // Dar de alta a alguien a mano: el que llegó por el local, por una llamada o con una tarjeta. Lo delicado
@@ -176,7 +205,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
         return mensajesDeChat(id).filter((m) => m.ts < desde);
       })(),
       analyses: listAnalyses(id, 10),
-      events: listEvents(id, 50),
+      events: listEvents(id, 200),
       appointments: listAppointments({ userId: id, limit: 20 }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })),
       replyWindow: replyWindow(id),
       propuesta: propuestaDe(id), // lo que aiva dejó listo aquí, si hay
@@ -274,6 +303,42 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     }
     const contact = updateContact(id, patch);
     return c.json({ contact });
+  });
+
+  /**
+   * Notas del equipo en la historia de la ficha: cada una con su fecha y quién la escribió. Van en `events` (tipo
+   * `nota`) y no en `users.notes`, que es UNA nota fija que se sobrescribe entera: «Priya decide la compra» y,
+   * tres días después, «pidió que la llamen el jueves» son dos cosas que pasaron, no una que se corrige.
+   *
+   * 🪤 La retención anonimiza dejando el `payload` de los eventos en `{}`: el texto de las notas se va con lo
+   * demás, que es lo que tiene que pasar con lo que alguien escribió sobre una persona.
+   */
+  app.post('/admin/api/contacts/:id/notas', async (c) => {
+    const id = c.req.param('id');
+    const body = (await c.req.json().catch(() => ({}))) as { texto?: string; por?: string };
+    if (!getContact(id)) return c.json({ error: 'no existe' }, 404);
+    const texto = String(body.texto ?? '').trim();
+    if (!texto) return c.json({ error: 'la nota está vacía' }, 400);
+    if (texto.length > 2000) return c.json({ error: 'la nota va hasta 2.000 letras' }, 400);
+    addEvent(id, 'nota', { texto, por: String(body.por ?? '').trim().slice(0, 40) || 'el equipo' });
+    emitEvent('contact', id, { nota: true });
+    return c.json({ ok: true, events: listEvents(id, 200) }, 201);
+  });
+
+  // Solo se borran notas: el resto de la historia (etapas, citas, traspasos) es lo que pasó y no se edita.
+  app.delete('/admin/api/contacts/:id/notas/:evento', (c) => {
+    const id = c.req.param('id');
+    const r = getDb().prepare("DELETE FROM events WHERE id = ? AND user_id = ? AND type = 'nota'").run(Number(c.req.param('evento')), id);
+    if (!r.changes) return c.json({ error: 'esa nota no existe' }, 404);
+    emitEvent('contact', id, { nota: true });
+    return c.json({ ok: true, events: listEvents(id, 200) });
+  });
+
+  // «Marcar todo como leído»: para el día que se atendió todo desde el teléfono y el tablero sigue en rojo.
+  app.post('/admin/api/contacts/leidas', (c) => {
+    const ids = (getDb().prepare('SELECT id FROM users WHERE unread > 0 AND archived = 0 LIMIT 2000').all() as { id: string }[]).map((r) => r.id);
+    for (const id of ids) updateContact(id, { unread: 0 });
+    return c.json({ ok: true, cuantas: ids.length });
   });
 
   app.post('/admin/api/contacts/:id/human', async (c) => {
@@ -1047,7 +1112,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     return appt ? c.json({ appointment: appt }) : c.json({ error: 'no existe' }, 404);
   });
 
-  app.get('/admin/api/stats', (c) => c.json({ ...stats(), stageLabels: STAGE_LABELS, stages: STAGE_DEFS }));
+  // La moneda va aquí porque el tablero la necesita desde el arranque para escribir cualquier valor.
+  app.get('/admin/api/stats', (c) => c.json({ ...stats(), stageLabels: STAGE_LABELS, stages: STAGE_DEFS, moneda: business.business.currency }));
 
   // Vista "Hoy": lo que un asesor debe atender primero, cada fila abre la conversación.
   /**

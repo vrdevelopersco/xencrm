@@ -269,5 +269,24 @@ check('🪤 ninguna clase nueva repite el nombre de otra', repetidas.length === 
   `se repiten: ${repetidas.join(', ')} — si son el mismo componente en capas, ponlo en ENCAPAS; si no, cámbiale el nombre a uno`);
 check('la búsqueda global no se llama como los colores de la marca', /dialog\.buscador\{/.test(html) && !/dialog\.paleta\{/.test(html));
 
+// — El orden de un CRM (2026-10-12): la ficha en dos columnas, la historia, «3 de 23» y fijar.
+// 🪤 Trampa 3 de diseno-tablero.md: lo que el JavaScript engancha al cargar tiene que estar ANTES del <script>, o
+// un `null.onclick` tumba el tablero entero.
+const antesDelScript = html.slice(0, html.indexOf('<script src="admin.js'));
+const enganchados = ['pf-ant', 'pf-sig', 'pf-fijar', 'pf-pos', 'pf-nav', 'pf-ini', 'marcar-leidas', 'rail-listas', 'pip-cifras', 'cuenta-pip', 'cuenta-cli', 'cli-filtros'];
+const faltan = enganchados.filter((id) => !antesDelScript.includes(`id="${id}"`));
+check('🪤 lo que se engancha al cargar existe antes del <script>', html.includes('<script src="admin.js') && faltan.length === 0, `faltan antes del script: ${faltan.join(', ')}`);
+// 🪤 Trampa 2: el display de un <dialog> va en [open]; suelto deja la ficha a la vista estando cerrada.
+check('🪤 la ficha solo se muestra abierta', /dialog\.perfil\.ficha\[open\]\{display:flex/.test(html) && !/dialog\.perfil\.ficha\{[^}]*display:/.test(html));
+// La historia cuenta en palabras: un tipo de evento que no sabe nombrar no sale, en vez de salir como «human_on».
+const historia = js.slice(js.indexOf('function historiaHtml'), js.indexOf('function historiaHtml') + 6000);
+check('la historia no enseña tipos de evento internos', /default: return;/.test(historia) && !/default: return e\.type/.test(historia));
+check('🪤 la historia nunca dice «bot» ni «admin» como si fueran alguien', /by === 'bot' \? agente/.test(historia) && /by === 'admin' \|\| by === 'equipo' \? 'El equipo'/.test(historia));
+check('borrar una nota pide un segundo clic, sin ventanas del navegador', /function engancharBorrarNotas/.test(js) && !/confirm\(/.test(js.slice(js.indexOf('function engancharBorrarNotas'), js.indexOf('function engancharBorrarNotas') + 900)));
+check('los fijados son de este cliente, no de todos los del dominio', /localStorage\.getItem\(LLAVE\('fijados'\)\)/.test(js) && !/localStorage\.getItem\('aiva\.fijados/.test(js));
+check('el dinero sale en la moneda del negocio, no en pesos fijos', /currency: state\.moneda \|\| 'COP'/.test(js) && !/currency: 'COP'/.test(js));
+check('🪤 sin valor es «—», nunca «$0»', /function valorHtml\(c, corto\) \{\s*return c\.valor \?/.test(js));
+check('los filtros de Conversaciones van encima de la lista, no en un panel que le quita sitio al chat', /<div class="list">[\s\S]*?id="filters"/.test(html) && /var conPanel = CFG_VIEWS\[view\];/.test(js));
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);
