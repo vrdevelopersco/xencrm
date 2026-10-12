@@ -9,6 +9,18 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### El recordatorio cuenta los días en la hora del negocio · `bc7771c`
+🪤 El día de la semana salía de `getDay()`, en la hora de la máquina. En un servidor en UTC, un recordatorio a las
+7:30 p. m. de Bogotá ya es el día siguiente, y un domingo cerrado pasaba por un lunes abierto. Ahora se cuenta en la
+hora del negocio; probado con `TZ=UTC`. De paso, el recordatorio a mano decía «La conversación la lleva bot» cuando
+el traspaso lo hizo el asistente, y el README seguía diciendo que el recordatorio sale el día antes a las 5 p. m.,
+cuando desde el 3 de octubre sale la mañana de la cita. Las dos pruebas nuevas fallan con el código de antes.
+
+### Los escenarios de DUNOR esperan la cancelación de hoy · `c1d4c67`
+Dos turnos de los escenarios esperaban «¿confirmas que cancelo?», que dejó de existir el 3 de octubre con la
+retención de citas. Ahora esperan la pregunta de qué pasó y la cancelación cuando el cliente insiste. Con Gemma,
+40 de 40.
+
 ### Una clave o una tarjeta escrita en el chat no se guarda ni llega al modelo · `ce06a07`
 «Mi clave es 4567, no puedo entrar» quedaba en claro en el CRM y se le mandaba a OpenAI; el tapador que existía solo
 corría en los chats importados. Ahora una clave, un PIN, un código de verificación, una llave o una tarjeta se tapan
