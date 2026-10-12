@@ -9,6 +9,14 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### La consola, con la misma piel del tablero · `8b1a237`
+La consola seguía con crema, dorado, vidrio y hojas de bloc, y el tablero es blanco y azul desde el 2 de octubre:
+abrir uno desde la otra se sentía como cambiar de producto. Ahora hablan igual por dentro. La fila de cada cliente
+deja a la vista «Abrir tablero» y «Ver más»; lo de una vez al mes pasa a «⋯». 🪤 La entrada no cambia, porque es
+el puente desde la portada: los colores nuevos mandan solo con la aplicación a la vista. 🪤 Había media hoja de
+estilos copiada dentro de la regla del celular. Dos roturas a propósito en las comprobaciones nuevas, dos fallos.
+Visto en Chrome a 1340 y 390 px.
+
 ### El orden de un CRM en el tablero · `b21f93d`
 El usuario vio un CRM tipo Attio y le gustó. Se quedó el estilo de hoy y se tomó del video lo demás. Cada ficha trae
 su **próximo paso**, escrito con reglas y sin modelo, y su **valor**. Clientes tiene pestañas con su número, orden
