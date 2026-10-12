@@ -9,6 +9,13 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### Desplegado `53693f6` y revisado en `/_salud`
+El usuario subió el paquete en la tarde. `/_salud` contesta `53693f6` en Node 24, con el enrutador en 67 MB y los
+cuatro procesos vivos, sin caídas y con un solo arranque cada uno. La portada, la consola y los tres tableros
+responden 200. El primer vistazo dio otra hora de arranque, cuatro segundos antes: es el doble arranque del
+alojamiento que explica `desplegar.md`, y después se quedó quieto. Los avisos de DUNOR, sin mensajes hace 3 días, y
+de HRC, sin mensajes hace 17, vienen de antes del despliegue: no los causó este cambio.
+
 ### Los fijados en la base de cada cliente · `0f4c870`
 Vivían en el navegador y no seguían a nadie a otro computador. Ahora van en `settings` con el nombre con el que
 responde cada quien, como «Míos». Lo que estaba en el navegador se sube solo la primera vez. 🪤 Un identificador de
