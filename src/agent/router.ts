@@ -14,6 +14,14 @@ export interface Route {
   engine: Engine;
   role: 'light' | 'heavy';
   reason: string;
+  /**
+   * Va al pesado por lo que pidió el cliente (recomendar, detalles, medidas…): se le avisa que va a tardar.
+   *
+   * 🪤 No basta con `role === 'heavy'`. Con un motor caído el turno también va al pesado, y entonces a un «hola» le
+   * llegaba «dame un segundito que lo consulto» antes del saludo: el aviso es por lo que se pregunta, no por qué
+   * motor quedó en pie.
+   */
+  porLoQuePidio?: boolean;
 }
 
 // El modelo pesado es para cuando el cliente pide algo específico: recomendar o comparar, detalles puntuales de una
@@ -77,6 +85,6 @@ export function chooseEngine(input: RouteInput): Route {
   const why = heavyReason(input.intent, input.userText, input.lastRole);
   // Al 90 % del tope de gasto, lo específico lo contesta el de responder, que es el barato (ver crm/presupuesto.ts).
   if (why && enAhorro()) return L(`ahorro por el tope de gasto (${why})`);
-  if (why) return H(why);
+  if (why) return { ...H(why), porLoQuePidio: true };
   return L(input.intent === 'saludo' ? 'saludo' : input.intent === 'info_tienda' ? 'info de tienda' : 'compra puntual');
 }

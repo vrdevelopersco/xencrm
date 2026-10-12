@@ -434,7 +434,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // este sería el único mensaje que se escapara, dejando al cliente con un «ya te digo» que nadie continúa.
   // 🪤 Y nunca se espera a que salga: se manda y se sigue. Si el canal tarda en aceptarlo, lo que no puede pasar
   // es que la respuesta de verdad llegue más tarde todavía por culpa del aviso de que va a tardar.
-  if (chosen.role === 'heavy' && !propone(msg.channel as ChannelId) && canDeliver(msg.userId)) {
+  if (chosen.porLoQuePidio && !propone(msg.channel as ChannelId) && canDeliver(msg.userId)) {
     const aviso = pick(MIENTRAS_CONSULTO.filter((x) => x !== ultimoAviso.get(msg.userId)));
     ultimoAviso.set(msg.userId, aviso);
     // La pregunta primero: si no, el aviso queda escrito antes de aquello a lo que responde.

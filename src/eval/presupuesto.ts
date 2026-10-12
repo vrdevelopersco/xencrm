@@ -177,12 +177,18 @@ check('la campana lo cuenta', listNotifications().some((n) => n.kind === 'presup
 
 // =====================================================================================================
 console.log('— Al 90 %: lo específico, con el barato');
+{
+  // 🪤 Antes de sondear, ningún motor cuenta como disponible: el saludo va al pesado por eso, y no por lo que se
+  // pidió. Ahí no va el «dame un segundito que lo consulto»: a un «hola» no se le consulta nada.
+  const caido = chooseEngine({ intent: 'saludo', userText: 'hola', estimatedTokens: 100 });
+  check('con los motores caídos, un saludo va al pesado pero sin aviso de que va a tardar', caido.role === 'heavy' && !caido.porLoQuePidio, JSON.stringify(caido));
+}
 await engines.probeEngines(); // OpenAI contesta; Ollama no
 borrarGasto();
 p.ponerTope(10);
 p.olvidarPresupuesto();
 const especifico = { intent: 'compra' as const, userText: '¿qué me recomiendas para una boda de día?', estimatedTokens: 500, lastRole: undefined };
-check('lejos del tope, lo específico va al pesado', chooseEngine(especifico).role === 'heavy', JSON.stringify(chooseEngine(especifico)));
+check('lejos del tope, lo específico va al pesado, y con aviso', chooseEngine(especifico).role === 'heavy' && chooseEngine(especifico).porLoQuePidio === true, JSON.stringify(chooseEngine(especifico)));
 gastar(9.2, ahora);
 p.olvidarPresupuesto();
 const conAhorro = chooseEngine(especifico);
