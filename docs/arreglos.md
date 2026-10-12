@@ -9,6 +9,15 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### El orden de un CRM en el tablero · `b21f93d`
+El usuario vio un CRM tipo Attio y le gustó. Se quedó el estilo de hoy y se tomó del video lo demás. Cada ficha trae
+su **próximo paso**, escrito con reglas y sin modelo, y su **valor**. Clientes tiene pestañas con su número, orden
+por columna y suma al pie. Prospectos tiene cifras arriba y suma por columna. La ficha va en dos columnas, con
+historia, notas con autor y fecha, «3 de 23» y fijar. La barra lleva números, las listas *Calientes* y *Míos* y los
+fijados. 🪤 La lista de contactos ignoraba el `limit` y devolvía 200 aunque se pidieran 500, sin decirlo. 🪤 El dinero
+salía siempre en pesos. `test:proximo` comprueba que «Retomar» coincida con Seguimientos. Tres roturas a propósito,
+tres fallos. Visto en Chrome a 1340 y 390 px, en claro y oscuro.
+
 ### Sedes al dar de alta un cliente, y sin sedes ni una palabra de sedes · `cc155fa`
 El alta de un cliente no preguntaba sedes: se ponían después, en El negocio. Ahora la consola, `pnpm cliente nuevo` y
 `pnpm onboard` las aceptan, una por línea con el nombre y la dirección. Una línea sin nombre se rechaza antes de
