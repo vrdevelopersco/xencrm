@@ -203,6 +203,7 @@ pantalla: es configuración, y al cerrar uno vuelve donde estaba.
 | Color y logo | La marca en el chat del sitio y en la página de la cita |
 | Zona horaria | Con eso entiende «mañana a las 3» |
 | Citas: si agenda, cómo se llama, dónde, duración, cupo, días y franjas | La agenda de verdad |
+| Sedes: nombre, dirección, cómo le dice la gente y, si cambia, su horario y cupo | Un mismo número para varios sitios |
 
 **El embudo y los datos que captura no se tocan desde ahí**: salen de cómo se dio de alta el cliente (citas,
 soporte o cotización). Cambiarlos en caliente dejaría fichas en etapas que ya no existen.

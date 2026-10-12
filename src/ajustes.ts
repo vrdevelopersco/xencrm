@@ -16,6 +16,7 @@ import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { BusinessConfigSchema, business } from './config.js';
+import { listAppointments } from './crm/appointments.js';
 
 const ARCHIVO = () => resolve(process.env.AIVA_CONFIG || 'aiva.config.json');
 
@@ -80,6 +81,25 @@ export const AjustesSchema = z.object({
     minLeadHours: z.number().min(0).max(720),
     maxDaysAhead: z.number().int().min(1).max(365),
   }),
+  /**
+   * Las sedes (crm/sedes.ts). 🪤 Opcional a propósito: un tablero viejo en la caché de alguien manda el formulario
+   * sin este campo, y si eso se leyera como «ninguna sede» las borraría todas al guardar otra cosa.
+   */
+  sedes: z
+    .array(
+      z.object({
+        /** Vacío en una sede nueva: el id sale del nombre. El de una que ya existe no cambia aunque cambie el nombre. */
+        id: z.string().trim().max(40).default(''),
+        nombre: z.string().trim().min(1, 'cada sede necesita un nombre').max(80),
+        direccion: z.string().trim().max(200),
+        apodos: z.array(z.string().trim().min(2, 'un apodo de sede tiene al menos dos letras').max(60)).max(20),
+        days: z.array(z.number().int().min(0).max(6)).max(7).optional(),
+        hours: z.array(z.tuple([hora, hora])).max(6).optional(),
+        capacity: z.number().int().min(1).max(50).optional(),
+      }),
+    )
+    .max(30)
+    .optional(),
 });
 export type Ajustes = z.infer<typeof AjustesSchema>;
 
@@ -123,7 +143,28 @@ export function ajustesDe(cfg = business): Ajustes {
       minLeadHours: c.minLeadHours,
       maxDaysAhead: c.maxDaysAhead,
     },
+    sedes: cfg.sedes.map((s) => ({
+      id: s.id,
+      nombre: s.nombre,
+      direccion: s.direccion,
+      apodos: s.apodos,
+      ...(s.days ? { days: s.days } : {}),
+      ...(s.hours ? { hours: s.hours.map(([x, y]) => [x, y] as [string, string]) } : {}),
+      ...(s.capacity ? { capacity: s.capacity } : {}),
+    })),
   };
+}
+
+/** El id de una sede nueva: su nombre sin «Sede», en minúsculas y sin tildes («Sede Norte» → «norte»). */
+function idDe(nombre: string, usados: Set<string>): string {
+  const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  // «DUNOR Centro» → «centro»: el nombre del negocio no distingue una sede de otra.
+  const negocio = fold(business.business.name);
+  const sinNegocio = fold(nombre).startsWith(`${negocio} `) ? fold(nombre).slice(negocio.length + 1) : fold(nombre);
+  const base = sinNegocio.replace(/^sede\s+/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 36) || 'sede';
+  let id = base;
+  for (let i = 2; usados.has(id); i++) id = `${base}-${i}`;
+  return id;
 }
 
 /** Lo guardado en el archivo, que puede ser más nuevo que lo que corre (si ya guardaron y no han reiniciado). */
@@ -152,6 +193,27 @@ export function guardar(entran: unknown): { ajustes: Ajustes; hayQueReiniciar: b
   for (const [desde, hasta] of a.citas.hours) {
     if (desde >= hasta) throw new Error(`la franja ${desde}–${hasta} termina antes de empezar`);
   }
+  let sedes: NonNullable<Ajustes['sedes']> | undefined;
+  if (a.sedes) {
+    const usados = new Set(a.sedes.map((s) => s.id).filter(Boolean));
+    sedes = a.sedes.map((s) => {
+      const id = s.id || idDe(s.nombre, usados);
+      usados.add(id);
+      if (s.days && !s.days.length) throw new Error(`${s.nombre} tiene horario propio pero ningún día`);
+      for (const [desde, hasta] of s.hours ?? []) {
+        if (desde >= hasta) throw new Error(`en ${s.nombre}, la franja ${desde}–${hasta} termina antes de empezar`);
+      }
+      if (s.hours && !s.hours.length) throw new Error(`${s.nombre} tiene horario propio pero ninguna franja`);
+      return { ...s, id };
+    });
+    // 🪤 Quitar una sede con citas por delante dejaría esas citas en un sitio que ya no existe: nadie las cuenta en
+    // ningún cupo y el recordatorio manda a una dirección que el negocio ya no ofrece. Primero se mueven.
+    const quedan = new Set(sedes.map((s) => s.id));
+    for (const vieja of business.sedes.filter((s) => !quedan.has(s.id))) {
+      const proximas = listAppointments({ from: Date.now(), status: 'confirmada', limit: 1000 }).filter((x) => x.sede === vieja.id).length;
+      if (proximas) throw new Error(`${vieja.nombre} tiene ${proximas} cita${proximas === 1 ? '' : 's'} por delante: muévelas o cancélalas antes de quitarla`);
+    }
+  }
 
   const archivo = ARCHIVO();
   const actual = JSON.parse(readFileSync(archivo, 'utf8')) as Record<string, any>;
@@ -162,13 +224,15 @@ export function guardar(entran: unknown): { ajustes: Ajustes; hayQueReiniciar: b
     brand: { ...(actual.brand ?? {}), ...a.marca },
     timezone: a.timezone,
     appointments: { ...actual.appointments, ...a.citas },
+    ...(sedes ? { sedes } : {}),
   };
   // El mismo esquema con el que se lee al arrancar: si no pasa, el cliente no levantaría.
   BusinessConfigSchema.parse(nuevo);
 
   if (existsSync(archivo)) copyFileSync(archivo, `${archivo}.anterior`);
   writeFileSync(archivo, `${JSON.stringify(nuevo, null, 2)}\n`);
-  return { ajustes: a, hayQueReiniciar: JSON.stringify(a) !== JSON.stringify(ajustesDe()) };
+  const guardados = ajustesDe(BusinessConfigSchema.parse(nuevo));
+  return { ajustes: guardados, hayQueReiniciar: JSON.stringify(guardados) !== JSON.stringify(ajustesDe()) };
 }
 
 /** Un mensaje que se entienda, en vez del volcado de zod. */

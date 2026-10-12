@@ -38,6 +38,7 @@ import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
 import { apagarClaveDelCliente, claveDelCliente, encenderClaveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente } from '../motores.js';
 import { ponerTope, presupuesto } from '../crm/presupuesto.js';
+import { agendaDe } from '../crm/sedes.js';
 import { borrarDocumento, documentosDelNegocio, guardarCatalogo, guardarDocumento } from '../rag/documentos.js';
 import { leerAdjunto } from '../crm/adjuntos.js';
 import { cuantoOcupa as cuantoOcupanLosMedios, guardar as guardarMedio, rutaDe as rutaDeMedio, MAXIMO_BYTES, MIMES_ACEPTADOS } from '../crm/medios.js';
@@ -122,6 +123,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       // Se manda ya ajustado al mínimo legible sobre cada fondo, en vez de dejar que la pantalla lo resuelva mal.
       colorClaro: accentOn(business.brand.color, '#f3f1ea'),
       colorOscuro: accentOn(business.brand.color, '#14120d'),
+      // Para decir en qué sede es cada cita, en todo el tablero (crm/sedes.ts). Vacío: no tiene sedes.
+      sedes: business.sedes.map((s) => ({ id: s.id, nombre: s.nombre })),
     }),
   );
 
@@ -1255,7 +1258,11 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       agent: business.agent,
       appointments: business.appointments,
       // Las sedes, para escoger en cuál al agendar a mano y para filtrar el calendario (crm/sedes.ts).
-      sedes: business.sedes.map((s) => ({ id: s.id, nombre: s.nombre, direccion: s.direccion })),
+      // Con su agenda ya resuelta (lo que no dicen, heredado): el calendario pinta abierto y cerrado con esto.
+      sedes: business.sedes.map((s) => {
+        const ag = agendaDe(s.id);
+        return { id: s.id, nombre: s.nombre, direccion: s.direccion, days: ag.days, hours: ag.hours, capacity: ag.capacity };
+      }),
       crmFields: business.crm.fields,
       timezone: business.timezone,
       engines: engineStatus(),

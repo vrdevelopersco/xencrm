@@ -78,6 +78,18 @@ for (const [texto, espera] of [
 ] as const) {
   check(`«${texto}» → ${espera ?? 'ninguna'}`, (sedeEn(texto)?.id ?? null) === espera, String(sedeEn(texto)?.id ?? null));
 }
+{
+  // 🪤 Un apodo que cabe dentro del de otra sede: vale el más largo.
+  const { business } = await import('../config.js');
+  const sur = business.sedes.find((s) => s.id === 'sur')!;
+  business.sedes.push({ id: 'centro', nombre: 'Sede Centro', direccion: '', apodos: ['la del centro'] });
+  sur.apodos.push('la del centro comercial');
+  check('🪤 «la del centro comercial» es la del sur, aunque adentro diga «la del centro»', sedeEn('quiero ir a la del centro comercial')?.id === 'sur', String(sedeEn('quiero ir a la del centro comercial')?.id));
+  check('y «la del centro» sola es la del centro', sedeEn('mejor la del centro')?.id === 'centro', String(sedeEn('mejor la del centro')?.id));
+  check('nombrar dos sin que una quepa en la otra sigue siendo ambiguo', sedeEn('la del centro o la del norte') === null);
+  business.sedes.pop();
+  sur.apodos.pop();
+}
 check('los días se dicen como se dicen', diasComoTexto([1, 2, 3, 4, 5]) === 'lunes a viernes' && diasComoTexto([1, 3, 5]) === 'lunes, miércoles y viernes' && diasComoTexto([6, 0]) === 'sábado y domingo',
   `${diasComoTexto([1, 2, 3, 4, 5])} · ${diasComoTexto([1, 3, 5])} · ${diasComoTexto([6, 0])}`);
 const info = sedesComoInformacion();
@@ -191,6 +203,39 @@ console.log('— Lo que una sede tiene y la otra no');
   check('el recordatorio de la del sur puede salir el sábado', wd(reminderTime(temprano, 'sur')) === 6, String(wd(reminderTime(temprano, 'sur'))));
   check('el de la del norte, el viernes', wd(reminderTime(temprano, 'norte')) === 5, String(wd(reminderTime(temprano, 'norte'))));
 }
+// =====================================================================================================
+console.log('— Editarlas desde El negocio');
+{
+  const { ajustesDe, guardar } = await import('../ajustes.js');
+  const enDisco = () => JSON.parse(readFileSync(join(dir, 'aiva.config.json'), 'utf8')) as { sedes: { id: string; nombre: string }[] };
+  const base = ajustesDe();
+  const [norte, sur] = base.sedes!;
+  guardar({ ...base, sedes: [norte, sur, { id: '', nombre: 'Sede Centro', direccion: 'Calle 1 # 2-3', apodos: [] }] });
+  check('una sede nueva recibe su id del nombre, sin «Sede» ni el nombre del negocio', enDisco().sedes.some((x) => x.id === 'centro'), JSON.stringify(enDisco().sedes.map((x) => x.id)));
+  guardar({ ...base, sedes: [{ ...norte!, nombre: 'Norte Alto Prado' }, sur, { id: 'centro', nombre: 'Sede Centro', direccion: 'Calle 1 # 2-3', apodos: [] }] });
+  check('🪤 cambiarle el nombre no le cambia el id: las citas y las fichas lo llevan', enDisco().sedes[0]!.id === 'norte' && enDisco().sedes[0]!.nombre === 'Norte Alto Prado');
+  const { sedes: _fuera, ...viejo } = base;
+  guardar(viejo);
+  check('🪤 un formulario viejo, sin el campo de sedes, no las borra', enDisco().sedes.length === 3, JSON.stringify(enDisco().sedes.map((x) => x.id)));
+  const u = cliente();
+  const libre = availableSlots({ count: 1, sede: 'sur' })[0]!.startsAt;
+  bookAppointment(u, libre, { sede: 'sur', by: 'admin' });
+  let error = '';
+  try {
+    guardar({ ...base, sedes: [norte] });
+  } catch (e) {
+    error = (e as Error).message;
+  }
+  check('🪤 no se puede quitar una sede con citas por delante', /Sede Sur tiene \d+ citas? por delante/.test(error) && enDisco().sedes.length === 3, error || 'la quitó');
+  let franja = '';
+  try {
+    guardar({ ...base, sedes: [norte, { ...sur!, hours: [['12:00', '08:00']] }] });
+  } catch (e) {
+    franja = (e as Error).message;
+  }
+  check('una franja al revés se dice con el nombre de la sede', /Sede Sur.*12:00–08:00/.test(franja), franja || 'se guardó');
+}
+
 check('enseñar una frase sabe leer sedes', bookingReading('la de la 72') === 'Sede Sur', String(bookingReading('la de la 72')));
 
 check('ni una llamada a un modelo', uso() === antes, `${uso() - antes} llamadas`);

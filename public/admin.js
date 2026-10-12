@@ -1012,12 +1012,12 @@
         { t: 'Pidieron una persona', n: t.handoffs.length, html: t.handoffs.map(function (c) { return contactRow(c); }).join(''), empty: 'Aiva lleva todas las conversaciones.' },
         { t: '¿Cómo les fue? (citas que ya pasaron)', n: (t.past || []).length, html: (t.past || []).map(pastItem).join(''), empty: 'Ninguna cita pasada sin resultado.' },
         { t: 'Recordar a mano', n: (t.remind || []).length, html: (t.remind || []).map(remindItem).join(''), empty: 'Los recordatorios de mañana salen solos.' },
-        { t: 'Citas de hoy', n: t.appointments.length, html: t.appointments.map(function (a) { return '<div class="appt"><span class="t">' + esc(a.label) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b> <span class="muted small">' + esc(a.service) + '</span>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Sin citas hoy.' },
+        { t: 'Citas de hoy', n: t.appointments.length, html: t.appointments.map(function (a) { return '<div class="appt"><span class="t">' + esc(a.label) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b> <span class="muted small">' + esc(a.service + conSede(a)) + '</span>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Sin citas hoy.' },
         { t: 'Calientes sin seguimiento (más de 24 h)', n: t.hot.length, html: t.hot.map(function (c) {
           return contactRow(c, null, '<button class="btn sm primary" data-follow="' + esc(c.id) + '">Escribirle</button><button class="btn sm" data-snooze="' + esc(c.id) + '">Dejarlo por ahora</button>');
         }).join(''), empty: 'Ningún prospecto caliente abandonado.' },
         { t: 'Sin leer, Aiva ya respondió', n: t.unread.length, html: t.unread.map(function (c) { return contactRow(c); }).join(''), empty: 'Todo leído.' },
-        { t: 'Próximas citas (3 días)', n: t.upcoming.length, html: t.upcoming.map(function (a) { return '<div class="appt"><span class="grow stack"><span class="small muted">' + esc(a.label) + '</span><b>' + esc(a.contactName || short(a.userId)) + '</b>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Nada agendado en los próximos días.' },
+        { t: 'Próximas citas (3 días)', n: t.upcoming.length, html: t.upcoming.map(function (a) { return '<div class="appt"><span class="grow stack"><span class="small muted">' + esc(a.label + conSede(a)) + '</span><b>' + esc(a.contactName || short(a.userId)) + '</b>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Nada agendado en los próximos días.' },
       ];
       var down = t.public && (t.public.state === 'caida' || t.public.state === 'otro_servidor')
         ? '<div class="panel help-first" role="alert"><span class="grow"><b>La dirección pública no responde.</b> <span class="small">' + esc(publicDetail(t.public)) + '</span></span><button class="btn primary" data-go="channels">Ver en Canales</button></div>'
@@ -1217,7 +1217,7 @@
   // ---------- calendario (vista semanal tipo agenda) ----------
   // En el celular la semana no cabe (siete columnas): se abre en Agenda, que es una lista. Lo que elijas se recuerda.
   var onPhone = function () { return window.matchMedia('(max-width: 900px)').matches; };
-  var cal = { mode: helpGet('aiva.cal.mode') || (onPhone() ? 'agenda' : 'week'), start: startOfWeek(new Date()), cfg: null, appts: [], busy: [] };
+  var cal = { mode: helpGet('aiva.cal.mode') || (onPhone() ? 'agenda' : 'week'), start: startOfWeek(new Date()), cfg: null, appts: [], todas: [], busy: [], sede: helpGet('aiva.cal.sede') || '', sedesAg: [] };
   var HOUR_PX = 56;
   function startOfWeek(d) { var x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
   function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
@@ -1226,8 +1226,40 @@
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   function toLocalInput(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
 
+  // ---------- sedes (src/crm/sedes.ts) ----------
+  // 🪤 Una cita sin sede es de antes de que el negocio tuviera sedes, y se cuenta en la primera, igual que en la
+  // agenda del servidor: si aquí se contara en ninguna, el calendario la escondería al filtrar por sede.
+  function variasSedes() { return (state.sedes || []).length > 1; }
+  function sedeDe(a) { return a.sede || ((state.sedes || [])[0] || {}).id || ''; }
+  function nombreSede(id) { var s = (state.sedes || []).filter(function (x) { return x.id === id; })[0]; return s ? s.nombre : ''; }
+  function conSede(a) { return variasSedes() && sedeDe(a) ? ' · ' + nombreSede(sedeDe(a)) : ''; }
+  function filtrarSede(list) { return cal.sede && variasSedes() ? list.filter(function (a) { return sedeDe(a) === cal.sede; }) : list; }
+  // Lo que se pinta abierto: el de la sede que se mira, o con «todas», lo que abre cualquiera.
+  function agendaVista(def) {
+    var base = cal.cfg || def;
+    var ss = cal.sedesAg || [];
+    if (ss.length < 2) return base;
+    var una = ss.filter(function (s) { return s.id === cal.sede; })[0];
+    if (una) return Object.assign({}, base, { days: una.days, hours: una.hours });
+    var days = [], hours = [];
+    ss.forEach(function (s) { s.days.forEach(function (d) { if (days.indexOf(d) < 0) days.push(d); }); s.hours.forEach(function (h) { hours.push(h); }); });
+    return Object.assign({}, base, { days: days, hours: hours });
+  }
+  function pintarSedesCal() {
+    var ss = cal.sedesAg || [];
+    if (ss.length < 2) { $('cal-sede').hidden = true; $('book-sede-l').hidden = true; return; }
+    if (cal.sede && !ss.some(function (s) { return s.id === cal.sede; })) cal.sede = '';
+    $('cal-sede').innerHTML = '<option value="">Todas las sedes</option>' + ss.map(function (s) { return '<option value="' + esc(s.id) + '"' + (s.id === cal.sede ? ' selected' : '') + '>' + esc(s.nombre) + '</option>'; }).join('');
+    $('cal-sede').hidden = false;
+    // Al agendar a mano se escoge sede, siempre: sin ella la cita no se agenda (y escoger una por defecto mandaría a
+    // alguien a la otra punta). Si se está mirando una, esa viene puesta.
+    var puesta = $('book-sede').value || cal.sede;
+    $('book-sede').innerHTML = '<option value="">Escoge la sede</option>' + ss.map(function (s) { return '<option value="' + esc(s.id) + '"' + (s.id === puesta ? ' selected' : '') + '>' + esc(s.nombre) + '</option>'; }).join('');
+    $('book-sede-l').hidden = false;
+  }
+
   function loadCalendar() {
-    var p = cal.cfg ? Promise.resolve(cal.cfg) : api('/agent').then(function (a) { cal.cfg = a.appointments; return cal.cfg; });
+    var p = cal.cfg ? Promise.resolve(cal.cfg) : api('/agent').then(function (a) { cal.cfg = a.appointments; cal.sedesAg = a.sedes || []; pintarSedesCal(); return cal.cfg; });
     p.then(function () {
       // 🪤 «Agenda» son LAS PRÓXIMAS CITAS, no las de la semana que estés mirando. Pedía solo el rango de la
       // semana y luego filtraba por ella, así que una cita del lunes siguiente salía como «sin citas» estando
@@ -1244,7 +1276,8 @@
       return Promise.all([api('/appointments?from=' + from + '&to=' + to), api('/busy?from=' + from + '&to=' + to)]);
     }).then(function (r) {
       var list = r[0]; cal.busy = r[1] || [];
-      cal.appts = list;
+      cal.todas = list;
+      cal.appts = filtrarSede(list);
       $('badge-cal').textContent = list.filter(function (a) { return a.status === 'confirmada' && a.startsAt >= Date.now(); }).length || '';
       renderCalendar();
     });
@@ -1269,7 +1302,7 @@
     if (cal.mode === 'week') renderWeek(); else if (cal.mode === 'month') renderMonth(); else renderAgenda();
   }
   function renderWeek() {
-    var cfg = cal.cfg || { days: [1, 2, 3, 4, 5], hours: [['09:00', '18:00']], durationMin: 45, enabled: false };
+    var cfg = agendaVista({ days: [1, 2, 3, 4, 5], hours: [['09:00', '18:00']], durationMin: 45, enabled: false });
     var hours = cfg.hours && cfg.hours.length ? cfg.hours : [['09:00', '18:00']];
     var h0 = Math.max(0, Math.floor(Math.min.apply(null, hours.map(function (h) { return hm(h[0]); })) - 1));
     var h1 = Math.min(24, Math.ceil(Math.max.apply(null, hours.map(function (h) { return hm(h[1]); })) + 1));
@@ -1296,7 +1329,7 @@
         // El estado va también en el texto: el color y el relieve nunca son la única señal.
         var mark = { completada: '✓ Asistió · ', no_asistio: '✗ No asistió · ', cancelada: 'Cancelada · ' }[a.status] || '';
         var who = a.contactName || short(a.userId);
-        return '<div class="cal-ev ' + a.status + '" data-id="' + a.id + '" title="' + esc(who + ' · ' + mark + hhmm(a.startsAt) + ' · ' + a.service) + '" style="top:' + top + 'px;height:' + height + 'px"><b>' + esc(who) + '</b><span>' + esc(mark + hhmm(a.startsAt)) + '</span><span>' + esc(a.service) + '</span></div>';
+        return '<div class="cal-ev ' + a.status + '" data-id="' + a.id + '" title="' + esc(who + ' · ' + mark + hhmm(a.startsAt) + ' · ' + a.service + conSede(a)) + '" style="top:' + top + 'px;height:' + height + 'px"><b>' + esc(who) + '</b><span>' + esc(mark + hhmm(a.startsAt)) + '</span><span>' + esc(a.service) + '</span></div>';
       }).join('');
       // Eventos del calendario privado del dueño: el bot no ofrece esas horas.
       var dayStart = new Date(d).setHours(0, 0, 0, 0), dayEnd = dayStart + 86400000;
@@ -1352,7 +1385,7 @@
    */
   function renderMonth() {
     var y = cal.start.getFullYear(), mo = cal.start.getMonth();
-    var cfg = cal.cfg || { days: [1, 2, 3, 4, 5] };
+    var cfg = agendaVista({ days: [1, 2, 3, 4, 5] });
     $('cal-label').textContent = new Date(y, mo, 1).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
     var primero = new Date(y, mo, 1);
     var inicio = addDays(primero, -((primero.getDay() + 6) % 7)); // la rejilla arranca en lunes
@@ -1392,7 +1425,7 @@
     list.forEach(function (a) { var day = new Date(a.startsAt).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }); (byDay[day] = byDay[day] || []).push(a); });
     $('cal-list').innerHTML = Object.keys(byDay).map(function (day) {
       return '<div class="day"><h3>' + esc(day) + '</h3>' + byDay[day].map(function (a) {
-        return '<div class="appt ' + a.status + '"><span class="t">' + hhmm(a.startsAt) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b> <span class="muted small">' + esc(a.service) + (a.notes ? ' · ' + esc(a.notes) : '') + '</span></span>' +
+        return '<div class="appt ' + a.status + '"><span class="t">' + hhmm(a.startsAt) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b> <span class="muted small">' + esc(a.service + conSede(a)) + (a.notes ? ' · ' + esc(a.notes) : '') + '</span></span>' +
           (a.status === 'confirmada' ? '<button class="btn sm" data-act="completada" data-id="' + a.id + '">Asistió</button><button class="btn sm" data-act="no_asistio" data-id="' + a.id + '">No asistió</button><button class="btn sm danger" data-act="cancelada" data-id="' + a.id + '">Cancelar</button>' : '<span class="chip">' + a.status + '</span>') +
           '<button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>';
       }).join('') + '</div>';
@@ -1422,9 +1455,17 @@
   $('cal-prev').onclick = function () { mover(-1); };
   $('cal-next').onclick = function () { mover(1); };
   $('cal-today').onclick = function () { cal.start = startOfWeek(new Date()); loadCalendar(); };
+  $('cal-sede').onchange = function () {
+    cal.sede = $('cal-sede').value;
+    helpSet('aiva.cal.sede', cal.sede);
+    cal.appts = filtrarSede(cal.todas);
+    if (cal.sede) $('book-sede').value = cal.sede;
+    renderCalendar();
+  };
   $('book-btn').onclick = function () {
     var userId = $('book-contact').value, when = $('book-when').value; if (!userId || !when) { $('book-msg').textContent = 'Elige contacto y fecha.'; return; }
-    api('/appointments', { method: 'POST', body: { userId: userId, startsAt: new Date(when).toISOString(), notes: $('book-notes').value } }).then(function (r) { $('book-msg').textContent = r.error ? 'Error: ' + r.error : 'Cita agendada.'; if (!r.error) $('book-notes').value = ''; loadCalendar(); });
+    if (variasSedes() && !$('book-sede').value) { $('book-msg').textContent = 'Elige en qué sede.'; return; }
+    api('/appointments', { method: 'POST', body: { userId: userId, startsAt: new Date(when).toISOString(), notes: $('book-notes').value, sede: variasSedes() ? $('book-sede').value : undefined } }).then(function (r) { $('book-msg').textContent = r.error ? 'Error: ' + r.error : 'Cita agendada.'; if (!r.error) $('book-notes').value = ''; loadCalendar(); });
   };
 
   // ---------- análisis ----------
@@ -2719,7 +2760,8 @@
         return '<tr>' +
           '<td data-rot="Quién"><button class="quien" data-id="' + esc(c.id) + '">' + esc(nameOf(c)) + '</button>' +
             (c.phone ? '<div class="dato">' + esc(c.phone) + '</div>' : '') + '</td>' +
-          '<td data-rot="Dónde" class="dato">' + esc(channelIcon(c.channel)) + '</td>' +
+          '<td data-rot="Dónde" class="dato">' + esc(channelIcon(c.channel)) +
+            (variasSedes() && c.data && c.data.sede ? '<div class="dato">' + esc(nombreSede(c.data.sede)) + '</div>' : '') + '</td>' +
           '<td data-rot="Etapa"><span class="chip ' + esc(rol(c.stage) || '') + '">' + esc(etiquetaEtapa(c.stage)) + '</span></td>' +
           // El puntaje nunca solo: va con su veredicto en palabras, que es la regla de siempre.
           '<td data-rot="Puntaje" class="num">' + (c.score == null ? '—' : c.score) +
@@ -2776,7 +2818,7 @@
       ((d.appointments || []).length ? '<div class="pf-bloque"><h4>Sus citas</h4>' +
         d.appointments.map(function (a) {
           return '<div class="appt ' + a.status + '"><span class="t">' + esc(a.label || '') + '</span>' +
-            '<span class="grow small muted">' + esc(a.service || '') + '</span><span class="chip">' + esc(a.status) + '</span></div>';
+            '<span class="grow small muted">' + esc((a.service || '') + conSede(a)) + '</span><span class="chip">' + esc(a.status) + '</span></div>';
         }).join('') + '</div>' : '') +
       '<div class="pf-bloque"><h4>Corregir</h4><div class="pf-campos">' +
         '<div><label for="pf-f-nombre">Nombre</label><input id="pf-f-nombre" value="' + esc(c.name || '') + '"></div>' +
@@ -3164,6 +3206,7 @@
       if ($('marca-btn')) $('marca-btn').title = me.business || 'Inicio';
       pintarQuienSoy();
       state.bizName = me.business; state.agentName = me.agent;
+      state.sedes = me.sedes || [];
       // El logo del negocio en su propia barra: entrar a su tablero tiene que sentirse suyo, no de aiva.
       if (me.logo) {
         var img = document.createElement('img');
@@ -3284,6 +3327,13 @@
         '</div>' +
       '</div>' +
 
+      // Las sedes van aparte de las citas: dónde queda cada una sirve aunque el negocio no agende.
+      '<div class="card"><h2 class="h">Sedes</h2>' +
+        '<div class="small muted" style="margin-bottom:10px">Si atiende en varios sitios con este mismo número. Con dos o más, el asistente pregunta en cuál antes de ofrecer horarios y dice la dirección al confirmar. Sin sedes, es un solo sitio: el «Dónde» de las citas.</div>' +
+        '<div id="n-sedes">' + (a.sedes || []).map(sedeFila).join('') + '</div>' +
+        '<button class="btn sm" type="button" id="n-mas-sede">Agregar sede</button>' +
+      '</div>' +
+
       '<div class="fila" style="gap:10px;align-items:center"><button class="btn primary" id="n-guardar">Guardar</button>' +
         '<span id="n-msg" class="small" role="status"></span></div>' +
       '<div class="small muted" style="margin-top:10px">El embudo y los datos que captura salen de cómo se dio de alta el cliente y no se cambian desde aquí: ' +
@@ -3292,12 +3342,69 @@
     $('n-citas').onchange = function () { $('n-citas-detalle').hidden = !this.checked; };
     $('n-mas-franja').onclick = function () { $('n-franjas').insertAdjacentHTML('beforeend', franja(['09:00', '13:00'])); enganchaFranjas(); };
     enganchaFranjas();
+    $('n-mas-sede').onclick = function () { $('n-sedes').insertAdjacentHTML('beforeend', sedeFila(null)); enganchaSedes(); };
+    enganchaSedes();
     if ($('neg-reiniciar')) $('neg-reiniciar').onclick = function () {
       this.disabled = true; this.textContent = 'Reiniciando…';
       api('/config/restart', { method: 'POST' }).catch(function () {});
       setTimeout(loadNegocio, 6000); // vuelve a preguntar cuando ya debería estar arriba
     };
     $('n-guardar').onclick = guardarNegocio;
+  }
+
+  // Una sede en el formulario. 🪤 Su id no se ve ni se edita: lo llevan las citas y la ficha, así que cambiarle el
+  // nombre no puede cambiarlo. Una sede nueva lo recibe del servidor, sacado de su nombre.
+  var sedeN = 0;
+  function sedeFila(s) {
+    s = s || { id: '', nombre: '', direccion: '', apodos: [] };
+    var k = ++sedeN, ci = state.negocio.guardado.citas;
+    var propio = Boolean(s.days || s.hours || s.capacity);
+    var dias = s.days || ci.days, horas = s.hours || ci.hours;
+    var c = function (cls, etiqueta, valor, pista) {
+      return '<div class="prof-field"><div class="lbl"><label class="small" for="' + cls + '-' + k + '"><b>' + esc(etiqueta) + '</b></label></div>' +
+        '<input type="text" id="' + cls + '-' + k + '" class="' + cls + '" value="' + esc(valor == null ? '' : valor) + '">' +
+        (pista ? '<div class="small muted">' + esc(pista) + '</div>' : '') + '</div>';
+    };
+    return '<div class="sede-fila" data-id="' + esc(s.id) + '">' +
+      '<div class="fila-2">' + c('s-nombre', 'Nombre', s.nombre, 'Como se le dice al cliente: «Sede Norte».') + c('s-dir', 'Dirección', s.direccion) + '</div>' +
+      c('s-apodos', 'Cómo le dice la gente', (s.apodos || []).join(', '), 'Separados por comas: la del norte, alto prado.') +
+      '<label class="prof-check"><input type="checkbox" class="s-propio"' + (propio ? ' checked' : '') + '> Tiene su propio horario o cupo</label>' +
+      '<div class="s-horario"' + (propio ? '' : ' hidden') + '>' +
+        '<div class="prof-field"><div class="lbl"><b class="small">Días que atiende</b></div><div class="dias">' +
+          DIAS.map(function (x) { return '<label class="prof-check"><input type="checkbox" class="s-dia" value="' + x[1] + '"' + (dias.indexOf(x[1]) !== -1 ? ' checked' : '') + '> ' + x[0] + '</label>'; }).join('') +
+        '</div></div>' +
+        '<div class="prof-field"><div class="lbl"><b class="small">Franjas del día</b></div><div class="s-franjas">' + horas.map(franja).join('') + '</div>' +
+          '<button class="btn sm s-mas-franja" type="button">Agregar franja</button></div>' +
+        '<div class="prof-field"><div class="lbl"><label class="small" for="s-cupo-' + k + '"><b>Cuántas a la vez</b></label></div>' +
+          '<input type="number" min="1" max="50" id="s-cupo-' + k + '" class="s-cupo" value="' + esc(s.capacity || ci.capacity) + '"></div>' +
+      '</div>' +
+      '<button class="btn sm danger s-quitar" type="button">Quitar esta sede</button>' +
+    '</div>';
+  }
+  function enganchaSedes() {
+    $('n-sedes').querySelectorAll('.sede-fila').forEach(function (f) {
+      f.querySelector('.s-propio').onchange = function () { f.querySelector('.s-horario').hidden = !this.checked; };
+      f.querySelector('.s-mas-franja').onclick = function () { f.querySelector('.s-franjas').insertAdjacentHTML('beforeend', franja(['09:00', '13:00'])); enganchaSedes(); };
+      f.querySelectorAll('.s-franjas [data-quitar]').forEach(function (b) { b.onclick = function () { b.parentNode.remove(); }; });
+      // Quitarla aquí no borra nada todavía: se aplica al guardar, y el servidor no deja si tiene citas por delante.
+      f.querySelector('.s-quitar').onclick = function () { f.remove(); };
+    });
+  }
+  function sedesDelFormulario() {
+    return Array.prototype.map.call($('n-sedes').querySelectorAll('.sede-fila'), function (f) {
+      var s = {
+        id: f.getAttribute('data-id') || '',
+        nombre: f.querySelector('.s-nombre').value.trim(),
+        direccion: f.querySelector('.s-dir').value.trim(),
+        apodos: f.querySelector('.s-apodos').value.split(',').map(function (x) { return x.trim(); }).filter(Boolean)
+      };
+      if (f.querySelector('.s-propio').checked) {
+        s.days = Array.prototype.map.call(f.querySelectorAll('.s-dia:checked'), function (x) { return Number(x.value); });
+        s.hours = Array.prototype.map.call(f.querySelectorAll('.s-franjas .franja'), function (x) { var e = x.querySelectorAll('input'); return [e[0].value, e[1].value]; });
+        s.capacity = Number(f.querySelector('.s-cupo').value) || 1;
+      }
+      return s;
+    });
   }
 
   function franja(h) {
@@ -3336,7 +3443,8 @@
         capacity: $('n-cupo') ? num('n-cupo') : 1,
         minLeadHours: $('n-aviso') ? num('n-aviso') : 0,
         maxDaysAhead: $('n-hasta') ? num('n-hasta') : 21
-      }
+      },
+      sedes: sedesDelFormulario()
     };
     $('n-msg').textContent = 'Guardando…';
     api('/config', { method: 'PUT', body: cuerpo }).then(function (r) {

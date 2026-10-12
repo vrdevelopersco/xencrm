@@ -232,7 +232,7 @@ Respaldo diario con `VACUUM INTO` a `data/backups/` (`rag/backup.ts`), con las �
 | El negocio y cómo atiende | `aiva.config.json` (`AIVA_CONFIG` elige otro) | quien instala (`pnpm onboard`) |
 | La máquina y los secretos | `.env` (`AIVA_ENV_FILE` elige otro) | quien instala; las credenciales de Meta, también el tablero |
 | Lo que el dueño confirma | `profileFile` | el tablero (Perfil) |
-| Nombre, asistente, marca, hora y citas | `aiva.config.json` | el tablero (El negocio) — se aplica **al reiniciar** |
+| Nombre, asistente, marca, hora, citas y sedes | `aiva.config.json` | el tablero (El negocio) — se aplica **al reiniciar** |
 | Lo que el negocio enseña | `dictionaryFile` | el tablero (Diccionario, Frases que no entendimos) |
 | Canales encendidos | tabla `settings` | el tablero (Canales) |
 

@@ -134,6 +134,10 @@ agenda una a mano. En el celular abre en **Agenda**, la lista de la semana; con 
 desliza en horizontal). Lo que elijas se recuerda. Si el dueño conectó su calendario personal, sus eventos salen como bloques *Ocupado* y el
 asistente no ofrece esas horas; desde aquí sí puedes agendar encima si hace falta.
 
+Si el negocio tiene **varias sedes**, arriba sale a cuál mirar. Con una escogida ves solo sus citas y su horario;
+con **Todas las sedes** ves todo y lo que abre cualquiera. Cada cita dice en qué sede es, aquí, en Hoy y en la
+ficha, y agendar a mano pide la sede: sin ella la cita no se agenda.
+
 ## Prospectos
 
 Una columna por etapa. Las etapas son **las de tu negocio**: una boutique va *Nuevo → Conversando → Interesado →
@@ -222,6 +226,10 @@ La configuración del negocio, en la otra pestaña del mismo modal del Perfil. A
   que entiende «mañana a las 3».
 - **Citas**: si agenda, cómo se llama la cita, dónde, cuánto dura, cuántas a la vez, con cuánta anticipación,
   hasta cuántos días adelante, qué días y qué franjas.
+- **Sedes**: si atiende en varios sitios con el mismo número. De cada una, el nombre, la dirección y cómo le dice
+  la gente («la del norte», «alto prado»). Si una abre otros días u horas, o atiende a más gente a la vez, se marca
+  *Tiene su propio horario o cupo*. Con dos o más, el asistente pregunta en cuál antes de ofrecer horarios. Una sede
+  con citas por delante no se puede quitar: primero se mueven o se cancelan.
 
 El **embudo** y los datos que captura no se tocan aquí: salen de cómo se dio de alta el cliente. Cambiarlos en
 caliente dejaría fichas en etapas que ya no existen.

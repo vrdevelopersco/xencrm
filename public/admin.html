@@ -778,6 +778,10 @@ dialog#dlg-grupos > b{font-size:17px}
 .fila-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0 14px}
 .dias{display:flex;flex-wrap:wrap;gap:6px 14px}
 .franja{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+/* El selector de sede del calendario: de su tamaño, no del de la barra. */
+#cal-sede{width:auto;max-width:220px;flex:0 1 auto;min-width:0}
+/* Una sede en El negocio: hermana de las demás, con su borde, sin sombra propia (la tarjeta ya la tiene). */
+.sede-fila{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
 .franja input[type=time]{min-height:38px}
 #negocio .card{margin-bottom:14px}
 #n-mas-franja{width:auto;align-self:flex-start;margin-top:2px}
@@ -1243,6 +1247,7 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
         <button class="btn sm" id="cal-today">Hoy</button>
         <button class="btn sm" id="cal-next" aria-label="Semana siguiente">→</button>
         <b id="cal-label" class="small"></b>
+        <select id="cal-sede" class="sm" aria-label="Qué sede mirar" hidden></select>
       </div>
       <div class="cal">
         <div id="cal-main" style="min-height:0;display:flex;flex-direction:column">
@@ -1254,6 +1259,7 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
           <b>Agendar cita</b>
           <span class="small muted">Haz clic en un hueco libre de la semana o elige la fecha y hora.</span>
           <label class="small muted">Contacto<select id="book-contact"></select></label>
+          <label class="small muted" id="book-sede-l" hidden>Sede<select id="book-sede"></select></label>
           <label class="small muted">Fecha y hora<input type="datetime-local" id="book-when" step="900"></label>
           <input type="text" id="book-notes" placeholder="Nota (opcional)">
           <button class="btn primary" id="book-btn">Agendar</button>

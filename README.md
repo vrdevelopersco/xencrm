@@ -219,8 +219,8 @@ Ofrece los espacios de esa sede, y si lo que pidió no existe ahí pero sí en o
 "Mejor en la del sur" cambia de sede a mitad del flujo. Cada sede tiene su cupo, la cita guarda la sede y la
 confirmación, el recordatorio y el calendario del cliente dicen la dirección. La ficha recuerda la sede para la
 próxima vez. Las sedes también van en la información del negocio, así que "¿dónde quedan?" se responde con todas.
-Una sede no es otro cliente: si cada una tiene dueño, número y precios propios, son clientes aparte. Pruebas:
-`pnpm test:sedes`.
+Una sede no es otro cliente: si cada una tiene dueño, número y precios propios, son clientes aparte. Se editan
+desde el tablero, en El negocio, y el calendario filtra por sede. Pruebas: `pnpm test:sedes`.
 
 **Recordatorio el día antes** (`appointments.reminder`: `at`, por defecto `"17:00"`, y `enabled`).
 Sale solo por el canal del cliente: WhatsApp por QR, o WhatsApp oficial dentro de las 24 horas.

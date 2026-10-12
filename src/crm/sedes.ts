@@ -86,11 +86,26 @@ export function sedeEn(texto: string): Sede | null {
   return nombradas.length === 1 ? nombradas[0]! : null;
 }
 
-/** Todas las sedes que nombra el mensaje: para saber si nombró dos y hay que volver a preguntar. */
+/**
+ * Todas las sedes que nombra el mensaje: para saber si nombró dos y hay que volver a preguntar.
+ *
+ * 🪤 Un apodo puede caber dentro del de otra sede: «la del centro» (una) y «la del centro comercial» (otra). En
+ * «la del centro comercial» aparecen las dos, pero el cliente nombró una sola: cuando lo que se reconoce de una sede
+ * queda dentro de lo que se reconoce de otra, vale el más largo.
+ */
 export function sedesNombradas(texto: string): Sede[] {
   if (!business.sedes.length) return [];
   const t = fold(texto);
-  return business.sedes.filter((s) => formasDe(s).some((f) => new RegExp(`(?<![a-z0-9ñ])${escapeRe(f)}(?![a-z0-9ñ])`).test(t)));
+  const tramos: { sede: Sede; desde: number; hasta: number }[] = [];
+  for (const s of business.sedes) {
+    for (const f of formasDe(s)) {
+      for (const m of t.matchAll(new RegExp(`(?<![a-z0-9ñ])${escapeRe(f)}(?![a-z0-9ñ])`, 'g'))) tramos.push({ sede: s, desde: m.index!, hasta: m.index! + f.length });
+    }
+  }
+  const dentroDeOtro = (a: (typeof tramos)[number]) =>
+    tramos.some((b) => b.sede.id !== a.sede.id && b.desde <= a.desde && b.hasta >= a.hasta && b.hasta - b.desde > a.hasta - a.desde);
+  const quedan = tramos.filter((a) => !dentroDeOtro(a));
+  return business.sedes.filter((s) => quedan.some((x) => x.sede.id === s.id));
 }
 
 // ---------- Cómo se dicen ----------
