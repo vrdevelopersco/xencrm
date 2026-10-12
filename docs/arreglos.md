@@ -9,6 +9,23 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### Sedes al dar de alta un cliente, y sin sedes ni una palabra de sedes · `cc155fa`
+El alta de un cliente no preguntaba sedes: se ponían después, en El negocio. Ahora la consola, `pnpm cliente nuevo` y
+`pnpm onboard` las aceptan, una por línea con el nombre y la dirección. Una línea sin nombre se rechaza antes de
+crear la carpeta. 🪤 Vacío, que es lo normal, no escribe la clave `sedes`: sin sedes, nada de lo que ve el modelo
+dice «sede» y al agendar no se pregunta en cuál. No hay una instrucción de «no hables de sedes», que sería gastar
+tokens en lo que no existe. `test:sedes` lo fija y falla si `sedesComoInformacion` dice algo sin sedes. Visto en
+Chrome: el alta con dos sedes deja `norte` y `centro` en la configuración.
+
+### Retención automática de conversaciones · `a3044d6`
+Quedaba pendiente desde el brief: un CRM que guarda para siempre el nombre, el teléfono y todo lo que alguien
+escribió hace años. Ahora las conversaciones quietas se anonimizan o se borran solas. Viene apagada y la enciende el
+super-admin en la consola, viendo antes cuántas tocaría; el negocio la ve en su tablero y no la puede cambiar.
+Anonimizar deja las cuentas del embudo y del gasto con otro identificador. 🪤 Sin un respaldo de menos de un día no
+toca nada, no toca a quien tiene una cita por delante y nunca baja de 90 días. La prueba recorre la base entera
+buscando el nombre, el teléfono y el correo después de anonimizar. Siete roturas a propósito, siete fallos. Visto
+en Chrome: la vista previa, guardar, la pasada y el panel del tablero.
+
 ### El calendario de una sede ocupa solo esa, y quien se crea a mano llega a una · `b45bbfb`
 El calendario personal ocupaba todas las sedes. Ahora cada sede puede tener el suyo en `CALENDAR_BUSY_ICS_<SEDE>`,
 que solo ocupa esa; el general sigue ocupando todas. 🪤 En el `.env`, no en la configuración: son direcciones
