@@ -67,6 +67,9 @@ const webPhone = make('web:rem-phone', 'web', { name: 'Marta', phone: '+57 300 4
 const webNoPhone = make('web:rem-nophone', 'web', { name: 'Sin Número' });
 const human = make('wa:573005556677@s.whatsapp.net', 'whatsapp', { name: 'Con Asesor' });
 setHumanMode('wa:573005556677@s.whatsapp.net', true, 'Laura del equipo');
+// Pidió una persona: el traspaso lo hizo el asistente, y eso se guarda como «bot».
+const pidioPersona = make('wa:573009990011@s.whatsapp.net', 'whatsapp', { name: 'Pidió Persona' });
+setHumanMode('wa:573009990011@s.whatsapp.net', true, 'bot');
 const late = make('wa:573006667788@s.whatsapp.net', 'whatsapp', { name: 'Recién', createdAgoH: 1 });
 const cancelled = make('wa:573007778899@s.whatsapp.net', 'whatsapp', { name: 'Canceló', status: 'cancelada' });
 const metaOld = make('meta:573008889900', 'meta', { name: 'Meta Viejo' });
@@ -90,10 +93,11 @@ check('queda marcado como enviado', getAppointment(wa)!.reminder?.status === 'en
 check('chat del sitio con número: a mano, con el número para WhatsApp', getAppointment(webPhone)!.reminder?.status === 'a_mano' && /por WhatsApp/.test(getAppointment(webPhone)!.reminder?.note ?? ''));
 check('chat del sitio sin número: a mano y dice por qué', /no dejó número/.test(getAppointment(webNoPhone)!.reminder?.note ?? ''));
 check('si la conversación la lleva una persona, a mano', getAppointment(human)!.reminder?.status === 'a_mano' && /Laura del equipo/.test(getAppointment(human)!.reminder?.note ?? ''));
+check('🪤 si el traspaso lo hizo el asistente, no dice «la lleva bot»', getAppointment(pidioPersona)!.reminder?.status === 'a_mano' && /la lleva alguien del equipo/.test(getAppointment(pidioPersona)!.reminder?.note ?? '') && !/lleva bot/.test(getAppointment(pidioPersona)!.reminder?.note ?? ''), getAppointment(pidioPersona)!.reminder?.note ?? '');
 check('agendó hace poco: no hace falta', getAppointment(late)!.reminder?.status === 'no_hace_falta');
 check('una cita cancelada no se recuerda', !getAppointment(cancelled)!.reminder && !sent.some((s) => s.userId === 'wa:573007778899@s.whatsapp.net'));
 check('WhatsApp oficial sin el emisor conectado: a mano', getAppointment(metaOld)!.reminder?.status === 'a_mano' && /no está conectado/.test(getAppointment(metaOld)!.reminder?.note ?? ''), getAppointment(metaOld)!.reminder?.note ?? '');
-check('se enviaron 3 (los de WhatsApp) y quedaron 4 a mano', r.sent === 3 && r.manual === 4, JSON.stringify(r));
+check('se enviaron 3 (los de WhatsApp) y quedaron 5 a mano', r.sent === 3 && r.manual === 5, JSON.stringify(r));
 check('otra pasada no repite nada', (await runReminders(remindAt + 10 * 60_000)).sent === 0 && sent.length === 3);
 const board = remindersBoard(remindAt + 5 * 60_000);
 const marta = board.find((a) => a.id === webPhone);

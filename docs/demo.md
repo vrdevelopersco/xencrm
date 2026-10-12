@@ -43,7 +43,7 @@ el celular y ahora responde solo. *"Lo que el equipo le enseña una vez, ya lo s
 **4. Agenda una cita.** *"¿puedo ir el jueves a probármelo?"* → ofrece tres horarios **de la agenda real** →
 *"la 2"* → te pide el número → lo das → *"sí, confírmala"*.
 → Muestra: **Calendario** con la cita, la ficha con el puntaje ("Prospecto con cita"), **Por qué** con los factores,
-y la **Línea de tiempo**. Menciona que el día antes sale el recordatorio solo.
+y la **Línea de tiempo**. Menciona que la mañana de la cita sale el recordatorio solo.
 
 **5. El mismo cliente, por WhatsApp.** Desde el WhatsApp del celular (el número que acabas de dar):
 *"hola, ¿me confirmas la cita del jueves?"*.

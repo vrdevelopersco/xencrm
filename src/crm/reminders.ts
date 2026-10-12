@@ -41,7 +41,10 @@ export function reminderTime(startsAt: number, sede: string | null = null): numb
   // nadie lo leía hasta que ya era tarde.
   const mismoDia = zoned(p.y, p.m, p.d, hh, mm);
   // Con al menos una hora de margen: un aviso que llega encima de la cita no avisa de nada.
-  if (mismoDia.getTime() <= startsAt - HOUR && dias.includes(mismoDia.getDay())) return mismoDia.getTime();
+  // 🪤 El día de la semana en la hora DEL NEGOCIO, no la de la máquina. Con getDay(), en un servidor en UTC un
+  // recordatorio a las 7:30 p. m. de Bogotá ya es el día siguiente, y un domingo cerrado pasaba por lunes abierto.
+  const diaDe = (t: Date) => tzParts(t).wd;
+  if (mismoDia.getTime() <= startsAt - HOUR && dias.includes(diaDe(mismoDia))) return mismoDia.getTime();
 
   // Si no cabe —la hora configurada es posterior a la cita, o ese día no se trabaja— se va hacia ATRÁS, al
   // último día que sí se trabaja. Hacia atrás y nunca hacia delante: un recordatorio después de la cita no es
@@ -49,7 +52,7 @@ export function reminderTime(startsAt: number, sede: string | null = null): numb
   let cuando = tzParts(new Date(zoned(p.y, p.m, p.d, 12, 0).getTime() - 24 * HOUR));
   for (let i = 0; i < 7; i++) {
     const t = zoned(cuando.y, cuando.m, cuando.d, hh, mm);
-    if (dias.includes(t.getDay())) return t.getTime();
+    if (dias.includes(diaDe(t))) return t.getTime();
     cuando = tzParts(new Date(zoned(cuando.y, cuando.m, cuando.d, 12, 0).getTime() - 24 * HOUR));
   }
   return zoned(cuando.y, cuando.m, cuando.d, hh, mm).getTime();
@@ -78,7 +81,8 @@ function manualReason(c: Contact | null): string | null {
   // recordatorio automático lo rompería justo donde más se nota — el cliente recibiría un mensaje de un robot
   // en una conversación que hasta ahora llevaba una persona. Se recuerda igual, pero a través del equipo.
   if (soloEscucha(c.channel as ChannelId)) return 'El canal está en solo escuchar: aiva no le escribe al cliente. Mándaselo tú.';
-  if (c.humanMode) return `La conversación la lleva ${c.humanBy ?? 'alguien del equipo'}: el recordatorio va mejor de su parte.`;
+  // «bot» es quien hizo el traspaso (pidió una persona, o se llegó al tope de gasto), no quien la lleva.
+  if (c.humanMode) return `La conversación la lleva ${c.humanBy && c.humanBy !== 'bot' ? c.humanBy : 'alguien del equipo'}: el recordatorio va mejor de su parte.`;
   if (c.channel === 'whatsapp' || c.channel === 'meta') return null;
   return contactNumber(c) ? 'Llegó por el chat del sitio: recuérdale por WhatsApp.' : 'Llegó por el chat del sitio y no dejó número.';
 }

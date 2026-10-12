@@ -56,7 +56,7 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
 | **Perfil del negocio** | Dirección, horarios, pagos, precios, políticas y datos propios, editables desde el tablero; lo vacío queda "por confirmar" y el bot no lo supone. |
 | **Análisis comercial por turno** | Sentimiento, interés, urgencia, objeciones, presupuesto y los campos que definas (prenda, ocasión, fecha del evento…). |
 | **Puntaje explicable** | 0 a 100 con factores visibles ("Pidió cita +30", "Objeción −10"). Etapas: nuevo, conversando, interesado, cita agendada, vendido, perdido. |
-| **Citas** | Flujo determinista: ofrece espacios reales según tu agenda, entiende muletillas ("al medio día", "la que sea", "en ocho días"), confirma, cambia o cancela por el chat y **recuerda la cita el día antes**. El modelo nunca inventa fechas. |
+| **Citas** | Flujo determinista: ofrece espacios reales según tu agenda, entiende muletillas ("al medio día", "la que sea", "en ocho días"), confirma, cambia o cancela por el chat y **recuerda la cita la mañana del día**. El modelo nunca inventa fechas. |
 | **Una ficha por persona** | Si el mismo cliente escribe por el chat del sitio y por WhatsApp, el tablero lo detecta por el número y ofrece unir las dos fichas en una: conversación, citas, análisis y consumo quedan juntos. |
 | **Traspaso humano** | El cliente pide una persona o el equipo toma el control desde el tablero; el bot se calla y las respuestas humanas llegan al mismo chat (WhatsApp o widget). |
 | **Tablero** | Hoy (lo que hay que atender), conversaciones con ficha, calendario, prospectos, análisis, perfil, agente y canales. En vivo, en el computador o el celular. |
@@ -223,7 +223,9 @@ próxima vez. Las sedes también van en la información del negocio, así que "�
 Una sede no es otro cliente: si cada una tiene dueño, número y precios propios, son clientes aparte. Se editan
 desde el tablero, en El negocio, y el calendario filtra por sede. Pruebas: `pnpm test:sedes`.
 
-**Recordatorio el día antes** (`appointments.reminder`: `at`, por defecto `"17:00"`, y `enabled`).
+**Recordatorio de la cita** (`appointments.reminder`: `at`, por defecto `"08:00"`, y `enabled`). Sale el mismo día de
+la cita a esa hora, si queda al menos una hora antes. Si no, o si ese día la sede no atiende, sale el último día que
+sí atiende, a la misma hora. Los días se cuentan en la hora del negocio, no en la del servidor.
 Sale solo por el canal del cliente: WhatsApp por QR, o WhatsApp oficial dentro de las 24 horas.
 Fuera de las 24 horas, WhatsApp oficial solo acepta una plantilla aprobada por Meta
 (`reminder.metaTemplate`: `name`, `language`; cuerpo con `{{1}}` = nombre y `{{2}}` = fecha y hora).

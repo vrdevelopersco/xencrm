@@ -237,6 +237,23 @@ console.log('— Editarlas desde El negocio');
   check('una franja al revés se dice con el nombre de la sede', /Sede Sur.*12:00–08:00/.test(franja), franja || 'se guardó');
 }
 
+{
+  // 🪤 En un servidor en UTC, un recordatorio a las 7:30 p. m. de Bogotá ya es el día siguiente en la máquina. Con
+  // el día de la semana de la máquina, un domingo cerrado pasaba por un lunes abierto.
+  const { business } = await import('../config.js');
+  const antes = { at: business.appointments.reminder.at, tz: process.env.TZ };
+  business.appointments.reminder.at = '19:30';
+  process.env.TZ = 'UTC';
+  let t = Date.now() + 2 * 86400_000;
+  while (tzParts(new Date(t)).wd !== 1) t += 86400_000;
+  const p = tzParts(new Date(t));
+  const nueve = zoned(p.y, p.m, p.d, 9, 0).getTime();
+  const dia = tzParts(new Date(reminderTime(nueve, 'norte'))).wd;
+  business.appointments.reminder.at = antes.at;
+  if (antes.tz === undefined) delete process.env.TZ;
+  else process.env.TZ = antes.tz;
+  check('🪤 con el servidor en UTC, el recordatorio de la tarde no cae en un día cerrado', dia === 5, `cayó en el día ${dia}`);
+}
 check('enseñar una frase sabe leer sedes', bookingReading('la de la 72') === 'Sede Sur', String(bookingReading('la de la 72')));
 
 check('ni una llamada a un modelo', uso() === antes, `${uso() - antes} llamadas`);
