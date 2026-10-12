@@ -13,7 +13,7 @@ import { readFileSync, existsSync, rmSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { actualizarCliente, crearCliente, darDeBajaCliente, leerIndice, llamarACliente, PLANTILLAS, puertoLibre, tokenDe, urlDe, type ClienteRef } from './clientes.js';
 import { cabecerasDeSiempre, soloDesdeAqui } from './cabeceras.js';
-import { abrirSesion, actualizarUsuario, alcanza, borrarUsuario, cambiarLoMio, COLORES, colorDe, cerrarSesion, crearUsuario, leerUsuarios, quitarClienteDeUsuarios, sesionDe, sinClave, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
+import { abrirSesion, ACENTOS, actualizarUsuario, alcanza, borrarUsuario, cambiarLoMio, COLORES, colorDe, cerrarSesion, crearUsuario, leerUsuarios, quitarClienteDeUsuarios, sesionDe, sinClave, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
 import { irseSiQuedaHuerfano } from './huerfano.js';
 import { deDondeViene, guardarLibretaConfig, libretaConfig } from './crm/libreta-config.js';
 import { general, guardarGeneral } from './crm/general.js';
@@ -529,7 +529,7 @@ export function mountConsola(app: Hono) {
 
   app.get('/api/yo', (c) => {
     const u = c.get('usuario' as never) as UsuarioPublico | null;
-    return c.json({ usuario: u ? { ...u, color: colorDe(u) } : null, super: Boolean(c.get('esSuper' as never)), colores: COLORES });
+    return c.json({ usuario: u ? { ...u, color: colorDe(u) } : null, super: Boolean(c.get('esSuper' as never)), colores: COLORES, acentos: ACENTOS });
   });
 
   // El equipo: quién entra a la consola y qué clientes atiende. Solo el super-admin.
@@ -549,9 +549,10 @@ export function mountConsola(app: Hono) {
   app.patch('/api/yo', async (c) => {
     const yo = c.get('usuario' as never) as UsuarioPublico | null;
     if (!yo) return c.json({ error: 'entraste con la llave maestra: eso no es una cuenta. Crea tu usuario en Equipo.' }, 400);
-    const body = (await c.req.json().catch(() => ({}))) as { nombre?: string; correo?: string; color?: string; claveActual?: string; claveNueva?: string };
+    const body = (await c.req.json().catch(() => ({}))) as { nombre?: string; correo?: string; color?: string; acento?: string; claveActual?: string; claveNueva?: string };
     try {
-      return c.json({ usuario: cambiarLoMio(yo.usuario, body) });
+      const u = cambiarLoMio(yo.usuario, body);
+      return c.json({ usuario: { ...u, color: colorDe(u) } });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 400);
     }

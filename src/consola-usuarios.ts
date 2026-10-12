@@ -18,6 +18,8 @@ export interface Usuario {
   correo?: string;
   /** El color con el que se le reconoce en la consola. Sale de su nombre si no elige. */
   color?: string;
+  /** El color de la consola que ve esta persona. Sin elegir, el azul de siempre, que no se guarda. */
+  acento?: Acento;
   rol: Rol;
   /** Clientes que atiende. Vacío en un super-admin: los ve todos. */
   clientes: string[];
@@ -60,6 +62,22 @@ export function colorDe(usuario: { usuario: string; color?: string }): string {
   for (const c of usuario.usuario) n = (n * 31 + c.charCodeAt(0)) % 100000;
   return COLORES[n % COLORES.length]!;
 }
+
+/**
+ * Los colores que puede tener la consola de cada quien. Es preferencia de la persona, no del negocio: cambia lo que
+ * ve ella y nada más. Azul es el de siempre y va primero. Cada uno tiene su variante clara para la barra oscura en
+ * public/consola.html, y test:tablero falla si aquí aparece uno que allá no esté pintado.
+ */
+export const ACENTOS = ['azul', 'dorado', 'grafito', 'morado'] as const;
+export type Acento = (typeof ACENTOS)[number];
+
+/** El azul no se guarda: «no eligió» y «eligió el de siempre» son lo mismo, y así un cambio del de siempre los alcanza. */
+const acentoLimpio = (acento: string | undefined): Acento | undefined => {
+  const a = String(acento ?? '').trim();
+  if (!a || a === 'azul') return undefined;
+  if (!(ACENTOS as readonly string[]).includes(a)) throw new Error('ese color de consola no está en la lista');
+  return a as Acento;
+};
 
 const colorLimpio = (color: string | undefined): string | undefined => {
   if (color === undefined) return undefined;
@@ -139,14 +157,14 @@ export function actualizarUsuario(usuario: string, cambios: Partial<Pick<Usuario
 }
 
 /**
- * Lo que cada quien puede cambiar de sí mismo: su nombre, su correo y su clave. La clave pide la actual, que si
+ * Lo que cada quien puede cambiar de sí mismo: su nombre, su correo, su color, el de su consola y su clave. La clave pide la actual, que si
  * no cualquiera que se siente en una sesión abierta se la cambia y deja al dueño afuera.
  *
  * El rol y los clientes NO se tocan aquí: eso lo decide el super-admin.
  */
 export function cambiarLoMio(
   usuario: string,
-  cambios: { nombre?: string; correo?: string; color?: string; claveActual?: string; claveNueva?: string },
+  cambios: { nombre?: string; correo?: string; color?: string; acento?: string; claveActual?: string; claveNueva?: string },
 ): UsuarioPublico {
   const usuarios = leerUsuarios();
   const i = usuarios.findIndex((u) => u.usuario === usuario);
@@ -163,6 +181,7 @@ export function cambiarLoMio(
     nombre,
     correo: cambios.correo === undefined ? actual.correo : correoLimpio(cambios.correo, usuario),
     color: cambios.color === undefined ? actual.color : colorLimpio(cambios.color),
+    acento: cambios.acento === undefined ? actual.acento : acentoLimpio(cambios.acento),
     clave: cambios.claveNueva ? hashear(cambios.claveNueva) : actual.clave,
   };
   guardar(usuarios);

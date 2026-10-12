@@ -428,7 +428,18 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
   --shadow:0 1px 2px rgba(16,24,40,.05); --lift:0 4px 12px rgba(16,24,40,.08);
   --r-card:12px; --r-input:10px;
   /* Las dos series de la gráfica: dos tonos que se distinguen, no el acento dos veces. */
-  --serie-wa:#2563eb; --serie-sitio:#93c5fd}
+  --serie-wa:#2563eb; --serie-sitio:#93c5fd;
+  /* El acento sobre la barra oscura (más claro, para que se lea ahí) y el del botón al pasar el ratón. */
+  --acento-riel:#60a5fa; --brand-hover:#1d4ed8}
+/* El color de la consola de cada quien (Mi cuenta). Azul es el de arriba. Todos medidos y por encima de 4.5:1: blanco
+   sobre el botón (el peor, azul, 5.17), el acento sobre blanco y sobre su fondo suave (el peor, azul, 4.75), y la
+   variante clara sobre la barra y sobre la pestaña activa (la peor, morado, 5.40). */
+:root[data-acento=dorado]:has(#app:not([hidden])){--brand:#7b660f;--brand-soft:#fdf6dd;--oro:#7b660f;--oro-claro:#7b660f;--oro-papel:#fdf6dd;
+  --brand-hover:#655409;--acento-riel:#e2c04c;--serie-wa:#7b660f;--serie-sitio:#e2c04c}
+:root[data-acento=grafito]:has(#app:not([hidden])){--brand:#344054;--brand-soft:#f2f4f7;--oro:#344054;--oro-claro:#344054;--oro-papel:#f2f4f7;
+  --brand-hover:#1d2939;--acento-riel:#d0d5dd;--serie-wa:#344054;--serie-sitio:#98a2b3}
+:root[data-acento=morado]:has(#app:not([hidden])){--brand:#6d28d9;--brand-soft:#f5f3ff;--oro:#6d28d9;--oro-claro:#6d28d9;--oro-papel:#f5f3ff;
+  --brand-hover:#5b21b6;--acento-riel:#a78bfa;--serie-wa:#6d28d9;--serie-sitio:#c4b5fd}
 #app{background:var(--papel);color:var(--tinta)}
 /* Sin manchas de luz: no hay vidrio que las necesite. La entrada las conserva. */
 body:has(#app:not([hidden]))::before{display:none}
@@ -444,8 +455,8 @@ body:has(#app:not([hidden])){background:#f5f6f8}
 #app .nav .tab .ic{color:#8b94a5}
 #app .nav .tab:hover{background:var(--riel-activo);color:#fff}
 #app .nav .tab.on{background:var(--riel-activo);color:#fff;font-weight:700;box-shadow:none}
-#app .nav .tab.on .ic{color:#60a5fa}
-#app .nav .tab.on::before{content:"";position:absolute;left:-12px;top:50%;transform:translateY(-50%);width:4px;height:22px;border-radius:0 4px 4px 0;background:#60a5fa}
+#app .nav .tab.on .ic{color:var(--acento-riel)}
+#app .nav .tab.on::before{content:"";position:absolute;left:-12px;top:50%;transform:translateY(-50%);width:4px;height:22px;border-radius:0 4px 4px 0;background:var(--acento-riel)}
 /* El número de cada sección, en gris: dice cuántos hay, no que algo urja. Lo que urge va en la insignia roja. */
 #app .nav .tab .cuenta-gris{margin-left:auto;font-size:12px;color:#8b94a5;font-variant-numeric:tabular-nums;font-weight:400}
 #app .nav .tab .cuenta-gris:empty{display:none}
@@ -462,7 +473,7 @@ body:has(#app:not([hidden])){background:#f5f6f8}
 :root:has(#app:not([hidden])) .btn{border-radius:10px;box-shadow:none;transform:none}
 :root:has(#app:not([hidden])) .btn:hover{box-shadow:none;transform:none;background:#f9fafb}
 :root:has(#app:not([hidden])) .btn.primary{background:var(--brand);color:#fff}
-:root:has(#app:not([hidden])) .btn.primary:hover{background:#1d4ed8}
+:root:has(#app:not([hidden])) .btn.primary:hover{background:var(--brand-hover)}
 :root:has(#app:not([hidden])) :is(select,input,textarea){box-shadow:none;border-color:#d0d5dd}
 :root:has(#app:not([hidden])) :is(.btn,input,select,textarea):focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 #app .card{box-shadow:var(--shadow)}
@@ -494,6 +505,19 @@ body:has(#app:not([hidden])){background:#f5f6f8}
 #app .dato.calma{background:transparent}
 #app .celda,#app .equipo-cliente,#app .zona-demo{background:#f9fafb;border-color:var(--line);border-radius:10px}
 #app .chip{border-radius:999px}
+/* El color de la consola, en Mi cuenta: cada opción con su muestra y su nombre. */
+.acentos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.acento{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;border-radius:10px;
+  padding:7px 12px;font:inherit;font-size:13px;color:var(--tinta);cursor:pointer;min-height:38px}
+.acento i{width:16px;height:16px;border-radius:50%;flex:none}
+.acento[data-acento=azul] i{background:#2563eb}
+.acento[data-acento=dorado] i{background:#7b660f}
+.acento[data-acento=grafito] i{background:#344054}
+.acento[data-acento=morado] i{background:#6d28d9}
+/* 🪤 El elegido se marca con borde Y con aria-checked, no solo con el color: el color es justamente lo que cambia. */
+.acento[aria-checked=true]{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand);font-weight:600}
+.acento .muted{font-weight:400}
+
 /* El menú «Más»: lo que se usa una vez al mes no compite con «Abrir tablero», que es lo de todos los días. */
 .mas{position:relative}
 .mas > summary{list-style:none}
@@ -625,6 +649,8 @@ dialog.panel{border-radius:16px 0 0 16px}
     <label>Nombre <input id="y-nombre" required></label>
     <label>Correo <input id="y-correo" type="email" placeholder="opcional"><span class="muted small">Si lo pones, también puedes entrar con él.</span></label>
     <div><b class="small">Tu color</b><div class="small muted">Con esto te reconocen en la consola.</div><div class="paleta" id="y-paleta"></div></div>
+    <div><b class="small">Color de la consola</b><div class="small muted">Solo cambia lo que ves tú. El de siempre es el azul.</div>
+      <div class="acentos" id="y-acentos" role="radiogroup" aria-label="Color de la consola"></div></div>
     <hr style="border:none;border-top:1px solid var(--line);width:100%">
     <label>Clave actual <input id="y-clave-actual" type="password" autocomplete="current-password" placeholder="solo si vas a cambiarla"></label>
     <label>Clave nueva <input id="y-clave-nueva" type="password" autocomplete="new-password" placeholder="8 o más caracteres"></label>
@@ -763,19 +789,30 @@ dialog.panel{border-radius:16px 0 0 16px}
     });
   }
 
+  // El botón del perfil, abajo en la barra: la inicial con su color, el nombre y la flechita. Se pinta igual al
+  // entrar y al guardar «Mi cuenta».
+  // 🪤 Al guardar se hacía `$('yo').textContent = …`, que borraba la inicial y la flecha y dejaba el botón en texto
+  // plano hasta volver a entrar.
+  function pintarYo() {
+    var comoMeLlamo = yo ? yo.nombre : 'llave maestra';
+    $('yo-nombre').textContent = comoMeLlamo;
+    if (yo && yo.color) { $('yo-ini').style.background = yo.color; $('yo-ini').style.color = '#fff'; $('yo-ini').style.borderColor = 'transparent'; }
+    $('yo-ini').textContent = (function (n) {
+      var p = String(n || 'A').trim().split(/\s+/);
+      return ((p[0] || 'A')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
+    })(comoMeLlamo);
+    $('yo').title = yo
+      ? 'Mi cuenta · ' + (esSuper ? 'super-admin' : yo.clientes.length === 1 ? '1 cliente' : yo.clientes.length + ' clientes')
+      : 'Entraste con la llave maestra';
+  }
+  // El color de la consola de esta persona. Lo pinta el CSS con `data-acento` en <html>; sin elegir, azul.
+  function ponerAcento(a) { document.documentElement.setAttribute('data-acento', ACENTOS.indexOf(a) >= 0 ? a : 'azul'); }
+
   function sesionLista() {
     return api('/yo').then(function (d) {
-      yo = d.usuario; esSuper = d.super; COLORES = d.colores || COLORES;
-      var comoMeLlamo = yo ? yo.nombre : 'llave maestra';
-      $('yo-nombre').textContent = comoMeLlamo;
-      if (yo && yo.color) { $('yo-ini').style.background = yo.color; $('yo-ini').style.color = '#fff'; $('yo-ini').style.borderColor = 'transparent'; }
-      $('yo-ini').textContent = (function (n) {
-        var p = String(n || 'A').trim().split(/\s+/);
-        return ((p[0] || 'A')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
-      })(comoMeLlamo);
-      $('yo').title = yo
-        ? 'Mi cuenta · ' + (esSuper ? 'super-admin' : yo.clientes.length === 1 ? '1 cliente' : yo.clientes.length + ' clientes')
-        : 'Entraste con la llave maestra';
+      yo = d.usuario; esSuper = d.super; COLORES = d.colores || COLORES; ACENTOS = d.acentos || ACENTOS;
+      pintarYo();
+      ponerAcento(yo && yo.acento);
       $('nuevo').hidden = !esSuper;
       $('tab-equipo').hidden = !esSuper;
       $('tab-config').hidden = !esSuper;
@@ -833,6 +870,7 @@ dialog.panel{border-radius:16px 0 0 16px}
   });
 
   var COLORES = [];
+  var ACENTOS = ['azul', 'dorado', 'grafito', 'morado']; // los manda el servidor en /api/yo; estos, por si tarda
   function pintarPaleta(elegido) {
     $('y-paleta').innerHTML = COLORES.map(function (c) {
       return '<button type="button" class="tinta' + (c === elegido ? ' puesto' : '') + '" data-color="' + c + '" style="background:' + c + '" aria-label="Color ' + c + '"></button>';
@@ -845,30 +883,51 @@ dialog.panel{border-radius:16px 0 0 16px}
     });
   }
 
+  var NOMBRE_ACENTO = { azul: 'Azul', dorado: 'Dorado', grafito: 'Grafito', morado: 'Morado' };
+  function pintarAcentos(elegido) {
+    elegido = elegido || 'azul';
+    $('y-acentos').innerHTML = ACENTOS.map(function (a) {
+      return '<button type="button" class="acento" role="radio" data-acento="' + a + '" aria-checked="' + (a === elegido) + '">' +
+        '<i aria-hidden="true"></i>' + (NOMBRE_ACENTO[a] || a) + (a === 'azul' ? ' <span class="muted">· el de siempre</span>' : '') + '</button>';
+    }).join('');
+    $('y-acentos').querySelectorAll('.acento').forEach(function (b) {
+      // Se ve al instante, antes de guardar: escoger un color sin verlo puesto es adivinar.
+      b.onclick = function () {
+        $('y-acentos').querySelectorAll('.acento').forEach(function (x) { x.setAttribute('aria-checked', String(x === b)); });
+        ponerAcento(b.getAttribute('data-acento'));
+      };
+    });
+  }
+  // Si se cierra sin guardar, vuelve el que tenía.
+  $('dlg-yo').addEventListener('close', function () { ponerAcento(yo && yo.acento); });
+
   $('yo').onclick = function () {
     if (!yo) { alert('Entraste con la llave maestra, que no es una cuenta. Crea tu usuario en Equipo y entra con él.'); return; }
     $('y-nombre').value = yo.nombre || '';
     $('y-correo').value = yo.correo || '';
     pintarPaleta(yo.color);
+    pintarAcentos(yo.acento);
     $('y-clave-actual').value = ''; $('y-clave-nueva').value = ''; $('y-msg').textContent = '';
     $('dlg-yo').showModal();
   };
   $('y-guardar').onclick = function () {
     var puesto = $('y-paleta').querySelector('.tinta.puesto');
-    var cuerpo = { nombre: $('y-nombre').value.trim(), correo: $('y-correo').value.trim(), color: puesto ? puesto.getAttribute('data-color') : '' };
+    var acento = $('y-acentos').querySelector('.acento[aria-checked="true"]');
+    var cuerpo = { nombre: $('y-nombre').value.trim(), correo: $('y-correo').value.trim(), color: puesto ? puesto.getAttribute('data-color') : '',
+      acento: acento ? acento.getAttribute('data-acento') : 'azul' };
     if ($('y-clave-nueva').value) { cuerpo.claveActual = $('y-clave-actual').value; cuerpo.claveNueva = $('y-clave-nueva').value; }
     $('y-msg').textContent = 'Guardando…';
     api('/yo', { method: 'PATCH', body: cuerpo }).then(function (d) {
       if (d.error) { $('y-msg').textContent = d.error; return; }
       yo = d.usuario;
-      $('yo').textContent = yo.nombre + (esSuper ? ' · super-admin' : '');
+      pintarYo();
       $('dlg-yo').close();
     });
   };
 
   $('salir').onclick = function () {
     api('/salir', { method: 'POST' }).catch(function () {});
-    sesion = ''; token = ''; yo = null;
+    sesion = ''; token = ''; yo = null; ponerAcento('azul');
     localStorage.removeItem('aiva.consola.sesion'); localStorage.removeItem('aiva.consola.token');
     entrar(false, 'Hasta luego');
   };

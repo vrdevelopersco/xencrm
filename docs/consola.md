@@ -248,8 +248,9 @@ cliente ya tiene su configuración en los datos, manda esa; la que trae el paque
 ## Cuentas
 
 Cada quien entra con **usuario y clave**, o con su **correo** y la clave si lo tiene puesto. El botón con tu
-nombre, arriba a la derecha, abre **Mi cuenta**: ahí cambias tu nombre, tu correo y tu clave sin pedirle nada al
-super-admin. Para cambiar la clave hay que poner la actual —si no, cualquiera que se siente frente a una sesión
+nombre, abajo en la barra, abre **Mi cuenta**: ahí cambias tu nombre, tu correo, tu clave y el **color de la
+consola** sin pedirle nada al super-admin. El color es solo de quien lo escoge: azul, que es el de siempre, dorado,
+grafito o morado. Se ve al instante y, si se cierra sin guardar, vuelve el que estaba. Para cambiar la clave hay que poner la actual —si no, cualquiera que se siente frente a una sesión
 abierta te deja afuera—. El rol y los clientes que atiendes no se tocan ahí: eso lo decide el super-admin en
 **Equipo**.
 

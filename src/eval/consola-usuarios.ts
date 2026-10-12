@@ -8,7 +8,7 @@ import { join } from 'node:path';
 const base = mkdtempSync(join(tmpdir(), 'aiva-usuarios-'));
 process.env.AIVA_CLIENTES_DIR = base;
 process.env.CONSOLA_TOKEN = 'llave-maestra';
-const { crearUsuario, actualizarUsuario, borrarUsuario, verificar, abrirSesion, sesionDe, cerrarSesion, leerUsuarios, alcanza, cambiarLoMio, colorDe, COLORES } = await import('../consola-usuarios.js');
+const { crearUsuario, actualizarUsuario, borrarUsuario, verificar, abrirSesion, sesionDe, cerrarSesion, leerUsuarios, alcanza, cambiarLoMio, colorDe, COLORES, ACENTOS } = await import('../consola-usuarios.js');
 const { crearCliente } = await import('../clientes.js');
 const { mountConsola } = await import('../consola.js');
 const { Hono } = await import('hono');
@@ -165,6 +165,20 @@ cambiarLoMio('pablo', { color: COLORES[2] });
 check('cada quien se elige el suyo', leerUsuarios().find((u) => u.usuario === 'pablo')!.color === COLORES[2]);
 check('un color inventado se rechaza', (() => { try { cambiarLoMio('pablo', { color: '#ff00ff' }); return false; } catch { return true; } })());
 check('y vaciarlo devuelve al automático', (() => { cambiarLoMio('pablo', { color: '' }); return colorDe(leerUsuarios().find((u) => u.usuario === 'pablo')!) === colorDe({ usuario: 'pablo' }); })());
+
+// El color de la consola es de cada quien, y el de siempre es el azul.
+const pablo = () => leerUsuarios().find((u) => u.usuario === 'pablo')!;
+check('sin elegir, la consola no guarda color: es el azul', pablo().acento === undefined);
+check('el azul va primero en la lista', ACENTOS[0] === 'azul' && ACENTOS.includes('dorado'));
+cambiarLoMio('pablo', { acento: 'dorado' });
+check('cada quien elige el color de su consola', pablo().acento === 'dorado');
+check('cambiar el color no toca su nombre ni su clave', pablo().nombre === 'Pablo Ruiz' && Boolean(verificar('pablo', 'otra-clave-larga')));
+check('un color de consola inventado se rechaza', (() => { try { cambiarLoMio('pablo', { acento: 'fucsia' }); return false; } catch (e) { return /color de consola/.test((e as Error).message); } })());
+check('lo que se rechaza no borra lo que tenía', pablo().acento === 'dorado');
+cambiarLoMio('pablo', { nombre: 'Pablo Ruiz' });
+check('guardar otra cosa no le quita el color', pablo().acento === 'dorado');
+cambiarLoMio('pablo', { acento: 'azul' });
+check('🪤 volver al azul no lo guarda: «el de siempre» queda siguiendo al de siempre', pablo().acento === undefined && !('acento' in JSON.parse(JSON.stringify(pablo()))));
 
 
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');

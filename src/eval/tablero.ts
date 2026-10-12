@@ -297,6 +297,11 @@ check('lo de una vez al mes va en «⋯» sin perder sus clases, que es por dond
   ['respaldar', 'restaurar', 'copiar', 'baja', 'prio'].every((k) => new RegExp(`<details class="mas">[\\s\\S]*?class="[^"]*\\b${k}\\b`).test(consola)));
 check('el menú «⋯» se cierra al hacer clic fuera o con Escape', /details\.mas\[open\][\s\S]{0,120}d\.open = false/.test(consola) && /e\.key === 'Escape'[\s\S]{0,120}details\.mas\[open\]/.test(consola));
 check('la hoja de la consola no repite reglas copiadas dos veces', (consola.match(/\.micro\{display:grid/g) || []).length === 1);
+// Cada color de consola que acepta el servidor tiene su pintura en la hoja; el azul es la base.
+const { ACENTOS } = await import('../consola-usuarios.js');
+const sinPintar = ACENTOS.filter((a) => a !== 'azul').filter((a) => !new RegExp(`:root\\[data-acento=${a}\\]:has\\(#app:not\\(\\[hidden\\]\\)\\)\\{[^}]*--brand:`).test(consola) || !consola.includes(`.acento[data-acento=${a}] i{`));
+check('cada color de consola de la lista tiene su pintura y su muestra', sinPintar.length === 0 && consola.includes('.acento[data-acento=azul] i{'), `sin pintar: ${sinPintar.join(', ')}`);
+check('🪤 al guardar «Mi cuenta» el botón del perfil no se queda en texto plano', !/\$\('yo'\)\.textContent = yo\./.test(consola) && /function pintarYo\(\)/.test(consola));
 check('la gráfica de la consola tiene dos colores, no el acento dos veces', /--serie-wa:#[0-9a-f]{6}; --serie-sitio:#[0-9a-f]{6}/.test(consola) && !/banda\(function \(p\) \{ return p\.total; \}, 'var\(--oro-claro\)'\)/.test(consola));
 
 // — La portada (2026-10-12): el usuario la sintió con mucho texto. Pasó de 385 palabras a menos de 250, y la vista
