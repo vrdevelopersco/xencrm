@@ -23,6 +23,9 @@ el archivo de usuarios.
   administración de otro.
 - **Privilegios**: un agente no ve el equipo, no crea usuarios, no le cambia la clave a otro, no borra a nadie,
   no da de alta clientes, y al editar «lo mío» no se asciende ni se asigna clientes ajenos.
+- **Retención**: el negocio ve la suya pero no la cambia; encenderla, que anonimiza o borra conversaciones, es solo
+  del super-admin. Al anonimizar, ni el nombre ni el teléfono quedan en ninguna tabla de la base (`test:retencion`
+  la recorre entera buscándolos).
 - **Sesiones**: salir la cierra; desactivar a alguien la cierra; **cambiarle la clave también la cierra**.
 - **Tablero**: sin token no contesta nada, ni las rutas que mueven datos.
 - **Chat público**: corta al mensaje 21 por conversación, rechaza vacíos y enormes, y un identificador de

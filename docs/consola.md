@@ -192,6 +192,20 @@ Al 80 % avisa. Al 90 % lo específico lo contesta el modelo de responder, que es
 usar la IA de pago hasta el mes siguiente: lo que se resuelve sin IA sigue y lo demás le llega al equipo, que
 recibe el aviso por la campana, la consola y WhatsApp. El detalle está en el README, en "Consumo de IA".
 
+## Qué pasa con las conversaciones viejas
+
+Debajo del tope está la **retención**: cuántos días sin movimiento antes de que una conversación se anonimice o se
+borre sola. Viene apagada, y la cambia solo el super-admin; el negocio la ve en su tablero, en el panel del respaldo.
+
+Mientras escribes los días, dice cuántas tocaría ese mismo día y desde cuándo está quieta la más vieja. Eso es para
+no poner «90» creyendo que son pocas. **Anonimizar** quita el nombre, el teléfono, los datos y los mensajes, y deja
+las cuentas del embudo y del gasto. **Borrar del todo** se lleva todo y pide confirmación aparte. Lo mínimo son 90
+días; vacío la apaga.
+
+No toca a quien tiene una cita por delante. Antes de cada pasada hay un respaldo de la base de menos de un día, que
+se guarda 14 días. Si no se pudo respaldar, no toca nada y lo dice ahí mismo. Pasa una vez al día, de a 300
+conversaciones, y la línea de arriba dice cuándo fue la última y cuántas quedan.
+
 ## La configuración de cada cliente
 
 Desde el tablero de un cliente —al que se entra por la consola—, en **El negocio**, se cambia sin tocar archivos.

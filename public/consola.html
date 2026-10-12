@@ -1783,6 +1783,9 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       '<div class="clave" id="cl-' + esc(slug) + '"><div class="small muted">Cargando la clave…</div></div>' +
       // Y cuánto puede gastar. Va justo debajo de quién paga porque es la misma pregunta: cuánto cuesta este cliente.
       '<div class="clave" id="tp-' + esc(slug) + '"><div class="small muted">Cargando el tope…</div></div>' +
+      // Y qué pasa con las conversaciones viejas. Va con el tope porque es igual de suyo: lo decide quien administra
+      // aiva, y el negocio solo lo ve.
+      '<div class="clave" id="rt-' + esc(slug) + '"><div class="small muted">Cargando la retención…</div></div>' +
       '<div class="small muted" style="margin:10px 0 2px">Lo que corre ahora. Guardar deja el archivo listo, pero hace falta reiniciar ese cliente para que lo tome.</div>' +
       (d.roles || []).map(function (r) {
         var meta = ROLES_UI.filter(function (x) { return x[0] === r.rol; })[0] || [r.rol, r.rol, ''];
@@ -1804,6 +1807,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
 
     pintarClave(slug);
     pintarTope(slug);
+    pintarRetencion(slug);
 
     // El campo del modelo solo cuenta con OpenAI: con los otros se apaga en vez de aceptar algo que se ignora.
     Array.prototype.forEach.call(cuerpo.querySelectorAll('.m-motor'), function (sel) {
@@ -1950,6 +1954,72 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         cli(slug + '/motores/tope', { method: 'PUT', body: { tope: $('tp-v-' + slug).value.trim() } }).then(function (r) {
           if (r && r.error) { msg.textContent = r.error; return; }
           pintarTope(slug);
+        });
+      };
+    });
+  }
+
+  // Retención automática de conversaciones viejas (ver src/crm/retencion.ts).
+  //
+  // 🪤 Antes de guardar se dice cuántas tocaría HOY con esos días, y se vuelve a calcular mientras se escribe. Poner
+  // «90» creyendo que son pocas y descubrir mañana que eran dos mil es justo lo que esta pantalla tiene que evitar.
+  // Borrar del todo pide confirmación aparte; anonimizar, no, porque deja las cuentas.
+  var fechaCorta = function (ts) { return new Date(ts).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }); };
+  function previaTexto(v) {
+    if (!v) return '';
+    var t = v.cuantas === 0 ? 'Con ' + v.dias + ' días, hoy no tocaría ninguna conversación.'
+      : 'Con ' + v.dias + ' días, hoy tocaría <b>' + v.cuantas + '</b> conversaci' + (v.cuantas === 1 ? 'ón' : 'ones') + (v.masVieja ? '; la más quieta, desde el ' + esc(fechaCorta(v.masVieja)) : '') + '.';
+    return t + (v.conCita ? ' ' + v.conCita + (v.conCita === 1 ? ' tiene' : ' tienen') + ' una cita por delante y no se toca' + (v.conCita === 1 ? '' : 'n') + '.' : '');
+  }
+  function pintarRetencion(slug) {
+    if (!$('rt-' + slug)) return;
+    cli(slug + '/retencion').then(function (d) {
+      var caja = $('rt-' + slug);
+      if (!caja) return;
+      if (d.error) { caja.innerHTML = '<div class="small muted">' + esc(d.error) + '</div>'; return; }
+      var p = d.politica, u = d.ultima;
+      var chip = !p ? ['', 'Retención apagada'] : p.accion === 'borrar' ? ['media', 'Borra a los ' + p.dias + ' días'] : ['ok', 'Anonimiza a los ' + p.dias + ' días'];
+      var ultima = !p || !u ? '' : u.error ? ' La última pasada no tocó nada: ' + esc(u.error) + '.'
+        : ' La última pasada, el ' + esc(fechaCorta(u.ts)) + ': ' + (u.cuantos ? u.cuantos + (u.accion === 'borrar' ? ' borradas' : ' anonimizadas') : 'nada que tocar') + (u.quedan ? ', y quedan ' + u.quedan + ' para la siguiente hora' : '') + '.';
+      var id = esc(slug);
+      caja.innerHTML =
+        '<div class="fila" style="align-items:center;gap:10px;flex-wrap:wrap">' +
+          '<span class="chip ' + chip[0] + '">' + esc(chip[1]) + '</span>' +
+          '<span class="small">' + (p ? 'Conversaciones sin movimiento.' + ultima : 'Las conversaciones se guardan sin límite de tiempo.') + '</span>' +
+        '</div>' +
+        '<div class="fila" style="gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:10px">' +
+          '<div><label class="small" for="rt-d-' + id + '" style="display:block">Días sin movimiento</label>' +
+            '<input id="rt-d-' + id + '" type="number" min="' + d.minimo + '" max="' + d.maximo + '" step="1" inputmode="numeric" style="max-width:120px" placeholder="Apagada" value="' + (p ? esc(String(p.dias)) : '') + '"></div>' +
+          '<div><label class="small" for="rt-a-' + id + '" style="display:block">Qué hacer</label>' +
+            '<select id="rt-a-' + id + '">' +
+              '<option value="anonimizar"' + (!p || p.accion === 'anonimizar' ? ' selected' : '') + '>Anonimizar</option>' +
+              '<option value="borrar"' + (p && p.accion === 'borrar' ? ' selected' : '') + '>Borrar del todo</option>' +
+            '</select></div>' +
+          '<button class="btn sm rt-guardar">Guardar</button>' +
+          '<span class="grow"></span><span class="small rt-msg" role="status"></span>' +
+        '</div>' +
+        '<div class="small rt-previa" style="margin-top:6px">' + (p ? previaTexto(d.previa) : 'Escribe los días para ver cuántas tocaría. Se sugieren ' + d.sugeridos + '.') + '</div>' +
+        '<div class="small muted" style="margin-top:6px">Anonimizar quita el nombre, el teléfono, los datos y los mensajes, y deja las cuentas del embudo y del gasto. Borrar se lleva todo. No toca a quien tiene una cita por delante. Antes de cada pasada hay un respaldo de la base, que se guarda 14 días. Mínimo ' + d.minimo + ' días; vacío la apaga.</div>';
+      var msg = caja.querySelector('.rt-msg'), previa = caja.querySelector('.rt-previa'), campo = $('rt-d-' + slug);
+      var ultimaPrevia = p ? d.previa : null, espera;
+      campo.oninput = function () {
+        clearTimeout(espera);
+        var n = Number(campo.value);
+        if (!campo.value.trim()) { previa.innerHTML = 'Vacío la apaga.'; ultimaPrevia = null; return; }
+        if (!Number.isInteger(n) || n < d.minimo) { previa.innerHTML = 'Lo mínimo son ' + d.minimo + ' días.'; ultimaPrevia = null; return; }
+        espera = setTimeout(function () {
+          cli(slug + '/retencion?dias=' + n).then(function (r) {
+            if (r && r.previa && String(r.previa.dias) === campo.value.trim()) { ultimaPrevia = r.previa; previa.innerHTML = previaTexto(r.previa); }
+          });
+        }, 350);
+      };
+      caja.querySelector('.rt-guardar').onclick = function () {
+        var dias = campo.value.trim(), accion = $('rt-a-' + slug).value;
+        if (dias && accion === 'borrar' && !confirm('Borrar del todo no deja ni las cuentas: lo borrado solo vuelve desde un respaldo, y se guardan 14 días.' + (ultimaPrevia && ultimaPrevia.cuantas ? '\n\nHoy serían ' + ultimaPrevia.cuantas + ' conversaciones.' : '') + '\n\n¿Sigo?')) return;
+        msg.textContent = 'Guardando…';
+        cli(slug + '/retencion', { method: 'PUT', body: { dias: dias || null, accion: accion } }).then(function (r) {
+          if (r && r.error) { msg.textContent = r.error; return; }
+          pintarRetencion(slug);
         });
       };
     });

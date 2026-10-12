@@ -1878,9 +1878,18 @@
     if (!bk.last) return 'Todavía no hay respaldos: el primero se hace un minuto después de arrancar.';
     return 'Último: hace ' + rel(bk.last.at) + ' (' + Math.max(1, Math.round(bk.last.bytes / 1024)) + ' KB) · ' + bk.count + (bk.count === 1 ? ' copia' : ' copias') + ' en ' + bk.dir;
   }
-  function backupPanel(bk) {
+  // Qué pasa con las conversaciones viejas (src/crm/retencion.ts). Aquí solo se lee: la pone quien administra aiva.
+  function retencionLinea(r) {
+    if (!r || r.error) return '';
+    var p = r.politica, u = r.ultima;
+    if (!p) return '<div class="small muted">Las conversaciones se guardan sin límite de tiempo. Si prefieres que las viejas se anonimicen solas, pídelo.</div>';
+    var que = p.accion === 'borrar' ? 'se borran del todo' : 'se anonimizan: se quitan el nombre, el teléfono y los mensajes, y quedan las cuentas del embudo';
+    var cuando = u && !u.error && u.cuantos ? ' La última vez, el ' + new Date(u.ts).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) + ', fueron ' + u.cuantos + '.' : '';
+    return '<div class="small">Las conversaciones sin movimiento en ' + p.dias + ' días ' + que + '. Nunca las de alguien con una cita por delante.' + cuando + '</div>';
+  }
+  function backupPanel(bk, ret) {
     return '<div class="panel" id="backup-panel"><b>Respaldo de la base</b><div class="small" id="backup-line">' + esc(backupLine(bk)) + '</div>' +
-      '<div class="small muted">Una copia al día de contactos, conversaciones y citas; se guardan las últimas 14. Tienen datos de clientes: guárdalas también fuera de este computador (por ejemplo, con Time Machine).</div>' +
+      '<div class="small muted">Una copia al día de contactos, conversaciones y citas; se guardan las últimas 14. Tienen datos de clientes: guárdalas también fuera de este computador (por ejemplo, con Time Machine).</div>' + retencionLinea(ret) +
       '<div class="feed-row"><button class="btn" id="backup-now">Respaldar ahora</button></div></div>';
   }
   function bindBackup() {
@@ -1990,8 +1999,8 @@
   }
 
   function loadAgent() {
-    Promise.all([api('/agent'), api('/usage?days=7'), api('/calendar'), api('/backup'), api('/presupuesto').catch(function () { return null; })]).then(function (r) {
-      var a = r[0], usage = r[1], calCfg = r[2], bk = r[3], tope = r[4];
+    Promise.all([api('/agent'), api('/usage?days=7'), api('/calendar'), api('/backup'), api('/presupuesto').catch(function () { return null; }), api('/retencion').catch(function () { return null; })]).then(function (r) {
+      var a = r[0], usage = r[1], calCfg = r[2], bk = r[3], tope = r[4], ret = r[5];
       var eng = Object.keys(a.engines).map(function (k) { var e = a.engines[k]; return '<li><b>' + k + '</b>: ' + (e.available ? '✓ disponible' : '✗ ' + esc(e.reason || 'no disponible')) + '</li>'; }).join('');
       var ap = a.appointments;
       $('agent').innerHTML =
@@ -2000,7 +2009,7 @@
         '<div class="panel"><b>Citas</b>' + (ap.enabled ? '<div class="small">' + esc(ap.service) + (ap.location ? ' en ' + esc(ap.location) : '') + ' · ' + ap.durationMin + ' min · días ' + ap.days.join(',') + ' · ' + ap.hours.map(function (h) { return h[0] + '–' + h[1]; }).join(', ') + ' · zona ' + esc(a.timezone) + '</div>' : '<div class="muted small">Desactivadas (appointments.enabled en aiva.config.json)</div>') + '</div>' +
         '<div class="panel"><b>Análisis comercial</b><div class="small">Campos capturados además de los básicos: ' + a.crmFields.map(function (f) { return '<code>' + esc(f.name) + '</code>'; }).join(' ') + '</div></div>' +
         '<div class="panel"><b>Conocimiento indexado</b><div class="small">' + (a.docs.product || 0) + ' productos · ' + (a.docs.knowledge || 0) + ' fragmentos de información.</div></div>' +
-        backupPanel(bk) + usagePanel(usage, tope) + calendarPanel(calCfg) + '<div class="panel" id="miss-panel"></div><div class="panel" id="dict-panel"></div>';
+        backupPanel(bk, ret) + usagePanel(usage, tope) + calendarPanel(calCfg) + '<div class="panel" id="miss-panel"></div><div class="panel" id="dict-panel"></div>';
       bindBackup();
       loadMissesPanel(a);
       loadDictionaryPanel(a);

@@ -91,6 +91,11 @@ for (const ruta of ['clave', 'motores']) {
 const tope = await comoAna('/api/c/confia/motores/tope', { method: 'PUT', body: JSON.stringify({ tope: 1000 }) });
 check('🪤 ni subirse el tope de gasto de IA', tope.status === 403, `dio ${tope.status}`);
 check('pero sí ver cómo va su mes (la instancia está apagada)', (await comoAna('/api/c/confia/presupuesto')).status === 502, 'se frenó algo que el negocio sí puede ver');
+// La retención borra (o anonimiza) datos de sus clientes: el negocio la ve, pero encenderla no es suyo.
+const retencion = await comoAna('/api/c/confia/retencion', { method: 'PUT', body: JSON.stringify({ dias: 90, accion: 'borrar' }) });
+check('🪤 ni encender la retención que borra conversaciones', retencion.status === 403, `dio ${retencion.status}`);
+check('ni por otro método', (await comoAna('/api/c/confia/retencion', { method: 'POST', body: '{}' })).status === 403);
+check('pero sí verla', (await comoAna('/api/c/confia/retencion')).status === 502, 'se frenó algo que el negocio sí puede ver');
 // Y el mensaje dice de quién es ese asunto, en vez de un «403» pelado que parece un fallo.
 const porQue = (await (await comoAna('/api/c/confia/clave')).json()) as { error?: string };
 check('y se explica de quién es ese asunto', /administra aiva/.test(porQue.error ?? ''), String(porQue.error));
@@ -99,6 +104,7 @@ check('lo demás de su cliente lo sigue manejando', (await comoAna('/api/c/confi
 // La llave maestra sí puede: alguien tiene que poder ponerla.
 check('la llave maestra sí llega a la clave', (await maestra('/api/c/confia/clave')).status === 502, 'se frenó al super-admin');
 check('y al tope de gasto', (await maestra('/api/c/confia/motores/tope')).status === 502, 'se frenó al super-admin');
+check('y a la retención', (await maestra('/api/c/confia/retencion', { method: 'PUT', body: JSON.stringify({ dias: 365 }) })).status === 502, 'se frenó al super-admin');
 check('el super-admin sí ve el equipo', (await (await maestra('/api/usuarios')).json() as { usuarios: unknown[] }).usuarios.length === leerUsuarios().length);
 
 // --- un cliente puede vivir en otra máquina: la consola le habla por su URL ---

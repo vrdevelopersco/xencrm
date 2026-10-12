@@ -5,6 +5,7 @@ import { startBusySync } from './crm/busy.js';
 import { startReminders } from './crm/reminders.js';
 import { empezarALimpiar } from './crm/medios.js';
 import { startBackups } from './rag/backup.js';
+import { empezarRetencion } from './crm/retencion.js';
 import { apple } from './llm/apple.js';
 import { countDocs, getDb } from './rag/store.js';
 
@@ -26,6 +27,9 @@ startReminders();
 // Los archivos del chat no los borra nadie: una vez al día se van los que pasaron el plazo. Ver crm/medios.ts.
 empezarALimpiar();
 startBackups();
+// Las conversaciones quietas por mucho tiempo se anonimizan o se borran, si el cliente lo tiene encendido (viene
+// apagado). Siempre con un respaldo de menos de un día detrás. Ver crm/retencion.ts.
+empezarRetencion();
 if (business.appointments.enabled && business.appointments.reminder.enabled) console.log(`   recordatorios: el día antes a las ${business.appointments.reminder.at}`);
 if (env.calendarBusyIcs.length) console.log(`   calendario: ${env.calendarBusyIcs.length} calendario(s) del dueño bloquean la agenda (se leen cada 5 min)`);
 

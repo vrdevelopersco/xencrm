@@ -102,7 +102,7 @@ y por qué.
 | `src/agent/` | `agent.ts` (el recorrido), `gate.ts` (clasificador), `router.ts` (motor por turno), `prompts.ts` (persona y reglas), `format.ts` (guardas y post-proceso), `dictionary.ts` (diccionario y expresiones), `teach.ts` (enseñar una frase), `memory.ts` (historial) |
 | `src/llm/` | `engines.ts` (roles, respaldo y operaciones), `openai.ts` (modelo por rol, razonamiento, caché), `ollama.ts`, `apple.ts` + `sidecar/`, `usage.ts` (consumo y costos) |
 | `src/rag/` | `store.ts` (SQLite: tablas, vectores, FTS5, migraciones), `retriever.ts` (búsqueda y ficha completa), `ingest.ts` (catálogo, markdown, sitio, Shopify, perfil), `profile-index.ts` |
-| `src/crm/` | `contacts.ts`, `merge.ts` (fichas de la misma persona en dos canales), `analyzer.ts` (análisis y puntaje), `score.ts` (el puntaje se enfría solo), `cross.ts` (la misma persona por dos canales), `followup.ts` (posponer seguimiento), `export.ts` (CSV), `signals.ts` (datos exactos por código), `recap.ts`, `appointments.ts` (agenda y zona horaria), `when.ts` (fechas y franjas), `booking.ts` (flujo de citas), `reminders.ts` (recordatorio de la cita), `calendar.ts` + `busy.ts` (iCalendar), `verifications.ts`, `misses.ts` (frases que no entendimos), `outbox.ts` (enviar al cliente, ventana de 24 h, plantillas), `notifications.ts`, `events.ts` (bus en memoria), `settings.ts` |
+| `src/crm/` | `contacts.ts`, `merge.ts` (fichas de la misma persona en dos canales), `analyzer.ts` (análisis y puntaje), `score.ts` (el puntaje se enfría solo), `cross.ts` (la misma persona por dos canales), `followup.ts` (posponer seguimiento), `export.ts` (CSV), `signals.ts` (datos exactos por código), `recap.ts`, `appointments.ts` (agenda y zona horaria), `when.ts` (fechas y franjas), `booking.ts` (flujo de citas), `reminders.ts` (recordatorio de la cita), `calendar.ts` + `busy.ts` (iCalendar), `verifications.ts`, `misses.ts` (frases que no entendimos), `outbox.ts` (enviar al cliente, ventana de 24 h, plantillas), `notifications.ts`, `events.ts` (bus en memoria), `settings.ts`, `retencion.ts` (conversaciones viejas) |
 | `src/channels/` | `web.ts` (servidor, widget, página demo), `admin.ts` (API del tablero y SSE), `whatsapp.ts` (Baileys), `meta.ts` (Cloud API) + `meta-credentials.ts`, `registry.ts` + `switches.ts` (Canales), `calendar.ts` (rutas públicas), `public-check.ts` (¿responde la dirección pública?) |
 | `src/` | `config.ts` (esquemas y variables), `profile.ts` (perfil del negocio), `ajustes.ts` (lo editable de la configuración desde el tablero), `brand.ts` (color, contraste y logo), `envfile.ts` (escribir `.env`), `index.ts` (arranque), `onboard.ts`, `cli.ts`, `seed.ts` |
 | `src/` (varios clientes) | `clientes.ts` (alta, baja, índice, tokens), `consola.ts` (tickets, bandeja, proxy del tablero), `consola-usuarios.ts` (quién entra: claves, roles, sesiones), `paquete.ts` (el ZIP del despliegue) |
@@ -225,11 +225,22 @@ ya guardados (no llama al modelo; `--write` para guardar).
 | `verifications` | preguntas por verificar y sus respuestas |
 | `misses` | frases que las reglas no entendieron, con lo que entendió el modelo |
 | `turnos` | cada turno del asistente: intención, vía, ruta, motor, modelo, rol, ms, guardas que saltaron, huella del prompt, versión y error. Se podan a los 90 días (`crm/turnos.ts`) |
-| `settings` | decisiones del tablero (qué canales están encendidos) y el tope de gasto de IA con su último aviso |
+| `settings` | decisiones del tablero (qué canales están encendidos), el tope de gasto de IA con su último aviso y la retención de conversaciones con su última pasada |
 | `entrantes` | el id de cada mensaje que ya entró por WhatsApp oficial, para no atender dos veces lo que Meta repite (se borra a los 7 días; `crm/entrantes.ts`) |
 
 Las columnas nuevas se agregan en `store.ts › migrate()`, porque SQLite no tiene `ADD COLUMN IF NOT EXISTS`.
 Respaldo diario con `VACUUM INTO` a `data/backups/` (`rag/backup.ts`), con las últimas 14 copias y permisos 600.
+
+**Retención** (`crm/retencion.ts`): apagada hasta que el super-admin la pone (`settings › retencion.politica`, días y
+acción). Mira cada hora y pasa una vez al día, o seguido mientras queden tandas de 300. Cuenta como quieta una ficha
+por `MAX(last_message_at, last_seen)` y se salta a quien tiene una cita confirmada por delante. Antes de tocar nada
+exige un respaldo de menos de un día; si no lo hay lo hace, y si falla no toca nada y lo deja dicho en
+`retencion.ultima`. Anonimizar es una transacción por ficha: le cambia el id a `anon:<12 hex>` en `users`,
+`appointments`, `events`, `llm_usage`, `turnos` y `origen`, vacía lo que tiene texto (notas, `payload`, el clic y la
+página del origen) y borra `messages`, `analyses`, `verifications`, `misses`, `propuestas`, `wa_salida` y su gente de
+grupos. Los archivos del chat se borran del disco después de confirmar. Borrar se lleva todo menos `llm_usage`, que
+queda a nombre de `borrado`. `import_messages` no entra: la primera pasada se lo llevaría entero. Las rutas son
+`GET /admin/api/retencion` (con `?dias=` da la vista previa) y `PUT`, que la consola solo deja al super-admin.
 
 ## Configuración por capas
 
@@ -415,6 +426,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:sedes` | varias sedes: preguntar en cuál, apodos, cambiar a mitad del flujo, cupo por sede, la otra sede cuando la suya no abre, recordatorio y lo que ve el modelo | no |
 | `pnpm test:turnos` | cada respuesta con su turno: ruta, modelo, guardas, costo y versión; llamadas y mensajes unidos; el análisis y lo del equipo fuera | no (OpenAI simulado) |
 | `pnpm test:claves` | claves y tarjetas en vivo: qué se tapa, qué no (correo, teléfono), que no llegue al modelo ni se guarde | no (OpenAI simulado) |
+| `pnpm test:retencion` | retención: apagada por defecto, mínimo 90 días, sin respaldo no toca nada, ni el nombre ni el teléfono quedan en ninguna tabla, el embudo y el gasto sí, citas por delante, tandas, borrar, y la ruta | no |
 | `pnpm test:repetidos` | WhatsApp oficial: lo que Meta manda dos veces entra y se contesta una vez; en «Mira» no marca leído ni contesta | no (Meta simulado) |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |
 | `pnpm replay` | las conversaciones sintéticas con los motores configurados; proyecta el costo | sí |

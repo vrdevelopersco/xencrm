@@ -459,6 +459,21 @@ base) muestra el último y tiene "Respaldar ahora". Conviene que también queden
 similar). Para restaurar: detener aiva, copiar el respaldo elegido sobre `data/aiva.db` y arrancar.
 Pruebas: `pnpm test:backup`.
 
+**Retención de conversaciones.** Las conversaciones que llevan mucho tiempo quietas se pueden anonimizar o borrar
+solas. Viene apagada. La enciende el super-admin, cliente por cliente, en la consola (Configuración › Motores), y
+antes de guardar ve cuántas tocaría ese día. El negocio la ve en su tablero, en el panel del respaldo.
+
+| Acción | Qué se va | Qué queda |
+|---|---|---|
+| Anonimizar, la de por defecto | Nombre, teléfono, número, datos, etiquetas, notas, resumen, mensajes y sus archivos, análisis, pendientes y propuestas | La ficha archivada con otro identificador, su etapa y su puntaje, sus citas y eventos sin notas, de dónde vino y el gasto |
+| Borrar | Todo lo de esa persona | El gasto de IA, a nombre de nadie |
+
+Lo mínimo son 90 días sin movimiento; se sugieren 365. No toca a quien tiene una cita por delante. Antes de cada
+pasada tiene que haber un respaldo de menos de un día, y si no se puede hacer, no se toca nada: lo anonimizado se
+recupera de los respaldos durante 14 días. Pasa una vez al día, de a 300 conversaciones. Si la persona vuelve a
+escribir, empieza de cero. El historial importado de WhatsApp no entra: es de donde sale el estilo del asistente y
+se borra desde donde se importa. Pruebas: `pnpm test:retencion`.
+
 ## Advertencias
 
 - Un cliente por proceso: para varios clientes, una carpeta, un `.env` y un puerto por cada uno.

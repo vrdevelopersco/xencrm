@@ -316,6 +316,11 @@ const quitarGalleta = (c: Context) => deleteCookie(c, GALLETA, { path: '/' });
  * del negocio. Todo lo demás —sus contactos, sus citas, su conocimiento, su configuración— sí es suyo.
  */
 const SOLO_SUPER = /^(clave|motores)(\/|$)/;
+/**
+ * Lo que el negocio puede ver pero solo cambia quien administra aiva. La retención borra (o anonimiza) datos de sus
+ * clientes: el negocio tiene que saber que existe y cuándo pasó, pero encenderla no es de la operación del día.
+ */
+const SOLO_SUPER_CAMBIA = /^retencion(\/|$)/;
 
 function quienEs(c: Context): { usuario: UsuarioPublico | null; esSuper: boolean } | null {
   if ((c.req.header('x-consola-token') ?? c.req.query('token')) === CONSOLA_TOKEN) return { usuario: null, esSuper: true };
@@ -696,6 +701,9 @@ export function mountConsola(app: Hono) {
     // la posibilidad de leerse y cambiarse la llave con una llamada. Se cierra donde se decide, no donde se pinta.
     if (!c.get('esSuper' as never) && SOLO_SUPER.test(c.req.param('ruta'))) {
       return c.json({ error: 'eso lo lleva quien administra aiva, no el negocio' }, 403);
+    }
+    if (!c.get('esSuper' as never) && SOLO_SUPER_CAMBIA.test(c.req.param('ruta')) && c.req.method !== 'GET' && c.req.method !== 'HEAD') {
+      return c.json({ error: 'eso lo cambia quien administra aiva; verlo sí puedes' }, 403);
     }
     const cliente = leerIndice().find((x) => x.slug === slug);
     const token = cliente ? tokenDe(slug) : '';

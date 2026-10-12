@@ -253,6 +253,9 @@ Nada se guarda sin validar, y antes de pisar el archivo queda una copia del ante
 
 ## Agente
 
+- **Respaldo de la base**: cuándo fue la última copia y el botón para hacer una ya. Si tu negocio tiene retención,
+  dice también cada cuánto se anonimizan o se borran las conversaciones quietas y cuántas fueron la última vez.
+  Quien tiene una cita por delante nunca entra. La retención la pone quien administra aiva.
 - **Consumo de IA**: cuánto cuestan las respuestas por conversación y por mensaje. Si tu negocio tiene tope de gasto
   al mes, arriba dice cuánto llevas. Al llegar al tope, lo que necesita IA te llega a ti para contestarlo a mano
   hasta el mes siguiente; las citas y lo demás que no necesita IA siguen igual.

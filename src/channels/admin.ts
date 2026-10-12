@@ -38,6 +38,7 @@ import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
 import { apagarClaveDelCliente, claveDelCliente, encenderClaveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente } from '../motores.js';
 import { ponerTope, presupuesto } from '../crm/presupuesto.js';
+import { DIAS_MAXIMO, DIAS_MINIMO, DIAS_SUGERIDOS, politica as politicaDeRetencion, ponerPolitica, ultimaPasada, vistaPrevia } from '../crm/retencion.js';
 import { agendaDe } from '../crm/sedes.js';
 import { turnoDe } from '../crm/turnos.js';
 import { version } from '../version.js';
@@ -584,6 +585,30 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   app.get('/admin/api/turnos/:id', (c) => {
     const t = turnoDe(c.req.param('id'));
     return t ? c.json(t) : c.json({ error: 'ese turno no existe o ya pasaron 90 días' }, 404);
+  });
+
+  /**
+   * La retención automática de conversaciones viejas (crm/retencion.ts). Verla lo puede cualquiera que vea el
+   * tablero: el negocio tiene que saber qué pasa con las conversaciones de sus clientes. Con `?dias=` dice cuántas
+   * tocaría con esos días, sin tocar nada: es lo que la consola enseña antes de guardar.
+   *
+   * 🪤 Cambiarla, solo quien administra aiva: la consola deja pasar a `retencion` solo para leer. Borra datos de
+   * clientes, y eso no se decide desde la operación del día.
+   */
+  const retencion = (dias?: number) => {
+    const p = politicaDeRetencion();
+    const d = dias && Number.isInteger(dias) && dias >= DIAS_MINIMO && dias <= DIAS_MAXIMO ? dias : (p?.dias ?? DIAS_SUGERIDOS);
+    return { politica: p, ultima: ultimaPasada(), previa: vistaPrevia(d), minimo: DIAS_MINIMO, maximo: DIAS_MAXIMO, sugeridos: DIAS_SUGERIDOS };
+  };
+  app.get('/admin/api/retencion', (c) => c.json(retencion(Number(c.req.query('dias')) || undefined)));
+  app.put('/admin/api/retencion', async (c) => {
+    try {
+      const b = (await c.req.json().catch(() => ({}))) as { dias?: number | string | null; accion?: string | null };
+      ponerPolitica(b);
+      return c.json(retencion());
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'no pude guardar la retención' }, 400);
+    }
   });
 
   app.put('/admin/api/motores/tope', async (c) => {
