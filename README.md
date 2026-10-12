@@ -42,6 +42,8 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
   puesta, y dice qué se ve y qué errores de JavaScript hubo. Las pruebas no cogen eso.
 - [`docs/arreglos.md`](docs/arreglos.md): la bitácora de arreglos: qué fallaba, qué cambió y cómo se comprobó, con
   su commit.
+- [`docs/checkpoint.md`](docs/checkpoint.md): dónde quedó el trabajo al cerrar la última sesión, qué falta para
+  desplegarlo y qué espera una decisión.
 - `examples/dunor/POR-CONFIRMAR.md`: lo que falta confirmar con DUNOR (se llena en el Perfil).
 
 ## Qué hace
