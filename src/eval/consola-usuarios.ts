@@ -86,6 +86,11 @@ for (const ruta of ['clave', 'motores']) {
   const escribir = await comoAna(`/api/c/confia/${ruta}`, { method: 'POST', body: JSON.stringify({ clave: 'sk-robada' }) });
   check(`🪤 ni CAMBIAR ${ruta}`, escribir.status === 403, `dio ${escribir.status}`);
 }
+// El tope de gasto es de la misma familia: decide cuánto se gasta, así que vive bajo `motores/`. Subírselo, no;
+// verlo, sí, que al negocio le sirve saber por qué su asistente pasó conversaciones al equipo.
+const tope = await comoAna('/api/c/confia/motores/tope', { method: 'PUT', body: JSON.stringify({ tope: 1000 }) });
+check('🪤 ni subirse el tope de gasto de IA', tope.status === 403, `dio ${tope.status}`);
+check('pero sí ver cómo va su mes (la instancia está apagada)', (await comoAna('/api/c/confia/presupuesto')).status === 502, 'se frenó algo que el negocio sí puede ver');
 // Y el mensaje dice de quién es ese asunto, en vez de un «403» pelado que parece un fallo.
 const porQue = (await (await comoAna('/api/c/confia/clave')).json()) as { error?: string };
 check('y se explica de quién es ese asunto', /administra aiva/.test(porQue.error ?? ''), String(porQue.error));
@@ -93,6 +98,7 @@ check('y se explica de quién es ese asunto', /administra aiva/.test(porQue.erro
 check('lo demás de su cliente lo sigue manejando', (await comoAna('/api/c/confia/contacts')).status === 502, 'se frenó algo que sí es del negocio');
 // La llave maestra sí puede: alguien tiene que poder ponerla.
 check('la llave maestra sí llega a la clave', (await maestra('/api/c/confia/clave')).status === 502, 'se frenó al super-admin');
+check('y al tope de gasto', (await maestra('/api/c/confia/motores/tope')).status === 502, 'se frenó al super-admin');
 check('el super-admin sí ve el equipo', (await (await maestra('/api/usuarios')).json() as { usuarios: unknown[] }).usuarios.length === leerUsuarios().length);
 
 // --- un cliente puede vivir en otra máquina: la consola le habla por su URL ---

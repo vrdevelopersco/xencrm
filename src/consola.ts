@@ -75,6 +75,8 @@ export interface EstadoCliente {
   publica?: string;
   whatsapp?: string;
   gastoMes?: number | null;
+  /** El tope de gasto de IA del mes calendario: cuánto va y en qué escalón (ver crm/presupuesto.ts). */
+  presupuesto?: { tope: number | null; gastado: number; porcentaje: number | null; nivel: string } | null;
 }
 
 const pesoUrgencia = { alta: 3, media: 2, baja: 1 } as const;
@@ -105,6 +107,15 @@ export function ticketsDe(cliente: ClienteRef, e: EstadoCliente): Ticket[] {
     });
   } else if (e.whatsapp && !['conectado', 'apagado', 'no_disponible', 'sin_configurar'].includes(e.whatsapp)) {
     t.push({ urgencia: 'media', titulo: `WhatsApp en "${e.whatsapp}"`, detalle: 'Puede que haya que volver a escanear el código.' });
+  }
+  // El tope de gasto. 🪤 Al 100 % es urgencia alta aunque nada esté caído: lo que necesita IA ya no lo contesta
+  // aiva, y si nadie del negocio está mirando su tablero, esos clientes se quedan esperando.
+  const p = e.presupuesto;
+  if (p && p.tope !== null && p.porcentaje !== null) {
+    const cuanto = `Lleva $${p.gastado.toFixed(2)} de $${p.tope.toFixed(2)} este mes.`;
+    if (p.nivel === 'agotado') t.push({ urgencia: 'alta', titulo: 'Llegó al tope de gasto de IA', detalle: `${cuanto} Lo que necesita IA lo contesta el equipo a mano hasta el mes siguiente, o hasta subir el tope en Configuración › Motores.` });
+    else if (p.nivel === 'ahorro') t.push({ urgencia: 'media', titulo: `Gasto de IA al ${p.porcentaje} %: ahorrando`, detalle: `${cuanto} Lo específico ya lo contesta el modelo de responder; al 100 % deja de usar la IA de pago.` });
+    else if (p.nivel === 'aviso') t.push({ urgencia: 'baja', titulo: `Gasto de IA al ${p.porcentaje} % del tope`, detalle: `${cuanto} Al 90 % empieza a ahorrar.` });
   }
   if (e.porVerificar) {
     t.push({ urgencia: 'media', titulo: `${e.porVerificar} pregunta${e.porVerificar === 1 ? '' : 's'} sin responder`, detalle: 'El asistente no supo y el cliente está esperando la respuesta del equipo.' });
@@ -146,13 +157,14 @@ const pedir = async (cliente: ClienteRef, ruta: string, token: string, ms = 2500
 export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
   const token = tokenDe(cliente.slug);
   if (!token) return { arriba: false };
-  const [me, stats, hoy, canales, gasto, tiempos] = await Promise.all([
+  const [me, stats, hoy, canales, gasto, tiempos, tope] = await Promise.all([
     pedir(cliente, '/admin/api/me', token, 1500),
     pedir(cliente, '/admin/api/stats', token),
     pedir(cliente, '/admin/api/today', token),
     pedir(cliente, '/admin/api/channels', token),
     pedir(cliente, '/admin/api/usage?days=30', token),
     pedir(cliente, '/admin/api/tiempos?dias=7', token),
+    pedir(cliente, '/admin/api/presupuesto', token),
   ]);
   if (!me) return { arriba: false };
   const lista = (x: unknown) => (Array.isArray(x) ? x.length : 0);
@@ -191,6 +203,9 @@ export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
     publica: (hoy?.public as { state?: string } | undefined)?.state ?? '',
     whatsapp: wa?.on ? wa.state : 'apagado',
     gastoMes: gasto ? Number(gasto.totalUsd ?? 0) : null,
+    presupuesto: tope
+      ? { tope: tope.tope == null ? null : Number(tope.tope), gastado: Number(tope.gastado ?? 0), porcentaje: tope.porcentaje == null ? null : Number(tope.porcentaje), nivel: String(tope.nivel ?? '') }
+      : null,
     mensajesHoy: Number(stats?.messagesToday ?? 0),
     puntajePromedio: Number(stats?.avgScore ?? 0),
     llegaronACita,

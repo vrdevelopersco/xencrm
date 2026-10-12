@@ -37,6 +37,7 @@ import { armar as armarRespaldo, restaurar as restaurarRespaldo, revisar as revi
 import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
 import { apagarClaveDelCliente, claveDelCliente, encenderClaveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente } from '../motores.js';
+import { ponerTope, presupuesto } from '../crm/presupuesto.js';
 import { borrarDocumento, documentosDelNegocio, guardarCatalogo, guardarDocumento } from '../rag/documentos.js';
 import { leerAdjunto } from '../crm/adjuntos.js';
 import { cuantoOcupa as cuantoOcupanLosMedios, guardar as guardarMedio, rutaDe as rutaDeMedio, MAXIMO_BYTES, MIMES_ACEPTADOS } from '../crm/medios.js';
@@ -556,6 +557,25 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       return c.json({ ok: true, ...r });
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'no pude guardar los motores' }, 400);
+    }
+  });
+
+  /**
+   * El tope de gasto de IA del mes (ver crm/presupuesto.ts). Verlo lo puede cualquiera que vea el tablero: al
+   * negocio le sirve saber por qué su asistente pasó conversaciones al equipo.
+   *
+   * 🪤 Cambiarlo va bajo `motores/`, y no por casualidad: la consola reserva todo lo que empieza por `motores` y
+   * `clave` a quien administra aiva. El tope decide cuánto se gasta, igual que los motores y la llave, y eso no es
+   * de la operación del negocio. Se aplica al instante, sin reiniciar.
+   */
+  app.get('/admin/api/presupuesto', (c) => c.json(presupuesto()));
+
+  app.put('/admin/api/motores/tope', async (c) => {
+    try {
+      const b = (await c.req.json().catch(() => ({}))) as { tope?: number | string | null };
+      return c.json(ponerTope(b.tope ?? null));
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'no pude guardar el tope' }, 400);
     }
   });
 

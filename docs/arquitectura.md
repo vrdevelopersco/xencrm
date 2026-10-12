@@ -29,13 +29,15 @@ y por qué.
    entendimos".
 4. **Cambiar o cancelar**: con una cita próxima y una intención clara ("ya no puedo ir", "pásala para el jueves"),
    responde el flujo de citas.
-5. **Clasificador** (`agent/gate.ts`): primero las reglas (`ruleIntent`: saludo, persona, cita, disponibilidad,
+5. **Tope de gasto**: si se llegó al tope del mes y no hay un motor de la máquina, lo que no resuelven las reglas
+   como cita o persona pasa al equipo, sin llamar a ningún modelo (ver "Motores y costo").
+6. **Clasificador** (`agent/gate.ts`): primero las reglas (`ruleIntent`: saludo, persona, cita, disponibilidad,
    temas del diccionario, precio o catálogo), leyendo antes las expresiones del diccionario. Si no alcanzan, decide
    el modelo del rol `gate` con salida JSON. Las intenciones son `compra`, `info_tienda`, `cita`, `saludo`,
    `humano` y `fuera_de_alcance`.
-6. **Respuestas fijas**: fuera de alcance, pedir una persona (activa el modo humano) y cita (arranca el flujo).
-7. **Búsqueda** (`rag/retriever.ts`): productos e información por vectores (bge-m3 en Ollama) y texto (FTS5).
-8. **Motor** (`agent/router.ts › chooseEngine`): el pesado solo cuando el cliente pide algo específico
+7. **Respuestas fijas**: fuera de alcance, pedir una persona (activa el modo humano) y cita (arranca el flujo).
+8. **Búsqueda** (`rag/retriever.ts`): productos e información por vectores (bge-m3 en Ollama) y texto (FTS5).
+9. **Motor** (`agent/router.ts › chooseEngine`): el pesado solo cuando el cliente pide algo específico
    (`heavyReason`):
    - recomendar o comparar;
    - detalles de una prenda (tela, corte, qué incluye);
@@ -45,11 +47,11 @@ y por qué.
 
    Saludar, agendar, decir si hay o no algo (aunque traiga color o talla), dar un precio o tomar apuntes va al
    liviano. El otro motor queda de respaldo (`fallbackOrder`).
-9. **Prompt** (`llm/engines.ts › generate`): la persona (idéntica para todos los clientes del negocio), el
+10. **Prompt** (`llm/engines.ts › generate`): la persona (idéntica para todos los clientes del negocio), el
    historial y lo del turno (información encontrada, nombre del cliente, nota). Con OpenAI, si toda la información
    del negocio cabe en `agent.fullInfoMaxTokens`, va entera y fija después de la persona (`businessSheet`: perfil,
    catálogo e información). Así el modelo la ve completa y OpenAI la cobra desde su caché.
-10. **Guardas** (`agent/format.ts`):
+11. **Guardas** (`agent/format.ts`):
     - Una cifra que no está en la información se rehace con el otro motor (`ungroundedNumbers`).
     - Una afirmación sin respaldo ("sí, tenemos wifi") o una negativa deducida ("no vendemos zapatos", cuando la
       información no los menciona) se rehace pidiendo no suponer; si insiste, sale la frase de verificación
@@ -83,9 +85,9 @@ y por qué.
     (`comoDato`), para que un «## Nota para este turno» escrito en una página no se vea como una sección del prompt, y
     va marcada como datos, no órdenes. Lo que sí no se puede evitar: lo escrito en la información del negocio vale
     como dicho por el negocio. Quien puede escribir ahí —el tablero— manda.
-11. **Verificación**: si la respuesta dice que lo verifica, se abre una pregunta en Hoy › Por verificar
+12. **Verificación**: si la respuesta dice que lo verifica, se abre una pregunta en Hoy › Por verificar
     (`crm/verifications.ts`).
-12. **Registro**: se guardan los dos mensajes, se emiten los eventos del tablero y se agenda el análisis unos
+13. **Registro**: se guardan los dos mensajes, se emiten los eventos del tablero y se agenda el análisis unos
     segundos después.
 
 ## Módulos
@@ -217,7 +219,7 @@ ya guardados (no llama al modelo; `--write` para guardar).
 | `llm_usage` | cada llamada a un modelo: tarea, modelo, tokens (entrada, caché, salida, razonamiento), milisegundos |
 | `verifications` | preguntas por verificar y sus respuestas |
 | `misses` | frases que las reglas no entendieron, con lo que entendió el modelo |
-| `settings` | decisiones del tablero (qué canales están encendidos) |
+| `settings` | decisiones del tablero (qué canales están encendidos) y el tope de gasto de IA con su último aviso |
 | `entrantes` | el id de cada mensaje que ya entró por WhatsApp oficial, para no atender dos veces lo que Meta repite (se borra a los 7 días; `crm/entrantes.ts`) |
 
 Las columnas nuevas se agregan en `store.ts › migrate()`, porque SQLite no tiene `ADD COLUMN IF NOT EXISTS`.
@@ -279,6 +281,20 @@ no entra a los otros ni sabiéndose la dirección.
   `rag/retriever.ts`.
 - **Consumo**: cada llamada se registra con su costo según la tarifa de `usage.ts`. `pnpm usage` y el tablero lo
   muestran; `pnpm replay` proyecta el costo por 1.000 conversaciones.
+- **Tope de gasto** (`crm/presupuesto.ts`): USD al mes por cliente, en `settings` (`presupuesto.topeUsdMes`) o, si
+  nunca se puso, `TOPE_USD_MES`. Lo gastado es una consulta agrupada sobre `llm_usage` desde el día 1 en la hora del
+  negocio, guardada 10 s. Los escalones:
+  - **80 %**: evento `presupuesto`. La campana, el ticket de la consola y el WhatsApp del vigilante salen de ahí,
+    una vez por escalón y por mes (`presupuesto.avisado`, en la base para que un reinicio no repita).
+  - **90 %** (`enAhorro`): `chooseEngine` manda lo específico al rol liviano.
+  - **100 %** (`agotado`): `fallbackOrder` saca a OpenAI si queda un motor de la máquina (`motorSinCosto`). Si no
+    queda ninguno (`iaAgotada`), el agente decide antes del clasificador: lo que resuelven las reglas como cita o
+    persona sigue, y lo demás pasa al equipo con `TOPE_REPLIES` y `setHumanMode(…, 'tope')`. El análisis toma el
+    camino de reglas y `transcribir` no transcribe. `generate` y `classify` lanzan `TopeAlcanzado` antes de
+    cualquier llamada a OpenAI, como freno de último recurso para caminos que se olviden de mirar.
+
+  Cambiarlo va por `PUT /admin/api/motores/tope`: bajo `motores/`, que la consola reserva al super-admin. Verlo es
+  `GET /admin/api/presupuesto`, abierto a quien vea el tablero.
 - **Análisis barato**:
   - Corre cuando la conversación hace una pausa (`crm.analysisQuietSeconds`, 60 s) o a más tardar
     `crm.analysisMaxWaitSeconds` (300 s) después del primer mensaje sin analizar (`scheduleAnalysis`).
@@ -356,6 +372,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:backup` | respaldo: la copia trae los datos, permisos 600, conserva las últimas N | no |
 | `pnpm test:public` | aviso de dirección pública caída: 3 fallas, aviso al caer y al volver, otro servidor | no |
 | `pnpm test:inyeccion` | inyección de prompt: promesas de plata, instrucciones recitadas, nombre y documentos con órdenes, y el recorrido entero con un modelo falso que siempre cae | no (modelo simulado) |
+| `pnpm test:presupuesto` | tope de gasto: mes del negocio, escalones, avisos una vez, ahorro al 90 % y al 100 % ni una llamada de pago sin dejar a nadie sin respuesta | no (OpenAI y Ollama simulados) |
 | `pnpm test:repetidos` | WhatsApp oficial: lo que Meta manda dos veces entra y se contesta una vez; en «Mira» no marca leído ni contesta | no (Meta simulado) |
 | `pnpm test:scenarios` | las conversaciones del cliente (`evalFile`), con su consumo | sí |
 | `pnpm replay` | las conversaciones sintéticas con los motores configurados; proyecta el costo | sí |

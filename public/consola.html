@@ -902,6 +902,8 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       [e.esperandoAhora || 0, 'esperando ahora'],
       [e.gastoMes == null ? '—' : '$' + Number(e.gastoMes).toFixed(2), 'IA · 30 días']
     ];
+    // El tope, solo si tiene: un «—» de más en un cliente sin tope no le dice nada a nadie.
+    if (e.presupuesto && e.presupuesto.tope != null) datos.push([e.presupuesto.porcentaje + '%', 'del tope de IA este mes']);
     return '<div class="micro">' + datos.map(function (d) {
       return '<div class="celda"><b>' + esc(d[0] == null ? '—' : d[0]) + '</b><span>' + d[1] + '</span></div>';
     }).join('') + '</div>' +
@@ -1777,6 +1779,8 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       // Quién paga lo que gasta este cliente. Va arriba del todo porque es lo primero que uno quiere saber al
       // abrir un cliente, y porque es la diferencia entre un producto y una cuenta de OpenAI compartida.
       '<div class="clave" id="cl-' + esc(slug) + '"><div class="small muted">Cargando la clave…</div></div>' +
+      // Y cuánto puede gastar. Va justo debajo de quién paga porque es la misma pregunta: cuánto cuesta este cliente.
+      '<div class="clave" id="tp-' + esc(slug) + '"><div class="small muted">Cargando el tope…</div></div>' +
       '<div class="small muted" style="margin:10px 0 2px">Lo que corre ahora. Guardar deja el archivo listo, pero hace falta reiniciar ese cliente para que lo tome.</div>' +
       (d.roles || []).map(function (r) {
         var meta = ROLES_UI.filter(function (x) { return x[0] === r.rol; })[0] || [r.rol, r.rol, ''];
@@ -1797,6 +1801,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       '</div>';
 
     pintarClave(slug);
+    pintarTope(slug);
 
     // El campo del modelo solo cuenta con OpenAI: con los otros se apaga en vez de aceptar algo que se ignora.
     Array.prototype.forEach.call(cuerpo.querySelectorAll('.m-motor'), function (sel) {
@@ -1897,6 +1902,52 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
           if (r.error) { msg.textContent = r.error; return; }
           $('cl-k-' + slug).value = '';
           pintarClave(slug);
+        });
+      };
+    });
+  }
+
+  // Cuánto puede gastar este cliente en IA al mes (ver src/crm/presupuesto.ts).
+  //
+  // 🪤 Se aplica al instante, al revés que los motores: no hay nada que reiniciar, y decir «reinicia» aquí
+  // enseñaría a desconfiar del botón. Lo que se dice es lo que va a pasar en cada escalón, porque eso es lo que
+  // uno necesita saber antes de poner una cifra.
+  var NIVEL_TOPE = {
+    sin_tope: ['', 'Sin tope'],
+    normal: ['ok', 'Va bien'],
+    aviso: ['media', 'Pasó el 80 %'],
+    ahorro: ['media', 'Ahorrando'],
+    agotado: ['alta', 'Llegó al tope']
+  };
+  function pintarTope(slug) {
+    if (!$('tp-' + slug)) return;
+    cli(slug + '/presupuesto').then(function (d) {
+      var caja = $('tp-' + slug);
+      if (!caja) return;
+      if (d.error) { caja.innerHTML = '<div class="small muted">' + esc(d.error) + '</div>'; return; }
+      var n = NIVEL_TOPE[d.nivel] || NIVEL_TOPE.sin_tope;
+      var lleva = '$' + Number(d.gastado || 0).toFixed(2);
+      caja.innerHTML =
+        '<div class="fila" style="align-items:center;gap:10px;flex-wrap:wrap">' +
+          '<span class="chip ' + n[0] + '">' + esc(n[1]) + '</span>' +
+          '<span class="small">' + (d.tope == null
+            ? 'Este mes lleva <b>' + lleva + '</b> de IA, sin tope.'
+            : 'Este mes lleva <b>' + lleva + '</b> de <b>$' + Number(d.tope).toFixed(2) + '</b> · ' + d.porcentaje + ' %') +
+            (d.sinPrecio ? ' Hay un modelo sin tarifa conocida: lo gastado se queda corto.' : '') + '</span>' +
+        '</div>' +
+        '<label class="small" for="tp-v-' + esc(slug) + '" style="display:block;margin-top:10px">Tope de gasto al mes, en dólares</label>' +
+        '<div class="fila" style="gap:8px;align-items:center">' +
+          '<input id="tp-v-' + esc(slug) + '" type="number" min="0" step="0.5" inputmode="decimal" style="max-width:140px" placeholder="Sin tope" value="' + (d.tope == null ? '' : esc(String(d.tope))) + '">' +
+          '<button class="btn sm tp-guardar">Guardar</button>' +
+          '<span class="grow"></span><span class="small tp-msg" role="status"></span>' +
+        '</div>' +
+        '<div class="small muted" style="margin-top:6px">Al 80 % avisa. Al 90 % lo específico lo contesta el modelo de responder, que es el barato. Al 100 % deja de usar la IA de pago hasta el mes siguiente: lo que se resuelve sin IA sigue, y lo demás lo contesta el equipo. Vacío es sin tope. Se aplica al instante.</div>';
+      var msg = caja.querySelector('.tp-msg');
+      caja.querySelector('.tp-guardar').onclick = function () {
+        msg.textContent = 'Guardando…';
+        cli(slug + '/motores/tope', { method: 'PUT', body: { tope: $('tp-v-' + slug).value.trim() } }).then(function (r) {
+          if (r && r.error) { msg.textContent = r.error; return; }
+          pintarTope(slug);
         });
       };
     });

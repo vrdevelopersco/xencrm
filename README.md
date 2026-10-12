@@ -103,7 +103,7 @@ Aiva no está amarrada a un negocio: todo lo propio de cada cliente vive en su c
 | Dónde | Qué va | Ejemplos |
 |---|---|---|
 | `aiva.config.json` | El negocio y cómo atiende | nombre, descripción, sitio, moneda, país e indicativo telefónico (`phoneCountryCode`, `phoneLocalDigits`), contacto humano; nombre y estilo del agente, su objetivo y lo que dice cuando no sabe algo (`agent.verifyPhrase`); fuentes (catálogo, información, páginas); zona horaria; agenda de citas (servicio, lugar, días, franjas, `askPhone`, `askEmail`); campos que captura el análisis (`crm.fields`); archivo del **diccionario** (`dictionaryFile`) y del **perfil** (`profileFile`); **marca** (`brand.color`, `brand.logo`); escenarios y datos de demostración |
-| `.env` | La máquina y los secretos | motores y modelos por rol, claves de OpenAI y Meta, puerto, `PUBLIC_URL`, token del tablero, calendarios del dueño |
+| `.env` | La máquina y los secretos | motores y modelos por rol, claves de OpenAI y Meta, puerto, `PUBLIC_URL`, token del tablero, calendarios del dueño, tope de gasto inicial (`TOPE_USD_MES`) |
 | Tablero › Perfil | Lo que el dueño confirma de su negocio | dirección, horarios, zona, contacto, pagos y abono, precios, políticas y datos propios (tallas, tiempos…) |
 | Tablero › Canales | Lo que se decide en el día a día | encender o apagar el chat web, WhatsApp (con su QR), WhatsApp oficial y MCP, sin reiniciar; credenciales de WhatsApp oficial |
 
@@ -254,6 +254,24 @@ por mensaje, con la tarifa estándar de OpenAI. `pnpm replay` repasa las convers
 cliente (`seedFile` y `evalFile`) con los motores configurados y proyecta el costo por 1.000
 conversaciones. Simula un mensaje del cliente cada 30 s (`--gap=`) y corre el análisis con la misma regla que
 en producción; `--fast` manda los mensajes seguidos.
+
+**Tope de gasto.** Cada cliente puede tener un tope en dólares al mes, que se pone en la consola (Configuración ›
+Motores, solo el super-admin) o con `TOPE_USD_MES` en su `.env`. Se cuenta el mes calendario en la hora del
+negocio, y solo lo de OpenAI: los motores de la máquina no cuestan. Se aplica al instante, sin reiniciar.
+
+| Al llegar a | Pasa esto |
+|---|---|
+| 80 % | Aviso por la campana, un ticket en la consola y un WhatsApp al equipo si hay a quién avisar |
+| 90 % | Lo específico lo contesta el modelo de responder, que es el barato |
+| 100 % | No se llama a la IA de pago hasta el mes siguiente o hasta subir el tope |
+
+Al 100 % nadie se queda sin respuesta. Lo que se resuelve sin IA sigue igual: citas, pedir una persona y
+respuestas rápidas. Lo demás pasa al equipo y al cliente se le dice que le contesta una persona. Esas
+conversaciones se quedan con el equipo hasta que alguien se las devuelva al asistente, como cuando alguien pide una
+persona. Si hay un motor en
+la máquina, como Ollama o Apple, sigue contestando ese. La ficha se actualiza con lo que sabe el código y las notas
+de voz quedan guardadas sin transcribir. Cada aviso sale una vez por escalón y por mes.
+Pruebas: `pnpm test:presupuesto`.
 
 **Caché de OpenAI.** OpenAI cobra 90 % menos por el inicio del prompt que ya vio. En la práctica,
 con `gpt-5.4-mini` solo pega cuando el inicio común pasa de unos 1.450 tokens (medido, no

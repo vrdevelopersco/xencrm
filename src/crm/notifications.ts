@@ -10,7 +10,7 @@ export interface Notification {
   id: number;
   ts: number;
   userId: string;
-  kind: 'handoff' | 'hot' | 'appointment' | 'new' | 'fail' | 'engine' | 'verify' | 'public' | 'cross' | 'recordatorio' | 'propuesta';
+  kind: 'handoff' | 'hot' | 'appointment' | 'new' | 'fail' | 'engine' | 'verify' | 'public' | 'cross' | 'recordatorio' | 'propuesta' | 'presupuesto';
   title: string;
   body: string;
 }
@@ -51,7 +51,14 @@ export function startNotifications() {
       const prop = p.propuesta as { texto?: string } | undefined;
       push('propuesta', ev.userId, `Respuesta lista para ${nameOf(ev.userId)}`, (prop?.texto ?? '').slice(0, 120));
     }
-    if (ev.type === 'handoff' && p.on && p.by === 'bot') push('handoff', ev.userId, `${nameOf(ev.userId)} pidió hablar con una persona`, 'Aiva está en pausa en esa conversación.');
+    if (ev.type === 'handoff' && p.on && p.by === 'bot') {
+      if (p.motivo === 'tope') push('handoff', ev.userId, `${nameOf(ev.userId)} pasó al equipo`, 'Se llegó al tope de gasto de IA del mes y su mensaje necesitaba IA: contéstale desde aquí.');
+      else push('handoff', ev.userId, `${nameOf(ev.userId)} pidió hablar con una persona`, 'Aiva está en pausa en esa conversación.');
+    }
+    if (ev.type === 'presupuesto') {
+      const titulo = p.nivel === 'agotado' ? 'Se llegó al tope de gasto de IA' : p.nivel === 'ahorro' ? 'Gasto de IA al 90 %: modo ahorro' : 'Gasto de IA al 80 % del tope';
+      push('presupuesto', 'system', titulo, String(p.texto ?? ''));
+    }
     if (ev.type === 'analysis') {
       const score = Number(p.score ?? 0);
       const prev = Number(p.prevScore ?? 0);

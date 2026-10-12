@@ -235,7 +235,9 @@ Nada se guarda sin validar, y antes de pisar el archivo queda una copia del ante
 
 ## Agente
 
-- **Consumo de IA**: cuánto cuestan las respuestas por conversación y por mensaje.
+- **Consumo de IA**: cuánto cuestan las respuestas por conversación y por mensaje. Si tu negocio tiene tope de gasto
+  al mes, arriba dice cuánto llevas. Al llegar al tope, lo que necesita IA te llega a ti para contestarlo a mano
+  hasta el mes siguiente; las citas y lo demás que no necesita IA siguen igual.
 - **Calendario**: el enlace para ver las citas en Google Calendar, Outlook o Apple Calendar. Es secreto: quien lo
   tenga ve nombres y teléfonos.
 - **Frases que no entendimos**: fechas, frases cortas o respuestas que el asistente no entendió por sus reglas

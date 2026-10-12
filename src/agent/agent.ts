@@ -2,10 +2,10 @@ import { business, env } from '../config.js';
 import { modoCanal, propone, soloEscucha, type ChannelId } from '../channels/switches.js';
 import { businessSheet, retrieve, formatContext } from '../rag/retriever.js';
 import { getDocs, productsMentionedIn, type ScoredDoc } from '../rag/store.js';
-import { generate, estimateTokens, fallbackOrder, type Engine } from '../llm/engines.js';
+import { generate, estimateTokens, fallbackOrder, iaAgotada, type Engine } from '../llm/engines.js';
 import { openaiModel } from '../llm/openai.js';
 import { appendMessage, clearHistory, getHistory, touchUser } from './memory.js';
-import { classify } from './gate.js';
+import { classify, ruleIntent } from './gate.js';
 import { anotarUso, buscarRespuestaRapida } from '../crm/respuestas-rapidas.js';
 import { pruebaActiva, puedeContestar } from '../crm/modo-prueba.js';
 import { anotarTurno } from '../crm/vivo.js';
@@ -13,7 +13,7 @@ import { chooseEngine } from './router.js';
 import { claimsBooked, dropRepeatedFacts, filtraInstrucciones, isHonest, postProcess, promesaSinRespaldo, stripRepeatedGreeting, touchesPending, unsupportedAnswer, ungroundedNumbers } from './format.js';
 import { pendingTopics } from '../profile.js';
 import { openVerification, saysWillVerify } from '../crm/verifications.js';
-import { datosDeLaPersona, ERROR_REPLIES, HUMAN_REPLIES, MIENTRAS_CONSULTO, OUT_OF_SCOPE_REPLIES, personaPrompt, pick, soloLasReglas, type Intent } from './prompts.js';
+import { datosDeLaPersona, ERROR_REPLIES, HUMAN_REPLIES, MIENTRAS_CONSULTO, OUT_OF_SCOPE_REPLIES, personaPrompt, pick, soloLasReglas, TOPE_REPLIES, type Intent } from './prompts.js';
 import { crossChannelGreeting } from '../crm/cross.js';
 import { getContact, purgeContact, setHumanMode, updateContact } from '../crm/contacts.js';
 import { proponer } from '../crm/propuestas.js';
@@ -255,6 +255,19 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   }
 
   const history = getHistory(msg.userId);
+  // Se llegó al tope de gasto del mes y no hay un motor de la máquina que conteste (ver crm/presupuesto.ts). Lo que
+  // se resuelve sin IA sigue igual —una cita, pedir una persona, y las citas en curso y las respuestas rápidas de
+  // arriba—. Lo demás pasa al equipo, y al cliente se le dice, porque quedarse callado es lo único peor.
+  // 🪤 Se decide aquí, ANTES del clasificador: con el tope alcanzado el clasificador de pago no corre, y llegar
+  // hasta él sería caer en la disculpa de «se me enredó algo», que no es verdad y no le sirve a nadie.
+  if (iaAgotada()) {
+    const porRegla = ruleIntent(text, history);
+    if (porRegla?.intent !== 'cita' && porRegla?.intent !== 'humano') {
+      const reply = finish(pick(TOPE_REPLIES), porRegla?.intent ?? 'humano', 'template', { gateVia: porRegla ? 'regex' : 'tope', route: 'tope de gasto: pasa al equipo' });
+      if (!reply.silent) setHumanMode(msg.userId, true, 'bot', 'tope');
+      return reply;
+    }
+  }
   const gate = await classify(text, history, msg.userId);
 
   if (gate.intent === 'fuera_de_alcance') return finish(pick(OUT_OF_SCOPE_REPLIES), gate.intent, 'template', { gateVia: gate.via });

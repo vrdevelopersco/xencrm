@@ -1469,12 +1469,25 @@
   // ---------- agente ----------
   function usd(n) { return n === null || n === undefined ? 's/p' : '$' + (n < 0.01 ? n.toFixed(4) : n < 1 ? n.toFixed(3) : n.toFixed(2)); }
   var TASKS = { light: 'Responder (liviano)', heavy: 'Responder (pesado)', gate: 'Clasificar mensaje', analysis: 'Análisis y puntaje', when: 'Interpretar fechas' };
-  function usagePanel(u) {
-    if (!u.rows.length) return '<div class="panel"><b>Consumo de IA · 7 días</b><div class="small muted">Sin llamadas a modelos en los últimos 7 días.</div></div>';
+  // El mes y su tope (src/crm/presupuesto.ts). Aquí solo se lee: el tope lo pone quien administra aiva.
+  var TOPE_DICE = {
+    aviso: 'Al 90 % empieza a ahorrar.',
+    ahorro: 'Ahorrando: lo específico lo contesta el modelo de responder, que es el barato.',
+    agotado: 'Llegó al tope: hasta el mes siguiente, lo que necesita IA te llega a ti para contestarlo a mano. Lo que se resuelve sin IA, como las citas, sigue igual.'
+  };
+  function topeLinea(p) {
+    if (!p || p.error) return '';
+    if (p.tope == null) return '<div class="small">Este mes van ' + usd(p.gastado) + ' en IA.</div>';
+    var texto = 'Este mes van <b>' + usd(p.gastado) + '</b> de un tope de <b>' + usd(p.tope) + '</b> (' + p.porcentaje + ' %). ' + esc(TOPE_DICE[p.nivel] || '');
+    // .aviso es una fila flexible: el texto va en un solo <span> para que no se parta en pedazos separados por el hueco.
+    return p.nivel === 'agotado' ? '<div class="aviso small" style="margin:6px 0"><span>' + texto + '</span></div>' : '<div class="small">' + texto + '</div>';
+  }
+  function usagePanel(u, tope) {
+    if (!u.rows.length) return '<div class="panel"><b>Consumo de IA · 7 días</b>' + topeLinea(tope) + '<div class="small muted">Sin llamadas a modelos en los últimos 7 días.</div></div>';
     var rows = u.rows.map(function (r) {
       return '<tr><td>' + esc(TASKS[r.task] || r.task) + '</td><td>' + esc((r.engine === 'openai' ? '' : r.engine + ' · ') + r.model) + '</td><td class="n">' + r.calls + '</td><td class="n">' + Math.round(r.inputTokens / r.calls) + ' / ' + Math.round(r.outputTokens / r.calls) + '</td><td class="n">' + usd(r.costUsd) + '</td></tr>';
     }).join('');
-    return '<div class="panel"><b>Consumo de IA · 7 días</b>' +
+    return '<div class="panel"><b>Consumo de IA · 7 días</b>' + topeLinea(tope) +
       '<div>' + usd(u.totalUsd) + ' en total' + (u.usdPerConversation !== null ? ' · ' + usd(u.usdPerConversation) + ' por conversación · ' + usd(u.usdPerMessage) + ' por mensaje del cliente' : '') + '</div>' +
       '<table class="usage"><thead><tr><th>Tarea</th><th>Modelo</th><th class="n">Llamadas</th><th class="n">Tokens por llamada (entrada / salida)</th><th class="n">Costo</th></tr></thead><tbody>' + rows + '</tbody></table>' +
       '<div class="small muted">Costo estimado con la tarifa estándar de OpenAI' + (u.unpriced ? ' (hay modelos sin precio conocido: el total se queda corto)' : '') + '. Los modelos locales no cuestan.</div></div>';
@@ -1870,8 +1883,8 @@
   }
 
   function loadAgent() {
-    Promise.all([api('/agent'), api('/usage?days=7'), api('/calendar'), api('/backup')]).then(function (r) {
-      var a = r[0], usage = r[1], calCfg = r[2], bk = r[3];
+    Promise.all([api('/agent'), api('/usage?days=7'), api('/calendar'), api('/backup'), api('/presupuesto').catch(function () { return null; })]).then(function (r) {
+      var a = r[0], usage = r[1], calCfg = r[2], bk = r[3], tope = r[4];
       var eng = Object.keys(a.engines).map(function (k) { var e = a.engines[k]; return '<li><b>' + k + '</b>: ' + (e.available ? '✓ disponible' : '✗ ' + esc(e.reason || 'no disponible')) + '</li>'; }).join('');
       var ap = a.appointments;
       $('agent').innerHTML =
@@ -1880,7 +1893,7 @@
         '<div class="panel"><b>Citas</b>' + (ap.enabled ? '<div class="small">' + esc(ap.service) + (ap.location ? ' en ' + esc(ap.location) : '') + ' · ' + ap.durationMin + ' min · días ' + ap.days.join(',') + ' · ' + ap.hours.map(function (h) { return h[0] + '–' + h[1]; }).join(', ') + ' · zona ' + esc(a.timezone) + '</div>' : '<div class="muted small">Desactivadas (appointments.enabled en aiva.config.json)</div>') + '</div>' +
         '<div class="panel"><b>Análisis comercial</b><div class="small">Campos capturados además de los básicos: ' + a.crmFields.map(function (f) { return '<code>' + esc(f.name) + '</code>'; }).join(' ') + '</div></div>' +
         '<div class="panel"><b>Conocimiento indexado</b><div class="small">' + (a.docs.product || 0) + ' productos · ' + (a.docs.knowledge || 0) + ' fragmentos de información.</div></div>' +
-        backupPanel(bk) + usagePanel(usage) + calendarPanel(calCfg) + '<div class="panel" id="miss-panel"></div><div class="panel" id="dict-panel"></div>';
+        backupPanel(bk) + usagePanel(usage, tope) + calendarPanel(calCfg) + '<div class="panel" id="miss-panel"></div><div class="panel" id="dict-panel"></div>';
       bindBackup();
       loadMissesPanel(a);
       loadDictionaryPanel(a);

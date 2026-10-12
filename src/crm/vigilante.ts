@@ -20,6 +20,7 @@ import { getSetting } from './settings.js';
 import { getContact } from './contacts.js';
 import { enviarSuelto } from './outbox.js';
 import { esperas } from './tiempos.js';
+import { onEvent } from './events.js';
 
 /** A quién avisar. Números en formato internacional sin signos, como los guarda WhatsApp. */
 export const aQuienAvisar = (): string[] =>
@@ -98,9 +99,28 @@ export async function avisar(opts: { acuerdoMin?: number; ahora?: number } = {})
 
 let reloj: NodeJS.Timeout | null = null;
 
+/**
+ * El tope de gasto también sale a buscar a una persona: al 80 %, al 90 % y al 100 %, una vez cada uno por mes (eso
+ * lo cuida crm/presupuesto.ts). Es el aviso que más importa recibir con el portátil cerrado: al 100 % lo que
+ * necesita IA lo contesta el equipo, y si nadie se entera, nadie contesta.
+ */
+async function avisarDelPresupuesto(texto: string): Promise<number> {
+  let salieron = 0;
+  for (const numero of aQuienAvisar()) {
+    const ok =
+      (await enviarSuelto('whatsapp', `wa:${numero}@s.whatsapp.net`, `💸 ${texto}`)) ||
+      (await enviarSuelto('meta', `meta:${numero}`, `💸 ${texto}`));
+    if (ok) salieron++;
+  }
+  return salieron;
+}
+
 /** Arranca el vigilante. No hace nada mientras nadie haya dicho a quién avisar. */
 export function empezarAVigilar(cadaMs = 60_000): void {
   if (reloj) return;
+  onEvent((ev) => {
+    if (ev.type === 'presupuesto') void avisarDelPresupuesto(String(ev.payload.texto ?? '')).catch(() => undefined);
+  });
   reloj = setInterval(() => {
     void avisar().catch(() => undefined);
   }, cadaMs);

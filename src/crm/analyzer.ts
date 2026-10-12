@@ -1,7 +1,7 @@
 // Análisis comercial por turno: sentimiento, interés, urgencia, objeciones y datos capturados,
 // con un puntaje explicable de probabilidad de cita/venta. Corre en segundo plano tras cada respuesta.
 import { business } from '../config.js';
-import { classify, roleEngine, fallbackOrder } from '../llm/engines.js';
+import { classify, roleEngine, fallbackOrder, iaAgotada } from '../llm/engines.js';
 import { openaiModel } from '../llm/openai.js';
 import type { SchemaSpec } from '../llm/apple.js';
 import { getHistory, getMessages, type StoredMessage } from '../agent/memory.js';
@@ -187,7 +187,10 @@ export async function analyzeContact(userId: string, opts: { full?: boolean } = 
 
     let s: Signals;
     let engineUsed = '';
-    if (!opts.full && newCustomer.every(isTrivial)) {
+    // 🪤 Con el tope de gasto alcanzado y sin motor de la máquina, la ficha sigue al día con lo que sabe el código
+    // (teléfono, presupuesto, cita, puntaje), igual que con una cortesía: sin esto, cada análisis fallaba en
+    // silencio y la ficha se quedaba congelada en el último mensaje antes del tope.
+    if ((!opts.full && newCustomer.every(isTrivial)) || iaAgotada()) {
       s = { ...(prev?.signals ?? emptySignals()) };
       engineUsed = 'reglas';
     } else {

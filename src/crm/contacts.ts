@@ -238,11 +238,12 @@ export function updateContact(id: string, patch: ContactPatch, opts: { silent?: 
   return c;
 }
 
-export function setHumanMode(id: string, on: boolean, by: string): Contact | null {
+/** `motivo`: por qué se pasó a una persona cuando no fue porque la pidieron («tope»: el tope de gasto de IA). */
+export function setHumanMode(id: string, on: boolean, by: string, motivo?: string): Contact | null {
   getDb().prepare('UPDATE users SET human_by = ?, human_since = ? WHERE id = ?').run(on ? by : null, on ? Date.now() : null, id);
   const c = updateContact(id, { humanMode: on });
-  addEvent(id, on ? 'human_on' : 'human_off', { by });
-  emitEvent('handoff', id, { on, by });
+  addEvent(id, on ? 'human_on' : 'human_off', motivo ? { by, motivo } : { by });
+  emitEvent('handoff', id, motivo ? { on, by, motivo } : { on, by });
   return c;
 }
 

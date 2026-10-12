@@ -2,6 +2,7 @@ import { env } from '../config.js';
 import { isAvailable, roleEngine, type Engine } from '../llm/engines.js';
 import { openaiModel } from '../llm/openai.js';
 import type { Intent } from './prompts.js';
+import { enAhorro } from '../crm/presupuesto.js';
 
 export interface RouteInput {
   intent: Intent;
@@ -74,6 +75,8 @@ export function chooseEngine(input: RouteInput): Route {
   // Apple tiene una ventana de 4.096 tokens: lo que no cabe va al otro motor.
   if (light === 'apple' && input.estimatedTokens > env.appleMaxPromptTokens) return H(`contexto ~${input.estimatedTokens} tokens`);
   const why = heavyReason(input.intent, input.userText, input.lastRole);
+  // Al 90 % del tope de gasto, lo específico lo contesta el de responder, que es el barato (ver crm/presupuesto.ts).
+  if (why && enAhorro()) return L(`ahorro por el tope de gasto (${why})`);
   if (why) return H(why);
   return L(input.intent === 'saludo' ? 'saludo' : input.intent === 'info_tienda' ? 'info de tienda' : 'compra puntual');
 }

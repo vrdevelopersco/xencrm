@@ -152,6 +152,15 @@ export const OUT_OF_SCOPE_REPLIES = [
   `De eso no sé nada, te confieso 😄 Pero si necesitas algo de ${b.name}, aquí estoy. ¿Qué buscas?`,
 ] as const;
 
+/**
+ * Cuando se llegó al tope de gasto de IA del mes y el mensaje necesita IA. Al cliente no se le habla de topes ni
+ * de modelos: se le dice lo que va a pasar, que es que le contesta una persona.
+ */
+export const TOPE_REPLIES = [
+  'Ya le paso tu mensaje a alguien del equipo para que te responda por aquí mismo 🙂',
+  'Te va a responder una persona del equipo por este mismo chat. Ya le avisé 🙂',
+] as const;
+
 export const HUMAN_REPLIES = [
   `Claro que sí, te paso con alguien del equipo. En un momento te escriben por aquí mismo; si es urgente, ${b.humanContact}`,
   `Por supuesto. Ya le aviso a una persona del equipo para que te atienda por este chat. Mientras tanto, cuéntame qué pasó por si puedo adelantar algo.`,

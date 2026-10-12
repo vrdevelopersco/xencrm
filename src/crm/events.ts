@@ -15,7 +15,8 @@ export type CrmEventType =
   | 'reminder_reply'
   | 'cross_channel'
   | 'public_down'
-  | 'public_up';
+  | 'public_up'
+  | 'presupuesto';
 export interface CrmEvent {
   type: CrmEventType;
   userId: string;

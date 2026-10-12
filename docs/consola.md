@@ -94,6 +94,9 @@ Debajo de cada fila salen los **tickets, que aparecen solos** según el estado:
 | WhatsApp pidiendo código | media |
 | Preguntas sin responder | media |
 | Gente esperando respuesta | media |
+| Llegó al tope de gasto de IA | alta |
+| Gasto de IA al 90 % del tope: ahorrando | media |
+| Gasto de IA al 80 % del tope | baja |
 | Citas sin resultado | baja |
 
 **Ver más** estira la fila con el micro-tablero del negocio:
@@ -102,6 +105,8 @@ Debajo de cada fila salen los **tickets, que aparecen solos** según el estado:
 61 mensajes hoy · 38 conversaciones · 5 calientes · 54 puntaje promedio
 9 llegaron a cita · 6 ganadas · 39 % efectividad · $1.42 de IA (30 días)
 ```
+
+Si el cliente tiene tope de gasto, sale además cuánto lleva del tope en el mes.
 
 La **efectividad** es cuántas de las conversaciones abiertas llegaron a cita o se ganaron. Se calcula por el
 **papel** de las etapas (`cita`, `ganado`), no por su nombre: cada negocio las llama distinto y el papel es lo
@@ -171,6 +176,16 @@ eso se hace con `pm2 stop aiva-<slug>`, a propósito.
 - Que la **dirección pública** de cada cliente responda: si se cae, no entran ni el chat del sitio ni WhatsApp.
 - El **consumo de IA** por cliente, que es lo que se factura.
 - Los **respaldos**: cada instancia guarda una copia diaria de su base (14 días) en su carpeta.
+
+## Cuánto puede gastar cada cliente
+
+En **Configuración › Motores**, al abrir un cliente, debajo de quién paga, está su **tope de gasto al mes** en
+dólares. Lo ve y lo cambia solo el super-admin, como los motores y la clave: decide cuánto se gasta, y eso no es de
+la operación del negocio. El negocio sí ve en su tablero cuánto lleva del tope. Se aplica al instante.
+
+Al 80 % avisa. Al 90 % lo específico lo contesta el modelo de responder, que es el barato. Al 100 % aiva deja de
+usar la IA de pago hasta el mes siguiente: lo que se resuelve sin IA sigue y lo demás le llega al equipo, que
+recibe el aviso por la campana, la consola y WhatsApp. El detalle está en el README, en "Consumo de IA".
 
 ## La configuración de cada cliente
 

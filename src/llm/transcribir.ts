@@ -10,6 +10,7 @@
 import { readFileSync, statSync } from 'node:fs';
 import { env } from '../config.js';
 import { recordUsage } from './usage.js';
+import { agotado } from '../crm/presupuesto.js';
 
 /**
  * Lo máximo que se transcribe, en segundos.
@@ -41,6 +42,9 @@ export async function transcribir(ruta: string, opts: { segundos?: number; userI
     throw new NoSeTranscribe(`la nota dura ${segundos} s y el tope es ${TOPE_SEGUNDOS} s`);
   }
   if (!env.openaiApiKey) throw new NoSeTranscribe('no hay llave de OpenAI configurada');
+  // Transcribir se cobra por minuto como cualquier otra llamada: con el tope alcanzado, la nota queda guardada
+  // para el equipo, igual que cuando no hay llave.
+  if (agotado()) throw new NoSeTranscribe('se llegó al tope de gasto de IA de este mes');
 
   const datos = readFileSync(ruta);
   // Si WhatsApp no declaró la duración, se estima por el tamaño para no cobrar cero. El audio de WhatsApp va a

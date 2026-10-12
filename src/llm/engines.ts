@@ -6,6 +6,7 @@ import { EngineError } from './errors.js';
 import { env } from '../config.js';
 import { emitEvent } from '../crm/events.js';
 import type { Task } from './usage.js';
+import { agotado, TopeAlcanzado } from '../crm/presupuesto.js';
 
 export type Engine = 'ollama' | 'apple' | 'openai';
 export const ENGINES: Engine[] = ['ollama', 'apple', 'openai'];
@@ -69,17 +70,34 @@ export function roleLabel(role: Role): string {
   return e === 'openai' ? `openai · ${openaiModel(role)}` : e;
 }
 
-/** Orden de intentos: el preferido primero, luego el otro rol, luego lo que quede disponible. */
+/**
+ * Orden de intentos: el preferido primero, luego el otro rol, luego lo que quede disponible.
+ *
+ * Con el tope de gasto alcanzado, OpenAI sale de la lista si queda un motor de la máquina que conteste: así se
+ * sigue atendiendo sin pagar. Si no queda ninguno, se deja el preferido para que la llamada falle con
+ * `TopeAlcanzado`, que es un motivo que se entiende, y no con una lista vacía.
+ */
 export function fallbackOrder(preferred: Engine): Engine[] {
   const seen = new Set<Engine>();
   const out: Engine[] = [];
+  const sinPagar = agotado();
   for (const e of [preferred, roleEngine('heavy'), roleEngine('light'), ...ENGINES]) {
     if (seen.has(e)) continue;
     seen.add(e);
+    if (sinPagar && e === 'openai') continue;
     if (e === preferred || isAvailable(e)) out.push(e);
   }
+  if (!out.length) out.push(preferred);
   return out;
 }
+
+/** Un motor de la máquina que esté contestando: no cuesta, así que no tiene tope. */
+export function motorSinCosto(): Engine | null {
+  return (['ollama', 'apple'] as const).find((e) => isAvailable(e)) ?? null;
+}
+
+/** Se llegó al tope de gasto y no hay un motor de la máquina que conteste: lo que necesita IA no se puede hacer. */
+export const iaAgotada = (): boolean => agotado() && !motorSinCosto();
 
 // ---------- Disponibilidad con enfriamiento ----------
 const COOLDOWN_MS = 60_000;
@@ -205,6 +223,9 @@ export function estimateTokens(text: string): number {
 // ---------- Operaciones ----------
 export async function generate(engine: Engine, input: GenerateInput): Promise<string> {
   const usage = { task: input.task ?? ((input.role ?? 'light') as Task), userId: input.sessionId };
+  // 🪤 El freno de último recurso, para cualquiera que llame a un modelo. Quien sabe qué hacer en ese caso (el
+  // agente, el análisis) lo mira antes; esto es para que ningún camino olvidado se salte el tope.
+  if (engine === 'openai' && agotado()) throw new TopeAlcanzado();
   try {
     let out: string;
     // Lo que cambia en cada turno: información encontrada, nombre del cliente y nota.
@@ -252,6 +273,7 @@ export async function generate(engine: Engine, input: GenerateInput): Promise<st
 
 export async function classify(engine: Engine, input: ClassifyInput): Promise<string> {
   const usage = { task: input.task ?? ((input.role ?? 'gate') as Task), userId: input.userId };
+  if (engine === 'openai' && agotado()) throw new TopeAlcanzado();
   try {
     let out: string;
     if (engine === 'apple') {

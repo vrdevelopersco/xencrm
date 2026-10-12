@@ -13,7 +13,8 @@
 // no le sirve a nadie para entrar; le sirve a quien mantiene esto para saber por dónde empezar.
 import { existsSync, accessSync, constants } from 'node:fs';
 import { business, env } from './config.js';
-import { engineStatus } from './llm/engines.js';
+import { engineStatus, motorSinCosto } from './llm/engines.js';
+import { presupuesto, type Nivel } from './crm/presupuesto.js';
 import { whatsappStatus } from './channels/whatsapp-estado.js';
 import { canalesQueEntregan } from './crm/outbox.js';
 import { carpeta as carpetaDeMedios, cuantoOcupa } from './crm/medios.js';
@@ -38,6 +39,8 @@ export interface SaludDelCliente {
   trafico: { ultimoEntranteHaceMin: number | null; ultimoSalienteHaceMin: number | null; mensajesHoy: number };
   medios: { carpetaEscribible: boolean; archivos: number; mb: number };
   base: { responde: boolean; contactos: number | null };
+  /** En qué escalón del tope de gasto va el mes. Sin cifras: esta puerta no lleva token. */
+  presupuesto: { nivel: Nivel };
 }
 
 /** Qué se sabe de los mensajes, mirando la base y no lo que diga nadie. */
@@ -93,6 +96,19 @@ export function saludDelCliente(): SaludDelCliente {
   if (motorPrincipal && !motorPrincipal.disponible) {
     avisos.push(`El motor ${motorPrincipal.motor} está caído${motorPrincipal.porque ? ` (${motorPrincipal.porque})` : ''}: el asistente no puede contestar.`);
   }
+  let nivel: Nivel = 'sin_tope';
+  try {
+    nivel = presupuesto().nivel;
+  } catch {
+    // la base no contesta: ya quedó dicho arriba
+  }
+  if (nivel === 'agotado') {
+    avisos.push(
+      motorSinCosto()
+        ? 'Llegó al tope de gasto de IA del mes: contesta el motor de la máquina, que no cuesta.'
+        : 'Llegó al tope de gasto de IA del mes: lo que necesita IA lo contesta el equipo, a mano.',
+    );
+  }
   if (env.whatsappEnabled && wa.state !== 'conectado') {
     avisos.push(`WhatsApp está en «${wa.state}»${wa.state === 'esperando_qr' ? ': hay que escanear el código otra vez' : ''}.`);
   }
@@ -114,5 +130,6 @@ export function saludDelCliente(): SaludDelCliente {
     trafico: t,
     medios: { carpetaEscribible: mediosEscribibles(), archivos: uso.archivos, mb: Math.round((uso.bytes / 1048576) * 10) / 10 },
     base: { responde: contactos !== null, contactos },
+    presupuesto: { nivel },
   };
 }
