@@ -446,12 +446,12 @@
           "intent": "cita",
           "engine": "template",
           "includesAny": [
-            "Confirmas que cancelo"
+            "que la cancele"
           ]
         }
       },
       {
-        "text": "sí",
+        "text": "no, cancélala de una",
         "expect": {
           "intent": "cita",
           "engine": "template",
