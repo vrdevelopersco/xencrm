@@ -84,6 +84,10 @@ check('no deja crear dos veces el mismo', repetido.status === 409, String(repeti
 
 const sinNombre = await pedir('/api/clientes', { method: 'POST', body: JSON.stringify({}) });
 check('sin nombre no crea nada', sinNombre.status === 400);
+// Las sedes viajan hasta el alta: una mal escrita se rechaza con su motivo y no crea nada (bien escritas, ver test:clientes).
+const sedeMala = await pedir('/api/clientes', { method: 'POST', body: JSON.stringify({ nombre: 'Óptica Visión', puerto: 39004, sedes: 'Sede Norte · Cra 1\n· sin nombre' }) });
+const porQueSede = (await sedeMala.json()) as { error?: string };
+check('las sedes llegan al alta: una sin nombre se avisa y no crea nada', sedeMala.status === 409 && /le falta el nombre/.test(porQueSede.error ?? '') && !leerIndice().some((c) => c.slug === 'optica-vision'), `${sedeMala.status} ${porQueSede.error}`);
 
 const cambio = await pedir('/api/clientes/financiera-del-caribe', { method: 'PATCH', body: JSON.stringify({ prioridad: 'baja', notas: 'arranca en octubre' }) });
 check('puede cambiarle la prioridad y dejarle una nota', cambio.status === 200 && leerIndice()[0]!.prioridad === 'baja' && leerIndice()[0]!.notas === 'arranca en octubre');

@@ -17,6 +17,7 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 import { BusinessConfigSchema, business } from './config.js';
 import { listAppointments } from './crm/appointments.js';
+import { idDeSede } from './sedes-texto.js';
 
 const ARCHIVO = () => resolve(process.env.AIVA_CONFIG || 'aiva.config.json');
 
@@ -155,17 +156,8 @@ export function ajustesDe(cfg = business): Ajustes {
   };
 }
 
-/** El id de una sede nueva: su nombre sin «Sede», en minúsculas y sin tildes («Sede Norte» → «norte»). */
-function idDe(nombre: string, usados: Set<string>): string {
-  const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-  // «DUNOR Centro» → «centro»: el nombre del negocio no distingue una sede de otra.
-  const negocio = fold(business.business.name);
-  const sinNegocio = fold(nombre).startsWith(`${negocio} `) ? fold(nombre).slice(negocio.length + 1) : fold(nombre);
-  const base = sinNegocio.replace(/^sede\s+/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 36) || 'sede';
-  let id = base;
-  for (let i = 2; usados.has(id); i++) id = `${base}-${i}`;
-  return id;
-}
+/** El id de una sede nueva: su nombre sin «Sede» ni el del negocio, en minúsculas y sin tildes (sedes-texto.ts). */
+const idDe = (nombre: string, usados: Set<string>): string => idDeSede(nombre, business.business.name, usados);
 
 /** Lo guardado en el archivo, que puede ser más nuevo que lo que corre (si ya guardaron y no han reiniciado). */
 export function ajustesEnDisco(): Ajustes {

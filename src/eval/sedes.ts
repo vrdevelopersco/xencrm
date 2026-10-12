@@ -296,6 +296,28 @@ console.log('— Editarlas desde El negocio');
 }
 check('enseñar una frase sabe leer sedes', bookingReading('la de la 72') === 'Sede Sur', String(bookingReading('la de la 72')));
 
+// =====================================================================================================
+console.log('— Sin sedes, ni una palabra de sedes');
+// 🪤 Casi ningún cliente tiene sedes, y para ellos esto tiene que costar cero: ni tokens en el prompt, ni una
+// instrucción de «no hables de sedes» que ponga al modelo a pensar en lo que no existe, ni una pregunta de más al
+// agendar. Si alguien pregunta por sedes, se contesta con el Perfil, como cualquier otra pregunta del negocio.
+{
+  const { business } = await import('../config.js');
+  const { sedesNombradas } = await import('../crm/sedes.js');
+  const { businessSheet, formatContext } = await import('../rag/retriever.js');
+  const { personaPrompt, gatePrompt, datosDeLaPersona, soloLasReglas } = await import('../agent/prompts.js');
+  const guardadas = business.sedes.splice(0);
+  const todo = [businessSheet().text, formatContext([], []), personaPrompt(), gatePrompt(), datosDeLaPersona(), soloLasReglas(), sedesComoInformacion()].join('\n');
+  const dicha = /.{0,60}\bsedes?\b.{0,60}/i.exec(todo)?.[0] ?? '';
+  check('🪤 nada de lo que ve el modelo dice «sede»', !dicha, dicha);
+  check('ningún mensaje nombra una sede', sedeEn('en la sede norte, la del norte') === null && sedesNombradas('la de la 72').length === 0);
+  const u = cliente();
+  const r = await startBooking(u, 'quiero agendar una visita');
+  check('al agendar no pregunta en cuál', !/sede/i.test(r) && estado(u)?.step !== 'sede' && /\d/.test(r), corto(r));
+  check('y la agenda es la de siempre', agendaDe(null).sede === null && agendaDe('norte').sede === null);
+  business.sedes.push(...guardadas);
+}
+
 check('ni una llamada a un modelo', uso() === antes, `${uso() - antes} llamadas`);
 console.log(fail ? `\n${fail} fallaron` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

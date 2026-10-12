@@ -345,6 +345,12 @@ no entra a los otros ni sabiéndose la dirección.
   - La sede se guarda en `users.data.sede` y en `appointments.sede`; `location` lleva el nombre con la dirección,
     que es lo que ya leían el recordatorio, el calendario y la exportación.
   - El recordatorio se va al último día que atiende la sede de esa cita, no la agenda general.
+  - Sin sedes no entra nada: `sedesComoInformacion()` devuelve vacío, la ficha del negocio no tiene «### Sedes» y el
+    flujo no tiene el paso. No hay ninguna instrucción de «no hables de sedes»: sería gastar tokens en poner al
+    modelo a pensar en lo que no existe. `test:sedes` revisa que nada de lo que ve el modelo diga «sede».
+  - Las sedes escritas a mano, una por línea, las lee `sedes-texto.ts`, que no carga ninguna configuración. Lo usan
+    el alta de un cliente (la consola y `pnpm cliente nuevo`), `pnpm onboard` y El negocio, que comparten el cálculo
+    del id: «Sede Norte» da `norte` y «DUNOR Centro», `centro`.
 - **Calendario**: iCalendar estándar. Suscripción secreta, página por cita con firma HMAC y calendarios del dueño
   que bloquean la agenda.
 

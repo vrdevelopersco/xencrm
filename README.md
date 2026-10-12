@@ -223,7 +223,10 @@ Ofrece los espacios de esa sede, y si lo que pidió no existe ahí pero sí en o
 confirmación, el recordatorio y el calendario del cliente dicen la dirección. La ficha recuerda la sede para la
 próxima vez. Las sedes también van en la información del negocio, así que "¿dónde quedan?" se responde con todas.
 Una sede no es otro cliente: si cada una tiene dueño, número y precios propios, son clientes aparte. Se editan
-desde el tablero, en El negocio, y el calendario filtra por sede. Pruebas: `pnpm test:sedes`.
+desde el tablero, en El negocio, y el calendario filtra por sede. También se pueden poner al dar de alta el cliente,
+en la consola o con `pnpm cliente nuevo`: una por línea, con el nombre y la dirección. Sin sedes, que es lo de casi
+todos, el asistente no oye hablar de ellas: nada en el prompt y ninguna pregunta de más al agendar. Si alguien pregunta
+por sedes, se contesta con el Perfil, como cualquier otra pregunta. Pruebas: `pnpm test:sedes`.
 
 **Recordatorio de la cita** (`appointments.reminder`: `at`, por defecto `"08:00"`, y `enabled`). Sale el mismo día de
 la cita a esa hora, si queda al menos una hora antes. Si no, o si ese día la sede no atiende, sale el último día que

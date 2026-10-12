@@ -96,5 +96,30 @@ let errPlantilla = '';
 try { crearCliente({ nombre: 'Otra Cosa', plantilla: 'no-existe.json' }); } catch (e) { errPlantilla = (e as Error).message; }
 check('una plantilla que no existe se avisa', /no encuentro la plantilla/.test(errPlantilla), errPlantilla);
 
+// --- Las sedes, al darlo de alta ---
+// 🪤 Vacío es lo normal y no escribe la clave: el asistente de ese cliente no oye hablar de sedes en ninguna parte.
+const { BusinessConfigSchema } = await import('../config.js');
+const { cliente: optica } = crearCliente({
+  nombre: 'Óptica Visión',
+  sedes: 'Sede Norte · Cra 53 # 82-20\n   \nÓptica Visión Centro: Calle 34 # 43-31\nSede Sur - Calle 72 # 45-10\nSede Norte | Local 2, CC Buenavista',
+});
+const cfgOptica = JSON.parse(readFileSync(rutas(optica.slug).config, 'utf8')) as { sedes?: { id: string; nombre: string; direccion: string }[] };
+const sedesOptica = cfgOptica.sedes ?? [];
+check('las sedes quedan en su configuración, una por línea', sedesOptica.map((x) => x.id).join() === 'norte,centro,sur,norte-2', JSON.stringify(sedesOptica));
+check('con su nombre y su dirección, sin partir «82-20»', sedesOptica[0]?.direccion === 'Cra 53 # 82-20' && sedesOptica[2]?.nombre === 'Sede Sur' && sedesOptica[2]?.direccion === 'Calle 72 # 45-10', JSON.stringify(sedesOptica.slice(0, 3)));
+check('el nombre del negocio no hace el id: «Óptica Visión Centro» es «centro»', sedesOptica[1]?.nombre === 'Óptica Visión Centro' && sedesOptica[1]?.id === 'centro');
+check('y la configuración sigue siendo válida', BusinessConfigSchema.safeParse(cfgOptica).success, JSON.stringify(BusinessConfigSchema.safeParse(cfgOptica).error?.issues?.slice(0, 2)));
+const cfgSinSedes = JSON.parse(readFileSync(rutas(fin.slug).config, 'utf8')) as Record<string, unknown>;
+check('🪤 sin sedes, la clave ni aparece', !('sedes' in cfgSinSedes), JSON.stringify(cfgSinSedes.sedes));
+const { cliente: espacios } = crearCliente({ nombre: 'Solo Espacios', sedes: '  \n \n' });
+check('unas líneas en blanco tampoco son sedes', !('sedes' in (JSON.parse(readFileSync(rutas(espacios.slug).config, 'utf8')) as Record<string, unknown>)));
+let errSede = '';
+try { crearCliente({ nombre: 'Mala Sede', sedes: 'Sede Norte · Cra 1\n: Calle sin nombre' }); } catch (e) { errSede = (e as Error).message; }
+check('una sede sin nombre se avisa', /le falta el nombre/.test(errSede), errSede);
+check('🪤 y no deja media carpeta hecha ni el cliente en el índice', !existsSync(rutas('mala-sede').dir) && !leerIndice().some((c) => c.slug === 'mala-sede'));
+let errMuchas = '';
+try { crearCliente({ nombre: 'Cadena', sedes: Array.from({ length: 21 }, (_, i) => `Sede ${i + 1}`).join('\n') }); } catch (e) { errMuchas = (e as Error).message; }
+check('más de 20 sedes, no', /máximo es 20/.test(errMuchas), errMuchas);
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

@@ -656,7 +656,7 @@ export function mountConsola(app: Hono) {
   // El alta la hace el super-admin desde aquí: crea la carpeta, el token y el puerto. No arranca nada.
   app.post('/api/clientes', async (c) => {
     if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin da de alta clientes' }, 403);
-    const body = (await c.req.json().catch(() => ({}))) as { nombre?: string; slug?: string; host?: string; puerto?: number; base?: string; prioridad?: ClienteRef['prioridad']; plantilla?: string };
+    const body = (await c.req.json().catch(() => ({}))) as { nombre?: string; slug?: string; host?: string; puerto?: number; base?: string; prioridad?: ClienteRef['prioridad']; plantilla?: string; sedes?: string };
     if (!body.nombre?.trim()) return c.json({ error: 'falta el nombre del negocio' }, 400);
     try {
       const { cliente, token } = crearCliente({
@@ -667,6 +667,7 @@ export function mountConsola(app: Hono) {
         base: body.base?.trim(),
         prioridad: body.prioridad,
         plantilla: body.plantilla,
+        sedes: typeof body.sedes === 'string' ? body.sedes : undefined,
       });
       return c.json({ cliente, token });
     } catch (err) {

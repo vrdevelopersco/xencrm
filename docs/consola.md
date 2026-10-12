@@ -23,6 +23,11 @@ Lo primero que se pregunta es **cómo atiende ese negocio**, porque de ahí sale
 | **Soporte** | Financiera, posventa, software | Nuevo → En revisión → Con un asesor → Resuelto |
 | **Cotización y producción** | Impresión industrial, fabricación | Nuevo → Tomando datos → Cotizado → En producción → Entregado |
 
+Si atiende en **varios sitios con el mismo número**, sus sedes van en el campo **Sedes**: una por línea, el nombre y
+la dirección («Sede Norte · Cra 53 # 82-20»). Vacío, que es lo normal, no deja nada de sedes en su configuración: el
+asistente no oye hablar de ellas. Sus días, franjas y cupo propios se ponen después, en El negocio. Con
+`pnpm cliente nuevo` se escriben en una línea, separadas por «;».
+
 Queda creada su carpeta en `clientes/<slug>/` con su configuración, su base, su catálogo, su diccionario, su perfil
 y su `.env` (puerto, token, dominio). Las claves compartidas de la máquina —OpenAI, Ollama— siguen **una sola vez**
 en el `.env` de la raíz: cada cliente hereda lo que no define.

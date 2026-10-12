@@ -562,6 +562,10 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
       <select id="f-plantilla"></select>
       <span class="muted small" id="f-plantilla-ayuda"></span>
     </label>
+    <label>Sedes
+      <textarea id="f-sedes" rows="3" placeholder="Sede Norte · Cra 53 # 82-20&#10;Sede Sur · Calle 72 # 45-10"></textarea>
+      <span class="muted small">Solo si atiende en varios sitios con el mismo número: una por línea, el nombre y la dirección. Vacío si atiende en uno, que es lo normal. Sus días y franjas se ponen después, en El negocio.</span>
+    </label>
     <div id="msg" class="small" role="status"></div>
     <div class="fila"><button class="btn primary" id="crear" type="button">Crear cliente</button><button class="btn" type="button" id="cerrar">Cancelar</button></div>
   </form>
@@ -2327,7 +2331,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
     if (!nombre) { $('msg').textContent = 'Falta el nombre del negocio.'; return; }
     $('crear').disabled = true;
     $('msg').textContent = 'Creando…';
-    api('/clientes', { method: 'POST', body: { nombre: nombre, slug: $('f-slug').value.trim() || undefined, host: $('f-host').value.trim(), prioridad: $('f-prioridad').value, plantilla: $('f-plantilla').value.trim() || undefined } })
+    api('/clientes', { method: 'POST', body: { nombre: nombre, slug: $('f-slug').value.trim() || undefined, host: $('f-host').value.trim(), prioridad: $('f-prioridad').value, plantilla: $('f-plantilla').value.trim() || undefined, sedes: $('f-sedes').value.trim() } })
       .then(function (r) {
         $('crear').disabled = false;
         if (r.error) { $('msg').textContent = r.error; return; }
@@ -2335,7 +2339,7 @@ form.alta label input,form.alta label select,form.alta label textarea{font-weigh
         $('msg').innerHTML = '<b>Listo: ' + esc(r.cliente.nombre) + '</b>' + (p ? ' · ' + esc(p.nombre) + ': ' + esc(p.embudo) : '') +
           '<br>Token del tablero (se muestra una vez, también queda en su .env):<br><code>' + esc(r.token) + '</code>' +
           '<br><br>Falta: ajustar su información en el tablero, <code>pnpm cliente pm2</code> y arrancarlo con pm2.';
-        $('f-nombre').value = ''; $('f-slug').value = ''; $('f-host').value = '';
+        $('f-nombre').value = ''; $('f-slug').value = ''; $('f-host').value = ''; $('f-sedes').value = '';
         cargar();
       })
       .catch(function () { $('crear').disabled = false; $('msg').textContent = 'No se pudo crear.'; });

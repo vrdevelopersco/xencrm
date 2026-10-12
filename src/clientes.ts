@@ -13,6 +13,7 @@ import { join, resolve } from 'node:path';
 import { request as peticionHttp } from 'node:http';
 import { Readable } from 'node:stream';
 import { randomBytes } from 'node:crypto';
+import { sedesDeTexto } from './sedes-texto.js';
 
 export interface ClienteRef {
   slug: string;
@@ -246,6 +247,8 @@ export function crearCliente(opts: {
   base?: string;
   prioridad?: ClienteRef['prioridad'];
   hoy?: string;
+  /** Sus sedes, una por línea: «Sede Norte · Cra 53 # 82-20». Vacío si atiende en un solo sitio (lo normal). */
+  sedes?: string;
 }): { cliente: ClienteRef; token: string } {
   const clientes = leerIndice();
   const slug = slugificar(opts.slug || opts.nombre);
@@ -254,6 +257,8 @@ export function crearCliente(opts: {
   if (clientes.some((c) => c.slug === slug)) throw new Error(`ya existe un cliente con el identificador "${slug}"`);
   const puerto = opts.puerto ?? puertoLibre(clientes);
   if (clientes.some((c) => c.puerto === puerto)) throw new Error(`el puerto ${puerto} ya lo usa otro cliente`);
+  // Las sedes se leen antes de crear nada: una línea mal escrita no puede dejar media carpeta hecha.
+  const sedes = sedesDeTexto(opts.sedes ?? '', opts.nombre);
 
   const r = rutas(slug);
   mkdirSync(r.data, { recursive: true });
@@ -262,6 +267,8 @@ export function crearCliente(opts: {
   const config = configDePlantilla(opts.plantilla);
   const negocio = (config.business ?? {}) as Record<string, unknown>;
   config.business = { ...negocio, name: opts.nombre };
+  // 🪤 Sin sedes no se escribe la clave: así el asistente de ese cliente no oye hablar de sedes en ninguna parte.
+  if (sedes.length) config.sedes = sedes;
   // Todo lo del cliente vive con el cliente: diccionario, perfil, catálogo y lo que sepa. Nada compartido con otro.
   config.dictionaryFile = resolve(r.diccionario);
   config.profileFile = resolve(r.perfil);
@@ -424,12 +431,16 @@ async function main() {
     console.log('\n¿Cómo atiende este negocio? De aquí sale su embudo y si agenda citas.');
     for (const p of PLANTILLAS) console.log(`  ${p.id.padEnd(11)} ${p.nombre} · ${p.ejemplo}\n${' '.repeat(14)}${p.embudo}`);
     const plantilla = await ask('\nPlantilla', PLANTILLAS[0].id);
+    console.log('\n¿Atiende en varias sedes con el mismo número? Escríbelas separadas por «;», cada una como «Nombre · Dirección».');
+    const sedes = (await ask('Sedes (vacío si atiende en un solo sitio)', '')).split(';').join('\n');
     rl.close();
 
-    const { cliente, token } = crearCliente({ nombre, slug, puerto, host, prioridad, plantilla });
+    const { cliente, token } = crearCliente({ nombre, slug, puerto, host, prioridad, plantilla, sedes });
     const r = rutas(cliente.slug);
     const elegida = PLANTILLAS.find((p) => p.id === plantilla);
     console.log(`\n✓ ${cliente.nombre} quedó en ${r.dir}${elegida ? ` · ${elegida.nombre}: ${elegida.embudo}` : ''}`);
+    const conSedes = (JSON.parse(readFileSync(r.config, 'utf8')) as { sedes?: { nombre: string }[] }).sedes ?? [];
+    if (conSedes.length) console.log(`  sedes:   ${conSedes.map((x) => x.nombre).join(', ')}  (sus días y franjas, en El negocio)`);
     console.log(`  tablero: http://localhost:${cliente.puerto}/admin`);
     console.log(`  token:   ${token}  (también en ${r.env}, con permisos 600)`);
     console.log('\nFalta:');

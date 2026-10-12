@@ -4,6 +4,7 @@ import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, cpSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
+import { MAXIMO_SEDES, sedesDeTexto } from './sedes-texto.js';
 
 const rl = createInterface({ input: stdin, output: stdout });
 const ask = async (q: string, def = ''): Promise<string> => {
@@ -120,6 +121,23 @@ if (mode === 'dunor' || mode === 'boutique' || mode === 'casa-verde') {
   }
   if (!existsSync('data/knowledge/sobre-nosotros.md')) writeFileSync('data/knowledge/sobre-nosotros.md', `# Sobre ${name}\n\nDescribe aquí el negocio, horarios, contacto, envíos, pagos y políticas. Un archivo .md por tema.\n`);
   if (!existsSync('data/scenarios.json')) writeFileSync('data/scenarios.json', JSON.stringify([{ name: 'saludo', turns: [{ text: 'hola', expect: { intent: 'saludo' } }] }], null, 2));
+}
+
+// Las sedes, solo si atiende en varios sitios con un mismo número. 🪤 Sin sedes (lo normal) no se escribe nada: el
+// asistente no oye hablar de sedes en ninguna parte. Sus días y franjas propios se ponen después, en El negocio.
+if (await yes('¿Atiende en varias sedes con el mismo número?', false)) {
+  const lineas: string[] = [];
+  for (let i = 1; i <= MAXIMO_SEDES; i++) {
+    const linea = await ask(`Sede ${i} (Nombre · Dirección; vacío para terminar)`);
+    if (!linea) break;
+    lineas.push(linea);
+  }
+  try {
+    const sedes = sedesDeTexto(lineas.join('\n'), (config.business as { name: string }).name);
+    if (sedes.length) config.sedes = sedes;
+  } catch (err) {
+    console.log(`⚠️  ${(err as Error).message}. Las sedes se pueden poner después, en El negocio.`);
+  }
 }
 
 writeFileSync('aiva.config.json', JSON.stringify(config, null, 2) + '\n');
