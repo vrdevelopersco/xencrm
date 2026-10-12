@@ -9,6 +9,21 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-12
 
+### Cada cliente con su tope de gasto de IA, y nadie sin respuesta al llegar · `148e438`
+El gasto se medía pero nada lo frenaba, y es lo primero que pregunta quien pone su propia llave de OpenAI. Ahora cada
+cliente tiene un tope en dólares al mes, que pone el super-admin en Configuración › Motores y se aplica al instante.
+Al 80 % avisa por la campana, la consola y WhatsApp; al 90 % lo específico pasa al modelo barato; al 100 % no sale
+ni una llamada a la IA de pago, lo que se resuelve sin IA sigue y lo demás pasa al equipo con aviso al cliente. Si
+hay un motor en la máquina, contesta ese. 🪤 Mes calendario en la hora del negocio, no los últimos 30 días, y el
+freno de último recurso está en el motor, para que ningún camino olvidado se lo salte. `pnpm test:presupuesto` (52
+casos, cada llamada contada) y visto en Chrome en escritorio y celular: la tarjeta, guardar desde ella, el panel de
+Consumo del tablero y la campana.
+
+### La sigla del cliente vuelve a salir cuando su logo no carga · `abffeb4`
+El respaldo del logo en la lista de clientes armaba su `onerror` con las comillas de `JSON.stringify` dentro de un
+atributo con comillas: el navegador no lo podía leer y quedaba la imagen rota. Salió al revisar la consola en Chrome
+para el tope: un cliente sin archivo de logo daba «Unexpected end of input». Escapado, sale la sigla y ningún error.
+
 ### Lo que las reglas prohíben ya no lo respaldan, y la plata no se promete · `459ea37`
 🪤 Las guardas de «no inventa» medían el respaldo contra la persona entera, y la persona nombra wifi, parqueadero,
 mascotas, descuentos y envíos como ejemplos de lo que no se supone. Esas palabras respaldaban: «¿tienen wifi?»
