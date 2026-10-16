@@ -130,8 +130,8 @@ check('por la consola solo se llega al tablero, no a lo demás del cliente', (aw
 
 // Quien atiende a un cliente no entra al de otro, ni sabiéndose la dirección.
 const { crearUsuario: nuevoUsuario, abrirSesion: abrir } = await import('../consola-usuarios.js');
-nuevoUsuario({ usuario: 'ana', nombre: 'Ana', clave: 'clave-de-prueba', rol: 'agente', clientes: ['financiera-del-caribe'] });
-const sesionAna = abrir({ usuario: 'ana', nombre: 'Ana', rol: 'agente', clientes: ['financiera-del-caribe'], activo: true, desde: '2026-09-25' });
+nuevoUsuario({ usuario: 'ana', nombre: 'Ana', clave: 'clave-de-prueba', rol: 'asesor', clientes: ['financiera-del-caribe'] });
+const sesionAna = abrir({ usuario: 'ana', nombre: 'Ana', rol: 'asesor', clientes: ['financiera-del-caribe'], activo: true, desde: '2026-09-25' });
 const comoAna = (ruta: string) => app.request(`http://local${ruta}`, { headers: { cookie: `aiva_consola=${sesionAna}` } });
 check('entra al tablero del cliente que atiende', (await comoAna('/c/financiera-del-caribe/admin/api/me')).status === 502);
 check('y al de otro cliente, no', (await comoAna('/c/litografia-industrial/admin')).status === 403);

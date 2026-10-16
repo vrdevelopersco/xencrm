@@ -21,8 +21,13 @@ el archivo de usuarios.
   existen). La galleta es HttpOnly y SameSite.
 - **Aislamiento**: quien atiende a un negocio solo ve ese negocio; no alcanza el tablero, el logo ni el token de
   administración de otro.
-- **Privilegios**: un agente no ve el equipo, no crea usuarios, no le cambia la clave a otro, no borra a nadie,
+- **Privilegios**: un asesor no ve el equipo, no crea usuarios, no le cambia la clave a otro, no borra a nadie,
   no da de alta clientes, y al editar «lo mío» no se asciende ni se asigna clientes ajenos.
+- **El admin de un cliente** maneja a su gente y a nadie más: no crea super-admins, no reparte clientes ajenos, no
+  toca a quien atiende además otro negocio ni al super-admin («no existe», igual que un usuario inventado), no se
+  entera de qué otros clientes tiene aiva y no se baja ni se desactiva a sí mismo (`test:usuarios`).
+- **Lo de quien administra aiva** (motores, clave de OpenAI, tope de gasto y encender la retención) se frena en las
+  dos puertas al cliente: `/api/c/<slug>/…` y `/c/<slug>/admin/api/…`.
 - **Retención**: el negocio ve la suya pero no la cambia; encenderla, que anonimiza o borra conversaciones, es solo
   del super-admin. Al anonimizar, ni el nombre ni el teléfono quedan en ninguna tabla de la base (`test:retencion`
   la recorre entera buscándolos).
@@ -54,6 +59,7 @@ Salió de cuatro revisiones en paralelo del código y de probarlo en un navegado
 | **La llave maestra se guardaba en el navegador** | Al entrar con ella quedaba en el almacenamiento local, que lee cualquier script del origen. Ya no se guarda: la sesión alcanza para todo. | `public/consola.html` |
 | **Fórmulas en el CSV** | El nombre lo pone el cliente desde WhatsApp, y Excel ejecuta lo que empieza por `=`, `+`, `-` o `@`. Un prospecto con `=HYPERLINK(…)` de nombre se llevaba la fila cuando el dueño abría el archivo. | `src/crm/export.ts` |
 | **Cambiar la clave no echaba a nadie** | A una cuenta comprometida se le cambiaba la clave y quien había entrado seguía dentro hasta doce horas: lo contrario de lo que uno cree que acaba de hacer. | `src/consola-usuarios.ts` |
+| **Lo de quien administra aiva pasaba por la segunda puerta** | El freno para motores, clave y retención estaba solo en `/api/c/<slug>/…`. Por `/c/<slug>/admin/api/…`, la que usa el tablero abierto desde la consola, cualquiera con un cliente asignado cambiaba los motores, ponía una clave de OpenAI o encendía la retención que borra conversaciones. La clave no se podía leer (sale tapada), pero sí reemplazar. **Comprobado pasando** y comprobado frenado (2026-10-16). Ahora las dos puertas usan la misma función. | `src/consola.ts` (`vedado`) |
 | **Un respaldo malo dejaba al cliente sin arrancar** | La configuración se escribía sin comprobar. Si quedaba rota, el proceso no volvía a levantar —y con un supervisor detrás, reiniciándose para siempre—. Ahora se valida ya compuesta y antes de escribir. | `src/crm/respaldo.ts` |
 | **Identificador de conversación adivinable en MCP** | Sin identificador se usaba `anon-<reloj>`, adivinable dentro del mismo segundo: quien lo adivinara retomaba la conversación de otro con su historial dentro del contexto del modelo. | `src/mcp/server.ts` |
 | **Mensajes sin tope por MCP** | El chat del sitio corta en 2000 caracteres; por MCP no había corte, así que un mensaje enorme entraba entero al modelo y lo pagaba el cliente. | `src/mcp/server.ts` |
@@ -63,10 +69,12 @@ Salió de cuatro revisiones en paralelo del código y de probarlo en un navegado
 
 Nada de esto es explotable hoy por un desconocido, pero conviene tenerlo escrito.
 
-- **Un «agente» es admin completo sobre los clientes que atiende.** El proxy comprueba de quién es el cliente,
-  no qué se hace con él: quien atiende conversaciones puede además bajar el CSV con los teléfonos, cambiar la
-  configuración, restaurar un respaldo y reiniciar el proceso. Es una decisión de producto —si «agente» va a ser
-  un asesor, hace falta filtrar rutas y métodos, no solo el cliente.
+- **Un asesor hace en su cliente todo lo que hace su admin, menos Equipo.** El proxy comprueba de quién es el
+  cliente, no qué se hace con él: quien atiende conversaciones puede además bajar el CSV con los teléfonos,
+  cambiar la configuración, restaurar un respaldo y reiniciar el proceso. El usuario lo decidió así el
+  2026-10-16. Si algún día el asesor tiene que ser solo chat, hay que filtrar rutas y métodos, no solo el cliente.
+- **Dos admins del mismo cliente se pueden cambiar la clave entre sí.** Es su negocio y su gente; si uno deja al
+  otro por fuera, lo arregla el super-admin.
 - **La ruta del logo no está confinada.** `marca.logo` acepta cualquier ruta del disco y `/brand/logo` se sirve
   sin autenticación (solo se limita la extensión). Hace falta ser admin del cliente y reiniciar.
 - **`/health` es público** y dice el nombre del negocio, el del asistente, el modelo y el estado de los motores.

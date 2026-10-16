@@ -159,11 +159,33 @@ consola, que es de donde se vino.
 
 ## Quién entra y qué ve
 
-- **Super-admin**: ve y atiende todos los clientes, da de alta, da de baja y maneja el equipo.
-- **Quien atiende**: solo ve —y solo le suena— lo de los clientes que tiene asignados. Si pide otro, recibe un no.
+| Rol | Para quién | Qué puede |
+|---|---|---|
+| **Super-admin** | Quien administra aiva | Ve y atiende todos los clientes, da de alta y de baja, y maneja a todo el equipo. Es el único que toca motores, la clave de OpenAI, el tope de gasto y la retención. |
+| **Admin del cliente** | El dueño o el gerente de un negocio | Atiende sus clientes y, en **Equipo**, maneja a la gente de ellos: crea asesores y otros admins de su negocio, les cambia la clave, los desactiva o los quita. |
+| **Asesor** | Quien atiende el chat | Atiende sus clientes y nada más. No ve Equipo. |
 
-Se administran en la pestaña **Equipo**: agregar a alguien con su clave, marcarle qué clientes atiende, cambiarle
-la clave, desactivarlo o quitarlo. Las claves se guardan cifradas (scrypt), nunca en claro.
+Asesor y admin hacen lo mismo dentro del tablero de su cliente (conversaciones, citas, configuración del negocio,
+exportar). La diferencia es solo Equipo. Así lo decidió el usuario el 2026-10-16.
+
+Todos solo ven —y solo les suena— lo de los clientes que tienen asignados. Si piden otro, reciben un no.
+
+Se administran en la pestaña **Equipo**: agregar a alguien con su clave y su rol, marcarle qué clientes atiende,
+cambiarle el rol o la clave, desactivarlo o quitarlo. Las claves se guardan cifradas (scrypt), nunca en claro.
+
+**Lo que el admin de un cliente no puede**, aunque lo pida a mano:
+
+- Crear o nombrar super-admins, ni darle a alguien un cliente que él no atiende.
+- Tocar a quien no es solo suyo: al super-admin, ni a quien atiende además otro negocio. A esos los ve por su
+  nombre, para que sepa quién más entra a sus conversaciones, y no se entera de qué otros clientes tienen. Si lo
+  intenta, recibe «ese usuario no existe», igual que con alguien que no existe.
+- Cambiarse a sí mismo el rol, los clientes o si sigue activo, ni quitarse. Un admin que se baja por error deja a
+  su negocio sin nadie que maneje el equipo. Su clave sí se la cambia, y eso le cierra la sesión, como a todos.
+- Dejar a alguien sin clientes: para sacarlo del todo está **Quitar**.
+
+Quien tenía el rol de antes («Atiende», guardado como `agente`) quedó como **admin del cliente**: podía hacer de
+todo en su cliente menos Equipo, y así nadie perdió nada al desplegar. El super-admin baja a asesor a quien
+corresponda. Un rol que no se entiende en el archivo se lee como asesor.
 
 El **`CONSOLA_TOKEN`** del `.env` es la llave maestra del super-admin: con eso se entra la primera vez —cuando
 todavía no hay usuarios— y cuando alguien pierde su clave.

@@ -13,7 +13,7 @@ import { readFileSync, existsSync, rmSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { actualizarCliente, crearCliente, darDeBajaCliente, leerIndice, llamarACliente, PLANTILLAS, puertoLibre, tokenDe, urlDe, type ClienteRef } from './clientes.js';
 import { cabecerasDeSiempre, soloDesdeAqui } from './cabeceras.js';
-import { abrirSesion, ACENTOS, actualizarUsuario, alcanza, borrarUsuario, cambiarLoMio, COLORES, colorDe, cerrarSesion, crearUsuario, leerUsuarios, quitarClienteDeUsuarios, sesionDe, sinClave, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
+import { abrirSesion, ACENTOS, actualizarComo, alcanza, borrarComo, cambiarLoMio, COLORES, colorDe, cerrarSesion, crearComo, equipoPara, leerUsuarios, manejaEquipo, quitarClienteDeUsuarios, sesionDe, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
 import { irseSiQuedaHuerfano } from './huerfano.js';
 import { deDondeViene, guardarLibretaConfig, libretaConfig } from './crm/libreta-config.js';
 import { general, guardarGeneral } from './crm/general.js';
@@ -322,6 +322,21 @@ const SOLO_SUPER = /^(clave|motores)(\/|$)/;
  */
 const SOLO_SUPER_CAMBIA = /^retencion(\/|$)/;
 
+/**
+ * Si quien no es super-admin pide algo de lo anterior, por qué no. Null si puede.
+ *
+ * 🪤 Al cliente se llega por DOS puertas: `/api/c/<slug>/…` (la consola hablando por él) y `/c/<slug>/admin/api/…`
+ * (su tablero abierto desde la consola). El freno estaba solo en la primera, así que por la segunda alguien que
+ * atiende cambiaba los motores, ponía una clave de OpenAI o encendía la retención que borra conversaciones. Con
+ * una sola función para las dos, no se puede volver a cerrar una y olvidar la otra.
+ */
+function vedado(esSuper: boolean, ruta: string, metodo: string): string | null {
+  if (esSuper) return null;
+  if (SOLO_SUPER.test(ruta)) return 'eso lo lleva quien administra aiva, no el negocio';
+  if (SOLO_SUPER_CAMBIA.test(ruta) && metodo !== 'GET' && metodo !== 'HEAD') return 'eso lo cambia quien administra aiva; verlo sí puedes';
+  return null;
+}
+
 function quienEs(c: Context): { usuario: UsuarioPublico | null; esSuper: boolean } | null {
   if ((c.req.header('x-consola-token') ?? c.req.query('token')) === CONSOLA_TOKEN) return { usuario: null, esSuper: true };
   const usuario = sesionDe(c.req.header('x-consola-sesion') ?? galletaDe(c));
@@ -463,11 +478,13 @@ export function mountConsola(app: Hono) {
     if (!quien) return c.redirect('/', 302); // sin sesión, a la puerta de la consola
     const slug = c.req.param('slug');
     if (!alcanza(quien.usuario, slug)) return c.text('Ese cliente no es tuyo.', 403);
+    const resto = c.req.param('resto') || '';
+    const prohibido = resto.startsWith('admin/api/') ? vedado(quien.esSuper, resto.slice('admin/api/'.length), c.req.method) : null;
+    if (prohibido) return c.json({ error: prohibido }, 403);
     const cliente = leerIndice().find((x) => x.slug === slug);
     const token = cliente ? tokenDe(slug) : '';
     if (!cliente || !token) return c.text('Ese cliente no existe o no tiene token.', 404);
 
-    const resto = c.req.param('resto') || '';
     const ruta = resto === 'admin' || resto === 'admin.js' || resto.startsWith('admin/api/') ? `/${resto}` : null;
     if (!ruta) return c.text('No encontrado', 404);
 
@@ -508,7 +525,7 @@ export function mountConsola(app: Hono) {
         // modelo— detrás de una sección que solo ve quien administra. Quien entra con el token a secas no pasa
         // por aquí y lo ve todo: es su token, y con él puede llamar a cualquier ruta igual. Esto ordena la
         // pantalla de quien atiende, no guarda un secreto; confundir las dos cosas lleva a creerse protegido.
-        const miRol = quien.esSuper ? 'super' : quien.usuario?.rol || 'agente';
+        const miRol = quien.esSuper ? 'super' : quien.usuario?.rol || 'asesor';
         const html = (await r.text()).replace(
           '</head>',
           `<script>window.AIVA_CONSOLA=${JSON.stringify(slug)};window.AIVA_EQUIPO=${JSON.stringify(equipo)};window.AIVA_QUIEN=${JSON.stringify(soy)};window.AIVA_ROL=${JSON.stringify(miRol)}</script></head>`,
@@ -529,16 +546,19 @@ export function mountConsola(app: Hono) {
 
   app.get('/api/yo', (c) => {
     const u = c.get('usuario' as never) as UsuarioPublico | null;
-    return c.json({ usuario: u ? { ...u, color: colorDe(u) } : null, super: Boolean(c.get('esSuper' as never)), colores: COLORES, acentos: ACENTOS });
+    return c.json({ usuario: u ? { ...u, color: colorDe(u) } : null, super: Boolean(c.get('esSuper' as never)), equipo: manejaEquipo(u), colores: COLORES, acentos: ACENTOS });
   });
 
-  // El equipo: quién entra a la consola y qué clientes atiende. Solo el super-admin.
+  // El equipo: quién entra a la consola y qué clientes atiende. El super-admin ve a todos; el admin de un cliente,
+  // a la gente de sus clientes (ver equipoPara). El asesor, a nadie.
   app.get('/api/usuarios', (c) => {
-    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
+    const actor = c.get('usuario' as never) as UsuarioPublico | null;
+    if (!manejaEquipo(actor)) return c.json({ error: 'el equipo lo maneja el admin de tu cliente' }, 403);
     // `sinClientes` son los que atienden y se quedaron sin ninguno: no pueden hacer nada hasta que les asignen.
+    // Solo los ve el super-admin: el admin de un cliente no tiene cómo asignárselos, y no son de su negocio.
     return c.json({
-      usuarios: leerUsuarios().map((u) => ({ ...sinClave(u), color: colorDe(u) })),
-      sinClientes: usuariosSinClientes().map((u) => u.usuario),
+      usuarios: equipoPara(actor).map((u) => ({ ...u, color: colorDe(u) })),
+      sinClientes: c.get('esSuper' as never) ? usuariosSinClientes().map((u) => u.usuario) : [],
       colores: COLORES,
     });
   });
@@ -558,28 +578,35 @@ export function mountConsola(app: Hono) {
     }
   });
 
+  // Crear, cambiar y quitar gente. Quién puede tocar a quién lo decide consola-usuarios (crearComo y compañía),
+  // no esta ruta: así la regla vive en un solo sitio y se prueba sin levantar la consola.
+  const actorDe = (c: Context) => c.get('usuario' as never) as UsuarioPublico | null;
   app.post('/api/usuarios', async (c) => {
-    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
-    const body = (await c.req.json().catch(() => ({}))) as { usuario?: string; nombre?: string; correo?: string; color?: string; clave?: string; rol?: 'super' | 'agente'; clientes?: string[] };
+    if (!manejaEquipo(actorDe(c))) return c.json({ error: 'el equipo lo maneja el admin de tu cliente' }, 403);
+    const body = (await c.req.json().catch(() => ({}))) as { usuario?: string; nombre?: string; correo?: string; color?: string; clave?: string; rol?: 'super' | 'admin' | 'asesor'; clientes?: string[] };
     if (!body.usuario || !body.clave) return c.json({ error: 'falta el usuario o la clave' }, 400);
     try {
-      return c.json({ usuario: crearUsuario({ usuario: body.usuario, nombre: body.nombre, correo: body.correo, color: body.color, clave: body.clave, rol: body.rol, clientes: body.clientes }) });
+      return c.json({ usuario: crearComo(actorDe(c), { usuario: body.usuario, nombre: body.nombre, correo: body.correo, color: body.color, clave: body.clave, rol: body.rol, clientes: body.clientes }) });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 409);
     }
   });
   app.patch('/api/usuarios/:usuario', async (c) => {
-    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
+    if (!manejaEquipo(actorDe(c))) return c.json({ error: 'el equipo lo maneja el admin de tu cliente' }, 403);
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
     try {
-      return c.json({ usuario: actualizarUsuario(c.req.param('usuario'), body) });
+      return c.json({ usuario: actualizarComo(actorDe(c), c.req.param('usuario'), body) });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 404);
     }
   });
   app.delete('/api/usuarios/:usuario', (c) => {
-    if (!c.get('esSuper' as never)) return c.json({ error: 'solo el super-admin' }, 403);
-    return borrarUsuario(c.req.param('usuario')) ? c.json({ ok: true }) : c.json({ error: 'no existe' }, 404);
+    if (!manejaEquipo(actorDe(c))) return c.json({ error: 'el equipo lo maneja el admin de tu cliente' }, 403);
+    try {
+      return borrarComo(actorDe(c), c.req.param('usuario')) ? c.json({ ok: true }) : c.json({ error: 'no existe' }, 404);
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
   });
 
   /**
@@ -701,12 +728,8 @@ export function mountConsola(app: Hono) {
     // de Configuración solo la ve el super—, pero esconder un botón no protege nada: por aquí pasaba cualquier
     // ruta con el token del cliente ya puesto, así que al darle cuenta a un cliente le estábamos dando también
     // la posibilidad de leerse y cambiarse la llave con una llamada. Se cierra donde se decide, no donde se pinta.
-    if (!c.get('esSuper' as never) && SOLO_SUPER.test(c.req.param('ruta'))) {
-      return c.json({ error: 'eso lo lleva quien administra aiva, no el negocio' }, 403);
-    }
-    if (!c.get('esSuper' as never) && SOLO_SUPER_CAMBIA.test(c.req.param('ruta')) && c.req.method !== 'GET' && c.req.method !== 'HEAD') {
-      return c.json({ error: 'eso lo cambia quien administra aiva; verlo sí puedes' }, 403);
-    }
+    const prohibido = vedado(Boolean(c.get('esSuper' as never)), c.req.param('ruta'), c.req.method);
+    if (prohibido) return c.json({ error: prohibido }, 403);
     const cliente = leerIndice().find((x) => x.slug === slug);
     const token = cliente ? tokenDe(slug) : '';
     if (!cliente || !token) return c.json({ error: 'ese cliente no existe' }, 404);

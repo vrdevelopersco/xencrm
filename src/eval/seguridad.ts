@@ -51,7 +51,7 @@ const tablero = new Hono();
 mountAdmin(tablero as any);
 
 // Quien atiende a la boutique y nada más. Y un super-admin, para comparar.
-crearUsuario({ usuario: 'agente', nombre: 'Agente de la boutique', clave: 'clave-de-prueba-1', rol: 'agente', clientes: ['boutique'] });
+crearUsuario({ usuario: 'agente', nombre: 'Asesor de la boutique', clave: 'clave-de-prueba-1', rol: 'asesor', clientes: ['boutique'] });
 crearUsuario({ usuario: 'jefa', nombre: 'La jefa', clave: 'clave-de-prueba-2', rol: 'super', clientes: [] });
 
 const entrar = async (usuario: string, clave: string) => {
@@ -105,7 +105,7 @@ check('🪤 ni el token de administración del otro negocio', tokenAjeno.status 
 const propio = await pedir('/c/boutique/contacts', conSesion(sesion));
 check('pero el suyo sí lo alcanza (no contesta porque no hay nadie detrás, pero no lo frena el permiso)', propio.status !== 403, `dio ${propio.status}`);
 
-// ---------- 🪤 Un agente no se asciende solo ----------
+// ---------- 🪤 Un asesor no se asciende solo ----------
 const soloSuper: [string, string, RequestInit][] = [
   ['/api/usuarios', 'ver el equipo', { method: 'GET' }],
   ['/api/usuarios', 'crear usuarios', { method: 'POST', body: JSON.stringify({ usuario: 'colado', clave: 'clave-colada-1', rol: 'super' }) }],
@@ -115,16 +115,26 @@ const soloSuper: [string, string, RequestInit][] = [
 ];
 for (const [ruta, que, opts] of soloSuper) {
   const r = await pedir(ruta, { ...conSesion(sesion), 'content-type': 'application/json' }, opts);
-  check(`🪤 un agente no puede ${que}`, r.status === 403, `dio ${r.status}`);
+  check(`🪤 un asesor no puede ${que}`, r.status === 403, `dio ${r.status}`);
 }
 check('y el equipo quedó como estaba', leerUsuarios().length === 2 && !leerUsuarios().some((u) => u.usuario === 'colado'),
   leerUsuarios().map((u) => u.usuario).join(','));
-check('su rol sigue siendo el que era', leerUsuarios().find((u) => u.usuario === 'agente')!.rol === 'agente');
+check('su rol sigue siendo el que era', leerUsuarios().find((u) => u.usuario === 'agente')!.rol === 'asesor');
+
+// 🪤 Lo que es de quien administra aiva se frena en las DOS puertas al cliente. Estaba solo en /api/c/<slug>/…, y
+// por /c/<slug>/admin/api/… —la que usa su tablero abierto desde la consola— pasaba: quien atendía cambiaba los
+// motores, ponía una clave de OpenAI o encendía la retención que borra conversaciones.
+for (const [ruta, metodo] of [['clave', 'POST'], ['motores', 'PUT'], ['motores/tope', 'PUT'], ['retencion', 'PUT']] as [string, string][]) {
+  const r = await pedir(`/c/boutique/admin/api/${ruta}`, { ...conSesion(sesion), 'content-type': 'application/json' }, { method: metodo, body: '{}' });
+  check(`🪤 ni por su tablero: ${metodo} ${ruta}`, r.status === 403, `dio ${r.status}`);
+}
+check('por su tablero, la retención se ve', (await pedir('/c/boutique/admin/api/retencion', conSesion(sesion))).status !== 403);
+check('y lo suyo se maneja igual', (await pedir('/c/boutique/admin/api/contacts', conSesion(sesion))).status !== 403);
 
 // Cambiarse lo suyo sí puede; el rol y los clientes, no.
 await pedir('/api/yo', { ...conSesion(sesion), 'content-type': 'application/json' }, { method: 'PATCH', body: JSON.stringify({ rol: 'super', clientes: ['financiera'], nombre: 'Me cambio el nombre' }) });
 const yoDespues = leerUsuarios().find((u) => u.usuario === 'agente')!;
-check('🪤 cambiándose «lo mío» tampoco se asciende', yoDespues.rol === 'agente' && !yoDespues.clientes.includes('financiera'),
+check('🪤 cambiándose «lo mío» tampoco se asciende', yoDespues.rol === 'asesor' && !yoDespues.clientes.includes('financiera'),
   JSON.stringify({ rol: yoDespues.rol, clientes: yoDespues.clientes }));
 
 // ---------- Las claves ----------

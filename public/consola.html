@@ -645,7 +645,7 @@ dialog.panel{border-radius:16px 0 0 16px}
 <dialog id="dlg-yo">
   <form class="alta" method="dialog" id="form-yo">
     <h2 style="margin:0">Mi cuenta</h2>
-    <p class="muted small" style="margin:0">Tu nombre, tu correo y tu clave. El rol y los clientes que atiendes los decide el super-admin.</p>
+    <p class="muted small" style="margin:0">Tu nombre, tu correo y tu clave. Tu rol y los clientes que atiendes los decide el admin de tu cliente o quien administra aiva.</p>
     <label>Nombre <input id="y-nombre" required></label>
     <label>Correo <input id="y-correo" type="email" placeholder="opcional"><span class="muted small">Si lo pones, también puedes entrar con él.</span></label>
     <div><b class="small">Tu color</b><div class="small muted">Con esto te reconocen en la consola.</div><div class="paleta" id="y-paleta"></div></div>
@@ -689,7 +689,9 @@ dialog.panel{border-radius:16px 0 0 16px}
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var token = localStorage.getItem('aiva.consola.token') || '';
   var sesion = localStorage.getItem('aiva.consola.sesion') || '';
-  var yo = null, esSuper = false;
+  var yo = null, esSuper = false, puedeEquipo = false;
+  // Cómo se le dice a cada rol en pantalla. «agente» es el nombre viejo del admin de un cliente (ver rolDe).
+  var ROL_UI = { super: 'Super-admin', admin: 'Admin del cliente', asesor: 'Asesor', agente: 'Admin del cliente' };
   var LIB = { llave: '', ips: [], tuIp: '', clientes: [] }; // la libreta; se llena en cargarLibreta()
   // Si algo se rompe dentro de una promesa y nadie lo atrapa, que al menos quede dicho. Sin esto, la pantalla se
   // queda a medias y no hay ni un rastro de qué pasó.
@@ -731,7 +733,7 @@ dialog.panel{border-radius:16px 0 0 16px}
   // alguien que atiende un solo cliente, esa persona alcanzaba a ver —unos segundos, hasta que llegaba /yo— la
   // lista de todos los clientes de aiva, que es de lo peor que puede pasar en un producto multicliente.
   function olvidarLoAnterior() {
-    yo = null; esSuper = false;
+    yo = null; esSuper = false; puedeEquipo = false;
     window.__clientes = []; window.__usuarios = [];
     pendientes = []; elegido = null;
     $('lista').innerHTML = '';
@@ -744,7 +746,7 @@ dialog.panel{border-radius:16px 0 0 16px}
     $('config-nav').innerHTML = '';
     LIB = { llave: '', ips: [], tuIp: '', clientes: [] };
     GEN = null;
-    $('tab-equipo').hidden = true;   // hasta que /yo diga que es super
+    $('tab-equipo').hidden = true;   // hasta que /yo diga que maneja el equipo
     $('tab-config').hidden = true;   // la configuración es del super-admin: toca a todos los clientes a la vez
     $('nuevo').hidden = true;
     if ($('dlg-atender').open) $('dlg-atender').close();
@@ -802,7 +804,7 @@ dialog.panel{border-radius:16px 0 0 16px}
       return ((p[0] || 'A')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
     })(comoMeLlamo);
     $('yo').title = yo
-      ? 'Mi cuenta · ' + (esSuper ? 'super-admin' : yo.clientes.length === 1 ? '1 cliente' : yo.clientes.length + ' clientes')
+      ? 'Mi cuenta · ' + (esSuper ? 'super-admin' : (ROL_UI[yo.rol] || 'Asesor').toLowerCase() + ' · ' + (yo.clientes.length === 1 ? '1 cliente' : yo.clientes.length + ' clientes'))
       : 'Entraste con la llave maestra';
   }
   // El color de la consola de esta persona. Lo pinta el CSS con `data-acento` en <html>; sin elegir, azul.
@@ -810,11 +812,11 @@ dialog.panel{border-radius:16px 0 0 16px}
 
   function sesionLista() {
     return api('/yo').then(function (d) {
-      yo = d.usuario; esSuper = d.super; COLORES = d.colores || COLORES; ACENTOS = d.acentos || ACENTOS;
+      yo = d.usuario; esSuper = d.super; puedeEquipo = Boolean(d.equipo); COLORES = d.colores || COLORES; ACENTOS = d.acentos || ACENTOS;
       pintarYo();
       ponerAcento(yo && yo.acento);
       $('nuevo').hidden = !esSuper;
-      $('tab-equipo').hidden = !esSuper;
+      $('tab-equipo').hidden = !puedeEquipo;
       $('tab-config').hidden = !esSuper;
       cargarTodo(); cargarPendientes();
       ver(localStorage.getItem('aiva.consola.vista') || 'atender');
@@ -1152,10 +1154,10 @@ dialog.panel{border-radius:16px 0 0 16px}
   }
 
   function equipoDe(slug) {
-    if (!esSuper) return '';
+    if (!puedeEquipo) return '';
     var todos = window.__usuarios || [];
     var suyos = todos.filter(function (u) { return u.rol === 'super' || (u.clientes || []).indexOf(slug) !== -1; });
-    var libres = todos.filter(function (u) { return u.rol !== 'super' && (u.clientes || []).indexOf(slug) === -1; });
+    var libres = todos.filter(function (u) { return u.rol !== 'super' && !u.soloVer && (u.clientes || []).indexOf(slug) === -1; });
     return '<div class="equipo-cliente">' +
       '<b class="small">Quién lo atiende</b>' +
       (suyos.length
@@ -1163,14 +1165,19 @@ dialog.panel{border-radius:16px 0 0 16px}
             return '<div class="fila persona" data-usuario="' + esc(u.usuario) + '">' +
               '<span class="avatar chico" style="background:' + esc(u.color || '#7b660f') + '">' +
                 esc(String(u.nombre || u.usuario).trim().charAt(0).toUpperCase()) + '</span>' +
-              '<span>' + esc(u.nombre) + '</span><span class="chip">' + esc(u.usuario) + '</span>' +
-              (u.rol === 'super' ? '<span class="chip">super-admin</span>' : '') +
+              '<span>' + esc(u.nombre) + '</span>' + (u.soloVer ? '' : '<span class="chip">' + esc(u.usuario) + '</span>') +
+              '<span class="chip">' + esc(ROL_UI[u.rol] || 'Asesor') + '</span>' +
               '<span class="grow"></span>' +
-              '<input class="correo-nuevo" type="email" placeholder="correo" value="' + esc(u.correo || '') + '" style="width:170px">' +
-              '<button class="btn sm poner-correo">Guardar correo</button>' +
-              '<input class="clave-nueva" type="password" placeholder="clave nueva (8+)" style="width:150px">' +
-              '<button class="btn sm poner-clave">Cambiar clave</button>' +
-              (u.rol === 'super' ? '' : '<button class="btn sm quitar-de">Quitar de aquí</button>') +
+              // Quien no es suyo de manejar (el super-admin, alguien que atiende además otro negocio) solo se nombra.
+              (u.soloVer
+                ? '<span class="small muted">Lo maneja quien administra aiva</span>'
+                : '<input class="correo-nuevo" type="email" placeholder="correo" value="' + esc(u.correo || '') + '" style="width:170px">' +
+                  '<button class="btn sm poner-correo">Guardar correo</button>' +
+                  '<input class="clave-nueva" type="password" placeholder="clave nueva (8+)" style="width:150px">' +
+                  '<button class="btn sm poner-clave">Cambiar clave</button>' +
+                  // Al admin de un cliente no le sirve quitar a alguien de su único cliente (no puede quedar sin
+                  // ninguno): para eso está Quitar, en Equipo.
+                  (u.rol === 'super' || (yo && u.usuario === yo.usuario) || (!esSuper && (u.clientes || []).length < 2) ? '' : '<button class="btn sm quitar-de">Quitar de aquí</button>')) +
               '</div>';
           }).join('')
         : '<div class="small muted">Nadie más que tú. Crea usuarios en <b>Equipo</b>.</div>') +
@@ -1248,7 +1255,7 @@ dialog.panel{border-radius:16px 0 0 16px}
   });
 
   function cargarTodo() {
-    if (!esSuper) return cargar();
+    if (!puedeEquipo) return cargar();
     return api('/usuarios').then(function (d) {
       window.__usuarios = d.usuarios || [];
       $('n-equipo').textContent = window.__usuarios.length ? String(window.__usuarios.length) : '';
@@ -1394,6 +1401,7 @@ dialog.panel{border-radius:16px 0 0 16px}
       $('lista').querySelectorAll('.persona').forEach(function (fila) {
         var quien = fila.getAttribute('data-usuario');
         var aviso = fila.closest('.equipo-cliente').querySelector('.ok-msg');
+        if (!fila.querySelector('.poner-correo')) return; // solo se nombra: no hay nada que manejarle
         fila.querySelector('.poner-correo').onclick = function () {
           var correo = fila.querySelector('.correo-nuevo').value.trim();
           api('/usuarios/' + encodeURIComponent(quien), { method: 'PATCH', body: { correo: correo } }).then(function (r) {
@@ -1415,7 +1423,10 @@ dialog.panel{border-radius:16px 0 0 16px}
           var slug = fila.closest('[data-slug]').getAttribute('data-slug');
           var u = (window.__usuarios || []).find(function (x) { return x.usuario === quien; });
           var quedan = (u.clientes || []).filter(function (x) { return x !== slug; });
-          api('/usuarios/' + encodeURIComponent(quien), { method: 'PATCH', body: { clientes: quedan } }).then(cargarTodo);
+          api('/usuarios/' + encodeURIComponent(quien), { method: 'PATCH', body: { clientes: quedan } }).then(function (r) {
+            if (r.error) { aviso.textContent = r.error; return; }
+            cargarTodo();
+          });
         };
       });
       $('lista').querySelectorAll('.hacer-asignar').forEach(function (b) {
@@ -1718,7 +1729,7 @@ dialog.panel{border-radius:16px 0 0 16px}
   };
 
   function ver(cual) {
-    if ((cual === 'equipo' || cual === 'config') && !esSuper) cual = 'atender';
+    if ((cual === 'equipo' && !puedeEquipo) || (cual === 'config' && !esSuper)) cual = 'atender';
     $('titulo').textContent = TITULOS[cual][0];
     $('subtitulo').textContent = TITULOS[cual][1];
     $('nuevo').hidden = !esSuper || cual !== 'clientes';
@@ -2417,7 +2428,9 @@ dialog.panel{border-radius:16px 0 0 16px}
     document.body.removeChild(t);
   }
 
-  // Quién entra a la consola y qué clientes atiende. Solo lo ve el super-admin.
+  // Quién entra a la consola y qué clientes atiende. El super-admin ve a todos; el admin de un cliente, a la gente
+  // de sus clientes, y crea y maneja la suya. Quién puede tocar a quién lo decide el servidor (consola-usuarios.ts):
+  // aquí solo se esconde lo que de todos modos diría que no.
   function cargarEquipo() {
     return Promise.all([api('/usuarios'), api('/clientes')]).then(function (r) {
       var usuarios = r[0].usuarios || [], clientes = (r[1].clientes || []).map(function (f) { return f.cliente; });
@@ -2429,49 +2442,91 @@ dialog.panel{border-radius:16px 0 0 16px}
           return '<label class="chip"><input type="checkbox" value="' + esc(c.slug) + '"' + (marcados.indexOf(c.slug) >= 0 ? ' checked' : '') + '> ' + esc(c.nombre) + '</label>';
         }).join(' ');
       };
+      // El admin de un cliente nombra asesores y otros admins de lo suyo; un super-admin, solo otro super-admin.
+      var roles = esSuper ? ['asesor', 'admin', 'super'] : ['asesor', 'admin'];
+      var selRol = function (actual, attrs) {
+        return '<select ' + attrs + '>' + roles.map(function (x) {
+          return '<option value="' + x + '"' + (x === actual ? ' selected' : '') + '>' + ROL_UI[x] + '</option>';
+        }).join('') + '</select>';
+      };
+      var QUE_HACE = {
+        super: 'Ve y atiende todos los clientes, los da de alta y maneja a todo el equipo.',
+        admin: 'Atiende sus clientes y maneja a la gente de ellos.',
+        asesor: 'Atiende sus clientes. No ve el equipo.'
+      };
+      var soyYo = function (u) { return yo && u.usuario === yo.usuario; };
       $('equipo').innerHTML =
         (sueltos.length
           ? '<div class="card"><b>' + sueltos.length + (sueltos.length === 1 ? ' persona quedó sin clientes' : ' personas quedaron sin clientes') + '</b>' +
             '<div class="small muted">Les quitamos el acceso porque no tendrían nada que ver. Asígnales un cliente y actívalas de nuevo, o quítalas.</div></div>'
           : '') +
         usuarios.map(function (u) {
+          var rolChip = '<span class="chip ' + (u.rol === 'super' ? 'alta' : '') + '">' + esc(ROL_UI[u.rol] || 'Asesor') + '</span>';
+          if (u.soloVer) {
+            return '<div class="card">' +
+              '<div class="fila"><span class="nombre">' + esc(u.nombre) + '</span>' + rolChip + '</div>' +
+              '<div class="small muted">También entra a tus conversaciones. Lo maneja quien administra aiva.</div></div>';
+          }
+          // A sí mismo, el admin de un cliente no se cambia el rol, los clientes ni si sigue activo: se quedaría
+          // por fuera y de ahí solo lo saca quien administra aiva. El servidor lo frena igual.
+          var propio = soyYo(u) && !esSuper;
           return '<div class="card" data-u="' + esc(u.usuario) + '">' +
             '<div class="fila"><span class="nombre">' + esc(u.nombre) + '</span><span class="chip">' + esc(u.usuario) + '</span>' +
               (u.correo ? '<span class="chip">' + esc(u.correo) + '</span>' : '') +
-              '<span class="chip ' + (u.rol === 'super' ? 'alta' : '') + '">' + (u.rol === 'super' ? 'Super-admin' : 'Atiende') + '</span>' +
+              // Su propio rol nadie se lo cambia desde aquí: un super-admin que se baja por error queda por fuera.
+              (soyYo(u) ? rolChip + '<span class="chip">tú</span>' : selRol(u.rol, 'class="rol-de" aria-label="Rol de ' + esc(u.nombre) + '"')) +
               (u.activo ? '' : '<span class="chip media">Inactivo</span>') +
               '<span class="grow"></span>' +
-              '<button class="btn sm act">' + (u.activo ? 'Desactivar' : 'Activar') + '</button>' +
+              (propio ? '' : '<button class="btn sm act">' + (u.activo ? 'Desactivar' : 'Activar') + '</button>') +
               '<button class="btn sm clave">Cambiar clave</button>' +
-              '<button class="btn sm quitar">Quitar</button></div>' +
-            (u.rol === 'super' ? '<div class="small muted">Ve y atiende todos los clientes.</div>' : '<div class="fila" style="margin-top:6px">' + opciones(u.clientes || []) + '</div>') +
-            '</div>';
+              (propio ? '' : '<button class="btn sm quitar">Quitar</button>') + '</div>' +
+            '<div class="small muted">' + esc(QUE_HACE[u.rol] || QUE_HACE.asesor) + '</div>' +
+            (u.rol === 'super' || propio ? '' : '<div class="fila" style="margin-top:6px">' + opciones(u.clientes || []) + '</div>') +
+            '<div class="small ok-msg" role="status"></div></div>';
         }).join('') +
         '<div class="card"><b>Agregar a alguien</b>' +
           '<div class="fila" style="margin-top:8px"><input id="n-usuario" placeholder="usuario" style="width:130px"><input id="n-nombre" placeholder="Nombre" style="width:150px">' +
           '<input id="n-correo" type="email" placeholder="correo (opcional)" style="width:180px">' +
           '<input id="n-clave" type="password" placeholder="clave (8+)" style="width:140px">' +
-          '<select id="n-rol"><option value="agente">Atiende clientes</option><option value="super">Super-admin</option></select>' +
+          selRol('asesor', 'id="n-rol" aria-label="Rol"') +
           '<button class="btn primary" id="n-crear">Agregar</button></div>' +
-          '<div class="fila" id="n-clientes" style="margin-top:8px">' + opciones([]) + '</div>' +
+          // Con un solo cliente no hay nada que elegir: queda marcado.
+          '<div class="fila" id="n-clientes" style="margin-top:8px">' + opciones(clientes.length === 1 ? [clientes[0].slug] : []) + '</div>' +
           '<div id="n-msg" class="small" role="status"></div></div>';
 
       $('equipo').querySelectorAll('.card[data-u]').forEach(function (card) {
         var u = card.getAttribute('data-u');
         var quien = usuarios.find(function (x) { return x.usuario === u; });
+        var aviso = card.querySelector('.ok-msg');
+        var cambiar = function (cuerpo, recargar) {
+          return api('/usuarios/' + encodeURIComponent(u), { method: 'PATCH', body: cuerpo }).then(function (d) {
+            if (d.error) { aviso.textContent = d.error; return false; }
+            aviso.textContent = '';
+            if (recargar) cargarEquipo();
+            return true;
+          });
+        };
         card.querySelectorAll('input[type=checkbox]').forEach(function (chk) {
           chk.onchange = function () {
             var marcados = [...card.querySelectorAll('input[type=checkbox]')].filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
-            api('/usuarios/' + encodeURIComponent(u), { method: 'PATCH', body: { clientes: marcados } });
+            // Si el servidor dice que no, la casilla vuelve a como estaba: que no quede marcado lo que no se guardó.
+            cambiar({ clientes: marcados }, false).then(function (ok) { if (!ok) chk.checked = !chk.checked; });
           };
         });
-        card.querySelector('.act').onclick = function () { api('/usuarios/' + encodeURIComponent(u), { method: 'PATCH', body: { activo: !quien.activo } }).then(cargarEquipo); };
+        var rol = card.querySelector('.rol-de');
+        if (rol) rol.onchange = function () { cambiar({ rol: rol.value }, true); };
+        var act = card.querySelector('.act');
+        if (act) act.onclick = function () { cambiar({ activo: !quien.activo }, true); };
         card.querySelector('.clave').onclick = function () {
           var nueva = prompt('Nueva clave para ' + u + ' (8 o más caracteres)');
-          if (nueva) api('/usuarios/' + encodeURIComponent(u), { method: 'PATCH', body: { clave: nueva } }).then(cargarEquipo);
+          if (nueva) cambiar({ clave: nueva }, true);
         };
-        card.querySelector('.quitar').onclick = function () {
-          if (confirm('¿Quitar a ' + u + ' de la consola?')) api('/usuarios/' + encodeURIComponent(u), { method: 'DELETE' }).then(cargarEquipo);
+        var quitar = card.querySelector('.quitar');
+        if (quitar) quitar.onclick = function () {
+          if (confirm('¿Quitar a ' + u + ' de la consola?')) api('/usuarios/' + encodeURIComponent(u), { method: 'DELETE' }).then(function (d) {
+            if (d.error) { aviso.textContent = d.error; return; }
+            cargarEquipo();
+          });
         };
       });
       $('n-crear').onclick = function () {

@@ -23,8 +23,8 @@ crearCliente({ nombre: 'CONFIA FINTECH', slug: 'confia', puerto: 39101, plantill
 crearCliente({ nombre: 'HRC TECHNOLOGIES', slug: 'hrc', puerto: 39102, plantilla: 'soporte' });
 
 // --- usuarios y claves ---
-const ana = crearUsuario({ usuario: 'ana', nombre: 'Ana Soporte', clave: 'clave-larga-1', rol: 'agente', clientes: ['confia'] });
-check('se crea quien atiende, con sus clientes', ana.rol === 'agente' && ana.clientes.join() === 'confia');
+const ana = crearUsuario({ usuario: 'ana', nombre: 'Ana Soporte', clave: 'clave-larga-1', rol: 'asesor', clientes: ['confia'] });
+check('se crea quien atiende, con sus clientes', ana.rol === 'asesor' && ana.clientes.join() === 'confia');
 check('la clave nunca queda en claro', !readFileSync(join(base, 'usuarios.json'), 'utf8').includes('clave-larga-1'));
 check('el archivo de usuarios no se lee desde afuera', (statSync(join(base, 'usuarios.json')).mode & 0o077) === 0);
 check('entra con su clave', verificar('ana', 'clave-larga-1')?.nombre === 'Ana Soporte');
@@ -139,7 +139,7 @@ check('dar de baja algo que no existe avisa', (() => { try { darDeBajaCliente('n
 check('quitar a alguien lo saca', borrarUsuario('jefe') && !leerUsuarios().some((u) => u.usuario === 'jefe'));
 
 // --- el correo y lo que cada quien puede cambiarse ---
-const conCorreo = crearUsuario({ usuario: 'pablo', nombre: 'Pablo', correo: 'Pablo@Dunor.CO ', clave: 'clave-de-prueba', rol: 'agente', clientes: [] });
+const conCorreo = crearUsuario({ usuario: 'pablo', nombre: 'Pablo', correo: 'Pablo@Dunor.CO ', clave: 'clave-de-prueba', rol: 'asesor', clientes: [] });
 check('el correo se guarda en minúsculas y sin espacios', conCorreo.correo === 'pablo@dunor.co', String(conCorreo.correo));
 check('se puede entrar con el correo en vez del usuario', verificar('pablo@dunor.co', 'clave-de-prueba')?.usuario === 'pablo');
 check('y con el usuario, como siempre', verificar('pablo', 'clave-de-prueba')?.usuario === 'pablo');
@@ -151,7 +151,7 @@ check('cada quien se cambia su nombre y su correo', mio.nombre === 'Pablo Ruiz' 
 check('cambiar la clave sin la actual, no', (() => { try { cambiarLoMio('pablo', { claveNueva: 'otra-clave-larga' }); return false; } catch (e) { return /clave actual/.test((e as Error).message); } })());
 cambiarLoMio('pablo', { claveActual: 'clave-de-prueba', claveNueva: 'otra-clave-larga' });
 check('con la actual, sí', verificar('pablo', 'otra-clave-larga')?.usuario === 'pablo' && verificar('pablo', 'clave-de-prueba') === null);
-check('y no se puede subir el rol a sí mismo', leerUsuarios().find((u) => u.usuario === 'pablo')!.rol === 'agente');
+check('y no se puede subir el rol a sí mismo', leerUsuarios().find((u) => u.usuario === 'pablo')!.rol === 'asesor');
 
 
 // --- el color con el que se reconoce a cada quien ---
@@ -180,6 +180,96 @@ check('guardar otra cosa no le quita el color', pablo().acento === 'dorado');
 cambiarLoMio('pablo', { acento: 'azul' });
 check('🪤 volver al azul no lo guarda: «el de siempre» queda siguiendo al de siempre', pablo().acento === undefined && !('acento' in JSON.parse(JSON.stringify(pablo()))));
 
+
+// --- 🪤 el admin de un cliente maneja a su gente, y a nadie más ---
+// Lo pidió el usuario el 2026-10-16: que el dueño de DUNOR cree y maneje a sus empleados sin pedírselo a quien
+// administra aiva. Se prueba por HTTP, que es por donde llegaría alguien queriendo pasarse.
+crear2({ nombre: 'DUNOR', slug: 'dunor', puerto: 39104, plantilla: 'soporte' });
+crearUsuario({ usuario: 'dueno', nombre: 'Dueño de DUNOR', clave: 'clave-dueno-1', rol: 'admin', clientes: ['dunor'] });
+crearUsuario({ usuario: 'luis', nombre: 'Luis HRC', correo: 'luis@hrc.co', clave: 'clave-luis-1', rol: 'super' });
+crearUsuario({ usuario: 'mixto', nombre: 'Atiende dos', correo: 'mixto@hrc.co', clave: 'clave-mixto-1', rol: 'asesor', clientes: ['dunor', 'confia'] });
+const como = async (usuario: string, clave: string) => {
+  const r = await app.request('http://local/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ usuario, clave }) });
+  const { sesion } = (await r.json()) as { sesion: string };
+  return (ruta: string, init: RequestInit = {}) =>
+    app.request(`http://local${ruta}`, { ...init, headers: { 'x-consola-sesion': sesion, 'content-type': 'application/json', ...(init.headers ?? {}) } });
+};
+const dueno = await como('dueno', 'clave-dueno-1');
+const json = async (r: Response | Promise<Response>) => (await (await r).json()) as Record<string, any>;
+
+check('el admin de un cliente abre Equipo', (await dueno('/api/usuarios')).status === 200);
+check('y la consola sabe que lo maneja', (await json(dueno('/api/yo'))).equipo === true);
+check('el asesor no', (await json(comoAna('/api/yo'))).equipo === false);
+const visto = (await json(dueno('/api/usuarios'))).usuarios as { usuario: string; soloVer?: boolean; clientes: string[]; correo?: string }[];
+check('ve a la gente de su cliente', visto.some((u) => u.usuario === 'dueno') && visto.some((u) => u.usuario === 'mixto'), visto.map((u) => u.usuario).join());
+check('🪤 y no a la de otros clientes', !visto.some((u) => u.usuario === 'ana'), visto.map((u) => u.usuario).join());
+check('al super-admin lo ve, pero solo de nombre', visto.find((u) => u.usuario === 'luis')?.soloVer === true && !visto.find((u) => u.usuario === 'luis')?.correo);
+const elMixto = visto.find((u) => u.usuario === 'mixto');
+check('a quien atiende además otro negocio, solo de nombre', elMixto?.soloVer === true && !elMixto?.correo);
+check('🪤 sin enterarse de qué otros clientes tiene aiva', !JSON.stringify(visto).includes('confia'), JSON.stringify(elMixto));
+check('ni de quiénes quedaron sin clientes', ((await json(dueno('/api/usuarios'))).sinClientes as string[]).length === 0);
+
+const nueva = await json(dueno('/api/usuarios', { method: 'POST', body: JSON.stringify({ usuario: 'camila', nombre: 'Camila', clave: 'clave-camila-1' }) }));
+check('crea a su empleada; sin decir rol, asesora', nueva.usuario?.rol === 'asesor', JSON.stringify(nueva));
+check('y sin decir clientes, los suyos', nueva.usuario?.clientes?.join() === 'dunor', JSON.stringify(nueva));
+const colado = await dueno('/api/usuarios', { method: 'POST', body: JSON.stringify({ usuario: 'colado', clave: 'clave-colada-1', rol: 'super' }) });
+check('🪤 no crea super-admins', colado.status === 409 && !leerUsuarios().some((u) => u.usuario === 'colado'), `dio ${colado.status}`);
+const ajenoNuevo = await dueno('/api/usuarios', { method: 'POST', body: JSON.stringify({ usuario: 'espia', clave: 'clave-espia-1', clientes: ['confia'] }) });
+check('🪤 ni le da clientes que no son suyos', ajenoNuevo.status === 409 && !leerUsuarios().some((u) => u.usuario === 'espia'), `dio ${ajenoNuevo.status}`);
+const gerente = await json(dueno('/api/usuarios', { method: 'POST', body: JSON.stringify({ usuario: 'gerente', clave: 'clave-gerente-1', rol: 'admin' }) }));
+check('nombra a otro admin de su cliente', gerente.usuario?.rol === 'admin' && gerente.usuario?.clientes?.join() === 'dunor', JSON.stringify(gerente));
+
+check('le cambia la clave a su empleada', (await dueno('/api/usuarios/camila', { method: 'PATCH', body: JSON.stringify({ clave: 'clave-nueva-camila' }) })).status === 200 && Boolean(verificar('camila', 'clave-nueva-camila')));
+check('la desactiva', (await json(dueno('/api/usuarios/camila', { method: 'PATCH', body: JSON.stringify({ activo: false }) }))).usuario?.activo === false && verificar('camila', 'clave-nueva-camila') === null);
+await dueno('/api/usuarios/camila', { method: 'PATCH', body: JSON.stringify({ activo: true, rol: 'admin' }) });
+check('la sube a admin de su cliente', leerUsuarios().find((u) => u.usuario === 'camila')?.rol === 'admin');
+await dueno('/api/usuarios/camila', { method: 'PATCH', body: JSON.stringify({ rol: 'asesor' }) });
+const ascenso = await dueno('/api/usuarios/camila', { method: 'PATCH', body: JSON.stringify({ rol: 'super' }) });
+check('🪤 pero no a super-admin', ascenso.status === 404 && leerUsuarios().find((u) => u.usuario === 'camila')?.rol === 'asesor', `dio ${ascenso.status}`);
+await dueno('/api/usuarios/camila', { method: 'PATCH', body: JSON.stringify({ clientes: ['dunor', 'confia'] }) });
+check('🪤 ni le agrega un cliente ajeno', leerUsuarios().find((u) => u.usuario === 'camila')?.clientes.join() === 'dunor');
+await dueno('/api/usuarios/camila', { method: 'PATCH', body: JSON.stringify({ desde: '1999-01-01', usuario: 'otra' }) });
+check('lo que no le toca cambiar se ignora', leerUsuarios().find((u) => u.usuario === 'camila')?.desde !== '1999-01-01');
+
+for (const [quien, que] of [['ana', 'a la gente de otro cliente'], ['mixto', 'a quien atiende además otro negocio'], ['luis', 'al super-admin']]) {
+  const r = await dueno(`/api/usuarios/${quien}`, { method: 'PATCH', body: JSON.stringify({ clave: 'me-la-quedo-yo' }) });
+  check(`🪤 no le cambia la clave ${que}`, r.status === 404 && verificar(quien!, 'me-la-quedo-yo') === null, `dio ${r.status}`);
+  check(`🪤 ni lo borra (${quien})`, (await dueno(`/api/usuarios/${quien}`, { method: 'DELETE' })).status === 404 && leerUsuarios().some((u) => u.usuario === quien));
+}
+const noExisteMsg = (await json(dueno('/api/usuarios/ana', { method: 'PATCH', body: JSON.stringify({ nombre: 'x' }) }))).error;
+check('🪤 y a quien no es suyo lo llama «no existe», como a quien de verdad no existe', noExisteMsg === (await json(dueno('/api/usuarios/fantasma', { method: 'PATCH', body: '{}' }))).error, String(noExisteMsg));
+
+const bajarme = await dueno('/api/usuarios/dueno', { method: 'PATCH', body: JSON.stringify({ rol: 'asesor' }) });
+check('🪤 no se baja a sí mismo de admin (dejaría al negocio sin nadie)', bajarme.status === 404 && leerUsuarios().find((u) => u.usuario === 'dueno')?.rol === 'admin', `dio ${bajarme.status}`);
+check('ni se desactiva', (await dueno('/api/usuarios/dueno', { method: 'PATCH', body: JSON.stringify({ activo: false }) })).status === 404 && leerUsuarios().find((u) => u.usuario === 'dueno')?.activo === true);
+check('ni se borra', (await dueno('/api/usuarios/dueno', { method: 'DELETE' })).status === 400 && leerUsuarios().some((u) => u.usuario === 'dueno'));
+check('su propia clave sí se la cambia', (await dueno('/api/usuarios/dueno', { method: 'PATCH', body: JSON.stringify({ clave: 'clave-dueno-2' }) })).status === 200);
+check('y como a todos, cambiarla le cierra la sesión', (await dueno('/api/usuarios')).status === 401);
+const dueno2 = await como('dueno', 'clave-dueno-2');
+
+const delGerente = await como('gerente', 'clave-gerente-1');
+check('el otro admin también maneja a la gente', (await delGerente('/api/usuarios/camila', { method: 'PATCH', body: JSON.stringify({ nombre: 'Camila R.' }) })).status === 200);
+check('quita a su empleada', (await delGerente('/api/usuarios/camila', { method: 'DELETE' })).status === 200 && !leerUsuarios().some((u) => u.usuario === 'camila'));
+
+const asesora = await json(dueno2('/api/usuarios', { method: 'POST', body: JSON.stringify({ usuario: 'sofia', clave: 'clave-sofia-1' }) }));
+check('la asesora queda creada', asesora.usuario?.rol === 'asesor');
+const deSofia = await como('sofia', 'clave-sofia-1');
+check('🪤 la asesora no ve el equipo', (await deSofia('/api/usuarios')).status === 403);
+check('🪤 ni crea gente', (await deSofia('/api/usuarios', { method: 'POST', body: JSON.stringify({ usuario: 'amiga', clave: 'clave-amiga-1' }) })).status === 403 && !leerUsuarios().some((u) => u.usuario === 'amiga'));
+check('pero atiende su cliente', (await deSofia('/api/c/dunor/contacts')).status === 502);
+check('🪤 el admin del cliente tampoco toca motores ni clave', (await dueno2('/api/c/dunor/motores', { method: 'PUT', body: '{}' })).status === 403 && (await dueno2('/c/dunor/admin/api/clave', { method: 'POST', body: '{}' })).status === 403);
+
+// 🪤 El rol de antes: quien tenía «agente» podía todo en su cliente menos el equipo. Se lee como admin del cliente
+// para que nadie pierda nada al desplegar, y un rol que no se entiende queda en lo que menos puede.
+{
+  const { writeFileSync: escribir } = await import('node:fs');
+  const archivo = JSON.parse(readFileSync(join(base, 'usuarios.json'), 'utf8')) as { usuarios: { usuario: string; rol: string }[] };
+  archivo.usuarios.find((u) => u.usuario === 'sofia')!.rol = 'agente';
+  archivo.usuarios.find((u) => u.usuario === 'gerente')!.rol = 'rey';
+  escribir(join(base, 'usuarios.json'), JSON.stringify(archivo));
+  check('«agente» del archivo viejo se lee como admin del cliente', leerUsuarios().find((u) => u.usuario === 'sofia')?.rol === 'admin');
+  check('un rol inventado queda en asesor, sin tumbar a nadie', leerUsuarios().find((u) => u.usuario === 'gerente')?.rol === 'asesor' && Boolean(verificar('dueno', 'clave-dueno-2')));
+}
 
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);
