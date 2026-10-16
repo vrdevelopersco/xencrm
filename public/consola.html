@@ -300,6 +300,13 @@ dialog.panel #detalle{padding:16px 18px 24px;overflow:auto;flex:1}
   border-radius:14px;padding:12px 14px}
 .equipo-cliente .persona{padding:5px 0;border-top:1px solid var(--line)}
 .equipo-cliente .persona:first-of-type{border-top:none}
+/* Un cliente sin admin no tiene a nadie de su lado que maneje a su gente: se avisa en rojo, en su fila y aquí. */
+.sin-admin{color:var(--alta);font-weight:600}
+.alta-campos,.alta-campo{display:flex;flex-direction:column;gap:12px}
+.alta-campo{gap:5px}
+.clave-visible{flex:1;min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em}
+.mensaje-acceso{margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#f9fafb;white-space:pre-wrap;
+  font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;user-select:all}
 .ok-msg{color:var(--ok);min-height:16px}
 .zona-demo{background:rgba(255,255,255,.5);border:1px dashed var(--vidrio-borde);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
 .zona-demo.encendido{background:color-mix(in srgb,var(--media) 8%,rgba(255,255,255,.5));border-color:color-mix(in srgb,var(--media) 45%,transparent);border-style:solid}
@@ -659,6 +666,33 @@ dialog.panel{border-radius:16px 0 0 16px}
   </form>
 </dialog>
 
+<!-- El acceso de alguien a un cliente: crearlo o darle una clave nueva, y el mensaje listo para pasárselo. -->
+<dialog id="dlg-acceso">
+  <form class="alta" id="form-acceso">
+    <h2 id="a-titulo">Acceso</h2>
+    <p class="muted small" id="a-ayuda" style="margin:0"></p>
+    <div id="a-campos" class="alta-campos">
+      <label>Nombre <input id="a-nombre" autocomplete="off" placeholder="Ana Gómez"></label>
+      <label>Usuario <input id="a-usuario" autocomplete="off" spellcheck="false" placeholder="ana.gomez"><span class="muted small">Con esto entra. En minúsculas y sin espacios; se arma solo con el nombre.</span></label>
+      <label>Correo <input id="a-correo" type="email" autocomplete="off" placeholder="opcional"><span class="muted small">Si lo pones, también puede entrar con él.</span></label>
+      <label>Rol
+        <select id="a-rol"><option value="admin">Admin del cliente: atiende y maneja a su gente</option><option value="asesor">Asesor: atiende, sin ver el equipo</option></select>
+      </label>
+    </div>
+    <div class="alta-campo" id="a-clave-caja"><b class="small">Clave</b>
+      <div class="fila"><input id="a-clave" class="clave-visible" autocomplete="off" spellcheck="false" aria-label="Clave"><button class="btn sm" type="button" id="a-otra">Generar otra</button></div>
+      <span class="muted small">Se ve para que se la pases. aiva no la guarda: guarda su huella, así que después nadie la puede volver a ver.</span>
+    </div>
+    <div id="a-listo" class="alta-campo" hidden>
+      <b class="small">Pásale esto por WhatsApp o por correo</b>
+      <pre id="a-mensaje" class="mensaje-acceso"></pre>
+    </div>
+    <div id="a-msg" class="small" role="status"></div>
+    <div class="fila"><span class="grow"></span><button class="btn" type="button" id="a-cerrar">Cerrar</button>
+      <button class="btn primary" type="button" id="a-copiar" hidden>Copiar el mensaje</button><button class="btn primary" id="a-guardar" type="submit">Crear acceso</button></div>
+  </form>
+</dialog>
+
 <dialog id="dlg">
   <form class="alta" method="dialog" id="form-alta">
     <h2 style="margin:0">Nuevo cliente</h2>
@@ -690,6 +724,7 @@ dialog.panel{border-radius:16px 0 0 16px}
   var token = localStorage.getItem('aiva.consola.token') || '';
   var sesion = localStorage.getItem('aiva.consola.sesion') || '';
   var yo = null, esSuper = false, puedeEquipo = false;
+  var equipoLeido = false; // si el equipo llegó de verdad: sin él no se puede decir que un cliente no tiene admin
   // Cómo se le dice a cada rol en pantalla. «agente» es el nombre viejo del admin de un cliente (ver rolDe).
   var ROL_UI = { super: 'Super-admin', admin: 'Admin del cliente', asesor: 'Asesor', agente: 'Admin del cliente' };
   var LIB = { llave: '', ips: [], tuIp: '', clientes: [] }; // la libreta; se llena en cargarLibreta()
@@ -733,7 +768,7 @@ dialog.panel{border-radius:16px 0 0 16px}
   // alguien que atiende un solo cliente, esa persona alcanzaba a ver —unos segundos, hasta que llegaba /yo— la
   // lista de todos los clientes de aiva, que es de lo peor que puede pasar en un producto multicliente.
   function olvidarLoAnterior() {
-    yo = null; esSuper = false; puedeEquipo = false;
+    yo = null; esSuper = false; puedeEquipo = false; equipoLeido = false;
     window.__clientes = []; window.__usuarios = [];
     pendientes = []; elegido = null;
     $('lista').innerHTML = '';
@@ -1153,34 +1188,57 @@ dialog.panel{border-radius:16px 0 0 16px}
     }).catch(function () { estado.textContent = 'No se pudo consultar.'; });
   }
 
+  // Quién administra un cliente: los admins activos que lo tienen asignado. Es lo primero que se busca al querer
+  // entrar como el cliente, y lo que falta en un cliente recién dado de alta.
+  function adminsDe(slug) {
+    return (window.__usuarios || []).filter(function (u) {
+      return u.rol === 'admin' && u.activo !== false && (u.clientes || []).indexOf(slug) !== -1;
+    });
+  }
+
   function equipoDe(slug) {
     if (!puedeEquipo) return '';
     var todos = window.__usuarios || [];
-    var suyos = todos.filter(function (u) { return u.rol === 'super' || (u.clientes || []).indexOf(slug) !== -1; });
+    // Primero quien lo administra, después quien atiende y al final el super-admin, que está en todos.
+    var ORDEN = { admin: 0, asesor: 1, super: 2 };
+    var puesto = function (u) { return u.rol in ORDEN ? ORDEN[u.rol] : 1; };
+    var suyos = todos.filter(function (u) { return u.rol === 'super' || (u.clientes || []).indexOf(slug) !== -1; })
+      .sort(function (a, b) { return puesto(a) - puesto(b) || String(a.nombre).localeCompare(String(b.nombre)); });
     var libres = todos.filter(function (u) { return u.rol !== 'super' && !u.soloVer && (u.clientes || []).indexOf(slug) === -1; });
     return '<div class="equipo-cliente">' +
-      '<b class="small">Quién lo atiende</b>' +
+      '<div class="fila"><b class="small">Quién entra a este cliente</b><span class="grow"></span>' +
+        '<button class="btn sm primary crear-acceso">Crear acceso</button></div>' +
+      (adminsDe(slug).length ? '' : '<div class="small sin-admin">Todavía no tiene admin del cliente: nadie de su lado puede entrar a manejar a su gente. Créalo con «Crear acceso».</div>') +
       (suyos.length
         ? suyos.map(function (u) {
+            var soyYo = Boolean(yo && u.usuario === yo.usuario);
+            // El rol se cambia aquí mismo, salvo el propio (quien se baja por error queda por fuera) y el de un
+            // super-admin, que se maneja en Equipo. Es el rol de la persona, así que vale en todos sus clientes.
+            var rol = !u.soloVer && u.rol !== 'super' && !soyYo
+              ? '<select class="rol-aqui" data-antes="' + esc(u.rol) + '" aria-label="Rol de ' + esc(u.nombre) + '"' +
+                  ((u.clientes || []).length > 1 ? ' title="Es su rol en sus ' + (u.clientes || []).length + ' clientes"' : '') + '>' +
+                  ['admin', 'asesor'].map(function (x) { return '<option value="' + x + '"' + (x === u.rol ? ' selected' : '') + '>' + ROL_UI[x] + '</option>'; }).join('') +
+                '</select>'
+              : '<span class="chip' + (u.rol === 'super' ? ' alta' : '') + '">' + esc(ROL_UI[u.rol] || 'Asesor') + '</span>';
             return '<div class="fila persona" data-usuario="' + esc(u.usuario) + '">' +
               '<span class="avatar chico" style="background:' + esc(u.color || '#7b660f') + '">' +
                 esc(String(u.nombre || u.usuario).trim().charAt(0).toUpperCase()) + '</span>' +
-              '<span>' + esc(u.nombre) + '</span>' + (u.soloVer ? '' : '<span class="chip">' + esc(u.usuario) + '</span>') +
-              '<span class="chip">' + esc(ROL_UI[u.rol] || 'Asesor') + '</span>' +
+              '<span>' + esc(u.nombre) + '</span>' + (u.soloVer ? '' : '<span class="chip" title="Su usuario para entrar">' + esc(u.usuario) + '</span>') +
+              rol + (soyYo ? '<span class="chip">tú</span>' : '') + (u.activo === false ? '<span class="chip media">Inactivo</span>' : '') +
               '<span class="grow"></span>' +
               // Quien no es suyo de manejar (el super-admin, alguien que atiende además otro negocio) solo se nombra.
               (u.soloVer
                 ? '<span class="small muted">Lo maneja quien administra aiva</span>'
                 : '<input class="correo-nuevo" type="email" placeholder="correo" value="' + esc(u.correo || '') + '" style="width:170px">' +
                   '<button class="btn sm poner-correo">Guardar correo</button>' +
-                  '<input class="clave-nueva" type="password" placeholder="clave nueva (8+)" style="width:150px">' +
-                  '<button class="btn sm poner-clave">Cambiar clave</button>' +
+                  // La propia se cambia en Mi cuenta, pidiendo la actual.
+                  (soyYo ? '' : '<button class="btn sm nueva-clave">Nueva clave</button>') +
                   // Al admin de un cliente no le sirve quitar a alguien de su único cliente (no puede quedar sin
                   // ninguno): para eso está Quitar, en Equipo.
-                  (u.rol === 'super' || (yo && u.usuario === yo.usuario) || (!esSuper && (u.clientes || []).length < 2) ? '' : '<button class="btn sm quitar-de">Quitar de aquí</button>')) +
+                  (u.rol === 'super' || soyYo || (!esSuper && (u.clientes || []).length < 2) ? '' : '<button class="btn sm quitar-de">Quitar de aquí</button>')) +
               '</div>';
           }).join('')
-        : '<div class="small muted">Nadie más que tú. Crea usuarios en <b>Equipo</b>.</div>') +
+        : '<div class="small muted">Nadie entra todavía.</div>') +
       (libres.length
         ? '<div class="fila" style="margin-top:8px"><select class="asignar"><option value="">Asignar a alguien…</option>' +
           libres.map(function (u) { return '<option value="' + esc(u.usuario) + '">' + esc(u.nombre) + ' (' + esc(u.usuario) + ')</option>'; }).join('') +
@@ -1222,6 +1280,13 @@ dialog.panel{border-radius:16px 0 0 16px}
         '<div class="quien">' +
           '<div class="fila"><span class="nombre">' + esc(c.nombre) + '</span>' + estado + prio + '</div>' +
           '<div class="small muted">' + esc(c.slug) + (c.host ? ' · ' + esc(c.host) : '') +
+            // Con qué usuario entra el cliente, sin abrir nada. Si no se pudo leer el equipo, no se dice nada:
+            // «sin admin» sería mentira.
+            (esSuper && equipoLeido
+              ? ' · ' + (adminsDe(c.slug).length
+                  ? '<span title="Su admin del cliente: su usuario para entrar">admin: ' + adminsDe(c.slug).map(function (u) { return esc(u.usuario); }).join(', ') + '</span>'
+                  : '<span class="sin-admin">sin admin del cliente</span>')
+              : '') +
             (e.gastoMes == null ? '' : ' · $' + Number(e.gastoMes).toFixed(2) + ' en IA (30 días)') +
             // Qué código corre en él: lo primero que hay que confirmar si algo cambió después de desplegar.
             (e.version ? ' · <span title="Versión del código que corre">' + esc(e.version) + '</span>' : '') + '</div>' +
@@ -1258,6 +1323,7 @@ dialog.panel{border-radius:16px 0 0 16px}
     if (!puedeEquipo) return cargar();
     return api('/usuarios').then(function (d) {
       window.__usuarios = d.usuarios || [];
+      equipoLeido = Array.isArray(d.usuarios);
       $('n-equipo').textContent = window.__usuarios.length ? String(window.__usuarios.length) : '';
     }).catch(function () {}).then(cargar);
   }
@@ -1273,6 +1339,12 @@ dialog.panel{border-radius:16px 0 0 16px}
         (esperando ? ' · ' + esperando + (esperando === 1 ? ' persona esperando respuesta' : ' personas esperando respuesta') : '');
       window.__clientes = filas;
       $('n-clientes').textContent = filas.length ? String(filas.length) : '';
+      // Esto se repinta solo cada minuto: lo que estaba abierto y lo buscado siguen igual después. Antes, «Ver más»
+      // se cerraba a mitad de lo que se estuviera haciendo dentro.
+      var abiertos = [].slice.call($('lista').querySelectorAll('.cliente')).filter(function (f) {
+        var d = f.querySelector('.detalle'); return d && !d.hidden;
+      }).map(function (f) { return f.getAttribute('data-slug'); });
+      var buscado = $('buscar-cliente') ? $('buscar-cliente').value : '';
       $('lista').innerHTML = (filas.length ? resumenDeTodos(filas) + buscadorDeClientes() : '') +
         (filas.length
           ? '<div class="lista-clientes">' + filas.map(tarjeta).join('') + '</div>'
@@ -1397,6 +1469,12 @@ dialog.panel{border-radius:16px 0 0 16px}
           b.textContent = abierto ? 'Ver más' : 'Ver menos';
         };
       });
+      abiertos.forEach(function (slug) {
+        var b = [].slice.call($('lista').querySelectorAll('.cliente')).filter(function (f) { return f.getAttribute('data-slug') === slug; })
+          .map(function (f) { return f.querySelector('.ver-mas'); })[0];
+        if (b) b.onclick();
+      });
+      if (buscado && $('buscar-cliente')) { $('buscar-cliente').value = buscado; $('buscar-cliente').oninput(); }
       // Cambiar la clave de alguien y asignarlo o quitarlo de este cliente, sin salir de su fila.
       $('lista').querySelectorAll('.persona').forEach(function (fila) {
         var quien = fila.getAttribute('data-usuario');
@@ -1410,12 +1488,16 @@ dialog.panel{border-radius:16px 0 0 16px}
             cargarTodo();
           });
         };
-        fila.querySelector('.poner-clave').onclick = function () {
-          var campo = fila.querySelector('.clave-nueva'), clave = campo.value;
-          if (clave.length < 8) { aviso.textContent = 'La clave necesita al menos 8 caracteres.'; return; }
-          api('/usuarios/' + encodeURIComponent(quien), { method: 'PATCH', body: { clave: clave } }).then(function (r) {
-            campo.value = '';
-            aviso.textContent = r.error ? r.error : 'Clave cambiada para ' + quien + '.';
+        var nuevaClave = fila.querySelector('.nueva-clave');
+        if (nuevaClave) nuevaClave.onclick = function () {
+          abrirAcceso({ slug: fila.closest('[data-slug]').getAttribute('data-slug'), usuario: quien });
+        };
+        var rolAqui = fila.querySelector('.rol-aqui');
+        if (rolAqui) rolAqui.onchange = function () {
+          api('/usuarios/' + encodeURIComponent(quien), { method: 'PATCH', body: { rol: rolAqui.value } }).then(function (r) {
+            // Si el servidor dice que no, el selector vuelve a como estaba: que no se vea un rol que no se guardó.
+            if (r.error) { aviso.textContent = r.error; rolAqui.value = rolAqui.getAttribute('data-antes'); return; }
+            cargarTodo();
           });
         };
         var quitar = fila.querySelector('.quitar-de');
@@ -1428,6 +1510,9 @@ dialog.panel{border-radius:16px 0 0 16px}
             cargarTodo();
           });
         };
+      });
+      $('lista').querySelectorAll('.crear-acceso').forEach(function (b) {
+        b.onclick = function () { abrirAcceso({ slug: b.closest('[data-slug]').getAttribute('data-slug') }); };
       });
       $('lista').querySelectorAll('.hacer-asignar').forEach(function (b) {
         b.onclick = function () {
@@ -2418,15 +2503,98 @@ dialog.panel{border-radius:16px 0 0 16px}
     });
   }
 
-  function copiarAlPortapapeles(texto, dijo) {
-    var listo = function () { if ($('lib-msg')) $('lib-msg').textContent = dijo; };
+  function copiarAlPortapapeles(texto, dijo, donde) {
+    var aviso = $(donde || 'lib-msg');
+    var listo = function () { if (aviso) aviso.textContent = dijo; };
     if (navigator.clipboard) { navigator.clipboard.writeText(texto).then(listo, listo); return; }
-    // Sin portapapeles (pasa fuera de https): al menos dejarlo seleccionado para copiarlo a mano.
+    // Sin portapapeles (pasa fuera de https): al menos dejarlo seleccionado para copiarlo a mano. Dentro de un
+    // diálogo abierto, lo de fuera no se deja seleccionar: el campo va dentro del diálogo.
+    var casa = (aviso && aviso.closest('dialog')) || document.body;
     var t = document.createElement('textarea');
-    t.value = texto; document.body.appendChild(t); t.select();
+    t.value = texto; casa.appendChild(t); t.select();
     try { document.execCommand('copy'); listo(); } catch (e) { /* que se copie a mano */ }
-    document.body.removeChild(t);
+    casa.removeChild(t);
   }
+
+  // ── El acceso de alguien: crearlo desde su cliente o darle una clave nueva, y el mensaje listo para pasárselo.
+  // La clave de antes no se puede mostrar: el servidor guarda su huella (scrypt), no la clave. Por eso aquí se
+  // genera una nueva, se ve una sola vez y no queda en ningún lado del navegador: al cerrar se borra.
+  var LETRAS_CLAVE = 'abcdefghjkmnpqrstuvwxyz23456789'; // sin i, l, o, 0 ni 1: se dictan sin confundirse
+  function claveAlAzar() {
+    var letras = [];
+    while (letras.length < 12) {
+      crypto.getRandomValues(new Uint8Array(24)).forEach(function (n) {
+        // 248 = 31 × 8. Lo que pasa de ahí se bota: si no, unas letras saldrían más que otras.
+        if (n < 248 && letras.length < 12) letras.push(LETRAS_CLAVE.charAt(n % LETRAS_CLAVE.length));
+      });
+    }
+    return letras.slice(0, 4).join('') + '-' + letras.slice(4, 8).join('') + '-' + letras.slice(8).join('');
+  }
+  function usuarioSugerido(nombre) {
+    return String(nombre || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+      .replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '').slice(0, 30);
+  }
+  function mensajeDeAcceso(cliente, usuario, clave) {
+    return 'Tu acceso a aiva' + (cliente ? ' para ' + cliente : '') + ':\n' + location.origin + '/\n' +
+      'Usuario: ' + usuario + '\nClave: ' + clave + '\n' +
+      'Al entrar, cámbiala en Mi cuenta (el botón con tu nombre, arriba).';
+  }
+  var ACCESO = null; // lo que está abierto en el diálogo de acceso
+  function abrirAcceso(op) {
+    var u = op.usuario ? (window.__usuarios || []).find(function (x) { return x.usuario === op.usuario; }) : null;
+    // Desde Equipo no hay cliente de por medio; si atiende uno solo, el mensaje lo nombra igual.
+    var slug = op.slug || (u && (u.clientes || []).length === 1 ? u.clientes[0] : '');
+    var c = (window.__clientes || []).map(function (f) { return f.cliente; }).find(function (x) { return x.slug === slug; });
+    ACCESO = { slug: slug, cliente: c ? c.nombre : '', usuario: u ? u.usuario : '', tocado: false };
+    var nuevo = !u;
+    $('a-titulo').textContent = nuevo ? 'Nuevo acceso' + (c ? ' a ' + c.nombre : '') : 'Nueva clave para ' + u.nombre;
+    $('a-ayuda').textContent = nuevo
+      ? 'Entra por esta misma consola y solo ve ' + (c ? c.nombre : 'sus clientes') + '.'
+      : 'Su usuario es «' + u.usuario + '». La clave que tiene ahora no se puede ver, ni siquiera aquí. Esta la reemplaza y, si tenía la sesión abierta, se la cierra.';
+    $('a-campos').hidden = !nuevo;
+    $('a-nombre').value = ''; $('a-usuario').value = ''; $('a-correo').value = '';
+    // Si el cliente aún no tiene quién lo maneje, lo primero que se le crea es su admin.
+    $('a-rol').value = nuevo && slug && !adminsDe(slug).length ? 'admin' : 'asesor';
+    $('a-clave').value = claveAlAzar();
+    $('a-clave-caja').hidden = false;
+    $('a-listo').hidden = true; $('a-mensaje').textContent = '';
+    $('a-guardar').hidden = false; $('a-guardar').disabled = false;
+    $('a-guardar').textContent = nuevo ? 'Crear acceso' : 'Guardar la clave';
+    $('a-copiar').hidden = true;
+    $('a-msg').textContent = '';
+    $('dlg-acceso').showModal();
+    (nuevo ? $('a-nombre') : $('a-guardar')).focus();
+  }
+  $('a-nombre').oninput = function () { if (ACCESO && !ACCESO.tocado) $('a-usuario').value = usuarioSugerido(this.value); };
+  $('a-usuario').oninput = function () { if (ACCESO) ACCESO.tocado = true; };
+  $('a-otra').onclick = function () { $('a-clave').value = claveAlAzar(); };
+  $('a-cerrar').onclick = function () { $('dlg-acceso').close(); };
+  $('a-copiar').onclick = function () { copiarAlPortapapeles($('a-mensaje').textContent, 'Copiado. Pégaselo a esa persona.', 'a-msg'); };
+  $('dlg-acceso').addEventListener('close', function () { $('a-clave').value = ''; $('a-mensaje').textContent = ''; ACCESO = null; });
+  $('form-acceso').onsubmit = function (e) {
+    e.preventDefault();
+    var a = ACCESO; if (!a || $('a-guardar').hidden) return;
+    var clave = $('a-clave').value.trim(), nuevo = !a.usuario;
+    var usuario = nuevo ? $('a-usuario').value.trim() : a.usuario;
+    if (nuevo && !$('a-nombre').value.trim()) { $('a-msg').textContent = 'Falta el nombre.'; return; }
+    if (nuevo && !usuario) { $('a-msg').textContent = 'Falta el usuario.'; return; }
+    if (clave.length < 8) { $('a-msg').textContent = 'La clave necesita al menos 8 caracteres.'; return; }
+    $('a-guardar').disabled = true; $('a-msg').textContent = 'Guardando…';
+    (nuevo
+      ? api('/usuarios', { method: 'POST', body: { usuario: usuario, nombre: $('a-nombre').value.trim(), correo: $('a-correo').value.trim(), clave: clave, rol: $('a-rol').value, clientes: a.slug ? [a.slug] : [] } })
+      : api('/usuarios/' + encodeURIComponent(usuario), { method: 'PATCH', body: { clave: clave } })
+    ).then(function (r) {
+      $('a-guardar').disabled = false;
+      if (r.error) { $('a-msg').textContent = r.error; return; }
+      // Ya quedó: lo de llenar se va y queda solo el mensaje para pasárselo.
+      $('a-campos').hidden = true; $('a-clave-caja').hidden = true; $('a-guardar').hidden = true;
+      $('a-mensaje').textContent = mensajeDeAcceso(a.cliente, usuario, clave);
+      $('a-listo').hidden = false; $('a-copiar').hidden = false; $('a-copiar').focus();
+      $('a-msg').textContent = nuevo ? 'Listo: ' + usuario + ' ya puede entrar.' : 'Listo: la clave de antes ya no sirve.';
+      cargarTodo();
+      if (!$('equipo').hidden) cargarEquipo();
+    }).catch(function () { $('a-guardar').disabled = false; $('a-msg').textContent = 'No se pudo guardar. Prueba otra vez.'; });
+  };
 
   // Quién entra a la consola y qué clientes atiende. El super-admin ve a todos; el admin de un cliente, a la gente
   // de sus clientes, y crea y maneja la suya. Quién puede tocar a quién lo decide el servidor (consola-usuarios.ts):
@@ -2435,6 +2603,7 @@ dialog.panel{border-radius:16px 0 0 16px}
     return Promise.all([api('/usuarios'), api('/clientes')]).then(function (r) {
       var usuarios = r[0].usuarios || [], clientes = (r[1].clientes || []).map(function (f) { return f.cliente; });
       window.__usuarios = usuarios;
+      equipoLeido = Array.isArray(r[0].usuarios);
       $('n-equipo').textContent = usuarios.length ? String(usuarios.length) : '';
       var sueltos = r[0].sinClientes || [];
       var opciones = function (marcados) {
@@ -2478,7 +2647,7 @@ dialog.panel{border-radius:16px 0 0 16px}
               (u.activo ? '' : '<span class="chip media">Inactivo</span>') +
               '<span class="grow"></span>' +
               (propio ? '' : '<button class="btn sm act">' + (u.activo ? 'Desactivar' : 'Activar') + '</button>') +
-              '<button class="btn sm clave">Cambiar clave</button>' +
+              (soyYo(u) ? '' : '<button class="btn sm clave">Nueva clave</button>') +
               (propio ? '' : '<button class="btn sm quitar">Quitar</button>') + '</div>' +
             '<div class="small muted">' + esc(QUE_HACE[u.rol] || QUE_HACE.asesor) + '</div>' +
             (u.rol === 'super' || propio ? '' : '<div class="fila" style="margin-top:6px">' + opciones(u.clientes || []) + '</div>') +
@@ -2517,10 +2686,9 @@ dialog.panel{border-radius:16px 0 0 16px}
         if (rol) rol.onchange = function () { cambiar({ rol: rol.value }, true); };
         var act = card.querySelector('.act');
         if (act) act.onclick = function () { cambiar({ activo: !quien.activo }, true); };
-        card.querySelector('.clave').onclick = function () {
-          var nueva = prompt('Nueva clave para ' + u + ' (8 o más caracteres)');
-          if (nueva) cambiar({ clave: nueva }, true);
-        };
+        // La propia se cambia en Mi cuenta, pidiendo la actual.
+        var clave = card.querySelector('.clave');
+        if (clave) clave.onclick = function () { abrirAcceso({ usuario: u }); };
         var quitar = card.querySelector('.quitar');
         if (quitar) quitar.onclick = function () {
           if (confirm('¿Quitar a ' + u + ' de la consola?')) api('/usuarios/' + encodeURIComponent(u), { method: 'DELETE' }).then(function (d) {
@@ -2555,7 +2723,8 @@ dialog.panel{border-radius:16px 0 0 16px}
         var p = PLANTILLAS.find(function (x) { return x.id === $('f-plantilla').value; });
         $('msg').innerHTML = '<b>Listo: ' + esc(r.cliente.nombre) + '</b>' + (p ? ' · ' + esc(p.nombre) + ': ' + esc(p.embudo) : '') +
           '<br>Token del tablero (se muestra una vez, también queda en su .env):<br><code>' + esc(r.token) + '</code>' +
-          '<br><br>Falta: ajustar su información en el tablero, <code>pnpm cliente pm2</code> y arrancarlo con pm2.';
+          '<br><br>Falta: ajustar su información en el tablero, <code>pnpm cliente pm2</code> y arrancarlo con pm2. ' +
+          'Para que el negocio entre, créale su admin en su fila: Ver más › Crear acceso.';
         $('f-nombre').value = ''; $('f-slug').value = ''; $('f-host').value = ''; $('f-sedes').value = '';
         cargar();
       })
@@ -2569,7 +2738,12 @@ dialog.panel{border-radius:16px 0 0 16px}
     if ($('app').hidden || $('dlg').open) return;
     if (!($('resp') && $('resp').value.trim())) cargarPendientes(); // sin pisar lo que estés escribiendo
   }, 10000);
-  setInterval(function () { if (!$('app').hidden && !$('dlg').open) cargar(); }, 60000);
+  // Si estás escribiendo dentro de un cliente (un correo, por ejemplo), el repintado de cada minuto espera.
+  function escribiendoEnLaLista() {
+    var a = document.activeElement;
+    return Boolean(a && $('lista').contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
+  }
+  setInterval(function () { if (!$('app').hidden && !$('dlg').open && !escribiendoEnLaLista()) cargar(); }, 60000);
 })();
 </script>
 </body>

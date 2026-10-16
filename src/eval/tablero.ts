@@ -302,6 +302,14 @@ const { ACENTOS } = await import('../consola-usuarios.js');
 const sinPintar = ACENTOS.filter((a) => a !== 'azul').filter((a) => !new RegExp(`:root\\[data-acento=${a}\\]:has\\(#app:not\\(\\[hidden\\]\\)\\)\\{[^}]*--brand:`).test(consola) || !consola.includes(`.acento[data-acento=${a}] i{`));
 check('cada color de consola de la lista tiene su pintura y su muestra', sinPintar.length === 0 && consola.includes('.acento[data-acento=azul] i{'), `sin pintar: ${sinPintar.join(', ')}`);
 check('🪤 al guardar «Mi cuenta» el botón del perfil no se queda en texto plano', !/\$\('yo'\)\.textContent = yo\./.test(consola) && /function pintarYo\(\)/.test(consola));
+// El acceso de cada cliente (2026-10-16): el super-admin no sabía con qué usuario entraba cada negocio, y la clave
+// guardada no se puede mostrar (es una huella). Se crea o se reemplaza desde la fila del cliente y se ve una sola vez.
+const acceso = consola.slice(consola.indexOf('function claveAlAzar'), consola.indexOf("$('form-acceso').onsubmit"));
+check('la clave nueva sale del azar del navegador, no de Math.random', /crypto\.getRandomValues/.test(acceso) && !/Math\.random/.test(acceso));
+check('la clave nueva no se guarda en el navegador y se borra al cerrar', !/localStorage|sessionStorage/.test(acceso) &&
+  /'dlg-acceso'\)\.addEventListener\('close', function \(\) \{ \$\('a-clave'\)\.value = ''; \$\('a-mensaje'\)\.textContent = ''/.test(acceso));
+check('«sin admin del cliente» solo se dice si el equipo llegó de verdad', /\(esSuper && equipoLeido\s/.test(consola) && /equipoLeido = Array\.isArray\(d\.usuarios\)/.test(consola));
+check('el repintado de cada minuto no cierra «Ver más» ni pisa lo que se escribe', /var abiertos = /.test(consola) && /!escribiendoEnLaLista\(\)\) cargar\(\)/.test(consola));
 check('la gráfica de la consola tiene dos colores, no el acento dos veces', /--serie-wa:#[0-9a-f]{6}; --serie-sitio:#[0-9a-f]{6}/.test(consola) && !/banda\(function \(p\) \{ return p\.total; \}, 'var\(--oro-claro\)'\)/.test(consola));
 
 // — La portada (2026-10-12): el usuario la sintió con mucho texto. Pasó de 385 palabras a menos de 250, y la vista

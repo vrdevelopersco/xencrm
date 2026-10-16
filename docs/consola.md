@@ -173,6 +173,28 @@ Todos solo ven —y solo les suena— lo de los clientes que tienen asignados. S
 Se administran en la pestaña **Equipo**: agregar a alguien con su clave y su rol, marcarle qué clientes atiende,
 cambiarle el rol o la clave, desactivarlo o quitarlo. Las claves se guardan cifradas (scrypt), nunca en claro.
 
+### El acceso de cada cliente
+
+Para saber con qué usuario entra un negocio no hace falta abrir Equipo. Cada fila de **Clientes** dice
+`admin: <usuario>`, y si no tiene ninguno, **sin admin del cliente** en rojo. Esto solo lo ve el super-admin.
+
+Dentro de **Ver más › Quién entra a este cliente** está todo lo de ese negocio:
+
+- **Crear acceso**: nombre, usuario (se arma solo con el nombre), correo opcional y rol. Si el cliente todavía no
+  tiene admin, el rol que viene marcado es *admin del cliente*. La clave la propone la consola.
+- **Nueva clave**: le pone a alguien una clave nueva. La de antes deja de servir y, si tenía la sesión abierta, se
+  le cierra.
+- El rol de cada quien se cambia ahí mismo (admin del cliente o asesor). Es el rol de la persona, así que vale en
+  todos los clientes que atiende.
+
+**La clave de alguien no se puede ver.** aiva guarda su huella, no la clave; ni el super-admin la puede leer. Si
+nadie sabe cuál es, se le pone una nueva. La que propone la consola son doce letras y números sin los que se
+confunden (`i`, `l`, `o`, `0`, `1`), sacados del azar del navegador. Se ve una sola vez, en un mensaje listo para
+copiar y mandar por WhatsApp o por correo (la dirección de la consola, el usuario y la clave), y al cerrar se borra
+de la pantalla. Lo sano es que la persona la cambie en **Mi cuenta** al entrar.
+
+El admin de un cliente tiene esta misma caja en sus clientes, con los límites de abajo.
+
 **Lo que el admin de un cliente no puede**, aunque lo pida a mano:
 
 - Crear o nombrar super-admins, ni darle a alguien un cliente que él no atiende.
