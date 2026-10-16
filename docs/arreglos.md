@@ -7,6 +7,27 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-10-16
+
+### El admin de cada cliente maneja a su gente · `52a46b0`
+El usuario no podía darle al dueño de DUNOR una cuenta con la que creara a sus empleados: había dos roles, y Equipo
+era solo del super-admin. Ahora hay tres. El **admin del cliente** abre Equipo, ve a la gente de sus clientes y
+crea asesores u otros admins de su negocio, les cambia la clave, los desactiva o los quita. El **asesor** hace lo
+mismo que hacía «Atiende» (todo en su cliente menos Equipo), como lo decidió el usuario. Quien tenía `agente` quedó
+como admin del cliente para que nadie perdiera nada al desplegar. 🪤 Al super-admin y a quien atiende además otro
+negocio, el admin del cliente los ve solo por su nombre: mostrarle sus clientes le contaba qué otros negocios tiene
+aiva. Si intenta tocarlos, recibe «no existe». Tampoco puede bajarse ni desactivarse a sí mismo. Son 40 pruebas
+nuevas en `test:usuarios`. Visto en Chrome sin pantalla como dueño, asesora y super-admin: la casilla que el
+servidor rechaza vuelve a como estaba.
+
+### Lo de aiva pasaba por la segunda puerta · `52a46b0`
+Motores, la clave de OpenAI, el tope de gasto y encender la retención solo se frenaban en `/api/c/<slug>/…`. Por
+`/c/<slug>/admin/api/…`, la que usa el tablero abierto desde la consola, alguien con «Atiende» los cambiaba. La
+clave no se podía leer (sale tapada), pero sí reemplazar. Se comprobó pasando antes de tocar nada (502 en vez de
+403) y frenado después. Las dos puertas usan ahora `vedado()`, y `test:seguridad` prueba la segunda. Una ruta
+codificada (`%6Dotores`) no lo esquiva: llega decodificada al freno. **Está en producción hasta el próximo
+despliegue.**
+
 ## 2026-10-12
 
 ### Desplegado `53693f6` y revisado en `/_salud`
