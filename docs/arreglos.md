@@ -16,7 +16,7 @@ crea asesores u otros admins de su negocio, les cambia la clave, los desactiva o
 mismo que hacía «Atiende» (todo en su cliente menos Equipo), como lo decidió el usuario. Quien tenía `agente` quedó
 como admin del cliente para que nadie perdiera nada al desplegar. 🪤 Al super-admin y a quien atiende además otro
 negocio, el admin del cliente los ve solo por su nombre: mostrarle sus clientes le contaba qué otros negocios tiene
-aiva. Si intenta tocarlos, recibe «no existe». Tampoco puede bajarse ni desactivarse a sí mismo. Son 40 pruebas
+aiva. Si intenta tocarlos, recibe «no existe». Tampoco puede bajarse ni desactivarse a sí mismo. Son unas 40 comprobaciones
 nuevas en `test:usuarios`. Visto en Chrome sin pantalla como dueño, asesora y super-admin: la casilla que el
 servidor rechaza vuelve a como estaba.
 
