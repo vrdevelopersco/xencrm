@@ -9,6 +9,18 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-16
 
+### El acceso de cada cliente, desde su fila · `59c15f8`
+El usuario entraba a aiva.confiafintech.com como super-admin, pero no sabía con qué usuario y clave entraba cada
+negocio. Lo primero no estaba a la vista y lo segundo no se puede saber: se guarda la huella, no la clave. Ahora
+cada fila de Clientes dice `admin: <usuario>` o **sin admin del cliente** en rojo. En **Ver más › Quién entra a este
+cliente** se crea el acceso (si no hay admin, viene marcado ese rol), se le pone una clave nueva a alguien y se
+cambia el rol. La clave la propone la consola: doce caracteres del azar del navegador. Se ve una vez, dentro de un
+mensaje listo para copiar, y se borra al cerrar. Equipo usa el mismo diálogo en vez del `prompt()`. 🪤 Si la lista
+del equipo no llega, no se dice «sin admin», porque sería mentira. De paso, el repintado de cada minuto cerraba
+«Ver más» y borraba lo que se estuviera escribiendo dentro; ya no. Visto en Chrome sin pantalla como super-admin y
+como admin del cliente. Con la clave nueva se entra (200), la vieja ya no sirve (401) y «Ver más» sigue abierto
+después del repintado. Son 4 comprobaciones nuevas en `test:tablero`.
+
 ### El admin de cada cliente maneja a su gente · `52a46b0`
 El usuario no podía darle al dueño de DUNOR una cuenta con la que creara a sus empleados: había dos roles, y Equipo
 era solo del super-admin. Ahora hay tres. El **admin del cliente** abre Equipo, ve a la gente de sus clientes y
