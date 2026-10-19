@@ -9,6 +9,14 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-19
 
+### Desplegado `7adbbec` y revisado en `/_salud`
+El usuario subió el paquete en la mañana. `/_salud` contesta `7adbbec` en Node 24, y en el sondeo todos contestan:
+los cuatro procesos van por socket. Respondió un espejo del lanzador 1446257, que es el doble arranque de siempre
+(ver `desplegar.md`). Que el lanzador con el mando también corre el código nuevo se ve en la consola, que ya sirve
+«Crear acceso». En el login de producción, con el `Origin` del dominio, un usuario inventado da 401: llega hasta
+comprobar la clave y el filtro de origen no lo frena. El Chrome sin pantalla no pasa de la verificación de Hostinger
+(«Checking your browser…»), y eso no se esquiva. La entrada en un navegador de verdad la hace el usuario.
+
 ### El mensaje de acceso apuntaba a la portada · `7adbbec`
 Salió al revisar el despliegue, antes de armar el ZIP. En el paquete la consola vive en `/consola` y la raíz es la
 portada, pero el mensaje de acceso mandaba a la raíz: el dueño del negocio iba a llegar a una página sin dónde poner
