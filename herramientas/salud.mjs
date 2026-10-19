@@ -50,7 +50,8 @@ const linea = (e) => {
     : e.tipo === 'tablero' ? `abrió ${e.cliente}`
     : e.tipo === 'cuenta' ? `${e.que}${e.por && e.por !== e.usuario ? ` (por ${e.por})` : ''}`
     : e.rol ? `(${e.rol})` : '';
-  return `  ${ancho(hora(e.cuando), 15)} ${ancho(QUE[e.tipo] || e.tipo, 8)} ${ancho(e.usuario, 20)} ${ancho(detalle, 44)} ${e.navegador || ''}${e.ip ? `  ${e.ip}` : ''}`;
+  // El detalle no se corta: «creada · admin · dunor (por llave maestra)» a medias no dice quién fue.
+  return `  ${ancho(hora(e.cuando), 17)} ${ancho(QUE[e.tipo] || e.tipo, 8)} ${ancho(e.usuario, 20)} ${String(detalle ?? '').padEnd(46)} ${e.navegador || ''}${e.ip ? `  ${e.ip}` : ''}`;
 };
 
 const d = await pedir().catch((err) => { console.error(`No pude leer ${base}/_salud: ${err.message}`); process.exit(1); });
