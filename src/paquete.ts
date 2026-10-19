@@ -19,8 +19,10 @@
 //   2. **Los datos viven fuera del despliegue**, que en estas plataformas estrena carpeta en cada actualización.
 //   3. **Va compilado a JavaScript**, no con tsx.
 import { execFileSync } from 'node:child_process';
+import { createHash, randomBytes } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { leerIndice, rutas, type ClienteRef } from './clientes.js';
 
 const DOMINIO = (process.argv[2] ?? 'aiva.hrctechnologies.com').replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -43,6 +45,8 @@ const http = require('node:http');
 const { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = require('node:fs');
 const { homedir, tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
+const { createHash, timingSafeEqual } = require('node:crypto');
+const { pathToFileURL } = require('node:url');
 
 const aqui = __dirname;
 const PUERTO = Number(process.env.PORT || 3000);
@@ -689,6 +693,37 @@ async function esperarALosDeAdentro(maxMs = 30000) {
   }
 }
 
+/**
+ * El token de /_salud. pnpm paquete lo genera en la máquina que arma el ZIP (~/aiva-credenciales/salud-token.txt)
+ * y aquí solo viaja su huella, en salud.json: el ZIP no lleva ningún secreto y no hay que tocar el panel para leer
+ * la bitácora de accesos. Si se pone SALUD_TOKEN en el panel, también vale; y la llave maestra, como siempre.
+ */
+const huellaSalud = (function () {
+  try { return String(JSON.parse(readFileSync(join(aqui, 'salud.json'), 'utf8')).huella || ''); } catch (e) { return ''; }
+})();
+function abreLaSalud(token) {
+  if (!token) return false;
+  if (process.env.CONSOLA_TOKEN && token === process.env.CONSOLA_TOKEN) return true;
+  if (process.env.SALUD_TOKEN && token === process.env.SALUD_TOKEN) return true;
+  if (!/^[0-9a-f]{64}$/.test(huellaSalud)) return false;
+  // Se comparan huellas del mismo largo y en tiempo fijo: cuánto tarda no dice nada de lo que se mandó.
+  return timingSafeEqual(createHash('sha256').update(token).digest(), Buffer.from(huellaSalud, 'hex'));
+}
+/**
+ * La bitácora de accesos de la consola (src/accesos.ts): quién entró, quién falló, quién abrió qué tablero y qué
+ * se le hizo a cada cuenta. La escribe la consola en su carpeta de datos, que es la misma para los dos lanzadores
+ * cuando el alojamiento arranca dos: conteste el que conteste, lee lo mismo.
+ */
+async function bitacoraDeAccesos(url) {
+  try {
+    const q = new URL(url || '/', 'http://x').searchParams;
+    const m = await import(pathToFileURL(join(aqui, 'dist', 'accesos.js')).href);
+    return m.accesosParaSalud(dirClientes, { n: Number(q.get('accesos')) || 100, usuario: q.get('usuario') || '' });
+  } catch (e) {
+    return { error: 'no pude leer la bitácora: ' + (e && e.message) };
+  }
+}
+
 const servidor = http.createServer(async (pide, responde) => {
     const camino = (pide.url || '/').split('?')[0];
     if (PORTADA && (camino === '/' || camino === '/index.html')) {
@@ -713,8 +748,8 @@ const servidor = http.createServer(async (pide, responde) => {
       //
       // Los pids y los puertos internos sí se guardan para quien traiga el token: no porque sean un secreto,
       // sino porque no le sirven a nadie más.
-      const token = (pide.headers['x-consola-token'] || '').toString() || new URL(pide.url, 'http://x').searchParams.get('token') || '';
-      const conToken = Boolean(process.env.CONSOLA_TOKEN) && token === process.env.CONSOLA_TOKEN;
+      const token = (pide.headers['x-salud-token'] || pide.headers['x-consola-token'] || '').toString() || new URL(pide.url, 'http://x').searchParams.get('token') || '';
+      const conToken = abreLaSalud(token);
       const mem = process.memoryUsage();
       const cuerpo = {
         arrancado: new Date(Date.now() - Math.round(process.uptime() * 1000)).toISOString(),
@@ -789,7 +824,10 @@ const servidor = http.createServer(async (pide, responde) => {
                   if (!conAvisos.length) return 'Todo arriba y atendiendo.';
                   return 'Los procesos están bien, pero ' + conAvisos.map((x) => x.slug + ': ' + x.servicio.avisos[0]).join(' · ');
                 })();
-      responde.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+      // Con token, al final: quién ha entrado a la consola. Sin token no se dice ni que existe.
+      // ?accesos=300 trae más líneas (100 si no se dice); ?usuario=dueno.dunor, solo las de esa persona.
+      if (conToken) cuerpo.accesos = await bitacoraDeAccesos(pide.url);
+      responde.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
       responde.end(JSON.stringify(cuerpo, null, 2));
       return;
     }
@@ -988,6 +1026,22 @@ writeFileSync(
   `${JSON.stringify({ dominio: DOMINIO, puertoInterno: PUERTO_INTERNO, clientes: clientes.map((c) => ({ slug: c.slug, nombre: c.nombre, prioridad: c.prioridad, desde: c.desde })) }, null, 2)}\n`,
 );
 writeFileSync(join(dir, 'app.js'), ARRANQUE);
+// El token de /_salud se queda en esta máquina; al paquete va solo su huella (ver abreLaSalud en el arranque).
+// 🪤 Si el archivo existe, se usa tal cual y nunca se pisa: cambiarlo dejaría sin lectura al que ya está subido.
+const ARCHIVO_TOKEN_SALUD = process.env.AIVA_SALUD_TOKEN_ARCHIVO || join(homedir(), 'aiva-credenciales', 'salud-token.txt');
+const tokenDeSalud = (() => {
+  if (existsSync(ARCHIVO_TOKEN_SALUD)) {
+    const t = readFileSync(ARCHIVO_TOKEN_SALUD, 'utf8').trim();
+    if (t.length < 32) throw new Error(`${ARCHIVO_TOKEN_SALUD} tiene un token demasiado corto; revísalo a mano, no lo piso`);
+    return t;
+  }
+  mkdirSync(dirname(ARCHIVO_TOKEN_SALUD), { recursive: true, mode: 0o700 });
+  const t = randomBytes(32).toString('base64url');
+  writeFileSync(ARCHIVO_TOKEN_SALUD, `${t}\n`, { mode: 0o600 });
+  console.log(`→ token nuevo para /_salud: ${ARCHIVO_TOKEN_SALUD}`);
+  return t;
+})();
+writeFileSync(join(dir, 'salud.json'), `${JSON.stringify({ huella: createHash('sha256').update(tokenDeSalud).digest('hex') })}\n`);
 // Qué commit va en este paquete (src/version.ts lo lee al arrancar): con esto, /_salud dice qué está desplegado.
 {
   const git = (...a: string[]) => execFileSync('git', a, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
@@ -1084,4 +1138,7 @@ ${clientes.map((c) => `     https://${DOMINIO}/${c.slug}/${' '.repeat(Math.max(1
 
   En el panel:  Node 24 · compilar "npm install --omit=dev" · iniciar "npm start"
   Las variables de entorno están en el LEEME.txt de adentro; sin ellas no arranca.
+
+  Quién ha entrado a la consola, ya subido:  pnpm salud ${DOMINIO === 'aiva.hrctechnologies.com' ? '' : DOMINIO}
+  (lee el token de ${ARCHIVO_TOKEN_SALUD.replace(homedir(), '~')})
 `);

@@ -32,6 +32,9 @@ el archivo de usuarios.
   del super-admin. Al anonimizar, ni el nombre ni el teléfono quedan en ninguna tabla de la base (`test:retencion`
   la recorre entera buscándolos).
 - **Sesiones**: salir la cierra; desactivar a alguien la cierra; **cambiarle la clave también la cierra**.
+- **Bitácora de accesos**: cada ingreso, fallo, tablero abierto y cambio de cuenta queda anotado, sin ninguna clave
+  —tampoco la que alguien pega donde iba el usuario, que se guarda tapada—, y anotar nunca tumba el login. Solo se
+  lee en `/_salud` con su token (`test:accesos`; ver `desplegar.md`).
 - **Tablero**: sin token no contesta nada, ni las rutas que mueven datos.
 - **Chat público**: corta al mensaje 21 por conversación, rechaza vacíos y enormes, y un identificador de
   conversación inventado no devuelve nada de nadie.

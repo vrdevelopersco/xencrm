@@ -11,7 +11,8 @@ import { Hono, type Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { readFileSync, existsSync, rmSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
-import { actualizarCliente, crearCliente, darDeBajaCliente, leerIndice, llamarACliente, PLANTILLAS, puertoLibre, tokenDe, urlDe, type ClienteRef } from './clientes.js';
+import { anotarAcceso, navegadorDe, tapado, type Acceso } from './accesos.js';
+import { actualizarCliente, CLIENTES_DIR, crearCliente, darDeBajaCliente, leerIndice, llamarACliente, PLANTILLAS, puertoLibre, tokenDe, urlDe, type ClienteRef } from './clientes.js';
 import { cabecerasDeSiempre, soloDesdeAqui } from './cabeceras.js';
 import { abrirSesion, ACENTOS, actualizarComo, alcanza, borrarComo, cambiarLoMio, COLORES, colorDe, cerrarSesion, crearComo, equipoPara, leerUsuarios, manejaEquipo, quitarClienteDeUsuarios, sesionDe, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
 import { irseSiQuedaHuerfano } from './huerfano.js';
@@ -383,6 +384,32 @@ setInterval(() => {
 const deDonde = (c: Context): string =>
   c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'sin-direccion';
 
+// ── La bitácora de accesos (src/accesos.ts): se lee en /_salud con su token. Anotar nunca tumba nada.
+const anotar = (c: Context, e: Omit<Acceso, 'cuando' | 'ip' | 'navegador'>) =>
+  anotarAcceso(CLIENTES_DIR, { ...e, ip: deDonde(c), navegador: navegadorDe(c.req.header('user-agent')) });
+/** Quién hizo algo, para la bitácora. La llave maestra no es una cuenta: se nombra con un espacio, que ningún
+ *  usuario puede tener, para que no se confunda con alguien que se llame «maestra». */
+const nombreDe = (u: UsuarioPublico | null): string => (!u || u === SUPER_DE_EMERGENCIA ? 'llave maestra' : u.usuario);
+/** A quién se refiere un intento fallido y por qué falló. Lo escrito solo se guarda si es una cuenta que existe:
+ *  si no, es justo donde alguien pudo pegar su clave por error, y va tapado. */
+function intentoFallido(body: { usuario?: string; clave?: string; maestra?: string }): { usuario: string; motivo: string } {
+  if (body.maestra) return { usuario: 'llave maestra', motivo: 'llave maestra equivocada' };
+  const escrito = String(body.usuario ?? '').trim().toLowerCase();
+  const cuenta = escrito ? leerUsuarios().find((x) => x.usuario === escrito || (Boolean(x.correo) && x.correo === escrito)) : undefined;
+  if (!cuenta) return { usuario: tapado(escrito), motivo: 'usuario que no existe' };
+  return { usuario: cuenta.usuario, motivo: !cuenta.activo ? 'cuenta desactivada' : body.clave ? 'clave equivocada' : 'sin clave' };
+}
+/** Qué se le cambió a una cuenta. La clave se nombra, nunca se escribe. */
+function queCambio(body: Record<string, unknown>): string {
+  const partes: string[] = [];
+  if (body.clave !== undefined || body.claveNueva !== undefined) partes.push('clave nueva');
+  if (body.rol !== undefined) partes.push(`rol: ${String(body.rol)}`);
+  if (Array.isArray(body.clientes)) partes.push(`clientes: ${body.clientes.join(', ') || 'ninguno'}`);
+  if (body.activo !== undefined) partes.push(body.activo ? 'activada' : 'desactivada');
+  for (const k of ['nombre', 'correo', 'color', 'acento']) if (body[k] !== undefined) partes.push(k);
+  return partes.join(' · ') || 'nada';
+}
+
 /**
  * La página de la consola, leída una sola vez al arrancar.
  *
@@ -438,19 +465,26 @@ export function mountConsola(app: Hono) {
     const body = (await c.req.json().catch(() => ({}))) as { usuario?: string; clave?: string; maestra?: string };
     const quien = String(body.usuario ?? (body.maestra ? 'maestra' : '')).toLowerCase().slice(0, 64);
     const llaves = [`d:${deDonde(c)}`, `u:${quien}`];
-    if (frenado(llaves)) return c.json({ error: 'Demasiados intentos. Espera unos minutos.' }, 429);
+    if (frenado(llaves)) {
+      anotar(c, { tipo: 'frenado', usuario: intentoFallido(body).usuario, motivo: 'demasiados intentos' });
+      return c.json({ error: 'Demasiados intentos. Espera unos minutos.' }, 429);
+    }
     const conMaestra = Boolean(body.maestra) && body.maestra === CONSOLA_TOKEN;
     const u = conMaestra ? SUPER_DE_EMERGENCIA : body.usuario && body.clave ? verificar(body.usuario, body.clave) : null;
     if (!u) {
       anotarFallo(llaves);
+      anotar(c, { tipo: 'fallo', ...intentoFallido(body) });
       return c.json({ error: conMaestra ? 'Llave maestra incorrecta' : 'Usuario o clave incorrectos' }, 401);
     }
     olvidarFallos(llaves);
     const sesion = abrirSesion(u, Date.now(), conMaestra);
     ponerGalleta(c, sesion);
+    anotar(c, { tipo: 'entro', usuario: nombreDe(u), rol: u.rol });
     return c.json({ sesion, usuario: u });
   });
   app.post('/api/salir', (c) => {
+    const quien = sesionDe(c.req.header('x-consola-sesion') ?? galletaDe(c));
+    if (quien) anotar(c, { tipo: 'salio', usuario: nombreDe(quien) });
     cerrarSesion(c.req.header('x-consola-sesion') ?? galletaDe(c));
     quitarGalleta(c);
     return c.json({ ok: true });
@@ -484,6 +518,8 @@ export function mountConsola(app: Hono) {
     const cliente = leerIndice().find((x) => x.slug === slug);
     const token = cliente ? tokenDe(slug) : '';
     if (!cliente || !token) return c.text('Ese cliente no existe o no tiene token.', 404);
+    // Abrir el tablero es lo que dice si alguien de verdad está mirando su negocio; sus llamadas de adentro, no.
+    if (resto === 'admin') anotar(c, { tipo: 'tablero', usuario: nombreDe(quien.usuario), cliente: slug });
 
     const ruta = resto === 'admin' || resto === 'admin.js' || resto.startsWith('admin/api/') ? `/${resto}` : null;
     if (!ruta) return c.text('No encontrado', 404);
@@ -572,6 +608,7 @@ export function mountConsola(app: Hono) {
     const body = (await c.req.json().catch(() => ({}))) as { nombre?: string; correo?: string; color?: string; acento?: string; claveActual?: string; claveNueva?: string };
     try {
       const u = cambiarLoMio(yo.usuario, body);
+      anotar(c, { tipo: 'cuenta', usuario: yo.usuario, por: yo.usuario, que: `lo suyo: ${queCambio(body)}` });
       return c.json({ usuario: { ...u, color: colorDe(u) } });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 400);
@@ -586,7 +623,9 @@ export function mountConsola(app: Hono) {
     const body = (await c.req.json().catch(() => ({}))) as { usuario?: string; nombre?: string; correo?: string; color?: string; clave?: string; rol?: 'super' | 'admin' | 'asesor'; clientes?: string[] };
     if (!body.usuario || !body.clave) return c.json({ error: 'falta el usuario o la clave' }, 400);
     try {
-      return c.json({ usuario: crearComo(actorDe(c), { usuario: body.usuario, nombre: body.nombre, correo: body.correo, color: body.color, clave: body.clave, rol: body.rol, clientes: body.clientes }) });
+      const nuevo = crearComo(actorDe(c), { usuario: body.usuario, nombre: body.nombre, correo: body.correo, color: body.color, clave: body.clave, rol: body.rol, clientes: body.clientes });
+      anotar(c, { tipo: 'cuenta', usuario: nuevo.usuario, por: nombreDe(actorDe(c)), que: `creada · ${nuevo.rol} · ${nuevo.clientes.join(', ') || 'sin clientes'}` });
+      return c.json({ usuario: nuevo });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 409);
     }
@@ -595,7 +634,9 @@ export function mountConsola(app: Hono) {
     if (!manejaEquipo(actorDe(c))) return c.json({ error: 'el equipo lo maneja el admin de tu cliente' }, 403);
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
     try {
-      return c.json({ usuario: actualizarComo(actorDe(c), c.req.param('usuario'), body) });
+      const cambiado = actualizarComo(actorDe(c), c.req.param('usuario'), body);
+      anotar(c, { tipo: 'cuenta', usuario: cambiado.usuario, por: nombreDe(actorDe(c)), que: queCambio(body) });
+      return c.json({ usuario: cambiado });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 404);
     }
@@ -603,7 +644,9 @@ export function mountConsola(app: Hono) {
   app.delete('/api/usuarios/:usuario', (c) => {
     if (!manejaEquipo(actorDe(c))) return c.json({ error: 'el equipo lo maneja el admin de tu cliente' }, 403);
     try {
-      return borrarComo(actorDe(c), c.req.param('usuario')) ? c.json({ ok: true }) : c.json({ error: 'no existe' }, 404);
+      if (!borrarComo(actorDe(c), c.req.param('usuario'))) return c.json({ error: 'no existe' }, 404);
+      anotar(c, { tipo: 'cuenta', usuario: c.req.param('usuario').toLowerCase(), por: nombreDe(actorDe(c)), que: 'quitada' });
+      return c.json({ ok: true });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 400);
     }

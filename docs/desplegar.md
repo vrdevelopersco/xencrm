@@ -150,6 +150,33 @@ Dos campos que existen por lo que costó no tenerlos:
 Los pids y los puertos internos piden `CONSOLA_TOKEN`; el estado y el veredicto no, porque esto se mira justo
 cuando nada funciona y pedir una credencial en ese momento es poner una puerta delante del extintor.
 
+### Quién ha entrado a la consola: la bitácora de accesos
+
+Con su token, `/_salud` trae al final **`accesos`**: quién entró, quién falló al intentarlo y por qué, quién abrió
+qué tablero y qué se le hizo a cada cuenta (creada, clave nueva, rol, desactivada, quitada). Va un resumen por
+persona (último ingreso, cuántas veces, fallos desde entonces) y las últimas líneas, con dirección y navegador.
+Nació el 2026-10-19: se le pasó su acceso a DUNOR y no había forma de saber si habían entrado.
+
+```
+pnpm salud                          aiva.hrctechnologies.com, en hora de Colombia
+pnpm salud --usuario dueno.dunor    solo lo de esa persona
+pnpm salud --seguir                 se queda mirando y pinta lo nuevo cada 20 segundos
+pnpm salud --json                   la respuesta tal cual
+```
+
+- **El token** lo crea `pnpm paquete` la primera vez, en `~/aiva-credenciales/salud-token.txt` (600), y no lo
+  vuelve a cambiar. Al ZIP va solo su huella (`salud.json`), así que no hay variable nueva en el panel y el ZIP no
+  lleva ningún secreto. Abre `/_salud` y nada más: no entra a la consola ni a ningún tablero. 🪤 Un paquete armado
+  en otra máquina trae la huella de *ese* token. Si `pnpm salud` dice que no lo reconoce, es eso.
+- Se manda en la cabecera `x-salud-token`. También valen `SALUD_TOKEN` en el panel y la llave maestra.
+- **Lo escribe la consola** en `accesos.jsonl`, junto a `usuarios.json`, en la carpeta de datos. Se conserva entre
+  despliegues y pasando de un mega se queda con las últimas 2000 líneas. Cuenta desde el primer paquete que la
+  trae: de antes no hay nada.
+- **Ninguna clave entra ahí.** Lo que alguien escribió como usuario tampoco, si no es una cuenta que exista,
+  porque a veces es la clave pegada donde no era: va tapado (`mi…(18)`).
+- La dirección es la que manda el servidor de delante en `x-forwarded-for`. Sirve para reconocer desde dónde,
+  no como prueba.
+
 ## 🪤 El alojamiento puede arrancar la aplicación dos veces a la vez
 
 Esto costó una mañana entera y no se parecía en nada a su causa.
