@@ -9,6 +9,23 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-19
 
+### Quién entró a la consola, en `/_salud` con su token · `5b9fa5b`
+El usuario le pasó su acceso a DUNOR y preguntó si habían entrado. No había forma de saberlo: las sesiones y los
+fallos viven en memoria y de un ingreso no quedaba nada. Pidió verlo en `/_salud`, con un token guardado en este
+Mac que yo pueda leer. Ahora la consola anota en `accesos.jsonl` cada ingreso, cada fallo y su motivo (clave
+equivocada, cuenta desactivada, usuario que no existe, frenado), cada tablero abierto, cada salida y cada cambio de
+cuenta, con dirección y navegador. `/_salud` lo trae con la cabecera `x-salud-token`, y `pnpm salud` lo pinta en hora
+de Colombia (`--usuario`, `--seguir`).
+- **El token:** `pnpm paquete` lo creó en `~/aiva-credenciales/salud-token.txt` y al ZIP va solo su huella, así que
+  no hay variable nueva en el panel. Abre `/_salud` y nada más.
+- 🪤 **Lo escrito como usuario:** si no es una cuenta que exista, va tapado (`cl…(18)`), porque es donde la gente
+  pega la clave por error. Ninguna clave entra al archivo, y anotar nunca tumba el login.
+
+Son 42 comprobaciones en `test:accesos`. Tres roturas puestas a propósito (sin tapar, anotar cada llamada del
+tablero, escribir el cuerpo del cambio) las detecta. El paquete se probó con dos lanzadores a la vez, como arranca
+Hostinger: por el espejo y por el que manda se lee lo mismo, sin token o con uno equivocado no sale nada, y en el
+archivo no hay ninguna de las claves usadas. El dueño de prueba entró en Chrome sin pantalla y quedó anotado.
+
 ### Desplegado `7adbbec` y revisado en `/_salud`
 El usuario subió el paquete en la mañana. `/_salud` contesta `7adbbec` en Node 24, y en el sondeo todos contestan:
 los cuatro procesos van por socket. Respondió un espejo del lanzador 1446257, que es el doble arranque de siempre
