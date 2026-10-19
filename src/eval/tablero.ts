@@ -308,6 +308,8 @@ const acceso = consola.slice(consola.indexOf('function claveAlAzar'), consola.in
 check('la clave nueva sale del azar del navegador, no de Math.random', /crypto\.getRandomValues/.test(acceso) && !/Math\.random/.test(acceso));
 check('la clave nueva no se guarda en el navegador y se borra al cerrar', !/localStorage|sessionStorage/.test(acceso) &&
   /'dlg-acceso'\)\.addEventListener\('close', function \(\) \{ \$\('a-clave'\)\.value = ''; \$\('a-mensaje'\)\.textContent = ''/.test(acceso));
+check('🪤 el mensaje de acceso lleva la dirección de la consola, no la raíz (en el paquete la raíz es la portada)',
+  /location\.origin \+ location\.pathname/.test(acceso) && !/location\.origin \+ '\/'/.test(acceso));
 check('«sin admin del cliente» solo se dice si el equipo llegó de verdad', /\(esSuper && equipoLeido\s/.test(consola) && /equipoLeido = Array\.isArray\(d\.usuarios\)/.test(consola));
 check('el repintado de cada minuto no cierra «Ver más» ni pisa lo que se escribe', /var abiertos = /.test(consola) && /!escribiendoEnLaLista\(\)\) cargar\(\)/.test(consola));
 check('la gráfica de la consola tiene dos colores, no el acento dos veces', /--serie-wa:#[0-9a-f]{6}; --serie-sitio:#[0-9a-f]{6}/.test(consola) && !/banda\(function \(p\) \{ return p\.total; \}, 'var\(--oro-claro\)'\)/.test(consola));

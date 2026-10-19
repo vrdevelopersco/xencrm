@@ -2534,8 +2534,10 @@ dialog.panel{border-radius:16px 0 0 16px}
     return String(nombre || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
       .replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '').slice(0, 30);
   }
+  // 🪤 La dirección es la de esta página, no la raíz: en el paquete la consola vive en /consola y la raíz es la
+  // portada, donde no hay dónde poner usuario y clave.
   function mensajeDeAcceso(cliente, usuario, clave) {
-    return 'Tu acceso a aiva' + (cliente ? ' para ' + cliente : '') + ':\n' + location.origin + '/\n' +
+    return 'Tu acceso a aiva' + (cliente ? ' para ' + cliente : '') + ':\n' + location.origin + location.pathname + '\n' +
       'Usuario: ' + usuario + '\nClave: ' + clave + '\n' +
       'Al entrar, cámbiala en Mi cuenta (el botón con tu nombre, arriba).';
   }
