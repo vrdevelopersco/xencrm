@@ -7,6 +7,18 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-10-19
+
+### El mensaje de acceso apuntaba a la portada · `7adbbec`
+Salió al revisar el despliegue, antes de armar el ZIP. En el paquete la consola vive en `/consola` y la raíz es la
+portada, pero el mensaje de acceso mandaba a la raíz: el dueño del negocio iba a llegar a una página sin dónde poner
+usuario y clave. Ahora lleva la dirección de la página en la que se creó. El paquete se probó como lo arranca
+Hostinger (`require('./app.js')`):
+- Entrar con el `Host` y el `Origin` del dominio da 200, y desde otro sitio da 403.
+- En Chrome sin pantalla, el super-admin le creó el acceso a DUNOR desde su fila, y el enlace salió `…/consola`.
+- El dueño entró, solo ve DUNOR, creó una asesora y abre su tablero (200). No abre el de CONFIA (403) ni cambia
+  motores por la segunda puerta (403).
+
 ## 2026-10-16
 
 ### El acceso de cada cliente, desde su fila · `59c15f8`
