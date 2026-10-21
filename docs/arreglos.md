@@ -9,6 +9,14 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-21
 
+### El tablero decía «Aiva» aunque el asistente se llamara de otra forma · `7858597`
+Salió al probar el paquete antes de entregarlo: ahí el asistente de DUNOR se llama **Arthur**, y Hoy decía «Aiva
+lleva todas las conversaciones» y «Sin leer, Aiva ya respondió». El interruptor de la conversación decía
+«Responde: Aiva | Tú» y las burbujas del asistente iban firmadas «Aiva». Eran nueve textos escritos a mano. Ahora
+salen con el nombre de cada cliente, y `test:tablero` revisa todo `admin.js`: falla si vuelve a aparecer «Aiva»
+fuera del respaldo `state.agentName || 'Aiva'`. Una rotura puesta a propósito lo detecta. Batería completa: 2082 ✓,
+0 ✗.
+
 ### Guía de inicio: los pasos se marcan solos · `b9e6f9d`
 El usuario la pidió después de ver la de Vocero: pasos que quedan listos cuando de verdad lo están, con el motivo
 exacto de lo que falta. El tutorial de Ayuda no servía para eso: explica el tablero y guarda «ya lo hice» en el
