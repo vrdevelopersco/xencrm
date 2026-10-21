@@ -121,3 +121,12 @@ export const ROL_ABIERTO = (stage: string): boolean => {
   const r = rolDe(stage);
   return r !== 'ganado' && r !== 'perdido';
 };
+
+/**
+ * Cuántos productos tiene el catálogo y cuántos con precio. Lo usa la guía de inicio (crm/guia.ts) con la misma
+ * regla de precio que el embudo, para que «tu catálogo no tiene precios» diga lo mismo en los dos sitios.
+ */
+export function estadoDelCatalogo(): { productos: number; conPrecio: number } {
+  const n = getDb().prepare("SELECT COUNT(*) n FROM docs WHERE kind = 'product'").get() as { n: number };
+  return { productos: n.n, conPrecio: catalogo().size };
+}

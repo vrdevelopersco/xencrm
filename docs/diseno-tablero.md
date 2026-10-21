@@ -402,3 +402,21 @@ franja de color de arriba. En una columna flexible eso deja que el navegador enc
 la columna se llena, y solo se veía la pastilla «0 · frío» y medio nombre. Con pocas tarjetas no pasa, así que en
 una demostración no se ve; con un cliente de verdad, sí. `.col .cards>.card{flex-shrink:0}` lo arregla: la que se
 desliza es la columna, no la tarjeta.
+
+### La guía de inicio (2026-10-21)
+
+La de Vocero, en aiva: pasos que se marcan solos, con el motivo de lo que falta. Reglas:
+
+- **Hecho lo dice el servidor, no el navegador.** `GET /admin/api/guia` (`src/crm/guia.ts`) mira lo mismo que el
+  asistente para contestar: el perfil que lee, el catálogo con el que cotiza, el canal que recibe. El tutorial de
+  Ayuda guarda «ya lo hice» en el navegador y puede mentir; la guía no guarda nada salvo «Ocultar por ahora».
+- **Lo que existe por defecto no cuenta como hecho.** El horario de citas siempre tiene valor (el de ejemplo), así
+  que «hecho» es que alguien lo haya escrito en el archivo, no que haya uno. Lo mismo vale para cualquier paso nuevo
+  con un valor de fábrica.
+- **Sin modelo y sin red.** Se pide cada vez que se abre Hoy. La dirección pública se lee del último chequeo;
+  `test:guia` falla si pedir la guía hace una sola llamada a la red.
+- **Ámbar para lo obligatorio que falta; gris para lo opcional.** El ámbar es lo que urge (regla de «El orden de
+  un CRM»), y lo opcional no urge. Cada título es un verbo («Llena», «Conecta», «Pon») y el botón dice adónde
+  lleva («Abrir el perfil»), igual en Hoy y en la guía.
+- **Para quien administra.** Los pasos llevan a pantallas que un asesor no toca; el asesor sigue viendo el
+  tutorial en Hoy.

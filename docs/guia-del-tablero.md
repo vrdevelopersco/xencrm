@@ -39,6 +39,30 @@ una persona, un prospecto se puso caliente, una cita agendada, movida o cancelad
 pregunta que el asistente no supo responder, un cliente que apareció por otro canal, o un mensaje que el asistente
 no pudo responder por una falla).
 
+## Guía de inicio
+
+Lo que falta para que el asistente atienda solo, en una lista que **se marca sola**: un paso queda listo cuando de
+verdad lo está, no cuando alguien le da clic. Está en **Configuración › Guía de inicio** (solo para quien
+administra), y mientras falte algo obligatorio, Hoy lo dice en una línea arriba («Deja listo a Aiva: 3 de 6 ·
+Siguiente: …») con el botón que lleva a arreglarlo. **Ocultar por ahora** la quita una semana.
+
+Los pasos, y cuándo quedan listos:
+
+- **Llena el perfil del negocio**: cuando tiene dirección, horarios y formas de pago, que es lo que más preguntan.
+- **Cuéntale lo que vendes**: cuando Lo que sabe tiene productos y al menos uno con precio.
+- **Conecta por dónde te escriben**: cuando WhatsApp (por código o el oficial) está recibiendo, o el chat del sitio
+  está encendido y su dirección pública responde.
+- **Haz una prueba**: cuando ya escribió alguien de verdad (la demostración y los grupos no cuentan).
+- **Pon tu horario de citas**, si el negocio agenda: cuando alguien escribió los días y las franjas. El horario de
+  ejemplo no cuenta.
+- **Pon con qué nombre respondes**: es tuyo, no del negocio, y en WhatsApp va antes de cada mensaje tuyo.
+- **Conecta tu calendario** (opcional, si agenda): para que el asistente no ofrezca horas en que estás ocupado.
+
+Lo que falta dice por qué, con el motivo exacto («Faltan los horarios y las formas de pago», «la dirección pública
+no responde»). Cuando lo obligatorio está hecho, dice **Todo listo** y Hoy deja de mostrarlo. La guía se vuelve a
+revisar al abrirla, al volver a la pestaña y al cerrar el perfil o El negocio. El **tutorial** de Ayuda sigue ahí:
+el tutorial explica el tablero; la guía deja listo el negocio.
+
 ## Hoy
 
 Lo que hay que atender, ordenado por lo que cuesta dejarlo esperando. Cada fila abre la conversación.

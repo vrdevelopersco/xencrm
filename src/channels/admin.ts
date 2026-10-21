@@ -67,6 +67,7 @@ import { checkPublicUrl, publicStatus } from './public-check.js';
 import { backupNow, backupStatus } from '../rag/backup.js';
 import { findDuplicates, keeperOf, mergeContacts } from '../crm/merge.js';
 import { getProfile, pendingFields, PROFILE_FIELDS, saveProfile } from '../profile.js';
+import { pasosDeLaGuia } from '../crm/guia.js';
 import { exportarAprendizaje, restaurarAprendizaje, revisarAprendizaje } from '../crm/aprendizaje.js';
 import { chatsImportados, borrarImportado, decidirTema, expresionesCandidatas, guardarImportados, leerChatExportado, muestraDeEstilo, resumenImportado, temasFrecuentes, vocabularioDelNegocio, mensajesDeChat } from '../crm/historial.js';
 import { ruleReading } from '../agent/teach.js';
@@ -591,6 +592,10 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       return c.json({ errors: (err as Error).message.split('\n') }, 400);
     }
   });
+
+  // La guía de inicio: qué falta para que el asistente atienda solo, paso por paso y con el motivo. Ver crm/guia.ts.
+  // Sin modelo y sin red: se pide cada vez que alguien abre Hoy.
+  app.get('/admin/api/guia', (c) => c.json({ pasos: pasosDeLaGuia(), agente: business.agent.name }));
 
   // Perfil del negocio (Configuración › Perfil): lo confirmado va al bot; lo vacío queda por confirmar.
   app.get('/admin/api/profile', (c) =>
