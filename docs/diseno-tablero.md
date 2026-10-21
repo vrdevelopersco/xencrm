@@ -397,6 +397,11 @@ Reglas que salen de aquí:
   veredicto y nada más; el porqué detrás de un clic), pero en el perfil lo que la persona contó ES el perfil, y por
   eso no se esconde. Lo que sí va detrás de un clic es el porqué del puntaje.
 
+- **La tarjeta del tablero enseña una pieza solo si dice algo** (2026-10-21, `2e4f8ba`), la misma regla que la
+  lista de conversaciones. El puntaje, si es caliente; el paso, si urge o es cita, y en su propia línea (al lado del
+  selector se cortaba); el valor, si se sabe; quién la lleva, si es una persona. **«Mover…» se queda en todas**: es
+  lo único que deja mover desde el celular. Achicarlo sí; quitarlo, no.
+
 🪤 **Las tarjetas aplastadas.** Desde la piel blanca y azul (2026-10-02), `.card` lleva `overflow:hidden` para la
 franja de color de arriba. En una columna flexible eso deja que el navegador encoja las tarjetas hasta 48 px cuando
 la columna se llena, y solo se veía la pastilla «0 · frío» y medio nombre. Con pocas tarjetas no pasa, así que en
