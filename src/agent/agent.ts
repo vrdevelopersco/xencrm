@@ -16,7 +16,7 @@ import { openVerification, saysWillVerify } from '../crm/verifications.js';
 import { datosDeLaPersona, ERROR_REPLIES, HUMAN_REPLIES, MIENTRAS_CONSULTO, OUT_OF_SCOPE_REPLIES, personaPrompt, pick, soloLasReglas, TOPE_REPLIES, type Intent } from './prompts.js';
 import { crossChannelGreeting } from '../crm/cross.js';
 import { getContact, purgeContact, setHumanMode, updateContact } from '../crm/contacts.js';
-import { proponer } from '../crm/propuestas.js';
+import { proponer, sugiereConPersona } from '../crm/propuestas.js';
 import { canDeliver, sendToContact } from '../crm/outbox.js';
 import { emitEvent } from '../crm/events.js';
 import { scheduleAnalysis } from '../crm/analyzer.js';
@@ -192,9 +192,13 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     : '';
   const contact = getContact(msg.userId);
   const base = { sources: [] as AgentReply['sources'], route: '', gateVia: '' };
+  // La conversación la lleva una persona y aiva la acompaña: hace su trabajo, pero lo que redacte queda como
+  // propuesta para esa persona. Nunca le habla al cliente. Ver «Una persona del equipo tiene la conversación».
+  const acompana = Boolean(contact?.humanMode) && !grupo && sugiereConPersona();
   // Si venía hablando por otro canal, se le dice una vez (y el historial de allá ya entró en el contexto). Se
   // resuelve al responder: si la conversación la tiene una persona, no hay respuesta y no se da por dicho.
-  let crossNote: string | null | undefined;
+  // 🪤 Acompañando tampoco: averiguarlo lo marca como dicho, y la persona que la lleva puede no mandar nada.
+  let crossNote: string | null | undefined = acompana ? null : undefined;
   // 🪤 El mensaje del cliente se anota normalmente al FINAL del turno, en `finish()`, cuando ya se sabe su
   // intención. Pero si en mitad del turno se le manda algo —el aviso de «dame un segundito»— ese algo quedaría
   // anotado ANTES que la pregunta que lo provocó, y en el tablero y en el chat del sitio se leería así:
@@ -208,9 +212,27 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     preguntaAnotada = true;
     recordCustomerMessage(msg.userId, text, intent, msg.media);
   };
+  // Lo que pasa hoy cuando la lleva una persona: el mensaje entra, se analiza, y aiva no dice nada.
+  const callarse = (route: string, extra: Partial<AgentReply> = {}): AgentReply => {
+    anotarLaPregunta('humano');
+    scheduleAnalysis(msg.userId);
+    console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} en modo humano, sin respuesta automática${route === 'modo humano' ? '' : ` (${route})`}`);
+    return { ...base, text: '', silent: true, intent: 'humano', engine: 'none', ms: Date.now() - started, ...extra, route };
+  };
   const finish = (answer: string, intent: Intent, engine: AgentReply['engine'], extra: Partial<AgentReply> = {}): AgentReply => {
     if (crossNote === undefined) crossNote = contact ? crossChannelGreeting(msg.userId) : null;
     const reply = crossNote ? `${crossNote}\n\n${answer}` : answer;
+    // Acompañando a una persona: la respuesta queda lista encima de su cajón y no sale. El mensaje del cliente
+    // se anota como siempre que la lleva alguien —intención «humano»—, para que nada de lo que mira quién la
+    // tiene (Hoy, los tiempos, las cuentas) cambie porque aiva haya redactado algo.
+    if (acompana) {
+      anotarLaPregunta('humano');
+      proponer(msg.userId, reply, intent, '', '', { conPersona: true });
+      scheduleAnalysis(msg.userId);
+      const msProp = Date.now() - started;
+      console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} la lleva una persona: le dejé lista la respuesta ${msProp}ms`);
+      return { ...base, text: '', silent: true, intent, engine, ms: msProp, ...extra, route: `acompaña · ${extra.route ?? ''}`.replace(/ · $/, '') };
+    }
     anotarLaPregunta(intent);
     // 🪤 En «Propone» NO se anota como dicho por aiva: no se ha dicho. Anotarlo dejaría en el historial —y en
     // lo que el cliente ve si abre el chat del sitio— una respuesta que nadie mandó, y el asistente seguiría la
@@ -271,12 +293,18 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   }
 
   // Una persona del equipo tiene la conversación: se registra y analiza, pero no se responde.
-  if (contact?.humanMode) {
-    recordCustomerMessage(msg.userId, text, 'humano', msg.media);
-    scheduleAnalysis(msg.userId);
-    console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} en modo humano, sin respuesta automática`);
-    return { ...base, text: '', silent: true, intent: 'humano', engine: 'none', route: 'modo humano', ms: Date.now() - started };
-  }
+  //
+  // Y si el negocio lo dejó encendido (Agente › Cuando la llevas tú), aiva la acompaña: sigue de largo, hace su
+  // trabajo y se detiene en finish(), justo antes de hablar, dejando la respuesta lista para esa persona. Es lo
+  // que hace Boba en un chat de amigos: no se mete en todo, pero cuando alguien pregunta algo que sabe, ahí está.
+  //
+  // 🪤 Solo lo que SABE. Lo demás se calla como siempre, porque quien la lleva ya está ahí:
+  //   - nada de flujo de citas: avanza y guarda estado, y una cita a medias no la agenda una propuesta;
+  //   - nada de «déjame verificar»: no abre un «Por verificar» ni avisa — la persona ya está leyendo;
+  //   - nada de saludos, traspasos ni «eso no es de aquí»: ahí la propuesta no le ahorra nada a nadie;
+  //   - y sin reintentos: si la primera redacción no se sostiene, no se paga otra para dejarla en un cajón.
+  if (contact?.humanMode && !acompana) return callarse('modo humano');
+  if (acompana && (hasBookingInProgress(msg.userId) || iaAgotada())) return callarse(iaAgotada() ? 'acompaña · tope de gasto' : 'acompaña · cita en curso');
 
   // Flujo de cita en curso: fechas y horas las maneja un flujo determinista, no el modelo.
   if (hasBookingInProgress(msg.userId)) {
@@ -287,6 +315,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // "Quiero cancelar mi cita", "¿la puedo pasar para el jueves?": si tiene una cita próxima, lo maneja el flujo de citas
   // (con confirmación), nunca el modelo, que podría decir "listo, cancelada" sin haberlo hecho.
   if (business.appointments.enabled && manageIntent(text, { strict: true }) && nextAppointmentFor(msg.userId)) {
+    if (acompana) return callarse('acompaña · su cita');
     return finish(await startBooking(msg.userId, text), 'cita', 'template', { route: 'cambiar o cancelar cita' });
   }
 
@@ -329,6 +358,9 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     }
   }
   const gate = await classify(text, history, msg.userId);
+  // Acompañando, solo se redacta lo que es del negocio: un producto o un dato de la tienda. Un saludo, una cita o
+  // un «quiero hablar con alguien» los contesta mejor la persona que ya está ahí, y no cuestan otra llamada.
+  if (acompana && gate.intent !== 'compra' && gate.intent !== 'info_tienda') return callarse(`acompaña · ${gate.intent}`, { gateVia: gate.via });
 
   if (gate.intent === 'fuera_de_alcance') return finish(pick(OUT_OF_SCOPE_REPLIES), gate.intent, 'template', { gateVia: gate.via });
   if (gate.intent === 'cita') return finish(await startBooking(msg.userId, text), gate.intent, 'template', { gateVia: gate.via, route: 'flujo de cita' });
@@ -434,7 +466,8 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // este sería el único mensaje que se escapara, dejando al cliente con un «ya te digo» que nadie continúa.
   // 🪤 Y nunca se espera a que salga: se manda y se sigue. Si el canal tarda en aceptarlo, lo que no puede pasar
   // es que la respuesta de verdad llegue más tarde todavía por culpa del aviso de que va a tardar.
-  if (chosen.porLoQuePidio && !propone(msg.channel as ChannelId) && canDeliver(msg.userId)) {
+  // 🪤 Y nunca acompañando a una persona, por lo mismo: el cliente está hablando con ella, no con aiva.
+  if (chosen.porLoQuePidio && !propone(msg.channel as ChannelId) && !acompana && canDeliver(msg.userId)) {
     const aviso = pick(MIENTRAS_CONSULTO.filter((x) => x !== ultimoAviso.get(msg.userId)));
     ultimoAviso.set(msg.userId, aviso);
     // La pregunta primero: si no, el aviso queda escrito antes de aquello a lo que responde.
@@ -466,6 +499,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   let fakeBooking = false; // la respuesta daba por hecha una cita que no existe // lo que no sabía, si la guarda de afirmaciones lo detectó
   let promesa: string | null = null; // lo que prometió en plata sin respaldo (un descuento, un porcentaje, algo gratis)
   let recito = false; // la respuesta recitaba las instrucciones
+  let noSabe: string | null = null; // acompañando: por qué lo redactado no sirve para dejárselo a la persona
   const reglas = soloLasReglas();
   let engine: AgentReply['engine'] = 'none';
   let route = `${chosen.reason} → sin motor`;
@@ -504,6 +538,11 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       const reference = [grounding, text, ...history.slice(-4).map((m) => m.content)].join('\n');
       const bad = ungroundedNumbers(candidate, reference);
       if (bad.length) anotarGuarda(`cifras:${bad.join(',')}`);
+      // Acompañando no se rehace nada: una cifra sin respaldo es un «no lo sé», y por un «no lo sé» no se paga otra.
+      if (bad.length && acompana) {
+        noSabe = `cifras sin respaldo: ${bad.join(', ')}`;
+        break;
+      }
       if (bad.length && i < order.length - 1) {
         console.warn(`[agent] ${e} inventó cifras (${bad.join(', ')}); reintento con ${order[i + 1]}`);
         lastEngine.delete(msg.userId); // el turno se rehace: Apple no debe conservar esa respuesta en su sesión
@@ -516,6 +555,10 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       const claim = unsupportedAnswer(text, candidate, grounding, scope) ?? (pendingHit && !isHonest(candidate) ? pendingHit : null);
       if (claim) {
         anotarGuarda(`sin_respaldo:${claim}`);
+        if (acompana) {
+          noSabe = `sin respaldo: ${claim}`;
+          break;
+        }
         verifyTopic = claim;
         console.warn(`[agent] ${e} respondió sobre «${claim}» sin respaldo en la información; se rehace para que lo verifique: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
         lastEngine.delete(msg.userId);
@@ -529,6 +572,10 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       promesa = promesaSinRespaldo(candidate, grounding);
       if (promesa) {
         anotarGuarda(`promesa:${promesa}`);
+        if (acompana) {
+          noSabe = `prometía ${promesa}`;
+          break;
+        }
         verifyTopic = verifyTopic ?? promesa;
         console.warn(`[agent] ${e} prometió «${promesa}» sin respaldo en la información; se rehace: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
         lastEngine.delete(msg.userId);
@@ -538,6 +585,10 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       }
       // Una cita que no existe ("te esperamos en la cita"): solo el flujo de citas agenda.
       if (business.appointments.enabled && claimsBooked(candidate) && !nextAppointmentFor(msg.userId)) {
+        if (acompana) {
+          noSabe = 'daba por hecha una cita';
+          break;
+        }
         console.warn(`[agent] ${e} dio por hecha una cita que no existe; se rehace: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
         const noAppt = 'El cliente todavía NO tiene una cita agendada: no digas que la tiene, que quedó agendada ni "te esperamos". Si quiere agendar, ofrécele buscarle un espacio.';
         const retry = await generate(e, { ...input, note: [input.note, noAppt].filter(Boolean).join('\n') });
@@ -567,6 +618,16 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     }
   }
 
+  // Acompañando, lo que no se sostiene no se le deja a la persona: ni un error, ni un «déjame verificar», ni lo
+  // que habría que rehacer. Se calla como cualquier otro mensaje mientras la lleva alguien — sin «Aiva no pudo
+  // responder» y sin «Por verificar»: quien la lleva está leyendo, no esperando a que aiva le avise.
+  if (acompana) {
+    // 🪤 Lo que se redacta acompañando no se dijo: Apple no puede conservarlo en su sesión como si lo hubiera dicho.
+    lastEngine.delete(msg.userId);
+    const porQue = noSabe ?? (raw === undefined ? 'ningún motor contestó' : recito ? 'recitaba sus instrucciones' : saysWillVerify(raw) ? 'habría que verificarlo' : null);
+    if (porQue) return callarse(`acompaña · no lo sabe: ${porQue}`, { gateVia: gate.via });
+  }
+
   let reply: string;
   if (raw === undefined) {
     reply = pick(ERROR_REPLIES);
@@ -580,7 +641,20 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       const lastAssistant = [...history].reverse().find((m) => m.role === 'assistant')?.content ?? '';
       cleaned = dropRepeatedFacts(cleaned, lastAssistant);
     }
-    reply = postProcess(cleaned, allowed) ?? pick(OUT_OF_SCOPE_REPLIES);
+    const limpia = postProcess(cleaned, allowed);
+    // Acompañando, lo que no pasa el último filtro tampoco se deja: «eso no es de aquí» no le sirve a quien atiende.
+    if (acompana && (!limpia || saysWillVerify(limpia))) return callarse('acompaña · no lo sabe: no pasó el filtro', { gateVia: gate.via });
+    reply = limpia ?? pick(OUT_OF_SCOPE_REPLIES);
+  }
+  // Lo de abajo es de lo que se le dijo al cliente —el rol que siguió, lo que queda por verificar— y aquí no se
+  // le dijo nada: se deja la propuesta y listo.
+  if (acompana) {
+    return finish(reply, gate.intent, engine, {
+      route,
+      ...(engine === 'openai' ? { model: openaiModel(chosen.role) } : {}),
+      gateVia: gate.via,
+      sources: sources.map((s) => ({ title: s.title, url: s.url, kind: s.kind })),
+    });
   }
   // 🪤 Si recitó sus instrucciones, la sesión de Apple las tiene adentro: el próximo turno arranca de cero.
   if (recito) lastEngine.delete(msg.userId);

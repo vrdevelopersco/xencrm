@@ -6,6 +6,7 @@ import { getContact, updateContact } from './contacts.js';
 import type { Medio } from './medios.js';
 import { emitEvent } from './events.js';
 import { getDb } from '../rag/store.js';
+import { apartarPropuestas } from './propuestas.js';
 
 // WhatsApp oficial (Meta) solo deja escribir texto libre hasta 24 h después del último mensaje del cliente; pasado ese
 // tiempo hace falta una plantilla aprobada. El chat web y WhatsApp por QR no tienen esa regla.
@@ -153,6 +154,8 @@ export async function sendToContact(
   const id = appendMessage(userId, 'assistant', text, undefined, author, by, medio);
   emitEvent('message', userId, { id, role: 'assistant', author, by: by ?? null, content: text, ts: Date.now(), media: medio });
   updateContact(userId, { unread: 0 }, { silent: true });
+  // Contestó una persona con sus palabras: lo que aiva había dejado listo aquí ya no hace falta.
+  if (author === 'human') apartarPropuestas(userId, by ?? '');
   // Lo que contesta una persona enseña cómo atiende este negocio: entra al material de aprendizaje. Del propio
   // asistente no se aprende nada (ver crm/historial.ts).
   // 🪤 De un mensaje que es solo un archivo no se aprende nada: el pie «te mando el portafolio» no enseña a

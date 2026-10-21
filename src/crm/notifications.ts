@@ -48,8 +48,9 @@ export function startNotifications() {
   onEvent((ev: CrmEvent) => {
     const p = ev.payload as Record<string, unknown>;
     if (ev.type === 'propuesta') {
-      const prop = p.propuesta as { texto?: string } | undefined;
-      push('propuesta', ev.userId, `Respuesta lista para ${nameOf(ev.userId)}`, (prop?.texto ?? '').slice(0, 120));
+      const prop = p.propuesta as { texto?: string; conPersona?: boolean } | undefined;
+      // 🪤 La que se deja mientras la lleva una persona no va a la campana: esa persona ya está en la conversación.
+      if (!prop?.conPersona) push('propuesta', ev.userId, `Respuesta lista para ${nameOf(ev.userId)}`, (prop?.texto ?? '').slice(0, 120));
     }
     if (ev.type === 'handoff' && p.on && p.by === 'bot') {
       if (p.motivo === 'tope') push('handoff', ev.userId, `${nameOf(ev.userId)} pasó al equipo`, 'Se llegó al tope de gasto de IA del mes y su mensaje necesitaba IA: contéstale desde aquí.');

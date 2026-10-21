@@ -91,6 +91,13 @@ dijo.
 escribes; en *Aiva*, vuelve a responder solo. Escribir a mano también te pasa la conversación. En WhatsApp el
 cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo número.
 
+**Cuando la llevas tú, Aiva acompaña.** Si el cliente pregunta algo que Aiva sabe —un precio, el horario, si hacen
+envíos—, deja la respuesta escrita encima del cajón con el título *Aiva puede contestar esto*. **Enviar** la manda
+tal cual (y la conversación sigue siendo tuya), **Corregir** la pasa al cajón para que la ajustes, y **Descartar** la
+quita. Nunca escribe sola, no suena y no abre nada en *Por verificar*: lo que no sabe, simplemente no lo propone, y
+tampoco se mete en saludos, citas ni en quien pide una persona. Si contestas con tus palabras, la propuesta se
+aparta. Se apaga en **Configuración › El asistente › Cuando la llevas tú**: cada pregunta que redacta es una llamada al modelo.
+
 **El perfil**, de arriba abajo:
 
 - **Quién es y qué quiere**: el nombre, por dónde escribió y, en una frase, lo que busca. Si tiene **nota fija**

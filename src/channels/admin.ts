@@ -9,7 +9,7 @@ import { engineStatus, roleLabel } from '../llm/engines.js';
 import { countDocs, getDb } from '../rag/store.js';
 import { borrarNotaInterna, guardarNotaInterna, notasInternas } from '../rag/interno.js';
 import { retratoDelNegocio } from '../rag/retrato.js';
-import { cerrarPropuesta, propuestaDe, propuestasPendientes, verPropuesta } from '../crm/propuestas.js';
+import { cerrarPropuesta, ponerSugiereConPersona, propuestaDe, propuestasPendientes, sugiereConPersona, verPropuesta } from '../crm/propuestas.js';
 import { genteDelGrupo } from '../crm/grupo-gente.js';
 import { getMessages } from '../agent/memory.js';
 import { addEvent, contactNumber, deleteContact, rolDe, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
@@ -1396,8 +1396,22 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       models: { chat: env.chatModel, embed: env.embedModel, openai: env.openaiModel },
       docs: countDocs(),
       publicUrl: env.publicUrl || `http://localhost:${env.port}`,
+      // Si deja respuestas listas cuando la conversación la lleva una persona (crm/propuestas.ts).
+      sugiereConPersona: sugiereConPersona(),
     }),
   );
+
+  /**
+   * Que aiva acompañe cuando la lleva una persona: lo que el cliente pregunte y aiva sepa, queda redactado encima
+   * del cajón de quien atiende. Es del negocio, no de quien administra aiva: cuesta una llamada al modelo por
+   * mensaje mientras alguien la lleva, y eso lo decide quien paga.
+   */
+  app.put('/admin/api/agent/sugiere', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { on?: unknown };
+    if (typeof body.on !== 'boolean') return c.json({ error: 'on requerido (true o false)' }, 400);
+    ponerSugiereConPersona(body.on);
+    return c.json({ ok: true, sugiereConPersona: sugiereConPersona() });
+  });
 
   app.get('/admin/api/knowledge', (c) => {
     const q = (c.req.query('q') || '').trim();

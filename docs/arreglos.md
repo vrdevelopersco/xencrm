@@ -9,6 +9,26 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-21
 
+### Cuando la lleva una persona, aiva deja lista la respuesta a lo que sabe · `fd1055d`
+De la comparación con Boba, el usuario tomó lo de «se mete en la charla cuando es útil» y escogió dónde: en la
+conversación que lleva una persona, no en los grupos. Hasta hoy aiva se callaba del todo ahí. Ahora, si el cliente
+pregunta un producto o un dato de la tienda que aiva sabe, la respuesta queda escrita encima del cajón con el título
+*Aiva puede contestar esto*. Quien atiende la envía, la corrige o la descarta, y la conversación sigue siendo suya.
+Es la misma propuesta del modo «Propone», marcada `con_persona`.
+- **Nunca escribe sola ahí:** ni la respuesta ni el «dame un segundito», que se colaba igual que en «Propone».
+- 🪤 **Solo lo que sabe:** un «déjame verificar», una cifra o una afirmación sin respaldo, una promesa o una cita
+  inventada no se dejan, y tampoco abren *Por verificar* ni avisan. Saludos, citas y «quiero hablar con alguien»
+  no se redactan.
+- 🪤 **Sin reintentos:** fuera de este modo, lo que no se sostiene se rehace pagando otra llamada. Aquí no: una
+  redacción por mensaje como máximo, más el clasificador (que no se tocó). Una cita a medias o el tope de gasto
+  cortan antes, sin gastar nada.
+- **Sin campana:** la persona ya recibió el mensaje del cliente; la propuesta aparece en la conversación y punto.
+- **Si contesta con sus palabras**, lo que aiva dejó se aparta, en vez de quedarse diciendo «se quedó atrás».
+- Se apaga por cliente en **Configuración › El asistente › Cuando la llevas tú** (`PUT /admin/api/agent/sugiere`). Viene encendido.
+
+Son 47 comprobaciones en `test:sugiere`, y dos roturas puestas a propósito (el aviso sin el freno, rehacer lo que
+no tenía respaldo) las detectan. Con el ajuste apagado todo es como antes: callada, sin una llamada al modelo.
+
 ### Más sencillo para quien empieza: el perfil al lado del chat y cinco secciones · `4ed68be`
 Al usuario le dijeron que aiva es «complejo de usar» y le sugirieron la cara de Vocero, con su insistencia en «el
 perfil del cliente». Comparado con capturas de los dos, el perfil ya existía y era mejor que el de Vocero, pero
