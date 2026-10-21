@@ -748,7 +748,7 @@
         + antes.map(burbujaDeAntes).join('')
         + '<div class="sysline">Desde aquí lo lleva aiva</div>'
       : '') + d.messages.map(bubble).join('');
-    if (c.humanMode) m.insertAdjacentHTML('beforeend', '<div class="sysline">Aiva está en pausa: esta conversación la lleva ' + esc(whoHas(c)) + (c.humanSince ? ' desde hace ' + rel(c.humanSince) : '') + '.</div>');
+    if (c.humanMode) m.insertAdjacentHTML('beforeend', '<div class="sysline">' + esc(state.agentName || 'Aiva') + ' está en pausa: esta conversación la lleva ' + esc(whoHas(c)) + (c.humanSince ? ' desde hace ' + rel(c.humanSince) : '') + '.</div>');
     pintarAdjuntos(m);
     m.scrollTop = m.scrollHeight;
   }
@@ -764,7 +764,7 @@
     // 🪤 `by` es el nombre de quien contestó, y NO siempre lo escribe alguien de la casa: de un chat de WhatsApp
     // importado sale tal cual del archivo. Sin escapar, quien mandó ese chat ejecuta JavaScript en la pantalla
     // de quien atiende —y de ahí se lleva el token del tablero—. Comprobado: se ejecutaba.
-    var label = who === 'customer' ? 'Cliente' : who === 'human' ? (msg.by ? esc(msg.by) + ' (equipo)' : 'Equipo') : 'Aiva';
+    var label = who === 'customer' ? 'Cliente' : who === 'human' ? (msg.by ? esc(msg.by) + ' (equipo)' : 'Equipo') : esc(state.agentName || 'Aiva');
     // «¿por qué?»: el turno que produjo esta respuesta (src/crm/turnos.ts). Solo para quien administra, por ruido.
     var porQue = who === 'bot' && msg.turno && esAdmin()
       ? '<button class="por-que" type="button" data-turno="' + esc(msg.turno) + '" aria-expanded="false">¿por qué?</button>' : '';
@@ -920,7 +920,7 @@
     // conversación había que acordarse de mover un interruptor ANTES de tener nada que decir — y lo natural es
     // al revés: uno empieza a escribir. Ahora escribir es la señal, como contestar desde el teléfono.
     $('composer-hint').hidden = human;
-    $('composer-hint').innerHTML = 'Contesta Aiva. <b>Si escribes aquí, se queda callada</b> en esta conversación.';
+    $('composer-hint').innerHTML = 'Contesta ' + esc(state.agentName || 'Aiva') + '. <b>Si escribes aquí, se queda callada</b> en esta conversación.';
     $('reply').hidden = false; $('send').hidden = !human;
     // 🪤 El botón de adjuntar solo donde el canal sabe entregarlo. Ofrecerlo en el chat del sitio sería prometer
     // algo que no pasa: el archivo quedaría en la conversación y el cliente no lo recibiría nunca.
@@ -942,7 +942,7 @@
         // 🪤 Lo que ya había escrito NO se pierde al recargar la conversación: es trabajo suyo.
         $('reply').value = loEscrito;
         $('reply').focus();
-        toast('Tomaste esta conversación: Aiva se queda callada aquí');
+        toast('Tomaste esta conversación: ' + (state.agentName || 'Aiva') + ' se queda callada aquí');
       })
       .finally(function () { tomando = false; });
   });
@@ -1276,15 +1276,15 @@
               + '<button class="btn sm primary" data-gr-si="' + p.id + '">Enviar al grupo</button>'
               + '<button class="btn sm" data-gr-no="' + p.id + '">Descartar</button></div></div></div>';
           }).join(''), empty: 'Nadie te ha escrito en un grupo.' },
-        { t: 'Esperan tu respuesta', n: t.unanswered.length, html: t.unanswered.map(function (c) { return contactRow(c, c.humanMode ? 'La última palabra la tiene el cliente y Aiva está en pausa.' : 'La última palabra la tiene el cliente y Aiva no respondió.'); }).join(''), empty: 'Nadie espera respuesta de una persona.' },
-        { t: 'Pidieron una persona', n: t.handoffs.length, html: t.handoffs.map(function (c) { return contactRow(c); }).join(''), empty: 'Aiva lleva todas las conversaciones.' },
+        { t: 'Esperan tu respuesta', n: t.unanswered.length, html: t.unanswered.map(function (c) { return contactRow(c, c.humanMode ? 'La última palabra la tiene el cliente y ' + (state.agentName || 'Aiva') + ' está en pausa.' : 'La última palabra la tiene el cliente y ' + (state.agentName || 'Aiva') + ' no respondió.'); }).join(''), empty: 'Nadie espera respuesta de una persona.' },
+        { t: 'Pidieron una persona', n: t.handoffs.length, html: t.handoffs.map(function (c) { return contactRow(c); }).join(''), empty: (state.agentName || 'Aiva') + ' lleva todas las conversaciones.' },
         { t: '¿Cómo les fue? (citas que ya pasaron)', n: (t.past || []).length, html: (t.past || []).map(pastItem).join(''), empty: 'Ninguna cita pasada sin resultado.' },
         { t: 'Recordar a mano', n: (t.remind || []).length, html: (t.remind || []).map(remindItem).join(''), empty: 'Los recordatorios de mañana salen solos.' },
         { t: 'Citas de hoy', n: t.appointments.length, html: t.appointments.map(function (a) { return '<div class="appt"><span class="t">' + esc(a.label) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b> <span class="muted small">' + esc(a.service + conSede(a)) + '</span>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Sin citas hoy.' },
         { t: 'Calientes sin seguimiento (más de 24 h)', n: t.hot.length, html: t.hot.map(function (c) {
           return contactRow(c, null, '<button class="btn sm primary" data-follow="' + esc(c.id) + '">Escribirle</button><button class="btn sm" data-snooze="' + esc(c.id) + '">Dejarlo por ahora</button>');
         }).join(''), empty: 'Ningún prospecto caliente abandonado.' },
-        { t: 'Sin leer, Aiva ya respondió', n: t.unread.length, html: t.unread.map(function (c) { return contactRow(c); }).join(''), empty: 'Todo leído.' },
+        { t: 'Sin leer, ' + (state.agentName || 'Aiva') + ' ya respondió', n: t.unread.length, html: t.unread.map(function (c) { return contactRow(c); }).join(''), empty: 'Todo leído.' },
         { t: 'Próximas citas (3 días)', n: t.upcoming.length, html: t.upcoming.map(function (a) { return '<div class="appt"><span class="grow stack"><span class="small muted">' + esc(a.label + conSede(a)) + '</span><b>' + esc(a.contactName || short(a.userId)) + '</b>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Nada agendado en los próximos días.' },
       ];
       var down = t.public && (t.public.state === 'caida' || t.public.state === 'otro_servidor')
@@ -2583,7 +2583,7 @@
           '<button class="btn sm" data-grupos="' + ch.id + '" data-set="' + (ch.grupos ? '0' : '1') + '">' +
             (ch.grupos ? 'Dejar de ver los grupos' : 'Ver también los grupos') + '</button>' +
           '<span class="small muted">' + (ch.grupos
-            ? 'Aiva aprende de lo que se habla en los grupos. Nunca escribe en ellos.'
+            ? (state.agentName || 'Aiva') + ' aprende de lo que se habla en los grupos. Nunca escribe en ellos.'
             : 'Los grupos se ignoran: ni se guardan ni se aprenden.') + '</span>' +
         '</div>';
       // Cuando WhatsApp no levanta, lo primero que hay que saber es si este servidor puede siquiera hablar con
@@ -3982,6 +3982,9 @@
       if ($('marca-btn')) $('marca-btn').title = me.business || 'Inicio';
       pintarQuienSoy();
       state.bizName = me.business; state.agentName = me.agent;
+      // 🪤 El asistente no siempre se llama Aiva (el de DUNOR en el paquete se llama Arthur): lo que el HTML trae escrito
+      // con «Aiva» se cambia aquí, al saberse el nombre. Lo que pinta el JavaScript usa state.agentName.
+      if (me.agent && $('seg-bot')) $('seg-bot').textContent = me.agent;
       state.sedes = me.sedes || [];
       // El logo del negocio en su propia barra: entrar a su tablero tiene que sentirse suyo, no de aiva.
       if (me.logo) {
@@ -4453,7 +4456,7 @@
         '</div>';
       if (d.respondidas) {
         html += '<div class="tiempos-quien">' +
-          '<span class="chip">Aiva: ' + d.porQuien.aiva.n + ' · ' + duracion(d.porQuien.aiva.medianaMs) + '</span>' +
+          '<span class="chip">' + esc(state.agentName || 'Aiva') + ': ' + d.porQuien.aiva.n + ' · ' + duracion(d.porQuien.aiva.medianaMs) + '</span>' +
           '<span class="chip">Personas: ' + d.porQuien.persona.n + ' · ' + duracion(d.porQuien.persona.medianaMs) + '</span>' +
           d.personas.map(function (p) { return '<span class="chip who">' + esc(p.nombre) + ': ' + duracion(p.medianaMs) + ' (' + p.n + ')</span>'; }).join('') +
           '</div>';

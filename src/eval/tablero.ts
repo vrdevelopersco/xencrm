@@ -395,5 +395,11 @@ check('se vuelve a mirar al volver a la pestaña y al cerrar el perfil o El nego
 check('el hueco de la guía en Hoy no ocupa una columna cuando está vacío', /\.guia-hoy-sitio\{grid-column:1 \/ -1\}/.test(html) && /\.guia-hoy-sitio:empty\{display:none\}/.test(html));
 check('si la guía no llega, Hoy cae al tutorial de siempre y no deja un hueco', /if \(!state\.guia\) return state\.guiaFallo \? helpBanner\(\) : ''/.test(js));
 
+// 🪤 Multicliente: el asistente no siempre se llama Aiva (en el paquete, el de DUNOR es Arthur). Ningún texto que se
+// le enseña a quien atiende puede llevar «Aiva» escrito a mano; va state.agentName, con «Aiva» solo de respaldo.
+const conAivaFijo = js.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l) && /'[^'\n]*\bAiva\b[^'\n]*'/.test(l.replace(/state\.agentName \|\| 'Aiva'|a\.agent\.name \|\| 'Aiva'/g, '')));
+check('ningún texto del tablero lleva «Aiva» fijo en vez del nombre del asistente', conAivaFijo.length === 0, conAivaFijo.map((l) => l.trim().slice(0, 90)).join(' | '));
+check('el «Responde: Aiva | Tú» dice el nombre de este asistente', /if \(me\.agent && \$\('seg-bot'\)\) \$\('seg-bot'\)\.textContent = me\.agent;/.test(js));
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);
