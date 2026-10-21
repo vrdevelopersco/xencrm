@@ -7,6 +7,30 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-10-21
+
+### Más sencillo para quien empieza: el perfil al lado del chat y cinco secciones · `4ed68be`
+Al usuario le dijeron que aiva es «complejo de usar» y le sugirieron la cara de Vocero, con su insistencia en «el
+perfil del cliente». Comparado con capturas de los dos, el perfil ya existía y era mejor que el de Vocero, pero
+estaba escondido: al lado de la conversación había un formulario. Ahora ese panel es el perfil (quién es, qué
+quiere, Detalles, «Lo que contó», citas, historia) y el formulario quedó detrás de **Corregir datos**. El riel bajó de
+ocho secciones a cinco, y Prospectos, Seguimientos y Ventas son pestañas dentro de Clientes y Análisis: el usuario
+pidió que no se viera cargado pero que quien sepa pueda «necear para exprimir aiva». Detalle en
+`diseno-tablero.md` › «Más sencillo para quien empieza».
+- 🪤 **Tarjetas aplastadas en Por etapa:** con una columna llena, cada tarjeta medía 48 px y su contenido 166. Venía
+  del `overflow:hidden` de la piel del 2026-10-02, y DUNOR lo tenía así en producción.
+- 🪤 **El panel borraba lo que se escribía:** se repinta con cada análisis. Una nota a medias o un nombre corregido
+  se perdían en mitad de la frase. Ahora se guardan y se devuelven, solo si es la misma persona.
+- **Visitantes y datos con nombre de persona:** «Visitante del sitio · 44fa» en vez de «web · 44fa379b», y
+  «Ocasión» en vez de «ocasion». El borrador para retomar saluda con el nombre de verdad, no con «Hola Visitante».
+- **En el celular** el perfil tapaba la conversación sin forma de volver; ahora tiene **‹ Volver a la conversación**.
+
+Son 15 comprobaciones nuevas en `test:tablero`. Tres roturas puestas a propósito (sin `flex-shrink:0`, sin devolver
+los borradores, sacando Seguimientos del área) las detecta. Se miró con capturas de Chrome sin pantalla a 1440 y a
+390 px, y en el navegador se probó el repintado: con un análisis disparado a mano, el nombre a medias, la nota y
+los desplegables abiertos siguen ahí, y al abrir otra conversación no se arrastra nada. Batería completa: 1974 ✓,
+0 ✗, y `tsc` limpio.
+
 ## 2026-10-19
 
 ### Quién entró a la consola, en `/_salud` con su token · `5b9fa5b`
