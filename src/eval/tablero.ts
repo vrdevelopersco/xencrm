@@ -280,7 +280,9 @@ check('la búsqueda global no se llama como los colores de la marca', /dialog\.b
 // 🪤 Trampa 3 de diseno-tablero.md: lo que el JavaScript engancha al cargar tiene que estar ANTES del <script>, o
 // un `null.onclick` tumba el tablero entero.
 const antesDelScript = html.slice(0, html.indexOf('<script src="admin.js'));
-const enganchados = ['pf-ant', 'pf-sig', 'pf-fijar', 'pf-pos', 'pf-nav', 'pf-ini', 'marcar-leidas', 'rail-listas', 'pip-cifras', 'cuenta-cli', 'cli-filtros'];
+const enganchados = ['pf-ant', 'pf-sig', 'pf-fijar', 'pf-pos', 'pf-nav', 'pf-ini', 'marcar-leidas', 'rail-listas', 'pip-cifras', 'cuenta-cli', 'cli-filtros',
+  // La guía de inicio engancha el cierre de estos dos diálogos al cargar (2026-10-21).
+  'dlg-config', 'dlg-yo', 'guia', 'guia-sub'];
 // (cuenta-pip ya no está en el HTML: va en la pestaña «Por etapa», que arma el JavaScript; ver la prueba de las áreas.)
 const faltan = enganchados.filter((id) => !antesDelScript.includes(`id="${id}"`));
 check('🪤 lo que se engancha al cargar existe antes del <script>', html.includes('<script src="admin.js') && faltan.length === 0, `faltan antes del script: ${faltan.join(', ')}`);
@@ -376,6 +378,22 @@ check('🪤 la insignia de seguimientos se pide con las cuentas, no solo al entr
 check('🪤 un archivo que ya se borró dice que ya no está, no que algo falló', /estado === 404 \? 'Esta foto ya no está guardada'/.test(js) && /estado === 404 \? 'Ese archivo ya no está guardado\.'/.test(js));
 const agenteJs = readFileSync(new URL('../agent/agent.ts', import.meta.url), 'utf8');
 check('🪤 una respuesta rápida que solo se propuso no cuenta como usada', /if \(!acompana\) anotarUso\(rapida\.respuesta\.id\)/.test(agenteJs));
+
+// — La guía de inicio (2026-10-21): lo que falta para que el asistente atienda solo. Lo marca el servidor.
+const guiaJs = js.slice(js.indexOf('// ---------- la guía de inicio ----------'), js.indexOf("document.addEventListener('visibilitychange'"));
+check('la guía está en Configuración, arriba de todo y solo para quien administra',
+  /var CFG_CLIENTE = \[[\s\S]{0,400}?\{ view: 'guia', ic: 'check', lbl: 'Guía de inicio', soloAdmin: true \},\s*(\/\/[^\n]*\n\s*)*\{ view: 'profile'/.test(js),
+  'la entrada tiene que ir primera en CFG_CLIENTE y con soloAdmin, que se filtra con visiblePara en los tres menús');
+check('la guía es una pantalla de Configuración que se carga al entrar', /CFG_VIEWS = \{ guia: 1,/.test(js) && /if \(view === 'guia'\) cargarGuia\(\);/.test(js) && html.includes('id="view-guia"'));
+check('🪤 en Hoy, la tarjeta de la guía es solo para quien administra; el asesor sigue con el tutorial',
+  /function bannerDeHoy\(\) \{\s*if \(!esAdmin\(\)\) return helpBanner\(\);/.test(js) && /function pintarGuiaEnHoy\(\) \{\s*if \(!esAdmin\(\)/.test(js) && /\+ bannerDeHoy\(\) \+/.test(js));
+check('🪤 un paso hecho lo dice el servidor, no el navegador: la guía no guarda pasos en localStorage',
+  !/localStorage\.setItem\(LLAVE\('guia-(paso|hecho)/.test(guiaJs) && (guiaJs.match(/localStorage\.setItem/g) || []).length === 1 && /LLAVE\('guia-oculta'\)/.test(guiaJs),
+  'lo único que se guarda en el navegador es «Ocultar por ahora»');
+check('se vuelve a mirar al volver a la pestaña y al cerrar el perfil o El negocio, no con un temporizador',
+  /visibilitychange', function \(\) \{ if \(!document\.hidden && state\.view === 'guia'\) cargarGuia\(\)/.test(js) && /\['dlg-config', 'dlg-yo'\]\.forEach/.test(js) && !/setInterval\([^)]*cargarGuia/.test(js));
+check('el hueco de la guía en Hoy no ocupa una columna cuando está vacío', /\.guia-hoy-sitio\{grid-column:1 \/ -1\}/.test(html) && /\.guia-hoy-sitio:empty\{display:none\}/.test(html));
+check('si la guía no llega, Hoy cae al tutorial de siempre y no deja un hueco', /if \(!state\.guia\) return state\.guiaFallo \? helpBanner\(\) : ''/.test(js));
 
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

@@ -390,6 +390,9 @@
   // El nombre del asistente es del cliente; el tuyo es tuyo; la consola es de aiva. Confundir esos tres niveles
   // costó cuatro entregas persiguiendo un nombre que se «cruzaba entre clientes». Aquí se dice en voz alta.
   var CFG_CLIENTE = [
+    // Arriba de todo: es lo primero que hay que hacer con un negocio nuevo. Solo para quien administra, porque
+    // cada paso lleva a una pantalla que un asesor no toca (el perfil, el catálogo, los canales).
+    { view: 'guia', ic: 'check', lbl: 'Guía de inicio', soloAdmin: true },
     { view: 'profile', ic: 'store', lbl: 'Perfil del negocio' },
     { view: 'negocio', ic: 'sliders', lbl: 'El negocio' },
     { view: 'agent', ic: 'bot', lbl: 'El asistente' },
@@ -512,10 +515,10 @@
   // ---------- el panel de la sección ----------
   // 🪤 Solo aparece donde tiene algo que decir. Un panel vacío a la izquierda «para que se vea simétrico» es
   // espacio robado a lo único que importa en esta pantalla, que es la conversación.
-  var CFG_VIEWS = { agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1 };
+  var CFG_VIEWS = { guia: 1, agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1 };
   // 🪤 En las pantallas de configuración el panel decía lo mismo que el título de la página, dos veces en la
   // misma fila. Aquí dice el ÁREA —dónde estás— y la lista de abajo dice la pantalla: cada uno aporta algo.
-  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Clientes', clientes: 'Clientes', ventas: 'Análisis', seguimientos: 'Clientes', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración', trazas: 'Configuración' };
+  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Clientes', clientes: 'Clientes', ventas: 'Análisis', seguimientos: 'Clientes', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración', trazas: 'Configuración', guia: 'Configuración' };
   function pintarPanel(view) {
     var panel = $('subnav');
     if (!panel) return;
@@ -596,6 +599,7 @@
     if (view === 'analysis') loadAnalysis();
     if (view === 'agent') loadAgent();
     if (view === 'help') loadHelp();
+    if (view === 'guia') cargarGuia();
     if (view === 'channels') loadChannels();
     // Al entrar se pasa por pestanaSabe y no por loadKnowledge a secas: es pestanaSabe quien decide qué
     // pestaña está puesta y qué se enseña con ella. Llamando solo a loadKnowledge, la pantalla salía con la
@@ -1288,7 +1292,7 @@
         : '';
       // Cada sección con su color: lo urgente no puede verse igual que lo que ya está resuelto.
       var TONOS = ['verificar', 'esperan', 'persona', 'pasadas', 'recordar', 'citas', 'calientes', 'leidas', 'proximas'];
-      $('today').innerHTML = down + helpBanner() + sections.map(function (s, i) {
+      $('today').innerHTML = down + bannerDeHoy() + sections.map(function (s, i) {
         return '<div class="panel" data-tono="' + (TONOS[i] || '') + '"><h3>' + esc(s.t) + '<span class="chip">' + s.n + '</span></h3>' +
           (s.html || '<div class="ok">' + esc(s.empty) + '</div>') + '</div>';
       }).join('');
@@ -1316,6 +1320,7 @@
       $('today').querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-open')); }; });
       $('today').querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
       if ($('help-hide')) $('help-hide').onclick = function () { helpSet('aiva.help.seen', true); loadToday(); };
+      pintarGuiaEnHoy();
       bindVerifyItems();
       $('today').querySelectorAll('[data-follow]').forEach(function (b) {
         b.onclick = function (e) {
@@ -1950,6 +1955,114 @@
     return '<div class="panel help-first"><span class="grow"><b>¿Primera vez aquí?</b> <span class="small">El tutorial rápido te muestra lo esencial en dos minutos.</span></span>' +
       '<button class="btn primary" data-go="help">Ver tutorial</button><button class="btn" id="help-hide">No mostrar más</button></div>';
   }
+
+  // ---------- la guía de inicio ----------
+  // Lo que falta para que el asistente atienda solo. 🪤 Cada paso lo marca el SERVIDOR mirando lo que de verdad hay
+  // (crm/guia.ts), no un «ya lo hice» guardado aquí como el tutorial: un paso marcado y un paso hecho son lo mismo.
+  // Solo el del nombre se arma aquí, porque el nombre es de quien mira, no del negocio.
+  //
+  // 🪤 Se vuelve a pedir al entrar y al volver a la pestaña, no con un temporizador: lo normal es salir a otra
+  // pantalla o a otra pestaña (Meta, el catálogo en Excel) a arreglar el paso y volver a mirar si quedó.
+  var ACCION_GUIA = { profile: 'Abrir el perfil', knowledge: 'Ir a Lo que sabe', channels: 'Ir a Canales', negocio: 'Abrir El negocio', agent: 'Ir a El asistente', nombre: 'Poner mi nombre' };
+  function pasosDeLaGuia(d) {
+    var pasos = (d && d.pasos ? d.pasos : []).slice();
+    var nombre = { id: 'nombre', titulo: 'Pon con qué nombre respondes', hecho: Boolean(state.name), opcional: false, ir: 'nombre',
+      falta: state.name ? '' : 'En WhatsApp tu nombre va antes de cada mensaje que escribes: sin él, el cliente no sabe quién le habla.' };
+    // Antes de los opcionales: es obligatorio y se hace en un minuto.
+    var i = pasos.findIndex(function (p) { return p.opcional; });
+    pasos.splice(i < 0 ? pasos.length : i, 0, nombre);
+    return pasos;
+  }
+  function cuentaGuia(pasos) {
+    var obligatorios = pasos.filter(function (p) { return !p.opcional; });
+    var hechos = obligatorios.filter(function (p) { return p.hecho; }).length;
+    return { total: obligatorios.length, hechos: hechos, siguiente: obligatorios.filter(function (p) { return !p.hecho; })[0] || null };
+  }
+  function irAlPaso(ir) { if (ir === 'nombre') $('foot-user').click(); else go(ir); }
+  function cargarGuia() {
+    if (!$('guia')) return Promise.resolve();
+    if (!state.guia) $('guia').innerHTML = '<div class="small muted">Revisando qué falta…</div>';
+    var fallo = function (msg) {
+      $('guia').innerHTML = '<div class="empty">No se pudo revisar la guía' + (msg ? ': ' + esc(msg) : '') + '. <button class="linkbtn" id="guia-otra">Intentar otra vez</button></div>';
+      $('guia-otra').onclick = cargarGuia;
+    };
+    return api('/guia').catch(function () { return { error: 'no hubo respuesta del servidor' }; }).then(function (d) {
+      if (!d || d.error) { fallo(d && d.error); return; }
+      state.guia = d;
+      pintarGuia();
+    });
+  }
+  function pintarGuia() {
+    var d = state.guia; if (!d || !$('guia')) return;
+    var ag = esc(d.agente || state.agentName || 'el asistente');
+    var pasos = pasosDeLaGuia(d), n = cuentaGuia(pasos);
+    $('guia-sub').textContent = 'Lo que falta para que ' + (d.agente || state.agentName || 'el asistente') + ' atienda solo';
+    $('guia').innerHTML =
+      '<div class="guia-cab"><b>Deja listo a ' + ag + ' en ' + n.total + ' pasos</b>' +
+        '<div class="guia-barra" role="progressbar" aria-label="Pasos listos" aria-valuemin="0" aria-valuemax="' + n.total + '" aria-valuenow="' + n.hechos + '"><i style="width:' + Math.round(100 * n.hechos / Math.max(1, n.total)) + '%"></i></div>' +
+        '<span class="small muted">' + n.hechos + ' de ' + n.total + ' listos</span></div>' +
+      (n.siguiente ? '' : '<div class="panel guia-fin"><b>Todo listo: ' + ag + ' ya atiende solo.</b> <span class="small">Lo opcional de abajo lo mejora, pero no hace falta para empezar.</span></div>') +
+      '<ol class="guia-pasos">' + pasos.map(function (p) {
+        var esSiguiente = n.siguiente && n.siguiente.id === p.id;
+        var accion = ACCION_GUIA[p.ir] || 'Ir';
+        return '<li class="guia-paso ' + (p.hecho ? 'hecho' : esSiguiente ? 'siguiente' : 'pendiente') + '" data-paso="' + esc(p.id) + '">' +
+          '<span class="guia-marca" aria-hidden="true">' + (p.hecho ? '✓' : '') + '</span>' +
+          // 🪤 El ámbar es para lo que urge: lo opcional que falta va en gris. Y lo hecho no repite «listo»: ya lo
+          // dicen el ✓ y su botón.
+          '<div class="grow"><b>' + esc(p.titulo) + '</b>' + (p.opcional ? ' <span class="chip">Opcional</span>' : '') +
+            (p.hecho ? '' : '<div class="small ' + (p.opcional ? 'muted' : 'guia-falta') + '">' + esc(p.falta) + '</div>') + '</div>' +
+          (p.hecho
+            ? '<button class="btn sm" data-guia-ir="' + esc(p.ir) + '">Listo · revisar</button>'
+            : '<button class="btn' + (esSiguiente ? ' primary' : '') + '" data-guia-ir="' + esc(p.ir) + '">' + esc(accion) + '</button>') +
+          '</li>';
+      }).join('') + '</ol>';
+    $('guia').querySelectorAll('[data-guia-ir]').forEach(function (b) { b.onclick = function () { irAlPaso(b.getAttribute('data-guia-ir')); }; });
+  }
+
+  // En Hoy, para quien administra y mientras falte algo obligatorio, la guía en una línea en vez del tutorial. El
+  // asesor sigue viendo el tutorial: los pasos de la guía son de quien administra.
+  function guiaOculta() {
+    try { return Number(localStorage.getItem(LLAVE('guia-oculta')) || 0) > Date.now(); } catch (e) { return false; }
+  }
+  function bannerDeHoy() {
+    if (!esAdmin()) return helpBanner();
+    // Un sitio reservado: se llena cuando llega la guía. Con lo último que se supo, para que Hoy no salte.
+    return '<div id="guia-hoy" class="guia-hoy-sitio">' + tarjetaGuiaHoy() + '</div>';
+  }
+  function tarjetaGuiaHoy() {
+    // Si la guía no llegó, el tutorial de siempre: mejor eso que un hueco.
+    if (!state.guia) return state.guiaFallo ? helpBanner() : '';
+    var pasos = pasosDeLaGuia(state.guia), n = cuentaGuia(pasos);
+    if (!n.siguiente || guiaOculta()) return helpBanner();
+    var ag = esc(state.guia.agente || state.agentName || 'el asistente');
+    return '<div class="panel help-first guia-hoy"><span class="grow"><b>Deja listo a ' + ag + ': ' + n.hechos + ' de ' + n.total + '</b> ' +
+      '<span class="small">Siguiente: ' + esc(n.siguiente.titulo) + '. <span class="guia-falta">' + esc(n.siguiente.falta) + '</span></span></span>' +
+      '<button class="btn primary" data-guia-ir="' + esc(n.siguiente.ir) + '">' + esc(ACCION_GUIA[n.siguiente.ir] || 'Ir') + '</button>' +
+      '<button class="btn" data-go="guia">Ver la guía</button><button class="btn" id="guia-ocultar">Ocultar por ahora</button></div>';
+  }
+  function pintarGuiaEnHoy() {
+    if (!esAdmin() || !$('guia-hoy')) return;
+    var pintar = function () {
+      var sitio = $('guia-hoy'); if (!sitio) return;
+      sitio.innerHTML = tarjetaGuiaHoy();
+      sitio.querySelectorAll('[data-guia-ir]').forEach(function (b) { b.onclick = function () { irAlPaso(b.getAttribute('data-guia-ir')); }; });
+      sitio.querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
+      if ($('help-hide')) $('help-hide').onclick = function () { helpSet('aiva.help.seen', true); loadToday(); };
+      // «Por ahora» es una semana, como «Dejarlo por ahora» en los seguimientos: después vuelve, si sigue faltando.
+      if ($('guia-ocultar')) $('guia-ocultar').onclick = function () { try { localStorage.setItem(LLAVE('guia-oculta'), String(Date.now() + 7 * 86400000)); } catch (e) {} pintar(); };
+    };
+    pintar();
+    api('/guia').then(function (d) {
+      if (d && !d.error) state.guia = d; else state.guiaFallo = true;
+      pintar();
+    }).catch(function () { state.guiaFallo = true; pintar(); });
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && state.view === 'guia') cargarGuia(); });
+  // Al cerrar el perfil, El negocio o «con qué nombre respondes» se vuelve a mirar: es donde se arreglan los pasos.
+  ['dlg-config', 'dlg-yo'].forEach(function (id) {
+    var dlg = $(id); if (!dlg) return;
+    dlg.addEventListener('close', function () { if (state.view === 'guia') cargarGuia(); });
+  });
 
   // ---------- perfil del negocio ----------
   // Lo confirmado es lo que el bot dice; lo vacío queda "por confirmar" (si preguntan, el bot dice que lo verifica).

@@ -9,6 +9,30 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-21
 
+### Guía de inicio: los pasos se marcan solos · `b9e6f9d`
+El usuario la pidió después de ver la de Vocero: pasos que quedan listos cuando de verdad lo están, con el motivo
+exacto de lo que falta. El tutorial de Ayuda no servía para eso: explica el tablero y guarda «ya lo hice» en el
+navegador, así que puede decir que algo está hecho sin estarlo. `GET /admin/api/guia` (`src/crm/guia.ts`) mira lo
+mismo que el asistente para contestar, sin modelo y sin red:
+- **Perfil:** dirección, horarios y formas de pago, que es lo que más preguntan («Faltan los horarios y las formas
+  de pago»).
+- **Lo que ofrece:** catálogo o información en Lo que sabe. Los **precios** van aparte, opcionales y solo si hay
+  productos (al fusionar: con un solo paso, un negocio sin precio de lista nunca completaba la guía).
+- **Canal:** WhatsApp recibiendo, o el chat del sitio encendido con la dirección pública respondiendo, según el
+  último chequeo.
+- **Prueba:** que haya escrito alguien de verdad; la demostración y los grupos no cuentan.
+- **Citas:** solo si el negocio agenda. 🪤 El horario siempre tiene valor, el de ejemplo, y el asistente ofrecería
+  esas horas como si fueran las del negocio: hecho es que alguien lo haya escrito en el archivo.
+- **Nombre** de quien atiende, que se arma en el navegador, y el **calendario**, opcional.
+
+Está en Configuración › Guía de inicio, solo para quien administra. En Hoy, una línea con el siguiente paso y su
+botón reemplaza al «¿Primera vez aquí?» mientras falte algo obligatorio; **Ocultar por ahora** la quita una semana,
+y el asesor sigue viendo el tutorial. Son 32 comprobaciones en `test:guia` y 7 en `test:tablero`. Dos roturas
+puestas a propósito (contar la demo como prueba, enseñarle la tarjeta al asesor) las detecta. Se miró a 1440 y 390
+px contra un servidor aparte con una copia de la base, y otra vez ya fusionada con las tarjetas nuevas: con los
+datos locales de DUNOR quedan 4 de 6 (faltan el perfil y la dirección pública; los precios, opcionales). Batería
+completa ya fusionada: 2080 ✓, 0 ✗, y `tsc` limpio.
+
 ### Tarjetas más simples y cuatro arreglos del tablero · `2e4f8ba`
 El usuario pidió tarjetas más simples. Cada tarjeta de **Por etapa** llevaba ocho cosas (puntaje, días, nombre,
 resumen, próximo paso, quién la lleva, canal, sin leer) más un selector a todo el ancho. Ahora cada pieza sale solo
