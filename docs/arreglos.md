@@ -9,6 +9,29 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-21
 
+### Guía de inicio: los pasos se marcan solos · `b9e6f9d`
+El usuario la pidió después de ver la de Vocero: pasos que quedan listos cuando de verdad lo están, con el motivo
+exacto de lo que falta. El tutorial de Ayuda no servía para eso: explica el tablero y guarda «ya lo hice» en el
+navegador, así que puede decir que algo está hecho sin estarlo. `GET /admin/api/guia` (`src/crm/guia.ts`) mira lo
+mismo que el asistente para contestar, sin modelo y sin red:
+- **Perfil:** dirección, horarios y formas de pago, que es lo que más preguntan («Faltan los horarios y las formas
+  de pago»).
+- **Catálogo:** productos y al menos uno con precio, con la misma regla de precio que el embudo.
+- **Canal:** WhatsApp recibiendo, o el chat del sitio encendido con la dirección pública respondiendo, según el
+  último chequeo.
+- **Prueba:** que haya escrito alguien de verdad; la demostración y los grupos no cuentan.
+- **Citas:** solo si el negocio agenda. 🪤 El horario siempre tiene valor, el de ejemplo, y el asistente ofrecería
+  esas horas como si fueran las del negocio: hecho es que alguien lo haya escrito en el archivo.
+- **Nombre** de quien atiende, que se arma en el navegador, y el **calendario**, opcional.
+
+Está en Configuración › Guía de inicio, solo para quien administra. En Hoy, una línea con el siguiente paso y su
+botón reemplaza al «¿Primera vez aquí?» mientras falte algo obligatorio; **Ocultar por ahora** la quita una semana,
+y el asesor sigue viendo el tutorial. Son 32 comprobaciones en `test:guia` y 7 en `test:tablero`. Dos roturas
+puestas a propósito (contar la demo como prueba, enseñarle la tarjeta al asesor) las detecta. Se miró a 1440 y 390
+px contra un servidor aparte con una copia de la base: con los datos locales de DUNOR quedan 2 de 6 (faltan el
+perfil, los precios del catálogo, la dirección pública y el nombre). Batería completa: 2066 ✓, 0 ✗, y `tsc`
+limpio.
+
 ### La franja amarilla vacía arriba de cada conversación · `8abb5ab`
 Salió en las capturas para comparar con Vocero: arriba de todas las conversaciones había una franja amarilla sin
 texto. Era el aviso de «Camila también está aquí», que debía estar escondido: su clase ponía `display:flex` y eso le
