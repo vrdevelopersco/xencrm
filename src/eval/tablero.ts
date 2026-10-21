@@ -362,5 +362,20 @@ check('🪤 repintar el perfil no borra lo que se estaba escribiendo', /var borr
 check('🪤 y tampoco pierde el aviso de «¿es la misma persona?» ni los botones de archivar', /renderDuplicates\(state\.dups\.list\)/.test(panel) && /bindArchive\(\)/.test(panel));
 check('en el celular, del perfil se vuelve a la conversación', /id="back-chat"/.test(panel) && /\.volver-chat\{display:none\}/.test(html));
 
+// — Tarjetas más simples (2026-10-21): cada pieza sale solo si dice algo.
+const tarjetaJs = js.slice(js.indexOf('      var tarjeta = function (c) {'), js.indexOf('      $(\'board\').innerHTML = stages.map'));
+check('la tarjeta enseña el puntaje solo si es un caliente', /esCaliente\(c\) \? scoreChip\(c\) : ''/.test(tarjetaJs) && (tarjetaJs.match(/scoreChip\(/g) || []).length === 1);
+check('el próximo paso sale en la tarjeta solo si urge o es una cita', /c\.proximo\.urgente \|\| c\.proximo\.tipo === 'cita'/.test(tarjetaJs));
+check('🪤 el paso va en su propia línea (compartiendo fila con «Mover…» quedaba en «Atender: l…»)', /'<div class="paso-linea">' \+ paso/.test(tarjetaJs));
+check('la tarjeta ya no lleva la fila del canal', !/channelIcon\(/.test(tarjetaJs) && !/class="pie"/.test(tarjetaJs));
+check('🪤 «Mover…» sigue en cada tarjeta: en el celular no se puede arrastrar', /moveTo\(c\)/.test(tarjetaJs) && /<select class="card-move" aria-label="Mover a /.test(js),
+  'quitarlo deja el tablero sin forma de mover nada desde el teléfono (diseno-tablero.md, 2026-09-21)');
+check('y compacto, al pie, con 44 px al tacto', /\.card \.cifra \.card-move\{width:auto;max-width:104px/.test(html) && /@media \(pointer:coarse\)\{\.card \.cifra \.card-move\{min-height:44px/.test(html));
+check('🪤 sin precios sale UNA cifra que lleva a cargarlos, no dos «Sin precios»', /cifra\('abierto', 'Valor en juego'/.test(js) && /\$\('pip-precios'\)\.onclick = function \(\) \{ go\('knowledge'\); \}/.test(js));
+check('🪤 la insignia de seguimientos se pide con las cuentas, no solo al entrar a Seguimientos', /pintarListas\(\);\s*api\('\/seguimientos'\)\.then\(pintarInsigniaSeg\)/.test(js));
+check('🪤 un archivo que ya se borró dice que ya no está, no que algo falló', /estado === 404 \? 'Esta foto ya no está guardada'/.test(js) && /estado === 404 \? 'Ese archivo ya no está guardado\.'/.test(js));
+const agenteJs = readFileSync(new URL('../agent/agent.ts', import.meta.url), 'utf8');
+check('🪤 una respuesta rápida que solo se propuso no cuenta como usada', /if \(!acompana\) anotarUso\(rapida\.respuesta\.id\)/.test(agenteJs));
+
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

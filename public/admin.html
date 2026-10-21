@@ -1190,6 +1190,14 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
 .card .cifra .paso-corto{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:12px}
 .card .cifra .paso{font-size:12px}
 .card .lleva-mini .nom{display:none}
+/* La tarjeta simple (2026-10-21): una fila de abajo con lo que urge a la izquierda y «Mover…» a la derecha, sin
+   ocupar el ancho. El paso es lo que cede (puntos suspensivos); el selector y el valor no se encogen. */
+.card .t .unread{flex-shrink:0}
+.card .cifra{margin-top:8px}
+.card .paso-linea{margin-top:4px;font-size:12.5px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.card .cifra .valor,.card .cifra .lleva-mini,.card .cifra .chip{flex-shrink:0}
+.card .cifra .card-move{width:auto;max-width:104px;flex:0 0 auto;margin:0 0 0 auto;min-height:30px;padding:2px 6px;font-size:12px}
+@media (pointer:coarse){.card .cifra .card-move{min-height:44px;max-width:120px;font-size:14px}}
 @media(max-width:900px){.pip-cifras{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;padding:10px 12px 0}.pip-cifras .n{font-size:19px}}
 
 /* La ficha en dos columnas: lo que pasó a la izquierda, los datos a la derecha. */
@@ -1412,7 +1420,7 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
     </section>
     <!-- Pipeline -->
     <section class="view" id="view-pipeline">
-      <div class="topbar"><h1>Prospectos</h1><span class="muted small">Arrastra una tarjeta o usa «Mover a…» para cambiar de etapa</span><span class="grow"></span><select id="pip-sede" aria-label="Qué sede mirar" hidden></select></div>
+      <div class="topbar"><h1>Prospectos</h1><span class="muted small">Arrastra una tarjeta, o usa «Mover…», para cambiar de etapa</span><span class="grow"></span><select id="pip-sede" aria-label="Qué sede mirar" hidden></select></div>
       <!-- Cuánto hay en juego y dónde: las cifras de arriba y la barra por etapa. Ver pintarCifrasEmbudo(). -->
       <div class="pip-cifras" id="pip-cifras"></div>
       <div class="board" id="board"></div>

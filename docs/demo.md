@@ -53,7 +53,7 @@ con las dos conversaciones, la cita y el análisis juntos.
 
 **6. El tablero como producto.** Cierra mostrando, rápido:
 - **Hoy**: lo que hay que atender hoy, ordenado por lo que cuesta dejarlo esperando.
-- **Prospectos**: el embudo; mueve una tarjeta de etapa con *Mover a…*.
+- **Clientes › Por etapa**: el embudo; mueve una tarjeta de etapa arrastrándola o con *Mover…*.
 - **Análisis**: los números y **Contactos (CSV)**, para que vean que los datos son suyos y se los pueden llevar.
 - **Ayuda**: el tutorial que le queda al equipo.
 

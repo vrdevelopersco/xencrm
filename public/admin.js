@@ -839,8 +839,10 @@
   // Las miniaturas se llenan después de pintar: así la conversación aparece de una y las fotos van entrando.
   function pintarAdjuntos(raiz) {
     Array.prototype.forEach.call((raiz || document).querySelectorAll('img[data-medio]:not([src])'), function (img) {
-      traerMedio(img.dataset.medio).then(function (url) { img.src = url; }).catch(function () {
-        img.replaceWith(Object.assign(document.createElement('div'), { className: 'adj-roto', textContent: 'No pude cargar la imagen' }));
+      // 🪤 Un 404 no es una falla: los archivos viejos se borran para no llenar el disco y el mensaje se queda
+      // (crm/medios.ts › limpiar). Decir «No pude cargar» ahí hacía pensar que algo estaba roto.
+      traerMedio(img.dataset.medio).then(function (url) { img.src = url; }).catch(function (estado) {
+        img.replaceWith(Object.assign(document.createElement('div'), { className: 'adj-roto', textContent: estado === 404 ? 'Esta foto ya no está guardada' : 'No pude cargar la imagen' }));
       });
     });
   }
@@ -858,7 +860,7 @@
       a.download = b.dataset.nombre || 'archivo';
       a.click();
       setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
-    }).catch(function () { toast('No pude bajar el archivo.'); });
+    }).catch(function (estado) { toast(estado === 404 ? 'Ese archivo ya no está guardado.' : 'No pude bajar el archivo.'); });
   });
   // ---------- lo que aiva dejó listo ----------
   var propuestaActual = null;
@@ -1453,8 +1455,12 @@
     var cifra = function (k, t, n, p) { return '<div class="pc" data-k="' + k + '"><span class="t">' + t + '</span><span class="n' + (n ? '' : ' flojo') + '">' + esc(n || 'Sin precios') + '</span><span class="p">' + p + '</span></div>'; };
     // 🪤 Cero no se pinta como «$0»: sin precios lo que falta es cargarlos, y un cero diría que no vale nada.
     var el = $('pip-cifras');
-    el.innerHTML = cifra('abierto', 'Embudo abierto', total ? plataCorta(total) : '', total ? conPrecio + ' de ' + abiertas.length + ' con precio' : 'Ni el catálogo ni las fichas tienen precios') +
-      cifra('ponderado', 'Ponderado por puntaje', total ? plataCorta(ponderado) : '', 'Cada valor por su probabilidad') +
+    // 🪤 Sin ningún precio, «Embudo abierto» y «Ponderado» decían los dos «Sin precios»: dos cifras para un solo
+    // hecho. Entonces va una sola, que dice qué falta y lleva a arreglarlo.
+    el.innerHTML = (total
+      ? cifra('abierto', 'Embudo abierto', plataCorta(total), conPrecio + ' de ' + abiertas.length + ' con precio') +
+        cifra('ponderado', 'Probable, según el puntaje', plataCorta(ponderado), 'Cada valor por su probabilidad')
+      : cifra('abierto', 'Valor en juego', '', '<button class="linkbtn" id="pip-precios" title="Ni el catálogo ni las fichas tienen precios">Cargar precios</button>')) +
       cifra('cita', 'Con cita por delante', suma(conCita) ? plataCorta(suma(conCita)) : (conCita.length ? '' : '—'), conCita.length + (conCita.length === 1 ? ' persona con cita' : ' personas con cita')) +
       cifra('vendido', 'Vendido en 30 días', '…', variasSedes() && pipSede ? 'todas las sedes' : '&nbsp;') +
       // La barra reparte el embudo abierto por etapa, con el color de cada una. Es lo mismo que dicen las sumas de
@@ -1463,6 +1469,7 @@
         var n = suma(abiertas.filter(function (c) { return c.stage === e.id; }));
         return n ? '<i data-rol="' + esc(e.rol || '') + '" style="flex:' + n + '" title="' + esc(e.label + ': ' + plataCorta(n)) + '"></i>' : '';
       }).join('') + '</div>' : '');
+    if ($('pip-precios')) $('pip-precios').onclick = function () { go('knowledge'); };
     api('/ventas?days=30').then(function (v) {
       var b = el.querySelector('[data-k=vendido]');
       if (!b || !v || v.error) return;
@@ -1480,9 +1487,31 @@
       var active = document.activeElement && document.activeElement.closest ? document.activeElement.closest('#board .card') : null;
       focusId = focusId || (active && active.getAttribute('data-id'));
       var stages = Object.keys(state.stageLabels);
+      // «Mover» sigue en cada tarjeta, porque en el celular arrastrar no funciona (diseno-tablero.md, 2026-09-21),
+      // pero compacto, al final de la fila de abajo: entero y a todo el ancho pesaba más que el nombre del cliente.
       var moveTo = function (c) {
-        return '<select class="card-move" aria-label="Mover a ' + esc(nameOf(c)) + ' a otra etapa"><option value="" selected disabled>Mover a…</option>' +
+        return '<select class="card-move" aria-label="Mover a ' + esc(nameOf(c)) + ' a otra etapa"><option value="" selected disabled>Mover…</option>' +
           stages.filter(function (k) { return k !== c.stage; }).map(function (k) { return '<option value="' + k + '">' + esc(state.stageLabels[k]) + '</option>'; }).join('') + '</select>';
+      };
+      // 🪤 Tarjetas más simples (2026-10-21): llevaban ocho cosas —puntaje, días, nombre, resumen, próximo paso,
+      // quién la lleva, canal, sin leer— más un selector a todo el ancho. Ahora cada pieza sale solo si DICE algo,
+      // como en la lista de conversaciones: el puntaje si es caliente, el paso si urge o es una cita, el valor si
+      // se sabe, quién la lleva si es una persona. Lo demás está a un clic, en la conversación y su perfil.
+      var tarjeta = function (c) {
+        var paso = c.proximo && c.proximo.texto && (c.proximo.urgente || c.proximo.tipo === 'cita') ? pasoHtml(c.proximo) : '';
+        var sede = variasSedes() && c.data && c.data.sede ? '<span class="chip">' + esc(nombreSede(c.data.sede)) + '</span>' : '';
+        var texto = c.recap || c.summary || '';
+        return '<div class="card" draggable="true" data-id="' + esc(c.id) + '"><div class="body">' +
+          '<div class="t"><button type="button" class="card-open" title="Abrir la conversación">' + esc(nameOf(c)) + '</button>' +
+            (c.unread ? '<span class="unread" title="' + c.unread + ' sin leer">' + c.unread + '</span>' : '') +
+            '<span class="grow"></span><span class="cuando">' + esc(c.lastMessageAt ? rel(c.lastMessageAt) : '') + '</span></div>' +
+          (texto ? '<div class="s">' + esc(texto) + '</div>' : '') +
+          // El paso que urge va en su propia línea: compartiendo fila con «Mover…» quedaba en «Atender: l…».
+          (paso ? '<div class="paso-linea">' + paso + '</div>' : '') +
+          '<div class="cifra">' + (esCaliente(c) ? scoreChip(c) : '') + sede + (c.valor ? valorHtml(c, true) : '') +
+            (c.humanMode ? '<span class="lleva-mini" title="La lleva ' + esc(llevaDe(c).nombre) + '">' + llevaHtml(c) + '</span>' : '') +
+            moveTo(c) + '</div>' +
+          '</div></div>';
       };
       $('board').innerHTML = stages.map(function (s) {
         var cards = list.filter(function (c) { return c.stage === s; });
@@ -1494,18 +1523,7 @@
         return '<div class="col' + (cards.length ? '' : ' vacia') + '" data-stage="' + s + '" data-rol="' + esc(def.rol || '') + '">' +
           // Cuántas y cuánto suman: la columna dice dónde está la plata, no solo dónde está la gente.
           '<h3><span class="nom">' + esc(state.stageLabels[s]) + '</span><span class="cuenta">' + cards.length + '</span>' + sumaColumna(cards) + '</h3><div class="cards">' +
-          cards.map(function (c) {
-            return '<div class="card" draggable="true" data-id="' + esc(c.id) + '"><div class="body">' +
-              '<div class="t">' + scoreChip(c) + '<span class="grow"></span><span class="cuando">' + esc(c.lastMessageAt ? rel(c.lastMessageAt) : '') + '</span></div>' +
-              '<button type="button" class="card-open" title="Abrir la conversación">' + esc(nameOf(c)) + '</button>' +
-              '<div class="s">' + esc(c.recap || c.summary || '') + '</div>' +
-              // Lo que vale, lo que sigue y quién la tiene: la fila de abajo de cada tarjeta de un CRM.
-              // Una venta cerrada sin precio no tiene nada que decir aquí: dos rayas serían ruido.
-              (c.valor || (c.proximo && c.proximo.texto) ? '<div class="cifra">' + valorHtml(c, true) + '<span class="paso-corto">' + (c.proximo && c.proximo.texto ? pasoHtml(c.proximo) : '') + '</span>' +
-                '<span class="lleva-mini" title="La lleva ' + esc(llevaDe(c).nombre) + '">' + llevaHtml(c) + '</span></div>' : '') +
-              '<div class="pie">' + channelIcon(c.channel) + (variasSedes() && c.data && c.data.sede ? '<span class="chip">' + esc(nombreSede(c.data.sede)) + '</span>' : '') + (c.unread ? '<span class="chip sin-leer">' + c.unread + ' sin leer</span>' : '') + '</div>' +
-              moveTo(c) + '</div></div>';
-          }).join('') +
+          cards.map(tarjeta).join('') +
           '</div></div>';
       }).join('');
       $('board').querySelectorAll('.card').forEach(function (card) {
@@ -1524,7 +1542,7 @@
         col.ondragleave = function () { col.classList.remove('over'); };
         col.ondrop = function (e) { e.preventDefault(); col.classList.remove('over'); moveCard(e.dataTransfer.getData('text/plain'), col.getAttribute('data-stage')); };
       });
-      // Después de mover con «Mover a…», el foco sigue a la tarjeta en su nueva columna.
+      // Después de mover con «Mover…», el foco sigue a la tarjeta en su nueva columna.
       var moved = focusId && $('board').querySelector('.card[data-id="' + (window.CSS && CSS.escape ? CSS.escape(focusId) : focusId) + '"] .card-open');
       if (moved) { moved.focus(); moved.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
     });
@@ -1886,7 +1904,7 @@
         { view: 'today', go: 'Ir a Hoy', title: 'Responde lo que ' + ag + ' no sabía', text: 'Cuando no sabe algo, ' + ag + ' le dice al cliente «' + verify + '». En Por verificar escribe la respuesta y dale Enviar respuesta: le llega por el mismo chat. Con «Agregar a la información» marcado, la próxima vez responde solo.' },
         { view: 'inbox', go: 'Ir a Conversaciones', title: 'Toma una conversación cuando quieras', text: 'El switch «Responde: ' + ag + ' | Tú» decide quién contesta. En Tú, ' + ag + ' se calla y escribes tú; vuelve a ' + ag + ' cuando termines. Escribir a mano también te pasa la conversación.' },
         { view: 'profile', go: 'Ir a Perfil', title: 'Llena el Perfil de ' + biz, text: 'Dirección, horarios, pagos, precios… Lo que llenes, ' + ag + ' lo dice al instante. Lo que quede vacío sale como «Por confirmar» y no se lo inventa.' },
-        { view: 'pipeline', go: 'Ir a Clientes › Por etapa', title: 'Sigue a tus prospectos', text: 'En Clientes, la pestaña «Por etapa» tiene una tarjeta por cliente en su etapa. Arrástrala o usa «Mover a…», que también funciona en el celular. Tocar el nombre abre la conversación.' },
+        { view: 'pipeline', go: 'Ir a Clientes › Por etapa', title: 'Sigue a tus prospectos', text: 'En Clientes, la pestaña «Por etapa» tiene una tarjeta por cliente en su etapa. Arrástrala o usa «Mover…», que también funciona en el celular. Tocar el nombre abre la conversación.' },
         { view: 'channels', go: 'Ir a Canales', title: 'Revisa por dónde llegan tus clientes', text: 'En Canales ves si WhatsApp y el chat del sitio están conectados y qué falta. WhatsApp oficial se configura ahí mismo, en Credenciales.' },
       ],
       faq: [
@@ -3202,6 +3220,7 @@
       if ($('cuenta-pip')) $('cuenta-pip').textContent = n.abiertos ? String(n.abiertos) : '';
       if ($('cuenta-cli')) $('cuenta-cli').textContent = n.total ? String(n.total) : '';
       pintarListas();
+      api('/seguimientos').then(pintarInsigniaSeg);
     });
   }
   // Se recalcula cuando algo cambia, pero no a cada evento: una conversación viva manda varios por minuto.
@@ -3663,13 +3682,19 @@
   }
 
   // ---------- Seguimientos ----------
+  // 🪤 La insignia de Clientes (calientes esperando seguimiento) solo se llenaba al ENTRAR a Seguimientos: quien no
+  // entraba nunca veía que había alguien esperando. Ahora se pide con las cuentas de la barra, que se recalculan
+  // cuando algo cambia.
+  function pintarInsigniaSeg(d) {
+    var badge = $('badge-seg');
+    if (badge && d && !d.error) { badge.textContent = d.calientes || ''; badge.style.display = d.calientes ? '' : 'none'; }
+  }
   function cargarSeguimientos() {
     $('seg-lista').innerHTML = '<div class="small muted">Cargando…</div>';
     api('/seguimientos').then(function (d) {
       var n = d.cuantos || 0;
       $('seg-resumen').textContent = n ? n + (n === 1 ? ' persona esperando' : ' personas esperando') + (d.calientes ? ' · ' + d.calientes + ' calientes' : '') : '';
-      var badge = $('badge-seg');
-      if (badge) { badge.textContent = d.calientes || ''; badge.style.display = d.calientes ? '' : 'none'; }
+      pintarInsigniaSeg(d);
       $('seg-lista').innerHTML = (d.seguimientos || []).length
         ? '<div class="envoltura"><table class="tz-tabla"><thead><tr><th>Quién</th><th>Por qué</th><th>Qué quería</th><th class="num">Puntaje</th><th></th></tr></thead><tbody>' +
           d.seguimientos.map(function (f) {

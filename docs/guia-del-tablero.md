@@ -175,14 +175,20 @@ Una columna por etapa. Las etapas son **las de tu negocio**: una boutique va *Nu
 Cita agendada → Vendido*; una financiera, *Nuevo → En revisión → Con un asesor → Resuelto*; una litografía,
 *Nuevo → Tomando datos → Cotizado → En producción → Entregado*. Se eligen al montar el negocio y se ajustan en su
 configuración. Para cambiar a
-alguien de etapa, arrastra la tarjeta o usa **Mover a…**, que también funciona en el celular. Tocar el nombre abre la
-conversación. El asistente mueve las etapas solo según la conversación; lo que muevas tú, él no lo deshace.
+alguien de etapa, arrastra la tarjeta o usa **Mover…**, al pie de cada una, que también funciona en el celular.
+Tocar la tarjeta abre la conversación, con su perfil al lado. El asistente mueve las etapas solo según la
+conversación; lo que muevas tú, él no lo deshace.
 
-Arriba van cuatro cifras: el **embudo abierto**, el mismo **ponderado por puntaje** (cada valor por su
-probabilidad), lo que está **con cita por delante** y lo **vendido en 30 días**. Debajo, una barra con el color de
-cada etapa dice dónde está la plata. Cada columna suma lo suyo, y cada tarjeta dice cuánto vale, qué sigue y quién
-la tiene. Si nada tiene precio, las cifras dicen **Sin precios**: hay que cargarlos en el catálogo o ponerlos a mano
-en la ficha.
+**Cada tarjeta dice solo lo que importa:** el nombre, los mensajes sin leer, hace cuánto escribió y qué quiere. Debajo,
+en ámbar, lo que urge («Contestar», «Atender», «Retomar») o su cita. Al pie, el puntaje si es un caliente, el valor
+si se sabe y quién la lleva si es una persona. Lo demás (el canal, el puntaje de los que no están calientes, el paso
+que no urge) está en la conversación y en su perfil.
+
+Arriba van las cifras: el **embudo abierto**, lo **probable según el puntaje** (cada valor por su probabilidad), lo
+que está **con cita por delante** y lo **vendido en 30 días**. Debajo, una barra con el color de cada etapa dice
+dónde está la plata, y cada columna suma lo suyo. Si nada tiene precio, en vez de las dos primeras sale una sola,
+**Valor en juego · Sin precios**, con **Cargar precios**, que lleva a Lo que sabe; también se pueden poner a mano en
+la ficha.
 
 Con varias sedes, arriba se escoge cuál mirar, y cada tarjeta dice la suya. **Sin sede todavía** junta a quienes no
 han escogido: es donde hay que ir a preguntarles.

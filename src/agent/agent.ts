@@ -335,7 +335,9 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // interruptor aparte para esto, y no debe haberlo: serían dos sitios donde decir lo mismo.
   const rapida = await buscarRespuestaRapida(text);
   if (rapida) {
-    anotarUso(rapida.respuesta.id);
+    // 🪤 Acompañando a una persona, la respuesta queda como propuesta y casi siempre la persona contesta a su
+    // manera: contarla aquí inflaba las «veces» que se usó una respuesta que nadie mandó.
+    if (!acompana) anotarUso(rapida.respuesta.id);
     return finish(rapida.respuesta.respuesta, 'info_tienda', 'template', {
       route: `respuesta rápida · ${rapida.respuesta.tema}`,
       gateVia: 'rápida',
