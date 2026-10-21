@@ -807,7 +807,8 @@
     caja.hidden = !p;
     if (!p) return;
     caja.classList.toggle('vieja', Boolean(p.vieja));
-    $('propuesta-titulo').textContent = p.vieja ? 'Esta respuesta se quedó atrás' : 'Respuesta lista';
+    // La que se dejó mientras la llevabas tú no es «la respuesta»: es una ayuda que puedes usar o no.
+    $('propuesta-titulo').textContent = p.vieja ? 'Esta respuesta se quedó atrás' : p.conPersona ? (state.agentName || 'Aiva') + ' puede contestar esto' : 'Respuesta lista';
     // 🪤 Si llegó algo después de redactarla, ya no contesta a lo último que dijeron. Mandarla de un toque
     // sería peor que no tener el modo: el cliente recibiría una respuesta a una pregunta que ya cambió.
     $('propuesta-meta').textContent = p.vieja
@@ -2144,6 +2145,30 @@
     });
   }
 
+  // Cuando la llevas tú: si aiva deja lista la respuesta a lo que sabe (crm/propuestas.ts). Nunca escribe sola ahí.
+  function sugierePanel(a) {
+    var on = a.sugiereConPersona !== false, ag = esc(a.agent.name || 'Aiva');
+    return '<div class="panel" id="sugiere-panel"><b>Cuando la llevas tú</b>' +
+      '<div class="fila" style="gap:10px;align-items:center;margin-top:8px">' +
+        '<button class="btn sm" id="sugiere-btn" aria-pressed="' + on + '">' + (on ? 'Dejar de sugerir' : 'Sugerir respuestas') + '</button>' +
+        '<span class="small muted">' + (on
+          ? 'Cuando la llevas tú, ' + ag + ' deja lista la respuesta a lo que sabe; tú decides si la mandas.'
+          : 'Cuando la llevas tú, ' + ag + ' se queda callada del todo.') + '</span>' +
+      '</div></div>';
+  }
+  function bindSugiere(a) {
+    var b = $('sugiere-btn');
+    if (!b) return;
+    b.onclick = function () {
+      b.disabled = true;
+      api('/agent/sugiere', { method: 'PUT', body: { on: a.sugiereConPersona === false } }).then(function (r) {
+        if (!r || r.error) { b.disabled = false; toast('No se pudo: ' + ((r && r.error) || 'sin respuesta')); return; }
+        a.sugiereConPersona = r.sugiereConPersona;
+        $('sugiere-panel').outerHTML = sugierePanel(a);
+        bindSugiere(a);
+      }).catch(function () { b.disabled = false; toast('No se pudo: revisa la conexión'); });
+    };
+  }
   function loadAgent() {
     Promise.all([api('/agent'), api('/usage?days=7'), api('/calendar'), api('/backup'), api('/presupuesto').catch(function () { return null; }), api('/retencion').catch(function () { return null; })]).then(function (r) {
       var a = r[0], usage = r[1], calCfg = r[2], bk = r[3], tope = r[4], ret = r[5];
@@ -2151,12 +2176,14 @@
       var ap = a.appointments;
       $('agent').innerHTML =
         '<div class="panel"><b>' + esc(a.agent.name) + '</b> · asistente de <b>' + esc(a.business.name) + '</b><div class="muted">' + esc(a.business.description) + '</div><div class="small">Estilo: ' + esc(a.agent.style) + '</div><div class="small">Contacto humano que ofrece: ' + esc(a.business.humanContact) + '</div></div>' +
+        sugierePanel(a) +
         '<div class="panel"><b>Motores</b><ul>' + eng + '</ul><div class="small muted">Modo: ' + esc(a.roles.mode) + ' · liviano: ' + esc(a.roles.light) + ' · pesado: ' + esc(a.roles.heavy) + ' · gate: ' + esc(a.roles.gate) + ' · análisis: ' + esc(a.roles.analysis) + '</div><div class="small muted">Modelos: ' + esc(a.models.chat) + ' · embeddings ' + esc(a.models.embed) + ' · nube ' + esc(a.models.openai) + '</div></div>' +
         '<div class="panel"><b>Citas</b>' + (ap.enabled ? '<div class="small">' + esc(ap.service) + (ap.location ? ' en ' + esc(ap.location) : '') + ' · ' + ap.durationMin + ' min · días ' + ap.days.join(',') + ' · ' + ap.hours.map(function (h) { return h[0] + '–' + h[1]; }).join(', ') + ' · zona ' + esc(a.timezone) + '</div>' : '<div class="muted small">Desactivadas (appointments.enabled en aiva.config.json)</div>') + '</div>' +
         '<div class="panel"><b>Análisis comercial</b><div class="small">Campos capturados además de los básicos: ' + a.crmFields.map(function (f) { return '<code>' + esc(f.name) + '</code>'; }).join(' ') + '</div></div>' +
         '<div class="panel"><b>Conocimiento indexado</b><div class="small">' + (a.docs.product || 0) + ' productos · ' + (a.docs.knowledge || 0) + ' fragmentos de información.</div></div>' +
         backupPanel(bk, ret) + usagePanel(usage, tope) + calendarPanel(calCfg) + '<div class="panel" id="miss-panel"></div><div class="panel" id="dict-panel"></div>';
       bindBackup();
+      bindSugiere(a);
       loadMissesPanel(a);
       loadDictionaryPanel(a);
       $('feed-copy').onclick = function () {
@@ -3646,6 +3673,9 @@
     es.addEventListener('propuesta', function (e) {
       var ev = JSON.parse(e.data), p = ev.payload.propuesta;
       if (state.current === ev.userId) { openContact(ev.userId); return; }
+      // 🪤 La que se deja mientras la lleva una persona no suena: esa persona ya recibió el mensaje del cliente, y
+      // un segundo aviso por cada pregunta es justo lo que hace que alguien apague el sonido.
+      if (p && p.conPersona) return;
       beep();
       var c = state.contacts.find(function (x) { return x.id === ev.userId; });
       toast(String(p.texto || '').slice(0, 90), function () { go('inbox'); openContact(ev.userId); },
