@@ -9,6 +9,31 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-21
 
+### Tarjetas más simples y cuatro arreglos del tablero · `2e4f8ba`
+El usuario pidió tarjetas más simples. Cada tarjeta de **Por etapa** llevaba ocho cosas (puntaje, días, nombre,
+resumen, próximo paso, quién la lleva, canal, sin leer) más un selector a todo el ancho. Ahora cada pieza sale solo
+si dice algo, con la misma regla que ya tenía la lista de conversaciones:
+- el puntaje, si es un caliente;
+- el próximo paso, si urge o es una cita, y en su propia línea, porque compartiendo fila con el selector quedaba en
+  «Atender: l…»;
+- el valor, si se sabe;
+- quién la lleva, si es una persona.
+
+El canal salió de la tarjeta. Pasó de unos 170 px a entre 108 y 129.
+- 🪤 **«Mover…» no se quitó**, aunque era lo que más pesaba. Existe porque en el celular no se puede arrastrar
+  (con HRCAPOLO, 2026-09-21). Quedó compacto, al pie, y con 44 px al tacto.
+- **Sin precios**, arriba salían dos cifras diciendo «Sin precios». Ahora sale una sola, **Valor en juego**, con
+  **Cargar precios**, que lleva a Lo que sabe. «Ponderado por puntaje» pasó a «Probable, según el puntaje».
+- 🪤 **La insignia de Seguimientos** solo se llenaba al entrar a Seguimientos, así que quien no entraba nunca veía
+  que había calientes esperando. Ahora se pide con las cuentas de la barra.
+- **«No pude cargar la imagen»** salía en fotos que se habían borrado a propósito: los archivos viejos se limpian
+  para no llenar el disco y el mensaje se queda. Con un 404 ahora dice «Esta foto ya no está guardada».
+- **Las «veces» de una respuesta rápida** contaban también las que aiva solo propuso mientras la llevaba una
+  persona.
+
+Son 10 comprobaciones nuevas en `test:tablero`. Tres roturas puestas a propósito (el puntaje en todas, sin «Mover…»
+y la insignia solo al entrar) las detecta. Se miró a 1440 y a 390 px. Batería completa: 2039 ✓, 0 ✗, y `tsc` limpio.
+
 ### La franja amarilla vacía arriba de cada conversación · `8abb5ab`
 Salió en las capturas para comparar con Vocero: arriba de todas las conversaciones había una franja amarilla sin
 texto. Era el aviso de «Camila también está aquí», que debía estar escondido: su clase ponía `display:flex` y eso le
