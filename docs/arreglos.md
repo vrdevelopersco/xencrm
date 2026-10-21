@@ -9,6 +9,16 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-10-21
 
+### La franja amarilla vacía arriba de cada conversación · `8abb5ab`
+Salió en las capturas para comparar con Vocero: arriba de todas las conversaciones había una franja amarilla sin
+texto. Era el aviso de «Camila también está aquí», que debía estar escondido: su clase ponía `display:flex` y eso le
+gana al `[hidden]` del navegador. Es la trampa que `test:tablero` ya vigilaba, pero con una lista de cuatro clases
+escrita a mano, y esta no estaba. Pasaba igual con la cabecera, los mensajes y el cajón antes de escoger una
+conversación. Ahora la prueba mira **todas** las clases de lo que nace con `hidden` en el HTML; con la lista vieja
+habría seguido sin verse. Se comprobó en Chrome sin pantalla que los ocho elementos quedan en `display:none`.
+- **«La lleva admin»:** cuando la toma alguien sin nombre, el servidor guarda `admin`, y el encabezado lo decía tal
+  cual. Ahora dice «La lleva el equipo», como ya lo decía el panel.
+
 ### Cuando la lleva una persona, aiva deja lista la respuesta a lo que sabe · `fd1055d`
 De la comparación con Boba, el usuario tomó lo de «se mete en la charla cuando es útil» y escogió dónde: en la
 conversación que lleva una persona, no en los grupos. Hasta hoy aiva se callaba del todo ahí. Ahora, si el cliente
