@@ -643,6 +643,10 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 .card{position:relative;padding:0;border-radius:10px;overflow:hidden;border:1px solid var(--line);
   background:var(--panel);box-shadow:var(--shadow);transition:box-shadow .15s,border-color .15s;cursor:grab}
 .card::before{content:"";display:block;height:3px;background:var(--tone,var(--brand))}
+/* 🪤 Sin esto, una columna con muchas tarjetas las APLASTA: el overflow:hidden de arriba deja que el flex las
+   encoja hasta 48 px y solo se ve la pastilla y medio nombre. Pasó desde el 2026-10-02 y solo se ve con una
+   columna llena, que es justo la de un cliente de verdad. La columna es la que se desliza, no la tarjeta. */
+.col .cards>.card{flex-shrink:0}
 .card .body{position:relative;padding:10px 12px;background:var(--panel)}
 .card:hover{border-color:var(--muted);box-shadow:var(--lift)}
 
@@ -721,6 +725,10 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .tabs button{border:0;background:transparent;border-radius:999px;padding:6px 14px;min-height:36px;cursor:pointer;
   color:var(--text);font-weight:500;transition:background .15s,color .15s}
 .tabs button:hover{background:var(--row-hover)}
+/* Las pestañas de un área (AREAS en admin.js). La cifra hereda el color de la pestaña: así se lee igual
+   encendida, blanco sobre azul, que apagada. */
+.area-tabs .n-tab{margin-left:6px;font-size:12px;font-variant-numeric:tabular-nums}
+.area-tabs .n-tab:empty{display:none}
 .tabs button.on{background:linear-gradient(180deg,color-mix(in srgb,var(--brand) 85%,#fff),var(--brand));
   color:var(--on-brand);font-weight:700;box-shadow:0 2px 8px color-mix(in srgb,var(--brand) 40%,transparent)}
 .tabs button:focus-visible{outline:none;box-shadow:var(--ring)}
@@ -1006,6 +1014,9 @@ dialog#dlg-grupos > b{font-size:17px}
   .tabs button{flex:1 1 calc(50% - 4px);min-width:0;border-radius:10px;padding:8px 10px;min-height:44px}
   /* La barra donde viven: en teléfono el título y las pestañas no caben en la misma línea. */
   #view-knowledge .topbar{flex-wrap:wrap;gap:8px}
+  /* Las de un área son dos o tres y cortas: en una sola fila, a partes iguales, no en mitades. */
+  .area-tabs{flex-wrap:nowrap}
+  .area-tabs button{flex:1 1 0}
 }
 
 /* Vista de mes, al estilo de un calendario de pared: la rejilla manda y las citas son renglones dentro del día. */
@@ -1120,6 +1131,7 @@ dialog.perfil::backdrop{background:rgba(16,24,40,.45)}
 /* La barra: cuántos hay en cada sección (en gris: no urge; lo que urge va en rojo, en la insignia). */
 .rail .rb .cuenta{position:absolute;top:50%;right:12px;transform:translateY(-50%);font-size:12px;color:#8b94a5;font-variant-numeric:tabular-nums}
 .rail .rb .cuenta:empty{display:none}
+.rail .rb .badge:not(:empty)~.cuenta{display:none}
 .rail .rb:has(.cuenta:not(:empty))::after{padding-right:28px}
 .rail-listas{display:flex;flex-direction:column;gap:2px;margin-top:8px;flex:0 1 auto;min-height:0;overflow:auto;scrollbar-width:thin}
 .rail-listas .rl-t{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8b94a5;padding:10px 12px 4px}
@@ -1198,6 +1210,16 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
 .det dd{margin:0;min-width:0;overflow-wrap:anywhere}
 .det select{width:100%}
 .det-chat{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+/* El perfil al lado de la conversación (renderDetails): las piezas de la ficha completa, en una columna. La
+   nota fija no va en ámbar: el ámbar es para lo que urge, y una nota no urge, se recuerda. */
+.perfil-quien{display:flex;gap:10px;align-items:center;min-width:0}
+.perfil-quien .ficha-titulo b{font-size:15px;overflow-wrap:anywhere}
+.perfil-nota{background:color-mix(in srgb,var(--brand) 7%,var(--panel));border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.45;overflow-wrap:anywhere}
+.perfil-nota b{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
+.perfil-por summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)}
+.details .corregir{margin-top:0}
+.volver-chat{display:none}
+@media(max-width:900px){.volver-chat{display:inline-flex;align-self:flex-start}}
 .ficha-tabs{display:flex;gap:20px;border-bottom:1px solid var(--line)}
 .ficha-tabs button{display:flex;align-items:center;gap:6px;border:0;background:none;padding:8px 0;margin-bottom:-1px;font:inherit;font-size:14px;
   color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
@@ -1260,10 +1282,10 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
       <button class="rb active" data-view="today" data-tip="Hoy" aria-label="Hoy"><i class="ic" data-ic="sun"></i></button>
       <button class="rb" data-view="inbox" data-tip="Conversaciones" aria-label="Conversaciones"><i class="ic" data-ic="message"></i><span class="badge" id="badge-unread"></span></button>
       <button class="rb" data-view="calendar" data-tip="Calendario" aria-label="Calendario"><i class="ic" data-ic="calendar"></i><span class="badge" id="badge-cal"></span></button>
-      <button class="rb" data-view="pipeline" data-tip="Prospectos" aria-label="Prospectos"><i class="ic" data-ic="columns"></i><span class="cuenta" id="cuenta-pip"></span></button>
-      <button class="rb" data-view="clientes" data-tip="Clientes" aria-label="Clientes"><i class="ic" data-ic="users"></i><span class="cuenta" id="cuenta-cli"></span></button>
-      <button class="rb" data-view="ventas" data-tip="Ventas" aria-label="Ventas"><i class="ic" data-ic="venta"></i></button>
-      <button class="rb" data-view="seguimientos" data-tip="Seguimientos" aria-label="Seguimientos"><i class="ic" data-ic="volver"></i><span class="badge" id="badge-seg"></span></button>
+      <!-- 🪤 Cinco secciones, no ocho. Prospectos, Seguimientos y Ventas no se fueron: viven DENTRO de Clientes y de
+           Análisis, como pestañas arriba de la pantalla (ver AREAS en admin.js). Quien empieza ve cinco puertas;
+           quien quiere exprimir aiva encuentra todo a un clic más. -->
+      <button class="rb" data-view="clientes" data-tip="Clientes" aria-label="Clientes"><i class="ic" data-ic="users"></i><span class="badge" id="badge-seg"></span><span class="cuenta" id="cuenta-cli"></span></button>
       <button class="rb" data-view="analysis" data-tip="Análisis" aria-label="Análisis"><i class="ic" data-ic="chart"></i></button>
     </nav>
     <!-- Listas guardadas (calientes, las mías) y las fichas fijadas: lo que se quiere a un clic. Se llena desde

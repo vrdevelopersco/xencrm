@@ -91,9 +91,21 @@
   }
   function rel(ts) { if (!ts) return ''; var d = Date.now() - ts, m = Math.round(d / 60000); if (m < 1) return 'ahora'; if (m < 60) return m + ' min'; var h = Math.round(m / 60); if (h < 24) return h + ' h'; var dd = Math.round(h / 24); return dd + ' d'; }
   function hhmm(ts) { return new Date(ts).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }); }
-  function short(id) { var m = /^(wa|meta|web|cli|mcp):(.*)$/.exec(id); if (!m) return id; var v = m[2].replace(/@.*$/, ''); return m[1] === 'web' ? 'web · ' + v.slice(0, 8) : v; }
+  // 🪤 Quien escribe por el chat del sitio sin dar su nombre no tiene ni nombre ni número: salía «web · 44fa379b»,
+  // que para quien atiende es un código, no una persona. Se dice qué es, y las cuatro letras quedan solo para
+  // distinguir a dos visitantes que escribieron a la misma hora.
+  function short(id) { var m = /^(wa|meta|web|cli|mcp):(.*)$/.exec(id); if (!m) return id; var v = m[2].replace(/@.*$/, ''); return m[1] === 'web' ? 'Visitante del sitio · ' + v.slice(0, 4) : v; }
   function channelIcon(ch) { return { whatsapp: '🟢 WhatsApp', meta: '🟢 WhatsApp', web: '🌐 Web', cli: '⌨️ CLI', mcp: '🔌 MCP' }[ch] || ch; }
   function nameOf(c) { return c.name || short(c.id); }
+  // 🪤 Los datos que captura el análisis tienen nombre de variable (`ocasion`, `fecha_evento`, `talla_o_medidas`)
+  // porque así los escribe el negocio en su configuración, y así salían en la ficha: en minúscula y sin tilde. Se
+  // enseñan como palabras. Las tildes que faltan se ponen solo en las palabras que se sabe que la llevan; inventar
+  // una sería peor que dejarla sin.
+  var TILDES = { ocasion: 'ocasión', direccion: 'dirección', telefono: 'teléfono', numero: 'número', categoria: 'categoría', dia: 'día', informacion: 'información', ubicacion: 'ubicación', descripcion: 'descripción', ultima: 'última', ultimo: 'último', ano: 'año', anos: 'años', medicion: 'medición', condicion: 'condición', tamano: 'tamaño' };
+  function etiquetaDato(k) {
+    var t = String(k || '').split('_').filter(Boolean).map(function (w) { return TILDES[w.toLowerCase()] || w; }).join(' ');
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
 
   // ---------- lo que cada fila dice además del nombre ----------
   // Etapa, valor, quién la lleva y el próximo paso. El valor y el paso los calcula el servidor (crm/valor.ts y
@@ -365,7 +377,11 @@
   applyTheme(); applySound();
 
   // ---------- navegación ----------
-  document.querySelectorAll('.rail .nav button').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-view')); }; });
+  // Un área (Clientes, Análisis) se abre en la pestaña donde se dejó: quien vive en «Por etapa» no tiene por qué
+  // pasar por la lista cada vez. AREA_DE y ultimaDelArea están más abajo, con las pestañas.
+  document.querySelectorAll('.rail .nav button').forEach(function (b) {
+    b.onclick = function () { var v = b.getAttribute('data-view'), a = AREA_DE[v]; go(a && ultimaDelArea[a.id] ? ultimaDelArea[a.id] : v); };
+  });
   if ($('marca-btn')) $('marca-btn').onclick = function () { go('today'); };
 
   // ---------- la configuración, agrupada por de quién es ----------
@@ -499,7 +515,7 @@
   var CFG_VIEWS = { agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1 };
   // 🪤 En las pantallas de configuración el panel decía lo mismo que el título de la página, dos veces en la
   // misma fila. Aquí dice el ÁREA —dónde estás— y la lista de abajo dice la pantalla: cada uno aporta algo.
-  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Prospectos', clientes: 'Clientes', ventas: 'Ventas', seguimientos: 'Seguimientos', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración', trazas: 'Configuración' };
+  var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Clientes', clientes: 'Clientes', ventas: 'Análisis', seguimientos: 'Clientes', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración', trazas: 'Configuración' };
   function pintarPanel(view) {
     var panel = $('subnav');
     if (!panel) return;
@@ -516,12 +532,56 @@
     cfg.querySelectorAll('[data-view]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
   }
 
+  // ---------- las áreas y sus pestañas ----------
+  // 🪤 El riel tenía ocho secciones y la mitad eran la misma gente vista de otra forma (Prospectos, Clientes,
+  // Seguimientos) o los mismos números (Análisis, Ventas). Para quien empieza eran ocho puertas sin saber cuál
+  // abrir. Ahora son áreas: el riel lleva al área y arriba de la pantalla van sus pestañas. Nada se quitó, quedó
+  // un clic más adentro: quien quiera exprimir aiva lo encuentra donde estaba.
+  //
+  // 🪤 Pestañas en la barra de arriba y NO en el panel de la sección: ese panel le quita 212 px al tablero y a la
+  // tabla, que son justo las pantallas que necesitan el ancho (por eso se quitó también de Conversaciones).
+  var AREAS = [
+    { id: 'clientes', lbl: 'Clientes', subs: [{ view: 'clientes', lbl: 'Lista' }, { view: 'pipeline', lbl: 'Por etapa', cuenta: 'cuenta-pip' }, { view: 'seguimientos', lbl: 'Seguimientos' }] },
+    { id: 'analisis', lbl: 'Análisis', subs: [{ view: 'analysis', lbl: 'Resumen' }, { view: 'ventas', lbl: 'Ventas' }] }
+  ];
+  var AREA_DE = {};
+  var ultimaDelArea = {};
+  try { ultimaDelArea = JSON.parse(localStorage.getItem(LLAVE('areas')) || '{}') || {}; } catch (e) {}
+  AREAS.forEach(function (a) {
+    a.subs.forEach(function (x) { AREA_DE[x.view] = a; });
+    var g = document.createElement('div');
+    g.className = 'tabs area-tabs';
+    g.setAttribute('role', 'group');
+    g.setAttribute('aria-label', 'Qué ver en ' + a.lbl);
+    g.innerHTML = a.subs.map(function (x) {
+      return '<button data-sub="' + x.view + '" aria-pressed="false">' + esc(x.lbl) + (x.cuenta ? '<span class="n-tab" id="' + x.cuenta + '"></span>' : '') + '</button>';
+    }).join('');
+    g.querySelectorAll('[data-sub]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-sub')); }; });
+    a.tabs = g;
+    // El título de cada pantalla del área dice el ÁREA, y la pestaña dice cuál: lo mismo que Configuración.
+    a.subs.forEach(function (x) { var h = document.querySelector('#view-' + x.view + ' .topbar h1'); if (h) h.textContent = a.lbl; });
+    // 🪤 Las pestañas son UN solo nodo que se muda de pantalla en pantalla (así sus id no se repiten), y nace ya
+    // dentro del documento: fuera de él, getElementById no lo encuentra y la cuenta de «Por etapa» reventaba.
+    var h0 = document.querySelector('#view-' + a.subs[0].view + ' .topbar h1');
+    if (h0) h0.after(g);
+  });
+  function pintarPestanasArea(view) {
+    var a = AREA_DE[view]; if (!a) return;
+    var h = document.querySelector('#view-' + view + ' .topbar h1');
+    if (h && h.nextSibling !== a.tabs) h.after(a.tabs);
+    a.tabs.querySelectorAll('[data-sub]').forEach(function (b) { var on = b.getAttribute('data-sub') === view; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+    ultimaDelArea[a.id] = view;
+    try { localStorage.setItem(LLAVE('areas'), JSON.stringify(ultimaDelArea)); } catch (e) {}
+  }
+
   function go(view, opts) {
     // Perfil y El negocio no son pantallas: son configuración, y se abren en un modal encima de lo que estabas
     // haciendo. Así no se pierde de vista la conversación ni hay que volver a navegar.
     if (view === 'profile' || view === 'negocio') { abrirConfig(view); return; }
     state.view = view;
-    document.querySelectorAll('.rail .nav button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
+    var area = AREA_DE[view], enRiel = area ? area.subs[0].view : view;
+    document.querySelectorAll('.rail .nav button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === enRiel); });
+    pintarPestanasArea(view);
     pintarPanel(view);
     // Celular: «Más» se ve activo cuando la sección está dentro de él.
     $('nav-more').classList.toggle('active', Boolean(CFG_VIEWS[view]));
@@ -634,7 +694,8 @@
     return api('/contacts/' + encodeURIComponent(id)).then(function (d) {
       state.detail = d; renderChat(); renderDetails();
       anunciarme(id, d.presentes || []);
-      api('/contacts/' + encodeURIComponent(id) + '/duplicates').then(renderDuplicates); // ¿otra ficha de la misma persona?
+      // ¿Otra ficha de la misma persona? Se guarda para que el panel no la pierda al volver a pintarse.
+      api('/contacts/' + encodeURIComponent(id) + '/duplicates').then(function (l) { state.dups = { id: id, list: l }; renderDuplicates(l); });
       bindArchive();
       var row = state.contacts.find(function (c) { return c.id === id; }); if (row) { row.unread = 0; renderRows(); updateBadges(); }
       // Retomar a un caliente: la conversación pasa a la persona y el borrador queda listo para ajustarlo y enviarlo.
@@ -989,73 +1050,121 @@
       };
     };
   }
+  // ---------- el perfil, al lado de la conversación ----------
+  // 🪤 Este panel ERA un formulario: Nombre, Teléfono, Etiquetas, Nota fija, Guardar, Re-analizar, Archivar,
+  // Borrar. Quien atiende pasa el día aquí, y lo que veía al lado de la conversación eran campos por llenar, no a
+  // la persona; el perfil de verdad (lo que contó, la historia) vivía en otra ventana a la que se llegaba desde
+  // Clientes. Ahora es al revés: primero quién es y qué quiere, como en la ficha completa y con sus mismas
+  // piezas, y el formulario detrás de «Corregir datos», que es lo que se toca una vez y no a cada mensaje.
+  //
+  // 🪤 Y se vuelve a pintar SOLO cada vez que llega un análisis o un mensaje. Sin guardar lo que se estaba
+  // escribiendo, una nota a medio escribir o un nombre corregido se borraban en mitad de la frase.
+  function borradoresDelPerfil(id) {
+    var caja = $('details');
+    if (!caja || caja.getAttribute('data-id') !== id) return null;
+    var b = { abiertos: {}, campos: {} };
+    caja.querySelectorAll('details[data-k]').forEach(function (x) { b.abiertos[x.getAttribute('data-k')] = x.open; });
+    caja.querySelectorAll('[data-borrador]').forEach(function (x) { if (x.value !== x.defaultValue) b.campos[x.id] = x.value; });
+    return b;
+  }
+  function devolverBorradores(b) {
+    if (!b) return;
+    $('details').querySelectorAll('details[data-k]').forEach(function (x) { var k = x.getAttribute('data-k'); if (k in b.abiertos) x.open = b.abiertos[k]; });
+    Object.keys(b.campos).forEach(function (id) { var x = $(id); if (x) x.value = b.campos[id]; });
+  }
   function renderDetails() {
     var d = state.detail; if (!d) return;
-    var c = d.contact, data = c.data || {};
-    var hidden = { booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1 };
-    var dataRows = Object.keys(data).filter(function (k) { return !hidden[k] && data[k] !== '' && data[k] != null; }).map(function (k) { return '<dt>' + esc(k.replace(/_/g, ' ')) + '</dt><dd>' + esc(data[k]) + '</dd>'; }).join('');
+    var c = d.contact, data = c.data || {}, h = d.historia || {};
+    var borradores = borradoresDelPerfil(c.id);
+    // Lo mismo que esconde la ficha completa: lo que no es algo que la persona contó, sino cuentas internas.
+    var ocultos = { booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1, pospuesto_desde: 1, valor: 1, sede: 1 };
+    var capturados = Object.keys(data).filter(function (k) { return !ocultos[k] && data[k] !== '' && data[k] != null && typeof data[k] !== 'object'; });
+    var fila = function (k, html) { return '<dt>' + esc(k) + '</dt><dd>' + html + '</dd>'; };
     var factors = (c.scoreFactors || []).map(function (f) { return '<li><span>' + esc(f.label) + '</span><span class="' + (f.points >= 0 ? 'pos' : 'neg') + '">' + (f.points >= 0 ? '+' : '') + f.points + '</span></li>'; }).join('') || '<li class="muted">Aún sin análisis.</li>';
-    var stages = Object.keys(state.stageLabels).map(function (k) { return '<option value="' + k + '"' + (k === c.stage ? ' selected' : '') + '>' + esc(state.stageLabels[k]) + '</option>'; }).join('');
-    var appts = d.appointments.map(function (a) { return '<div class="appt ' + a.status + '"><span class="t">' + esc(a.label || '') + '</span><span class="grow small muted">' + esc(a.service) + ' · ' + a.status + '</span></div>'; }).join('') || '<span class="muted small">Sin citas.</span>';
-    var v = verdict(c);
-    var quick = esc(c.recap || '');
+    var etapas = (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '"' + (e.id === c.stage ? ' selected' : '') + '>' + esc(e.label) + '</option>'; }).join('');
+    var appts = d.appointments.map(function (a) { return '<div class="appt ' + a.status + '"><span class="t">' + esc(a.label || '') + '</span><span class="grow small muted">' + esc(a.service) + ' · ' + esc(estadoCita(a.status)) + '</span></div>'; }).join('') || '<span class="muted small">Sin citas.</span>';
+    var v = verdict(c), viejo = isStale(c);
+    var sub = [channelIcon(c.channel), c.phone || '', h.frase || ''].filter(Boolean).join(' · ');
+    $('details').setAttribute('data-id', c.id);
     $('details').innerHTML =
-      // Lo mismo que la ficha dice arriba a la derecha, aquí arriba: qué sigue, cuánto vale y quién la tiene.
-      '<div id="dup-panel"></div><dl class="det det-chat">' +
-        '<dt>Próximo paso</dt><dd>' + pasoHtml(c.proximo) + '</dd>' +
-        '<dt>Valor</dt><dd>' + valorHtml(c) + '</dd>' +
-        '<dt>La lleva</dt><dd>' + llevaHtml(c) + '</dd>' +
-      '</dl><div class="verdict' + (isStale(c) ? ' stale' : '') + '"><h3>¿Es un prospecto?</h3><div class="big">' + esc(v.label) + '</div><div class="why">' + esc(v.why || '') + (c.summary ? ' ' + esc(c.summary) : '') + '</div>' +
-        (quick ? '<div class="small">' + quick + '</div>' : '') +
-        '<div class="bar' + (isStale(c) ? ' stale' : '') + '" title="Probabilidad ' + c.score + '"><i class="z-' + c.temperature + '" style="width:' + c.score + '%"></i></div><div class="bar-legend"><span>sin señales</span><span>posible</span><span>prospecto</span></div>' +
-        '<div class="small muted">Probabilidad ' + c.score + ' (en tarjetas y avisos: ' + esc(tempLabel(c.temperature)) + ')' + (c.scoreBase > c.score ? ' · llegó a ' + c.scoreBase + ' cuando hablaron' : '') + (c.scoreAt ? ' · hace ' + rel(c.scoreAt) : '') + (isStale(c) ? ' · <b style="color:var(--warn)">hay mensajes nuevos, se recalcula solo</b>' : '') + ' · <button class="linkbtn" id="toggle-detail">' + (state.detailOpen ? 'Ocultar detalle' : 'Ver detalle') + '</button></div>' +
-      '</div>' +
-      '<div class="detail-more" id="detail-more"' + (state.detailOpen ? '' : ' hidden') + '>' +
-        '<div><h3>Por qué</h3><ul class="factors">' + factors + '</ul>' + (c.sentiment ? '<div class="small muted" style="margin-top:6px">Ánimo: ' + sentIcon(c.sentiment) + (data.urgencia ? ' · urgencia ' + esc(data.urgencia) : '') + '</div>' : '') + '</div>' +
-        '<div style="margin-top:12px"><h3>Datos capturados</h3>' + (dataRows ? '<dl class="kv">' + dataRows + '</dl>' : '<span class="muted small">Todavía nada. Se llenan solos mientras conversa.</span>') + '</div>' +
-      '</div>' +
-      '<div><h3>Ficha</h3><div style="display:flex;flex-direction:column;gap:6px">' +
-        '<input type="text" id="f-name" placeholder="Nombre" value="' + esc(c.name || '') + '">' +
-        '<input type="text" id="f-phone" placeholder="Teléfono" value="' + esc(c.phone || '') + '">' +
-        (d.number
-          ? '<div class="feed-row"><a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/' + esc(d.number) + '">Escribirle por WhatsApp</a>' +
-            '<a class="btn sm" href="tel:+' + esc(d.number) + '">Llamar</a></div>'
-          : '<div class="small muted">Sin número: no dejó teléfono todavía.</div>') +
-        // Por dónde llegó. Al atender cambia la conversación: no es lo mismo alguien que venía buscando trajes
-        // de grado que alguien que pulsó un anuncio de alquiler para una boda.
-        (d.origen
-          ? '<div class="small muted" style="margin-top:6px">Llegó por <b>' + esc(d.origen.fuente || 'un origen desconocido') + '</b>' +
-            (d.origen.campana ? ' · ' + esc(d.origen.campana) : '') +
-            (d.origen.titular ? '<div class="small">«' + esc(d.origen.titular) + '»</div>' : '') +
-            (d.origen.url ? '<div class="small muted">' + esc(d.origen.url) + '</div>' : '') + '</div>'
-          : '') +
-        '<select id="f-stage">' + stages + '</select>' +
-        '<input type="text" id="f-tags" placeholder="Etiquetas separadas por coma" value="' + esc((c.tags || []).join(', ')) + '">' +
-        '<textarea id="f-notes" placeholder="Nota fija: lo que siempre hay que saber de esta persona">' + esc(c.notes || '') + '</textarea>' +
-        '<div style="display:flex;gap:6px"><button class="btn sm primary" id="f-save">Guardar</button><button class="btn sm" id="f-analyze">Re-analizar</button></div>' +
-        '<div class="feed-row" style="margin-top:8px"><button class="btn sm" id="arch-btn">' + (c.archived ? 'Devolver a las listas' : 'Archivar') + '</button><button class="btn sm" id="del-btn">Borrar</button></div><div class="small" id="del-msg" role="status"></div>' +
-      '</div></div>' +
+      // En el celular el perfil tapa la conversación: sin esto, la única salida era el riel de abajo.
+      '<button class="btn sm volver-chat" id="back-chat">‹ Volver a la conversación</button>' +
+      '<div id="dup-panel"></div>' +
+      // Quién es. En el celular este panel se ve solo, sin la conversación al lado, así que dice el nombre.
+      '<div class="perfil-quien"><span class="ficha-ini" aria-hidden="true">' + esc(c.name ? inicialesDe(c.name) : '') + '</span>' +
+        '<div class="ficha-titulo"><b>' + esc(nameOf(c)) + '</b><div class="small muted">' + esc(sub) + '</div></div></div>' +
+      (h.amago ? '<div class="pf-amago">⚠ Se le fue una venta: tuvo cita y no acabó en compra, y no tiene otra agendada.</div>' : '') +
+      (c.summary ? '<p class="ficha-quiere">' + esc(c.summary) + '</p>' : '<p class="ficha-quiere muted">Todavía no se sabe qué busca: se llena solo mientras conversa.</p>') +
+      (c.notes ? '<div class="perfil-nota"><b>Nota fija</b> ' + esc(c.notes) + '</div>' : '') +
+      (d.number
+        ? '<div class="feed-row"><a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/' + esc(d.number) + '">Escribirle por WhatsApp</a>' +
+          '<a class="btn sm" href="tel:+' + esc(d.number) + '">Llamar</a></div>'
+        : '') +
+      '<dl class="det">' +
+        // La etapa se cambia aquí mismo: es lo que más se toca, y no tiene por qué esperar a «Corregir datos».
+        fila('Etapa', '<select id="f-etapa" aria-label="Etapa">' + etapas + '</select>') +
+        // «Nunca el número solo»: el veredicto primero y el puntaje de respaldo. El porqué, detrás de un clic.
+        fila('¿Prospecto?', '<span class="' + (viejo ? 'stale' : '') + '"><b>' + esc(v.label) + '</b> · ' + esc(String(c.score == null ? '—' : c.score)) + '</span>' +
+          (viejo ? '<div class="small" style="color:var(--warn)">Hay mensajes nuevos: se recalcula solo.</div>' : '')) +
+        fila('Próximo paso', pasoHtml(c.proximo)) +
+        fila('Valor', valorHtml(c)) +
+        fila('La lleva', llevaHtml(c)) +
+        (d.origen && d.origen.fuente ? fila('Llegó por', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : '')) + (d.origen.titular ? '<div class="small muted">«' + esc(d.origen.titular) + '»</div>' : '')) : '') +
+        (variasSedes() && data.sede ? fila('Sede', esc(nombreSede(data.sede))) : '') +
+      '</dl>' +
+      '<details class="perfil-por" data-k="por"><summary>Por qué ese puntaje</summary>' +
+        '<ul class="factors">' + factors + '</ul>' +
+        (c.sentiment ? '<div class="small muted" style="margin-top:6px">Ánimo: ' + sentIcon(c.sentiment) + (data.urgencia ? ' · urgencia ' + esc(data.urgencia) : '') + '</div>' : '') +
+        '<div class="small muted" style="margin-top:6px">' + (c.scoreBase > c.score ? 'Llegó a ' + c.scoreBase + ' cuando hablaron. ' : '') + (c.scoreAt ? 'Calculado hace ' + rel(c.scoreAt) + '. ' : '') +
+          '<button class="linkbtn" id="f-analyze">Volver a analizar</button></div>' +
+      '</details>' +
+      '<div><h3>Lo que contó</h3>' + (capturados.length
+        ? '<dl class="det">' + capturados.map(function (k) { return fila(etiquetaDato(k), esc(data[k])); }).join('') + '</dl>'
+        : '<span class="muted small">Todavía nada. Se llena solo mientras conversa.</span>') + '</div>' +
       '<div><h3>Citas</h3>' + appts + '</div>' +
       // La historia, corta: lo último que pasó y una nota a mano mientras se conversa. Entera, en la ficha.
       '<div><h3>Historia</h3><div class="nota-nueva"><label class="sr-only" for="chat-nota">Nota nueva</label>' +
-        '<textarea id="chat-nota" rows="2" maxlength="2000" placeholder="Nota para el equipo…"></textarea><button class="btn sm" id="chat-nota-ok">Guardar nota</button></div>' +
-        historiaHtml(d, { max: 8, borrar: true }) +
+        '<textarea id="chat-nota" data-borrador rows="2" maxlength="2000" placeholder="Nota para el equipo…"></textarea><button class="btn sm" id="chat-nota-ok">Guardar nota</button></div>' +
+        historiaHtml(d, { max: 6, borrar: true }) +
         '<button class="linkbtn small" id="chat-ficha">Ver la ficha completa</button></div>' +
-      '<div class="small muted">' + esc(channelIcon(c.channel)) + ' · ' + esc(c.id) + '</div>';
+      '<details class="corregir" data-k="corregir"><summary>Corregir datos</summary><div class="pf-campos">' +
+        '<div class="ancho"><label for="f-name">Nombre</label><input id="f-name" data-borrador value="' + esc(c.name || '') + '"></div>' +
+        '<div class="ancho"><label for="f-phone">Teléfono</label><input id="f-phone" data-borrador inputmode="tel" value="' + esc(c.phone || '') + '"></div>' +
+        '<div class="ancho"><label for="f-tags">Etiquetas, separadas por coma</label><input id="f-tags" data-borrador value="' + esc((c.tags || []).join(', ')) + '"></div>' +
+        '<div class="ancho"><label for="f-notes">Nota fija</label><textarea id="f-notes" data-borrador rows="2" placeholder="Lo que siempre hay que saber de esta persona">' + esc(c.notes || '') + '</textarea></div>' +
+      '</div><div class="fila" style="gap:8px;margin-top:10px"><button class="btn sm primary" id="f-save">Guardar</button></div>' +
+      '<div class="feed-row" style="margin-top:14px"><button class="btn sm" id="arch-btn">' + (c.archived ? 'Devolver a las listas' : 'Archivar') + '</button><button class="btn sm" id="del-btn">Borrar</button></div><div class="small" id="del-msg" role="status"></div>' +
+      '<div class="small muted" style="margin-top:10px">' + esc(channelIcon(c.channel)) + ' · ' + esc(c.id) + '</div></details>';
+    devolverBorradores(borradores);
+    bindArchive();
+    if (state.dups && state.dups.id === c.id) renderDuplicates(state.dups.list);
+    $('back-chat').onclick = function () { $('inbox').setAttribute('data-pane', 'chat'); };
     $('chat-ficha').onclick = function () { abrirPerfil(c.id); };
     $('chat-nota-ok').onclick = function () {
       var texto = $('chat-nota').value.trim();
       if (!texto) { $('chat-nota').focus(); return; }
       api('/contacts/' + encodeURIComponent(c.id) + '/notas', { method: 'POST', body: { texto: texto, por: state.name || '' } }).then(function (r) {
         if (r && r.error) { toast(r.error); return; }
+        $('chat-nota').value = '';
         d.events = r.events || d.events; renderDetails();
       });
     };
     engancharBorrarNotas($('details'), c.id, function (events) { d.events = events; renderDetails(); });
-    $('toggle-detail').onclick = function () { state.detailOpen = !state.detailOpen; $('detail-more').hidden = !state.detailOpen; $('toggle-detail').textContent = state.detailOpen ? 'Ocultar detalle' : 'Ver detalle'; };
+    $('f-etapa').onchange = function () {
+      api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: { stage: $('f-etapa').value } }).then(function (r) {
+        if (r && r.error) { toast(r.error); return; }
+        toast('Etapa: ' + etiquetaEtapa($('f-etapa').value));
+        openContact(c.id); loadContacts();
+      });
+    };
     $('f-save').onclick = function () {
-      api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: { name: $('f-name').value, phone: $('f-phone').value, stage: $('f-stage').value, tags: $('f-tags').value.split(',').map(function (t) { return t.trim(); }).filter(Boolean), notes: $('f-notes').value } })
-        .then(function () { toast('Ficha guardada'); openContact(c.id); loadContacts(); });
+      api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: { name: $('f-name').value, phone: $('f-phone').value, tags: $('f-tags').value.split(',').map(function (t) { return t.trim(); }).filter(Boolean), notes: $('f-notes').value } })
+        .then(function (r) {
+          if (r && r.error) { toast(r.error); return; }
+          // Guardado: lo escrito ya no es un borrador que haya que proteger del siguiente repintado.
+          ['f-name', 'f-phone', 'f-tags', 'f-notes'].forEach(function (id) { $(id).defaultValue = $(id).value; });
+          toast('Ficha guardada'); openContact(c.id); loadContacts();
+        });
     };
     $('f-analyze').onclick = function () { $('f-analyze').disabled = true; api('/contacts/' + encodeURIComponent(c.id) + '/analyze', { method: 'POST' }).then(function () { openContact(c.id); loadContacts(); }); };
   }
@@ -1065,7 +1174,9 @@
   // Borrador para retomar a un prospecto caliente: solo con lo que él mismo dijo (prenda, ocasión). Sin precios ni
   // fechas inventadas, y queda en el cajón de escribir para que la persona lo ajuste antes de enviarlo.
   function followupDraft(c) {
-    var d = c.data || {}, first = (nameOf(c) || '').split(' ')[0], biz = state.bizName ? ' de ' + state.bizName : '';
+    // 🪤 Del nombre de verdad, no de nameOf: sin nombre, nameOf dice «Visitante del sitio» y el borrador saldría
+    // «Hola Visitante 🙂».
+    var d = c.data || {}, first = (c.name || '').trim().split(' ')[0], biz = state.bizName ? ' de ' + state.bizName : '';
     var prenda = (d.prenda || d.servicio || '').toString().replace(/\s*\(.*?\)/g, '').trim();
     var ocasion = (d.ocasion || '').toString().replace(/\s*\(.*?\)/g, '').trim();
     var asunto = prenda ? 'lo de tu ' + prenda + (ocasion ? ' para tu ' + ocasion : '') : 'lo que hablamos' + (ocasion ? ' para tu ' + ocasion : '');
@@ -1773,7 +1884,7 @@
         { view: 'today', go: 'Ir a Hoy', title: 'Responde lo que ' + ag + ' no sabía', text: 'Cuando no sabe algo, ' + ag + ' le dice al cliente «' + verify + '». En Por verificar escribe la respuesta y dale Enviar respuesta: le llega por el mismo chat. Con «Agregar a la información» marcado, la próxima vez responde solo.' },
         { view: 'inbox', go: 'Ir a Conversaciones', title: 'Toma una conversación cuando quieras', text: 'El switch «Responde: ' + ag + ' | Tú» decide quién contesta. En Tú, ' + ag + ' se calla y escribes tú; vuelve a ' + ag + ' cuando termines. Escribir a mano también te pasa la conversación.' },
         { view: 'profile', go: 'Ir a Perfil', title: 'Llena el Perfil de ' + biz, text: 'Dirección, horarios, pagos, precios… Lo que llenes, ' + ag + ' lo dice al instante. Lo que quede vacío sale como «Por confirmar» y no se lo inventa.' },
-        { view: 'pipeline', go: 'Ir a Prospectos', title: 'Sigue a tus prospectos', text: 'Cada tarjeta es un cliente en su etapa. Arrástrala o usa «Mover a…», que también funciona en el celular. Tocar el nombre abre la conversación.' },
+        { view: 'pipeline', go: 'Ir a Clientes › Por etapa', title: 'Sigue a tus prospectos', text: 'En Clientes, la pestaña «Por etapa» tiene una tarjeta por cliente en su etapa. Arrástrala o usa «Mover a…», que también funciona en el celular. Tocar el nombre abre la conversación.' },
         { view: 'channels', go: 'Ir a Canales', title: 'Revisa por dónde llegan tus clientes', text: 'En Canales ves si WhatsApp y el chat del sitio están conectados y qué falta. WhatsApp oficial se configura ahí mismo, en Credenciales.' },
       ],
       faq: [
@@ -3060,8 +3171,8 @@
       if (!n || n.error) return;
       state.cuentas = n;
       // En gris y sin fondo: dicen cuántos hay, no que algo urja. Lo que urge va en rojo, en las insignias.
-      $('cuenta-pip').textContent = n.abiertos ? String(n.abiertos) : '';
-      $('cuenta-cli').textContent = n.total ? String(n.total) : '';
+      if ($('cuenta-pip')) $('cuenta-pip').textContent = n.abiertos ? String(n.abiertos) : '';
+      if ($('cuenta-cli')) $('cuenta-cli').textContent = n.total ? String(n.total) : '';
       pintarListas();
     });
   }
@@ -3139,7 +3250,7 @@
   function pintarPerfil(d) {
     var c = d.contact, h = d.historia || {}, v = d.valor || {};
     $('pf-nombre').textContent = nameOf(c);
-    $('pf-ini').textContent = inicialesDe(nameOf(c));
+    $('pf-ini').textContent = c.name ? inicialesDe(c.name) : '';
     $('pf-sub').textContent = [channelIcon(c.channel), c.phone || '', h.frase || ''].filter(Boolean).join(' · ');
     if (PF_LISTA) {
       var i = PF_LISTA.indexOf(c.id);
@@ -3180,7 +3291,7 @@
         (d.origen && d.origen.fuente ? fila('Llegó por', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : ''))) : '') +
         (variasSedes() && data.sede ? fila('Sede', esc(nombreSede(data.sede))) : '') +
       '</dl>' +
-      (capturados.length ? '<h4>Lo que contó</h4><dl class="det">' + capturados.map(function (k) { return fila(k.replace(/_/g, ' '), esc(data[k])); }).join('') + '</dl>' : '') +
+      (capturados.length ? '<h4>Lo que contó</h4><dl class="det">' + capturados.map(function (k) { return fila(etiquetaDato(k), esc(data[k])); }).join('') + '</dl>' : '') +
       '<details class="corregir"><summary>Corregir datos</summary><div class="pf-campos">' +
         '<div class="ancho"><label for="pf-f-nombre">Nombre</label><input id="pf-f-nombre" value="' + esc(c.name || '') + '"></div>' +
         '<div class="ancho"><label for="pf-f-tel">Teléfono</label><input id="pf-f-tel" value="' + esc(c.phone || '') + '"></div>' +

@@ -13,9 +13,13 @@ un aviso que lleva al tutorial. Esta guía es la referencia completa, para entre
 nada, porque ya entraste allá.
 
 **Si eres el negocio**, abre la dirección del tablero (termina en `/admin`) desde el computador o el celular y
-escribe el token que te dieron. En el celular el menú queda abajo, con Hoy, Chats, Calendario, Prospectos y **Más**. En
-Más están Análisis, Perfil, El negocio, Agente, Canales, Lo que sabe, Ayuda, el tema claro u oscuro, el sonido y
-**Salir**. En el computador todo está en la barra lateral, con Salir al pie.
+escribe el token que te dieron. En el computador las secciones van en la barra lateral; en el celular, abajo.
+
+Son cinco: **Hoy**, **Conversaciones**, **Calendario**, **Clientes** y **Análisis**. Las dos últimas tienen
+pestañas arriba de la pantalla: en Clientes, *Lista*, *Por etapa* y *Seguimientos*; en Análisis, *Resumen* y
+*Ventas*. Cada una se abre en la pestaña donde la dejaste. Al pie van la campana y **Configuración**, que tiene lo de
+tu negocio (Perfil del negocio, El negocio, El asistente, Canales, Lo que sabe), lo tuyo (tu nombre, el tema claro u
+oscuro, el sonido y **Salir**) y la Ayuda.
 
 **Perfil** y **El negocio** no son pantallas: abren un **modal con dos pestañas** encima de lo que estés haciendo,
 y al cerrarlo vuelves donde estabas.
@@ -70,8 +74,9 @@ escribir o usar una plantilla aprobada por Meta.
 
 A la izquierda la lista, con los filtros encima: *Todos*, *Sin leer*, *Con una persona*, *Prospectos*,
 *Interesados*, *Con cita* y *Archivados*. Al final va **Marcar todo como leído**, para el día que se atendió todo
-desde el teléfono. En el centro, el chat. A la derecha, la ficha: arriba el **próximo paso**, el **valor** y
-**quién la lleva**, y abajo la **historia**, con una caja para dejar una nota sin salir de la conversación.
+desde el teléfono. En el centro, el chat. A la derecha, **el perfil de la persona**: quién es, qué quiere, lo que
+contó y su historia, para atenderla sin tener que leerse la conversación entera. En el celular se abre con el
+botón **Ficha** de arriba del chat, y **‹ Volver a la conversación** te devuelve.
 
 **¿Por qué contestó eso?** Si administras, debajo de cada respuesta del asistente hay un **¿por qué?**. Dice qué
 entendió, por dónde lo mandó, qué modelo contestó y en cuánto tiempo, qué guardas saltaron (una cifra sin respaldo,
@@ -86,11 +91,16 @@ dijo.
 escribes; en *Aiva*, vuelve a responder solo. Escribir a mano también te pasa la conversación. En WhatsApp el
 cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo número.
 
-**La ficha.**
+**El perfil**, de arriba abajo:
 
-- **¿Es un prospecto?**: el veredicto (*Sin señales aún*, *Posible prospecto*, *Prospecto claro*, *Prospecto con
-  cita*, *Cliente*, *Perdido*) con la barra de probabilidad. Debajo dice el número y cómo se ve en tarjetas y avisos
-  (*frío*, *tibio*, *caliente*): es el mismo puntaje.
+- **Quién es y qué quiere**: el nombre, por dónde escribió y, en una frase, lo que busca. Si tiene **nota fija**
+  (lo que siempre hay que saber de esa persona), va justo debajo.
+- **Escribirle por WhatsApp** y **Llamar**, si dejó teléfono.
+- **Detalles**: la **etapa**, que se cambia ahí mismo; **¿Prospecto?**, el veredicto con su puntaje (*Sin señales
+  aún*, *Posible prospecto*, *Prospecto claro*, *Prospecto con cita*, *Cliente*, *Perdido*); el **próximo paso**,
+  el **valor**, **quién la lleva** y por dónde llegó.
+- **Por qué ese puntaje** (se abre con un clic): los puntos que suman o restan ("Pidió cita +30", "Objeción −10"),
+  el ánimo y **Volver a analizar**, que lee otra vez toda la conversación.
 
   El puntaje **se enfría solo**: a los 3 días sin hablar baja 10, a la semana 25 y a las dos semanas 40, y la ficha
   dice hasta dónde llegó cuando hablaron ("llegó a 65 cuando hablaron"). Quien tiene cita o ya compró no se enfría:
@@ -98,13 +108,15 @@ cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo nú
   tener claro qué quiere; dar el nombre o preguntar el precio pesan poco. Son pesos **estimados** con las primeras
   conversaciones del negocio: se afinan cuando haya unas 20 citas con su resultado marcado en Hoy › *¿Cómo les
   fue?*.
-- **Por qué**: los puntos que suman o restan ("Pidió cita +30", "Objeción −10").
-- **Datos capturados**: lo que el asistente entendió de la conversación (prenda, ocasión, fecha del evento,
-  presupuesto, teléfono…).
-- **Ficha**: nombre, teléfono, etapa, etiquetas y notas, que puedes corregir y **Guardar**.
-- **Escribirle por WhatsApp** y **Llamar**: al lado del teléfono, para buscarlo tú por fuera del tablero (por
-  ejemplo, si llegó por el chat del sitio o si ya pasaron las 24 horas de WhatsApp oficial). WhatsApp abre desde tu
-  propio número, no desde el del negocio. Si no dejó teléfono, lo dice.
+- **Lo que contó**: lo que el asistente entendió de la conversación, sin preguntarlo (servicio, prenda, ocasión,
+  fecha del evento, presupuesto…). Se llena solo mientras conversa.
+- **Citas** y **Historia**: lo último que pasó, con una caja para dejar una nota sin salir de la conversación.
+  **Ver la ficha completa** abre la historia entera.
+- **Corregir datos** (se abre con un clic): nombre, teléfono, etiquetas y nota fija, con **Guardar**. Ahí mismo
+  están **Archivar** y **Borrar**. Si mientras escribes llega un mensaje o un análisis nuevo, lo que llevabas
+  escrito no se pierde.
+- **Escribirle por WhatsApp** abre desde tu propio número, no desde el del negocio: sirve para buscarlo por fuera
+  del tablero (si llegó por el chat del sitio o ya pasaron las 24 horas de WhatsApp oficial).
 - **Archivar**: saca la conversación de las listas, del embudo y de los números, sin perder nada. Sirve para
   pruebas, equivocados o spam. Si esa persona vuelve a escribir, reaparece sola. Con el filtro *Archivados* las ves
   y las devuelves.
@@ -121,9 +133,6 @@ cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo nú
   después por WhatsApp), aparece arriba con **Unir fichas**. Se conserva la ficha donde escribió más recientemente,
   que es por donde le llegan las respuestas, y se le suman la conversación, las citas y el análisis de la otra.
   No se puede deshacer, así que pide confirmación.
-- **Re-analizar**: vuelve a leer toda la conversación.
-- **Citas** y **Línea de tiempo**: su historial.
-
 Si llegaron mensajes nuevos después del último análisis, la ficha lo dice y se recalcula sola.
 
 ### Cuando son varios atendiendo
@@ -147,7 +156,13 @@ ficha, y agendar a mano pide la sede: sin ella la cita no se agenda. La ficha qu
 Los bloques *Ocupado* también son de la sede que miras: el calendario del dueño ocupa todas, y si una sede tiene el
 suyo, ese solo ocupa esa sede. Al crear una persona a mano en Clientes, se escoge a qué sede llegó.
 
-## Prospectos
+## Clientes
+
+Todas las personas que te han escrito, en tres pestañas: **Lista** para buscar a alguien, **Por etapa** para
+moverlas por el embudo y **Seguimientos** para retomar a quien se quedó callado. Quien escribe por el chat del sitio
+sin dar su nombre sale como *Visitante del sitio*, con cuatro letras para distinguirlo de otro.
+
+### Por etapa
 
 Una columna por etapa. Las etapas son **las de tu negocio**: una boutique va *Nuevo → Conversando → Interesado →
 Cita agendada → Vendido*; una financiera, *Nuevo → En revisión → Con un asesor → Resuelto*; una litografía,
@@ -165,7 +180,7 @@ en la ficha.
 Con varias sedes, arriba se escoge cuál mirar, y cada tarjeta dice la suya. **Sin sede todavía** junta a quienes no
 han escogido: es donde hay que ir a preguntarles.
 
-## Clientes
+### Lista
 
 El directorio de todas las personas, para buscar a alguien y saber de un vistazo qué pasa con cada una. Arriba,
 pestañas con su número: *Todos*, *Míos* (las que llevas tú), *🔥 Calientes*, *Prospectos*, *Clientes* y
@@ -183,9 +198,15 @@ cambia ahí mismo. Arriba, **3 de 23** pasa a la siguiente de la lista sin volve
 teclado. **Fijar** la deja en la barra lateral, debajo de las listas. Los fijados son tuyos: cada quien fija a los
 suyos. Se guardan con el nombre con el que respondes, así que te siguen a otro computador o al celular.
 
+### Seguimientos
+
+Quienes llevan días sin escribir y valdría la pena retomar, los calientes primero. Si hay calientes esperando, la
+sección Clientes lo dice con un número en rojo.
+
 ## Análisis
 
-Los números del negocio: embudo por etapa, ánimo de los clientes y más. Cada número abre la lista de conversaciones
+En dos pestañas: **Resumen** y **Ventas** (lo vendido en 30 días, 90 días o un año). En Resumen, los números del
+negocio: embudo por etapa, ánimo de los clientes y más. Cada número abre la lista de conversaciones
 que lo explica.
 
 **Llevarse los datos.** Abajo, **Contactos (CSV)** y **Citas (CSV)** bajan una hoja de cálculo con lo que hay hoy,

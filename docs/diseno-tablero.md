@@ -367,3 +367,38 @@ sección dice una cosa en una línea y quedan menos de 250 palabras. Lo que dec�
 del tablero** hecha con HTML, con sus colores de verdad (blanco, azul, barra oscura), aunque la página siga con el
 dorado de la casa: enseña lo que uno va a ver al entrar. Lleva `role="img"` y su descripción, porque para un lector de
 pantalla una tabla de ejemplo sería ruido. `test:tablero` avisa si la portada vuelve a pasar de 260 palabras.
+
+## Más sencillo para quien empieza (2026-10-21)
+
+Le dijeron al usuario que aiva era «complejo de usar» y le mostraron Vocero, un CRM de WhatsApp de código abierto.
+Se comparó con capturas de los dos: Vocero se ve sencillo porque hace menos (desde su 2.0 no trae agente, no
+puntúa, y su ficha arranca vacía), así que copiarle la cara no habría simplificado nada. Lo que sí se tomó:
+
+| De dónde | En aiva |
+|---|---|
+| Su panel de la conversación ES el perfil | El panel derecho de Conversaciones pasó de formulario a perfil: quién es, qué quiere, nota fija, Detalles, «Lo que contó», citas e historia. El formulario, detrás de **Corregir datos** |
+| Pocas secciones | El riel bajó de ocho a cinco: Hoy, Conversaciones, Calendario, **Clientes** (Lista · Por etapa · Seguimientos) y **Análisis** (Resumen · Ventas). Nada se quitó: lo demás son pestañas arriba de la pantalla |
+| — | Visitantes sin nombre como «Visitante del sitio · 44fa», no «web · 44fa379b». Datos capturados como palabras («Ocasión», «Talla o medidas»), no como variables |
+
+Reglas que salen de aquí:
+
+- **El área en el riel, la pantalla en la pestaña.** El título de cada pantalla de un área dice el área («Clientes»)
+  y la pestaña encendida dice cuál. Es la misma regla de Configuración: cada nivel aporta algo, nadie repite.
+- **Pestañas arriba, no un panel de sección al lado.** El panel le quita 212 px justo a las pantallas que más ancho
+  necesitan (el tablero por etapa y la tabla). Por eso se quitó también de Conversaciones.
+- **Un área se abre donde se dejó.** Quien vive en «Por etapa» no pasa por la lista cada vez. Es comodidad de cada
+  quien, en su navegador (`aiva.admin.<cliente>.areas`), y si no hay nada guardado se abre la primera pestaña.
+- **Lo urgente gana al conteo.** El botón de Clientes lleva la cifra gris de cuántos hay; si hay calientes esperando
+  seguimiento, la insignia roja ocupa ese sitio y la cifra se calla.
+- **Repintar no borra lo que se escribe.** El perfil se vuelve a pintar con cada análisis y cada mensaje. Lo que
+  lleva `data-borrador` y los `<details data-k>` abiertos se guardan antes y se devuelven después, solo si es la misma
+  persona. Cualquier campo nuevo del panel lleva `data-borrador`.
+- **«Lo que contó» va a la vista en el perfil.** La regla del puntaje sigue en pie (en listas, tablero y cabecera, el
+  veredicto y nada más; el porqué detrás de un clic), pero en el perfil lo que la persona contó ES el perfil, y por
+  eso no se esconde. Lo que sí va detrás de un clic es el porqué del puntaje.
+
+🪤 **Las tarjetas aplastadas.** Desde la piel blanca y azul (2026-10-02), `.card` lleva `overflow:hidden` para la
+franja de color de arriba. En una columna flexible eso deja que el navegador encoja las tarjetas hasta 48 px cuando
+la columna se llena, y solo se veía la pastilla «0 · frío» y medio nombre. Con pocas tarjetas no pasa, así que en
+una demostración no se ve; con un cliente de verdad, sí. `.col .cards>.card{flex-shrink:0}` lo arregla: la que se
+desliza es la columna, no la tarjeta.

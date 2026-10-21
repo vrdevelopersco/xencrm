@@ -273,7 +273,8 @@ check('la búsqueda global no se llama como los colores de la marca', /dialog\.b
 // 🪤 Trampa 3 de diseno-tablero.md: lo que el JavaScript engancha al cargar tiene que estar ANTES del <script>, o
 // un `null.onclick` tumba el tablero entero.
 const antesDelScript = html.slice(0, html.indexOf('<script src="admin.js'));
-const enganchados = ['pf-ant', 'pf-sig', 'pf-fijar', 'pf-pos', 'pf-nav', 'pf-ini', 'marcar-leidas', 'rail-listas', 'pip-cifras', 'cuenta-pip', 'cuenta-cli', 'cli-filtros'];
+const enganchados = ['pf-ant', 'pf-sig', 'pf-fijar', 'pf-pos', 'pf-nav', 'pf-ini', 'marcar-leidas', 'rail-listas', 'pip-cifras', 'cuenta-cli', 'cli-filtros'];
+// (cuenta-pip ya no está en el HTML: va en la pestaña «Por etapa», que arma el JavaScript; ver la prueba de las áreas.)
 const faltan = enganchados.filter((id) => !antesDelScript.includes(`id="${id}"`));
 check('🪤 lo que se engancha al cargar existe antes del <script>', html.includes('<script src="admin.js') && faltan.length === 0, `faltan antes del script: ${faltan.join(', ')}`);
 // 🪤 Trampa 2: el display de un <dialog> va en [open]; suelto deja la ficha a la vista estando cerrada.
@@ -321,6 +322,38 @@ const principal = portada.slice(portada.indexOf('<main>'), portada.indexOf('</ma
 const palabras = principal.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
 check('la portada no vuelve a llenarse de texto (menos de 260 palabras)', palabras < 260, `tiene ${palabras}`);
 check('la vista del tablero en la portada se lee como una imagen con su descripción', /class="vista" role="img" aria-label="[^"]{30,}"/.test(portada));
+
+// — Más sencillo para quien empieza (2026-10-21). Salió de comparar aiva con Vocero: «complejo de usar».
+// 🪤 Con una columna llena, las tarjetas se aplastaban a 48 px y solo se veía la pastilla y medio nombre.
+check('🪤 las tarjetas del tablero por etapa no se aplastan cuando la columna se llena', /\.col \.cards>\.card\{flex-shrink:0\}/.test(html),
+  'sin flex-shrink:0, el overflow:hidden de .card deja que la columna las encoja');
+check('un visitante sin nombre se ve como visitante, no como un código', /'Visitante del sitio · '/.test(js) && !/'web · '/.test(js));
+check('🪤 el borrador para retomar saluda con el nombre de verdad, no con «Visitante»', /first = \(c\.name \|\| ''\)/.test(js));
+check('los datos capturados se ven como palabras («Ocasión»), no como variables', (js.match(/fila\(etiquetaDato\(k\)/g) || []).length === 2 && /ocasion: 'ocasión'/.test(js));
+
+// El riel: cinco secciones. Lo demás vive dentro de un área, como pestañas; nada se quitó.
+const rielNuevo = html.slice(html.indexOf('<nav class="nav">'), html.indexOf('</nav>'));
+const enRiel = [...rielNuevo.matchAll(/class="rb[^"]*" data-view="([a-z]+)"/g)].map((m) => m[1]);
+check('el riel tiene cinco secciones', enRiel.join(',') === 'today,inbox,calendar,clientes,analysis', enRiel.join(','));
+const areas = js.slice(js.indexOf('var AREAS = ['), js.indexOf('var AREA_DE'));
+const dentro = [...areas.matchAll(/view: '([a-z]+)'/g)].map((m) => m[1]);
+check('🪤 lo que salió del riel sigue a un clic: cada pantalla quitada está en un área', ['pipeline', 'seguimientos', 'ventas'].every((v) => dentro.includes(v) && html.includes(`id="view-${v}"`)),
+  'una pantalla que no está ni en el riel ni en un área es una pantalla a la que no se llega');
+check('cada área se abre en la pantalla que lleva su botón del riel', /\{ id: 'clientes', lbl: 'Clientes', subs: \[\{ view: 'clientes'/.test(areas) && /\{ id: 'analisis', lbl: 'Análisis', subs: \[\{ view: 'analysis'/.test(areas));
+check('🪤 las pestañas nacen dentro del documento (si no, la cuenta de «Por etapa» no se encuentra)', /if \(h0\) h0\.after\(g\)/.test(js) && /if \(\$\('cuenta-pip'\)\)/.test(js));
+check('el riel marca el área aunque se esté en una de sus pestañas', /enRiel = area \? area\.subs\[0\]\.view : view/.test(js));
+check('la insignia de seguimientos gana a la cifra gris, que va en el mismo sitio', /\.rail \.rb \.badge:not\(:empty\)~\.cuenta\{display:none\}/.test(html) &&
+  /id="badge-seg"><\/span><span class="cuenta" id="cuenta-cli">/.test(html));
+
+// El panel de la conversación es el perfil: primero quién es y qué quiere; el formulario, detrás de «Corregir».
+const panel = js.slice(js.indexOf('  function renderDetails() {'), js.indexOf('  // ---------- hoy ----------'));
+check('el perfil al lado de la conversación dice qué quiere y lo que contó antes que nada editable',
+  panel.indexOf('ficha-quiere') > 0 && panel.indexOf('Lo que contó') > 0 && panel.indexOf('Lo que contó') < panel.indexOf('<summary>Corregir datos'));
+check('el formulario de la ficha vive detrás de «Corregir datos»', /<details class="corregir" data-k="corregir"><summary>Corregir datos<\/summary>[\s\S]*id="f-name"[\s\S]*id="del-btn"/.test(panel));
+check('🪤 repintar el perfil no borra lo que se estaba escribiendo', /var borradores = borradoresDelPerfil\(c\.id\)/.test(panel) && /devolverBorradores\(borradores\)/.test(panel) &&
+  (panel.match(/data-borrador/g) || []).length >= 5, 'llega un análisis cada pocos segundos y repinta el panel entero');
+check('🪤 y tampoco pierde el aviso de «¿es la misma persona?» ni los botones de archivar', /renderDuplicates\(state\.dups\.list\)/.test(panel) && /bindArchive\(\)/.test(panel));
+check('en el celular, del perfil se vuelve a la conversación', /id="back-chat"/.test(panel) && /\.volver-chat\{display:none\}/.test(html));
 
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);
