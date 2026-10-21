@@ -228,6 +228,11 @@ dialog.buscador::backdrop{background:rgba(16,24,40,.42);backdrop-filter:blur(2px
 .propuesta{border-top:1px solid var(--glass-border);background:color-mix(in srgb,var(--brand) 7%,var(--glass));
   padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 .propuesta[hidden]{display:none}
+/* 🪤 Los cuatro nacen escondidos y su clase pone display:flex, que le gana al [hidden] del navegador. El de
+   «también está aquí» salía como una franja amarilla vacía arriba de TODAS las conversaciones (desde d93506e), y
+   la cabecera, los mensajes y el cajón se veían vacíos antes de escoger una. test:tablero ya mira todas las
+   clases que nacen con hidden, no una lista a mano. */
+.presentes[hidden],.chat .head[hidden],.msgs[hidden],.composer[hidden]{display:none}
 .propuesta #propuesta-texto{white-space:pre-wrap;font-size:14px;line-height:1.45}
 .propuesta.vieja{background:color-mix(in srgb,var(--warn) 14%,var(--glass))}
 .composer{display:flex;gap:8px;padding:10px;border-top:1px solid var(--glass-border);background:var(--glass);align-items:flex-end}

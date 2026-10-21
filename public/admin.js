@@ -676,7 +676,8 @@
   }
   function topFactor(c) { var top = (c.scoreFactors || []).slice().sort(function (a, b) { return Math.abs(b.points) - Math.abs(a.points); })[0]; return top ? top.label + '.' : ''; }
   // Quién lleva la conversación: si la pasó el bot, la tiene el equipo hasta que alguien la tome.
-  function whoHas(c) { return c.humanBy && c.humanBy !== 'bot' ? c.humanBy : 'el equipo'; }
+  // 🪤 «bot» y «admin» no son nombres (regla de diseno-tablero.md): «La lleva admin» no le dice a nadie quién es.
+  function whoHas(c) { return c.humanBy && c.humanBy !== 'bot' && c.humanBy !== 'admin' ? c.humanBy : 'el equipo'; }
   function verdictChip(c) { var v = verdict(c); return '<span class="chip ' + v.cls + (isStale(c) ? ' stale' : '') + '" title="Probabilidad ' + c.score + (c.scoreAt ? ' · calculada hace ' + rel(c.scoreAt) : '') + '">' + esc(v.label) + '</span>'; }
   function isStale(c) { return c.scoreAt && c.lastMessageAt && c.lastMessageAt > c.scoreAt + 20000; }
   function tempLabel(t) { return t === 'frio' ? 'frío' : t; } // el valor interno va sin tilde; la palabra, con

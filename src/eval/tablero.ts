@@ -235,10 +235,17 @@ check('y quien atiende también lo ve', /genteDelGrupo\(p\.userId/.test(adm) && 
 // pone display:none por [hidden], pero cualquier `display:flex` de una clase le gana. Pasó con el chip del
 // archivo adjunto —salía vacío, con su botón de Quitar, sin que nadie hubiera escogido nada— y se vio en una
 // captura, no en una prueba. Esto lo caza para todos los que vengan.
-for (const clase of ['propuesta', 'login', 'detail-more', 'adj-listo']) {
-  const ponenDisplay = new RegExp(`\\.${clase}\\{[^}]*display:`).test(html);
-  const seApagan = new RegExp(`\\.${clase}\\[hidden\\]\\{display:none`).test(html);
-  check(`🪤 .${clase} se esconde de verdad cuando lleva [hidden]`, !ponenDisplay || seApagan,
+// 🪤 2026-10-21: la lista de arriba era a mano y se quedó corta. «.presentes» (el «Camila también está aquí») salía
+// como una franja amarilla vacía en todas las conversaciones, y nadie la había puesto en la lista. Ahora se miran
+// TODAS las clases de lo que nace con hidden en el HTML. Vale la regla con o sin un padre delante (.chat .head).
+const nacenEscondidas = new Set<string>();
+for (const m of html.matchAll(/<[a-z]+\b[^>]*\bclass="([^"]+)"[^>]*>/g)) {
+  if (/\shidden(\s|>|=)/.test(m[0])) for (const c of m[1]!.split(/\s+/)) nacenEscondidas.add(c);
+}
+for (const clase of new Set([...nacenEscondidas, 'propuesta', 'login', 'detail-more', 'adj-listo'])) {
+  const ponenDisplay = new RegExp(`(^|[},\\s])\\.${clase}\\{[^}]*display:`, 'm').test(html);
+  const seApagan = new RegExp(`\\.${clase}\\[hidden\\][^{]*\\{display:none`).test(html);
+  if (ponenDisplay) check(`🪤 .${clase} se esconde de verdad cuando lleva [hidden]`, seApagan,
     'tiene display: en su clase, así que [hidden] no lo apaga; hace falta .' + clase + '[hidden]{display:none}');
 }
 
