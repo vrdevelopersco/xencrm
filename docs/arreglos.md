@@ -7,6 +7,35 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-10-22
+
+### Claude de respaldo: si OpenAI falla, contesta Claude · `b72db16`
+En el servidor no corren Ollama ni Apple, así que si OpenAI se caía, rechazaba la llave o se quedaba sin saldo, aiva
+dejaba de contestar en los tres clientes: la lista de respaldo existía, pero no tenía a quién pasar. Ahora, con
+`ANTHROPIC_API_KEY` en el panel, contesta Claude (`src/llm/anthropic.ts`). Usa **Haiku 5.5** para lo de todos los
+días y el análisis, y **Sonnet 5.5** para lo específico y para el clasificador, que no baja de categoría ni siendo
+el suplente. No se ofrece en la consola: si alguien lo pusiera de titular, dejaría de ser respaldo. Mientras OpenAI
+conteste no sale una sola llamada a Claude, y lo que gaste cuenta para el tope de cada cliente.
+- **Sin esperar a OpenAI:** si OpenAI se acaba de caer, durante ese minuto va de último en la lista. Antes, cada
+  mensaje habría esperado su timeout, hasta 60 s sin red, antes de llegar al respaldo.
+- **Sin saldo en OpenAI:** responde con un 429 como si fuera exceso de velocidad. Ahora se reconoce
+  (`insufficient_quota`) y deja a OpenAI fuera un rato. Sin saldo en Claude es un 400 «credit balance», con el
+  mismo trato.
+- **Caché:** con Claude no es automática ni gratis. Guardar cuesta 1,25 × y dura 5 minutos. Se marcan la persona
+  (con la ficha completa del negocio, igual que con OpenAI) y el final del historial. Lo del turno va pegado al
+  mensaje del cliente, al final, para no romper lo guardado.
+- **Gasto:** lo que se guarda en caché queda en `llm_usage.cache_write_tokens`. El informe da las dos cifras: lo que
+  ahorró leer y lo que costó guardar. Con mensajes más espaciados que 5 minutos, la caché sale más cara que no
+  tenerla.
+- **Salud:** con OpenAI caído y Claude arriba, dice «está contestando Claude, el respaldo», no «no puede
+  contestar».
+- **Probarlo de titular** con las frases de siempre: `pnpm test:scenarios --engine=anthropic`. La llave sale de
+  `~/aiva-credenciales/anthropic.txt`, no del `.env` de la raíz, que leería cualquier prueba.
+
+Son 68 comprobaciones en `test:claude`, con OpenAI y Claude simulados. Se metieron nueve roturas a propósito y
+todas las detecta. La primera vez se escapaba una: que Claude no recibiera la ficha completa. Se agregó la
+comprobación que la detecta. Batería completa: 2151 ✓, 0 ✗.
+
 ## 2026-10-21
 
 ### El tablero decía «Aiva» aunque el asistente se llamara de otra forma · `7858597`
