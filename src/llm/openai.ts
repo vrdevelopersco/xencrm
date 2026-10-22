@@ -101,7 +101,18 @@ async function request(body: Record<string, unknown>, usage?: UsageTag): Promise
   }
   if (!res.ok) {
     const text = (await res.text()).slice(0, 300);
-    const code = res.status === 401 || res.status === 403 ? 'auth' : res.status === 429 ? 'rate_limited' : res.status >= 500 ? 'server' : 'bad_request';
+    // 🪤 Sin saldo es un 429, como pasarse de velocidad, pero no se arregla esperando: se marca aparte para que el
+    // motor quede fuera un rato y los mensajes vayan derecho al respaldo en vez de chocar uno por uno.
+    const code =
+      res.status === 401 || res.status === 403
+        ? 'auth'
+        : res.status === 429 && /insufficient_quota/.test(text)
+          ? 'sin_saldo'
+          : res.status === 429
+            ? 'rate_limited'
+            : res.status >= 500
+              ? 'server'
+              : 'bad_request';
     throw new EngineError('openai', code, `OpenAI ${res.status}: ${text}`, res.status);
   }
   const data = (await res.json()) as {

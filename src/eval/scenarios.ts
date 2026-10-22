@@ -1,13 +1,20 @@
-// Batería de escenarios por cliente: pnpm test:scenarios [--only=texto] [--engine=router|ollama|apple|openai] [--keep]
+// Batería de escenarios por cliente: pnpm test:scenarios [--only=texto] [--engine=router|ollama|apple|openai|anthropic] [--keep]
 // Lee los escenarios de `evalFile` en aiva.config.json y verifica intención, motor, enlaces y límites.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 const engineArg = process.argv.find((a) => a.startsWith('--engine='))?.split('=')[1];
 if (engineArg) process.env.LLM_ENGINE = engineArg;
+// Probar a Claude de titular necesita su llave. Sale de ~/aiva-credenciales/anthropic.txt si no viene en el entorno.
+// 🪤 NO del .env de la raíz: de ahí la leería cualquier prueba, y una prueba no sale a internet ni gasta.
+if (engineArg === 'anthropic' && !process.env.ANTHROPIC_API_KEY) {
+  const archivo = join(homedir(), 'aiva-credenciales', 'anthropic.txt');
+  if (existsSync(archivo)) process.env.ANTHROPIC_API_KEY = readFileSync(archivo, 'utf8').trim();
+}
 
 const { business, env } = await import('../config.js');
 const { handleMessage } = await import('../agent/agent.js');
-const { probeEngines, roleEngine, roleLabel } = await import('../llm/engines.js');
-const { openaiModel } = await import('../llm/openai.js');
+const { probeEngines, roleEngine, roleLabel, modeloDe } = await import('../llm/engines.js');
 const { apple } = await import('../llm/apple.js');
 const { getDb, countDocs } = await import('../rag/store.js');
 const { purgeContact, getContact } = await import('../crm/contacts.js');
@@ -41,7 +48,7 @@ const engines = await probeEngines();
 const light = roleEngine('light');
 const heavy = roleEngine('heavy');
 // El enrutador reparte si los roles difieren en motor o, con OpenAI, en modelo.
-const lanesDiffer = light !== heavy || (light === 'openai' && openaiModel('light') !== openaiModel('heavy'));
+const lanesDiffer = light !== heavy || modeloDe(light, 'light') !== modeloDe(heavy, 'heavy');
 const routerReady = lanesDiffer && engines[light].available && engines[heavy].available;
 console.log(
   `motores: ${Object.entries(engines)

@@ -97,7 +97,13 @@ export function saludDelCliente(): SaludDelCliente {
   if (!canales.some((c) => c.entrega)) avisos.push('No hay ningún canal por el que entregarle un mensaje a un cliente.');
   const motorPrincipal = motores.find((m) => m.motor === env.lightEngine) ?? motores.find((m) => m.disponible);
   if (motorPrincipal && !motorPrincipal.disponible) {
-    avisos.push(`El motor ${motorPrincipal.motor} está caído${motorPrincipal.porque ? ` (${motorPrincipal.porque})` : ''}: el asistente no puede contestar.`);
+    // Con el respaldo arriba sigue contestando, y decir «no puede contestar» mandaría a alguien a apagar un incendio
+    // que no hay. Pero se avisa igual: el respaldo cuesta, tiene saldo limitado y no es el motor que se eligió.
+    const respaldo = motores.find((m) => m.motor === 'anthropic' && m.disponible);
+    avisos.push(
+      `El motor ${motorPrincipal.motor} está caído${motorPrincipal.porque ? ` (${motorPrincipal.porque})` : ''}: ` +
+        (respaldo ? 'está contestando Claude, el respaldo.' : 'el asistente no puede contestar.'),
+    );
   }
   let nivel: Nivel = 'sin_tope';
   try {

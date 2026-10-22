@@ -73,12 +73,11 @@ export const env = {
   historyTurns: num(process.env.HISTORY_TURNS, 8),
 
   // Motores por rol. 'router' reparte por tipo de turno entre LIGHT_ENGINE y HEAVY_ENGINE;
-  // LLM_ENGINE=ollama|apple|openai fuerza uno solo para todo.
-  llmEngine: (['router', 'ollama', 'apple', 'openai'].includes(process.env.LLM_ENGINE ?? '') ? process.env.LLM_ENGINE : 'router') as
+  // LLM_ENGINE=ollama|apple|openai fuerza uno solo para todo. `anthropic` también vale aquí, pero es para probar a
+  // Claude con las frases de siempre (pnpm test:scenarios --engine=anthropic): en el día a día Claude es el respaldo.
+  llmEngine: (['router', 'ollama', 'apple', 'openai', 'anthropic'].includes(process.env.LLM_ENGINE ?? '') ? process.env.LLM_ENGINE : 'router') as
     | 'router'
-    | 'ollama'
-    | 'apple'
-    | 'openai',
+    | MotorConf,
   lightEngine: engineName(process.env.LIGHT_ENGINE, 'apple'),
   heavyEngine: engineName(process.env.HEAVY_ENGINE, 'ollama'),
   gateEngine: engineName(process.env.GATE_ENGINE, 'ollama'),
@@ -108,6 +107,20 @@ export const env = {
     analysis: process.env.OPENAI_EFFORT_ANALYSIS || '',
   },
 
+  // Claude (Anthropic): el respaldo de la nube. No tiene rol: entra cuando el motor de un rol falla, se cae o se
+  // queda sin saldo, y basta con poner la llave para que esté. Lo de cada rol lo contesta el modelo de su altura:
+  // Haiku para lo de todos los días y Sonnet para lo específico y para clasificar, que no baja de categoría ni
+  // siendo el suplente (ver CUIDADO en motores.ts).
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+  anthropicBaseUrl: (process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1').replace(/\/$/, ''),
+  anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5',
+  anthropicRoleModels: {
+    light: process.env.ANTHROPIC_MODEL_LIGHT || '',
+    heavy: process.env.ANTHROPIC_MODEL_HEAVY || 'claude-sonnet-5-5',
+    gate: process.env.ANTHROPIC_MODEL_GATE || 'claude-sonnet-5-5',
+    analysis: process.env.ANTHROPIC_MODEL_ANALYSIS || '',
+  },
+
   // Tablero de administración
   adminToken: process.env.ADMIN_TOKEN || '',
 
@@ -117,8 +130,10 @@ export const env = {
   calendarBusyIcs: list(process.env.CALENDAR_BUSY_ICS),
 };
 
-function engineName(v: string | undefined, def: 'ollama' | 'apple' | 'openai'): 'ollama' | 'apple' | 'openai' {
-  return v === 'ollama' || v === 'apple' || v === 'openai' ? v : def;
+type MotorConf = 'ollama' | 'apple' | 'openai' | 'anthropic';
+
+function engineName(v: string | undefined, def: MotorConf): MotorConf {
+  return v === 'ollama' || v === 'apple' || v === 'openai' || v === 'anthropic' ? v : def;
 }
 
 // ---------- Configuración del negocio (aiva.config.json) ----------

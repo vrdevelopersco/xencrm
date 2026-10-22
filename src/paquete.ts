@@ -1085,6 +1085,11 @@ const variables = [
   '# Opcional: la clave de OpenAI de un cliente concreto, para que pague lo que gasta él y no la casa.',
   '# Lo mismo se puede poner desde la consola (Configuración > Motores), que es más cómodo y la comprueba antes.',
   ...clientes.map((c) => `# OPENAI_KEY_${c.slug.toUpperCase().replace(/[^A-Z0-9]/g, '_')}=sk-...    # solo ${c.nombre}`),
+  '',
+  '# Opcional: el respaldo. Si OpenAI se cae, rechaza la llave o se queda sin saldo, contesta Claude (Anthropic).',
+  '# Sin esta línea no hay respaldo y, en este servidor, sin OpenAI no contesta nadie. Mientras OpenAI funcione no',
+  '# gasta nada. Lo que gaste cuenta en el tope de cada cliente y sale en su informe de gasto.',
+  '# ANTHROPIC_API_KEY=sk-ant-...    # una sola para todos los clientes',
 ];
 writeFileSync(
   join(dir, 'LEEME.txt'),

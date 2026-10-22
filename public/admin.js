@@ -1874,12 +1874,23 @@
   function usagePanel(u, tope) {
     if (!u.rows.length) return '<div class="panel"><b>Consumo de IA · 7 días</b>' + topeLinea(tope) + '<div class="small muted">Sin llamadas a modelos en los últimos 7 días.</div></div>';
     var rows = u.rows.map(function (r) {
-      return '<tr><td>' + esc(TASKS[r.task] || r.task) + '</td><td>' + esc((r.engine === 'openai' ? '' : r.engine + ' · ') + r.model) + '</td><td class="n">' + r.calls + '</td><td class="n">' + Math.round(r.inputTokens / r.calls) + ' / ' + Math.round(r.outputTokens / r.calls) + '</td><td class="n">' + usd(r.costUsd) + '</td></tr>';
+      return '<tr><td>' + esc(TASKS[r.task] || r.task) + '</td><td>' + esc((r.engine === 'openai' || r.engine === 'anthropic' ? '' : r.engine + ' · ') + r.model) + '</td><td class="n">' + r.calls + '</td><td class="n">' + Math.round(r.inputTokens / r.calls) + ' / ' + Math.round(r.outputTokens / r.calls) + '</td><td class="n">' + usd(r.costUsd) + '</td></tr>';
     }).join('');
     return '<div class="panel"><b>Consumo de IA · 7 días</b>' + topeLinea(tope) +
       '<div>' + usd(u.totalUsd) + ' en total' + (u.usdPerConversation !== null ? ' · ' + usd(u.usdPerConversation) + ' por conversación · ' + usd(u.usdPerMessage) + ' por mensaje del cliente' : '') + '</div>' +
       '<table class="usage"><thead><tr><th>Tarea</th><th>Modelo</th><th class="n">Llamadas</th><th class="n">Tokens por llamada (entrada / salida)</th><th class="n">Costo</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<div class="small muted">Costo estimado con la tarifa estándar de OpenAI' + (u.unpriced ? ' (hay modelos sin precio conocido: el total se queda corto)' : '') + '. Los modelos locales no cuestan.</div></div>';
+      cacheLineas(u.cache) +
+      '<div class="small muted">Costo estimado con la tarifa estándar de cada proveedor' + (u.unpriced ? ' (hay modelos sin precio conocido: el total se queda corto)' : '') + '. Los modelos locales no cuestan.</div></div>';
+  }
+  // Lo que hizo la caché (src/llm/usage.ts › efectoCache). 🪤 Con Claude guardar cuesta, y si los mensajes llegan
+  // más espaciados que los 5 minutos que dura, la caché sale más cara que no tenerla: por eso las dos cifras.
+  var PROVEEDOR = { openai: 'OpenAI', anthropic: 'Claude' };
+  function cacheLineas(cache) {
+    return (cache || []).map(function (c) {
+      var neto = c.ahorroUsd - c.guardarUsd;
+      return '<div class="small">Caché de ' + esc(PROVEEDOR[c.engine] || c.engine) + ': releer lo ya leído ahorró ' + usd(c.ahorroUsd) +
+        (c.guardarUsd > 0 ? '; guardarlo costó ' + usd(c.guardarUsd) + ' de más. ' + (neto >= 0 ? 'Neto, ahorró ' + usd(neto) + '.' : 'Neto, costó ' + usd(-neto) + ' más que no tenerla.') : '.') + '</div>';
+    }).join('');
   }
   function calendarPanel(cfg) {
     var f = cfg.feed;
@@ -2415,7 +2426,7 @@
   function loadAgent() {
     Promise.all([api('/agent'), api('/usage?days=7'), api('/calendar'), api('/backup'), api('/presupuesto').catch(function () { return null; }), api('/retencion').catch(function () { return null; })]).then(function (r) {
       var a = r[0], usage = r[1], calCfg = r[2], bk = r[3], tope = r[4], ret = r[5];
-      var eng = Object.keys(a.engines).map(function (k) { var e = a.engines[k]; return '<li><b>' + k + '</b>: ' + (e.available ? '✓ disponible' : '✗ ' + esc(e.reason || 'no disponible')) + '</li>'; }).join('');
+      var eng = Object.keys(a.engines).map(function (k) { var e = a.engines[k]; return '<li><b>' + (k === 'anthropic' ? 'claude (respaldo)' : k) + '</b>: ' + (e.available ? '✓ disponible' : '✗ ' + esc(e.reason || 'no disponible')) + '</li>'; }).join('');
       var ap = a.appointments;
       $('agent').innerHTML =
         '<div class="panel"><b>' + esc(a.agent.name) + '</b> · asistente de <b>' + esc(a.business.name) + '</b><div class="muted">' + esc(a.business.description) + '</div><div class="small">Estilo: ' + esc(a.agent.style) + '</div><div class="small">Contacto humano que ofrece: ' + esc(a.business.humanContact) + '</div></div>' +

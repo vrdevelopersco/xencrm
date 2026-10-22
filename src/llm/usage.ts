@@ -1,5 +1,5 @@
 // Registro de consumo de los modelos: tokens y costo por tarea, modelo y conversación.
-// Cada llamada a OpenAI u Ollama deja una fila en llm_usage; el tablero y `pnpm usage` la resumen.
+// Cada llamada a OpenAI, Claude u Ollama deja una fila en llm_usage; el tablero y `pnpm usage` la resumen.
 import { getDb } from '../rag/store.js';
 import { idDelTurno } from '../crm/turnos.js';
 
@@ -19,6 +19,8 @@ export interface UsageEntry extends UsageTag {
   model: string;
   inputTokens: number;
   cachedTokens?: number;
+  /** Lo que se guardó en la caché en esta llamada. Solo Claude lo cobra aparte (OpenAI guarda gratis). */
+  cacheWriteTokens?: number;
   outputTokens: number;
   reasoningTokens?: number;
   /** Segundos de audio, cuando el modelo se cobra por minuto en vez de por tokens. */
@@ -27,8 +29,8 @@ export interface UsageEntry extends UsageTag {
 }
 
 // USD por millón de tokens, tarifa estándar. Consultado el 2026-09-21 en developers.openai.com/api/docs/pricing.
-// Un modelo que no esté aquí se registra igual, sin costo.
-const PRICES: Record<string, { input: number; cached: number; output: number }> = {
+// Un modelo que no esté aquí se registra igual, sin costo. `write` es guardar en la caché, que solo Claude cobra.
+const PRICES: Record<string, { input: number; cached: number; output: number; write?: number }> = {
   'gpt-5.5': { input: 5, cached: 0.5, output: 30 },
   'gpt-5.4': { input: 2.5, cached: 0.25, output: 15 },
   'gpt-5.4-mini': { input: 0.75, cached: 0.075, output: 4.5 },
@@ -39,7 +41,20 @@ const PRICES: Record<string, { input: number; cached: number; output: number }> 
   // Vectores de búsqueda: no generan salida, solo leen. Son centavos al año con este volumen.
   'text-embedding-3-small': { input: 0.02, cached: 0.02, output: 0 },
   'text-embedding-3-large': { input: 0.13, cached: 0.13, output: 0 },
+  // Claude, consultado el 2026-10-22 en platform.claude.com/docs/en/about-claude/pricing. Guardar en la caché de 5
+  // minutos cuesta 1,25 × la entrada; leerla, 0,1 × en Haiku y 0,05 × en Sonnet y Opus 5.5. Haiku 5.5 sube de
+  // tarifa con prompts de más de 100.000 tokens; aiva no manda nada ni cerca de eso.
+  'claude-haiku-5-5': { input: 0.1, cached: 0.01, write: 0.125, output: 0.5 },
+  'claude-sonnet-5-5': { input: 2, cached: 0.1, write: 2.5, output: 10 },
+  'claude-opus-5-5': { input: 4, cached: 0.2, write: 5, output: 20 },
+  'claude-haiku-4-5': { input: 1, cached: 0.1, write: 1.25, output: 5 },
 };
+
+/** Los motores que cobran. Los de la máquina (Ollama, Apple) cuestan 0 y no tienen tope. */
+const DE_PAGO = new Set(['openai', 'anthropic']);
+
+/** El nombre del modelo sin la fecha de la versión: «gpt-5.4-2026-03-05» y «claude-haiku-4-5-20251001» cobran como su familia. */
+const familia = (model: string) => model.replace(/-\d{4}-\d{2}-\d{2}$/, '').replace(/-\d{8}$/, '');
 
 /** Costo en USD de una llamada; null si el modelo no tiene precio conocido (los locales cuestan 0). */
 /**
@@ -55,23 +70,37 @@ const POR_MINUTO: Record<string, number> = {
   'whisper-1': 0.006,
 };
 
-export function costUsd(engine: string, model: string, input: number, cached: number, output: number, segundos = 0): number | null {
-  if (engine !== 'openai') return 0;
-  const limpio = model.replace(/-\d{4}-\d{2}-\d{2}$/, '');
+export function costUsd(engine: string, model: string, input: number, cached: number, output: number, segundos = 0, guardados = 0): number | null {
+  if (!DE_PAGO.has(engine)) return 0;
+  const limpio = familia(model);
   const porMinuto = POR_MINUTO[limpio];
   if (porMinuto !== undefined) return (segundos / 60) * porMinuto;
   const p = PRICES[limpio];
   if (!p) return null;
-  return ((input - cached) * p.input + cached * p.cached + output * p.output) / 1_000_000;
+  return ((input - cached - guardados) * p.input + cached * p.cached + guardados * (p.write ?? p.input) + output * p.output) / 1_000_000;
+}
+
+/**
+ * Lo que hizo la caché: cuánto se ahorró al leer lo ya guardado y cuánto costó de más guardarlo. null sin precio.
+ *
+ * 🪤 Con OpenAI guardar no cuesta, así que la caché solo puede ahorrar. Con Claude puede salir más cara que no
+ * usarla: si los mensajes llegan más espaciados que los 5 minutos que dura, se paga el 25 % extra de guardar y
+ * nunca se lee. Por eso se dan las dos cifras y no solo «lo que ahorró», que sería la cifra bonita y falsa.
+ */
+export function efectoCache(engine: string, model: string, cached: number, guardados: number): { ahorroUsd: number; guardarUsd: number } | null {
+  if (!DE_PAGO.has(engine)) return { ahorroUsd: 0, guardarUsd: 0 };
+  const p = PRICES[familia(model)];
+  if (!p) return null;
+  return { ahorroUsd: (cached * (p.input - p.cached)) / 1_000_000, guardarUsd: (guardados * ((p.write ?? p.input) - p.input)) / 1_000_000 };
 }
 
 export function recordUsage(e: UsageEntry): void {
   try {
     getDb()
       .prepare(
-        'INSERT INTO llm_usage (ts, user_id, task, engine, model, input_tokens, cached_tokens, output_tokens, reasoning_tokens, segundos, ms, turno) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO llm_usage (ts, user_id, task, engine, model, input_tokens, cached_tokens, cache_write_tokens, output_tokens, reasoning_tokens, segundos, ms, turno) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       )
-      .run(Date.now(), e.userId ?? null, e.task ?? 'light', e.engine, e.model, e.inputTokens, e.cachedTokens ?? 0, e.outputTokens, e.reasoningTokens ?? 0, e.segundos ?? 0, e.ms, idDelTurno());
+      .run(Date.now(), e.userId ?? null, e.task ?? 'light', e.engine, e.model, e.inputTokens, e.cachedTokens ?? 0, e.cacheWriteTokens ?? 0, e.outputTokens, e.reasoningTokens ?? 0, e.segundos ?? 0, e.ms, idDelTurno());
   } catch (err) {
     console.warn('[usage] no se pudo registrar:', (err as Error).message);
   }
@@ -84,6 +113,7 @@ export interface UsageRow {
   calls: number;
   inputTokens: number;
   cachedTokens: number;
+  cacheWriteTokens: number;
   outputTokens: number;
   reasoningTokens: number;
   /** Segundos de audio transcrito, cuando el modelo se cobra por minuto. */
@@ -98,6 +128,8 @@ export interface UsageSummary {
   totalUsd: number;
   /** Algún modelo usado no tiene precio conocido: el total se queda corto. */
   unpriced: boolean;
+  /** Lo que hizo la caché en cada motor de pago que la usó (ver efectoCache). */
+  cache: { engine: string; ahorroUsd: number; guardarUsd: number }[];
   conversations: number;
   customerMessages: number;
   usdPerConversation: number | null;
@@ -110,17 +142,25 @@ export function usageSummary(since: number, opts: { userPrefix?: string } = {}):
   const prefix = opts.userPrefix ? `${opts.userPrefix}%` : '%';
   const raw = db
     .prepare(
-      `SELECT task, engine, model, COUNT(*) calls, SUM(input_tokens) input, SUM(cached_tokens) cached, SUM(output_tokens) output,
-              SUM(reasoning_tokens) reasoning, SUM(COALESCE(segundos, 0)) segundos, AVG(ms) ms
+      `SELECT task, engine, model, COUNT(*) calls, SUM(input_tokens) input, SUM(cached_tokens) cached, SUM(COALESCE(cache_write_tokens, 0)) guardados,
+              SUM(output_tokens) output, SUM(reasoning_tokens) reasoning, SUM(COALESCE(segundos, 0)) segundos, AVG(ms) ms
        FROM llm_usage WHERE ts >= ? AND COALESCE(user_id, '') LIKE ? GROUP BY task, engine, model ORDER BY task, model`,
     )
-    .all(since, prefix) as { task: string; engine: string; model: string; calls: number; input: number; cached: number; output: number; reasoning: number; segundos: number; ms: number }[];
+    .all(since, prefix) as { task: string; engine: string; model: string; calls: number; input: number; cached: number; guardados: number; output: number; reasoning: number; segundos: number; ms: number }[];
   let totalUsd = 0;
   let unpriced = false;
+  const cache = new Map<string, { engine: string; ahorroUsd: number; guardarUsd: number }>();
   const rows: UsageRow[] = raw.map((r) => {
-    const cost = costUsd(r.engine, r.model, r.input, r.cached, r.output, r.segundos);
+    const cost = costUsd(r.engine, r.model, r.input, r.cached, r.output, r.segundos, r.guardados);
     if (cost === null) unpriced = true;
     else totalUsd += cost;
+    const efecto = r.cached || r.guardados ? efectoCache(r.engine, r.model, r.cached, r.guardados) : null;
+    if (efecto && (efecto.ahorroUsd || efecto.guardarUsd)) {
+      const c = cache.get(r.engine) ?? { engine: r.engine, ahorroUsd: 0, guardarUsd: 0 };
+      c.ahorroUsd += efecto.ahorroUsd;
+      c.guardarUsd += efecto.guardarUsd;
+      cache.set(r.engine, c);
+    }
     return {
       task: r.task,
       engine: r.engine,
@@ -129,6 +169,7 @@ export function usageSummary(since: number, opts: { userPrefix?: string } = {}):
       inputTokens: r.input,
       segundos: r.segundos ?? 0,
       cachedTokens: r.cached,
+      cacheWriteTokens: r.guardados ?? 0,
       outputTokens: r.output,
       reasoningTokens: r.reasoning,
       avgMs: Math.round(r.ms),
@@ -144,6 +185,7 @@ export function usageSummary(since: number, opts: { userPrefix?: string } = {}):
     rows,
     totalUsd,
     unpriced,
+    cache: [...cache.values()],
     conversations: counts.conversations,
     customerMessages: counts.messages,
     usdPerConversation: counts.conversations ? totalUsd / counts.conversations : null,
@@ -164,6 +206,7 @@ export function formatUsage(s: UsageSummary): string {
     ),
     `total ${usd(s.totalUsd)}${s.unpriced ? ' (hay modelos sin precio)' : ''} · ${s.conversations} conversaciones · ${s.customerMessages} mensajes del cliente` +
       (s.usdPerConversation !== null ? ` · ${usd(s.usdPerConversation)} por conversación · ${usd(s.usdPerMessage)} por mensaje` : ''),
+    ...s.cache.map((c) => `caché de ${c.engine}: leer ahorró ${usd(c.ahorroUsd)}` + (c.guardarUsd ? ` · guardar costó ${usd(c.guardarUsd)} de más · neto ${usd(c.ahorroUsd - c.guardarUsd)}` : '')),
   ];
   return lines.join('\n');
 }

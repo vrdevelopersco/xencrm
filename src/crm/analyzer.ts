@@ -1,9 +1,8 @@
 // Análisis comercial por turno: sentimiento, interés, urgencia, objeciones y datos capturados,
 // con un puntaje explicable de probabilidad de cita/venta. Corre en segundo plano tras cada respuesta.
 import { business } from '../config.js';
-import { classify, roleEngine, fallbackOrder, iaAgotada } from '../llm/engines.js';
+import { classify, roleEngine, fallbackOrder, iaAgotada, modeloDe } from '../llm/engines.js';
 import { fueraDelTurno } from './turnos.js';
-import { openaiModel } from '../llm/openai.js';
 import type { SchemaSpec } from '../llm/apple.js';
 import { getHistory, getMessages, type StoredMessage } from '../agent/memory.js';
 import { getDb } from '../rag/store.js';
@@ -201,7 +200,7 @@ export async function analyzeContact(userId: string, opts: { full?: boolean } = 
       for (const engine of fallbackOrder(roleEngine('analysis'))) {
         try {
           raw = await classify(engine, { sessionId: 'analysis', instructions: instructions(), prompt, schema: schema(), maxTurns: 1, role: 'analysis', userId });
-          engineUsed = engine === 'openai' ? `openai:${openaiModel('analysis')}` : engine;
+          engineUsed = modeloDe(engine, 'analysis') ? `${engine}:${modeloDe(engine, 'analysis')}` : engine;
           break;
         } catch (err) {
           console.warn(`[crm] análisis con ${engine} falló: ${(err as Error).message}`);

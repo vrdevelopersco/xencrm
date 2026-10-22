@@ -1,6 +1,5 @@
 import { env } from '../config.js';
-import { isAvailable, roleEngine, type Engine } from '../llm/engines.js';
-import { openaiModel } from '../llm/openai.js';
+import { isAvailable, modeloDe, roleEngine, type Engine } from '../llm/engines.js';
 import type { Intent } from './prompts.js';
 import { enAhorro } from '../crm/presupuesto.js';
 
@@ -72,7 +71,7 @@ export function chooseEngine(input: RouteInput): Route {
   const heavy = roleEngine('heavy');
   const L = (reason: string): Route => ({ engine: light, role: 'light', reason });
   const H = (reason: string): Route => ({ engine: heavy, role: 'heavy', reason });
-  if (light === heavy && (light !== 'openai' || openaiModel('light') === openaiModel('heavy'))) {
+  if (light === heavy && modeloDe(light, 'light') === modeloDe(heavy, 'heavy')) {
     return L(env.llmEngine !== 'router' ? `forzado LLM_ENGINE=${light}` : 'un solo motor');
   }
   const lightOk = isAvailable(light);

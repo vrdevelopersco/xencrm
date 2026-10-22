@@ -296,6 +296,23 @@ no entra a los otros ni sabiéndose la dirección.
 - **Caché de OpenAI**: con `gpt-5.4-mini` solo pega cuando el inicio común del prompt pasa de unos 1.450 tokens
   (medido, no documentado). Por eso existe la ficha completa fija al inicio. Todo en `llm/openai.ts` y
   `rag/retriever.ts`.
+- **Claude de respaldo** (`llm/anthropic.ts`, desde el 2026-10-22): con `ANTHROPIC_API_KEY` puesta, `fallbackOrder`
+  lo agrega detrás de los motores de la máquina (`RESPALDOS`). No tiene rol y la consola no lo ofrece. Modelos:
+  `claude-haiku-5-5` para liviano y análisis, y `claude-sonnet-5-5` para pesado y clasificador, que no baja de
+  categoría (`ANTHROPIC_MODEL[_ROL]`).
+  - **Cuándo entra:** OpenAI caído, sin red, sin saldo (un 429 `insufficient_quota` → `sin_saldo`) o con la llave
+    revocada. Si el preferido está en su minuto de enfriamiento (`enfriando`), pasa al final de la lista, para que
+    los mensajes de ese minuto no esperen su timeout antes de llegar al respaldo.
+  - **Saldo de Claude:** sin saldo devuelve un 400 «credit balance», también `sin_saldo`.
+  - **Arranque:** un sondeo fallido con llave se reintenta al minuto, no al siguiente reinicio.
+  - **Caché:** no es automática. Se marcan `system` (la persona con la ficha completa, que Claude recibe igual que
+    OpenAI, `conInfoCompleta`) y el final del historial. Lo del turno va pegado al último mensaje del cliente, porque
+    Claude no acepta `system` a mitad de la conversación y así no rompe el prefijo. Guardar cuesta 1,25 × la entrada y
+    dura 5 minutos. `llm_usage.cache_write_tokens` lo registra aparte, y `usageSummary().cache` da lo que ahorró
+    leer y lo que costó guardar: con mensajes más espaciados que 5 minutos, la caché sale más cara que no tenerla.
+  - **Tope:** cuenta para el mismo tope que OpenAI (`DE_PAGO`).
+  - **Probarlo de titular:** `pnpm test:scenarios --engine=anthropic`, con la llave en
+    `~/aiva-credenciales/anthropic.txt`.
 - **Consumo**: cada llamada se registra con su costo según la tarifa de `usage.ts`. `pnpm usage` y el tablero lo
   muestran; `pnpm replay` proyecta el costo por 1.000 conversaciones.
 - **Tope de gasto** (`crm/presupuesto.ts`): USD al mes por cliente, en `settings` (`presupuesto.topeUsdMes`) o, si
@@ -304,7 +321,7 @@ no entra a los otros ni sabiéndose la dirección.
   - **80 %**: evento `presupuesto`. La campana, el ticket de la consola y el WhatsApp del vigilante salen de ahí,
     una vez por escalón y por mes (`presupuesto.avisado`, en la base para que un reinicio no repita).
   - **90 %** (`enAhorro`): `chooseEngine` manda lo específico al rol liviano.
-  - **100 %** (`agotado`): `fallbackOrder` saca a OpenAI si queda un motor de la máquina (`motorSinCosto`). Si no
+  - **100 %** (`agotado`): `fallbackOrder` saca a OpenAI y a Claude si queda un motor de la máquina (`motorSinCosto`). Si no
     queda ninguno (`iaAgotada`), el agente decide antes del clasificador: lo que resuelven las reglas como cita o
     persona sigue, y lo demás pasa al equipo con `TOPE_REPLIES` y `setHumanMode(…, 'tope')`. El análisis toma el
     camino de reglas y `transcribir` no transcribe. `generate` y `classify` lanzan `TopeAlcanzado` antes de

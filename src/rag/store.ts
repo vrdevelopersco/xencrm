@@ -279,6 +279,9 @@ function migrate(d: DatabaseSync) {
   // El turno que originó cada llamada y cada mensaje (crm/turnos.ts): lo que une «qué contestó» con «qué costó y
   // por qué». Vacío en lo que no sale de un turno: el análisis, lo que escribe el equipo, lo importado.
   if (!cols('llm_usage').has('turno')) d.exec('ALTER TABLE llm_usage ADD COLUMN turno TEXT');
+  // Lo que se guardó en la caché en cada llamada. Va aparte de lo leído porque Claude lo cobra a otra tarifa (más
+  // cara que la entrada normal), y sumado a la entrada el informe diría menos de lo que se paga.
+  if (!cols('llm_usage').has('cache_write_tokens')) d.exec('ALTER TABLE llm_usage ADD COLUMN cache_write_tokens INTEGER NOT NULL DEFAULT 0');
   if (!messages.has('turno')) d.exec('ALTER TABLE messages ADD COLUMN turno TEXT');
   d.exec('CREATE INDEX IF NOT EXISTS llm_usage_turno ON llm_usage(turno)');
   d.exec(`

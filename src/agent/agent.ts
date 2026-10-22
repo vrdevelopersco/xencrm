@@ -2,8 +2,7 @@ import { business, env } from '../config.js';
 import { modoCanal, propone, soloEscucha, type ChannelId } from '../channels/switches.js';
 import { businessSheet, retrieve, formatContext } from '../rag/retriever.js';
 import { getDocs, productsMentionedIn, type ScoredDoc } from '../rag/store.js';
-import { generate, estimateTokens, fallbackOrder, iaAgotada, type Engine } from '../llm/engines.js';
-import { openaiModel } from '../llm/openai.js';
+import { generate, estimateTokens, fallbackOrder, iaAgotada, conInfoCompleta, modeloDe, type Engine } from '../llm/engines.js';
 import { appendMessage, clearHistory, getHistory, touchUser } from './memory.js';
 import { classify, ruleIntent } from './gate.js';
 import { anotarUso, buscarRespuestaRapida } from '../crm/respuestas-rapidas.js';
@@ -478,10 +477,10 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   }
 
   const order = fallbackOrder(chosen.engine);
-  // Negocio chico + OpenAI: toda la información va fija al inicio del prompt (completa y desde la caché de OpenAI);
-  // de la búsqueda solo queda una pista de qué es lo más relacionado con el mensaje.
+  // Negocio chico + un motor de la nube (OpenAI, o Claude de respaldo): toda la información va fija al inicio del
+  // prompt (completa y desde la caché); de la búsqueda solo queda una pista de qué es lo más relacionado.
   const maxSheet = business.agent.fullInfoMaxTokens;
-  const sheet = maxSheet > 0 && order.includes('openai') ? businessSheet() : null;
+  const sheet = maxSheet > 0 && order.some(conInfoCompleta) ? businessSheet() : null;
   const useSheet = Boolean(sheet && sheet.tokens <= maxSheet);
   const related = [...new Set(sources.map((d) => d.title))].slice(0, 4);
   // Lo que el negocio marcó "por confirmar" en su perfil ("Zapatos"): ni sí ni no, se verifica. Se avisa antes de
@@ -507,7 +506,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   let route = `${chosen.reason} → sin motor`;
   for (let i = 0; i < order.length; i++) {
     const e = order[i]!;
-    const withSheet = useSheet && e === 'openai';
+    const withSheet = useSheet && conInfoCompleta(e);
     try {
       const input = {
         sessionId: msg.userId,
@@ -636,7 +635,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     emitEvent('bot_failed', msg.userId, { reason: route, text });
   } else {
     // Enlaces permitidos: los de las fuentes de este turno y los que aparecen en la información que vio el modelo.
-    const seen = engine === 'openai' && useSheet ? sheet!.text : fullContext;
+    const seen = engine !== 'none' && conInfoCompleta(engine) && useSheet ? sheet!.text : fullContext;
     const allowed = [...sources.flatMap((s) => (s.url ? [s.url] : [])), ...(seen.match(/https?:\/\/[^\s<>()"']+/g) ?? [])];
     let cleaned = history.length > 0 ? stripRepeatedGreeting(raw) : raw;
     if (details || !ASKS_PRICE_OR_LINK_RE.test(text)) {
@@ -653,7 +652,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   if (acompana) {
     return finish(reply, gate.intent, engine, {
       route,
-      ...(engine === 'openai' ? { model: openaiModel(chosen.role) } : {}),
+      ...(engine !== 'none' && modeloDe(engine, chosen.role) ? { model: modeloDe(engine, chosen.role) } : {}),
       gateVia: gate.via,
       sources: sources.map((s) => ({ title: s.title, url: s.url, kind: s.kind })),
     });
@@ -668,7 +667,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
 
   return finish(reply, gate.intent, engine, {
     route,
-    ...(engine === 'openai' ? { model: openaiModel(chosen.role) } : {}),
+    ...(engine !== 'none' && modeloDe(engine, chosen.role) ? { model: modeloDe(engine, chosen.role) } : {}),
     ...(engine === chosen.engine ? { role: chosen.role } : {}),
     gateVia: gate.via,
     sources: sources.map((s) => ({ title: s.title, url: s.url, kind: s.kind })),

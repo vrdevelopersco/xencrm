@@ -131,7 +131,7 @@ export function turnoDe(id: string): (Turno & { llamadas: Llamada[]; costoUsd: n
   if (!r) return null;
   const llamadas = (
     db
-      .prepare('SELECT task, engine, model, input_tokens, cached_tokens, output_tokens, reasoning_tokens, COALESCE(segundos, 0) segundos, ms FROM llm_usage WHERE turno = ? ORDER BY id')
+      .prepare('SELECT task, engine, model, input_tokens, cached_tokens, COALESCE(cache_write_tokens, 0) guardados, output_tokens, reasoning_tokens, COALESCE(segundos, 0) segundos, ms FROM llm_usage WHERE turno = ? ORDER BY id')
       .all(id) as Record<string, number | string>[]
   ).map((l) => ({
     task: String(l.task),
@@ -142,7 +142,7 @@ export function turnoDe(id: string): (Turno & { llamadas: Llamada[]; costoUsd: n
     salida: Number(l.output_tokens),
     razonamiento: Number(l.reasoning_tokens),
     ms: Number(l.ms),
-    costoUsd: costUsd(String(l.engine), String(l.model), Number(l.input_tokens), Number(l.cached_tokens), Number(l.output_tokens), Number(l.segundos)),
+    costoUsd: costUsd(String(l.engine), String(l.model), Number(l.input_tokens), Number(l.cached_tokens), Number(l.output_tokens), Number(l.segundos), Number(l.guardados)),
   }));
   const mensajes = db.prepare('SELECT id, role, author, content FROM messages WHERE turno = ? ORDER BY id').all(id) as { id: number; role: string; author: string; content: string }[];
   let guardas: string[] = [];

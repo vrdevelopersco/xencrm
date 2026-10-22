@@ -20,8 +20,10 @@ const engines = await probeEngines();
 console.log(`   ollama: ${engines.ollama.available ? '✓' : '✗ ' + engines.ollama.reason}`);
 console.log(`   apple:  ${engines.apple.available ? `✓ (${apple.info?.contextSize ?? '?'} tokens de contexto)` : '✗ ' + engines.apple.reason}`);
 console.log(`   openai: ${engines.openai.available ? '✓' : '✗ ' + engines.openai.reason}`);
+// El respaldo solo se nombra si hay llave: sin ella, una línea de «✗» en cada arranque parecería una avería.
+if (env.anthropicApiKey) console.log(`   claude: ${engines.anthropic.available ? '✓ de respaldo' : '✗ ' + engines.anthropic.reason}`);
 console.log(`   roles:  liviano ${roleLabel('light')} · pesado ${roleLabel('heavy')} · gate ${roleLabel('gate')} · análisis ${roleLabel('analysis')}`);
-if (!engines.ollama.available && !engines.apple.available && !engines.openai.available) console.error('⚠️  Ningún motor disponible. Arranca Ollama, compila el sidecar (pnpm build:sidecar) o configura OPENAI_API_KEY.');
+if (!engines.ollama.available && !engines.apple.available && !engines.openai.available && !engines.anthropic.available) console.error('⚠️  Ningún motor disponible. Arranca Ollama, compila el sidecar (pnpm build:sidecar) o configura OPENAI_API_KEY.');
 startBusySync();
 startReminders();
 // Los archivos del chat no los borra nadie: una vez al día se van los que pasaron el plazo. Ver crm/medios.ts.

@@ -1,15 +1,26 @@
-// Capa de motores: Ollama (local), Apple Foundation Models (local) y OpenAI (nube) detrás de una misma interfaz.
+// Capa de motores: Ollama (local), Apple Foundation Models (local), OpenAI (nube) y Claude (nube, de respaldo)
+// detrás de una misma interfaz.
 import { chat, checkOllama, type ChatMessage } from './ollama.js';
 import { apple, AppleError, type SchemaSpec } from './apple.js';
 import { openaiChat, openaiEffort, openaiModel, probeOpenAI } from './openai.js';
+import { anthropicChat, anthropicModel, probeAnthropic } from './anthropic.js';
 import { EngineError } from './errors.js';
 import { env } from '../config.js';
 import { emitEvent } from '../crm/events.js';
 import type { Task } from './usage.js';
 import { agotado, TopeAlcanzado } from '../crm/presupuesto.js';
 
-export type Engine = 'ollama' | 'apple' | 'openai';
+export type Engine = 'ollama' | 'apple' | 'openai' | 'anthropic';
+/** Los que se le pueden asignar a un rol desde la consola. */
 export const ENGINES: Engine[] = ['ollama', 'apple', 'openai'];
+/**
+ * Los que no tienen rol y solo entran cuando falla el de un rol: Claude. Van detrás de los de la máquina, que no
+ * cuestan. 🪤 No se ofrecen en la consola a propósito: un respaldo que alguien pone de titular deja de ser respaldo,
+ * y entonces no queda nadie detrás.
+ */
+export const RESPALDOS: Engine[] = ['anthropic'];
+/** Los que cobran, y por eso cuentan para el tope de gasto (crm/presupuesto.ts). */
+const DE_PAGO = new Set<Engine>(['openai', 'anthropic']);
 export type Role = 'light' | 'heavy' | 'gate' | 'analysis';
 
 export interface GenerateInput {
@@ -64,29 +75,48 @@ export function roleEngine(role: Role): Engine {
 
 export const ROLES: Role[] = ['light', 'heavy', 'gate', 'analysis'];
 
-/** Motor y, si es OpenAI, modelo de un rol: "openai · gpt-5.4-mini". Para logs y el tablero. */
+/** El modelo con el que un motor de la nube atiende un rol; undefined en los de la máquina, que tienen uno solo. */
+export function modeloDe(e: Engine, role?: Role): string | undefined {
+  return e === 'openai' ? openaiModel(role) : e === 'anthropic' ? anthropicModel(role) : undefined;
+}
+
+/**
+ * Los motores que reciben la información del negocio completa y fija al inicio del prompt, porque la guardan en
+ * caché y releerla sale casi gratis. Los de la máquina no: reciben solo lo que encontró la búsqueda.
+ */
+export const conInfoCompleta = (e: Engine): boolean => e === 'openai' || e === 'anthropic';
+
+/** Motor y, si es de la nube, modelo de un rol: "openai · gpt-5.4-mini". Para logs y el tablero. */
 export function roleLabel(role: Role): string {
   const e = roleEngine(role);
-  return e === 'openai' ? `openai · ${openaiModel(role)}` : e;
+  const m = modeloDe(e, role);
+  return m ? `${e} · ${m}` : e;
 }
 
 /**
  * Orden de intentos: el preferido primero, luego el otro rol, luego lo que quede disponible.
  *
- * Con el tope de gasto alcanzado, OpenAI sale de la lista si queda un motor de la máquina que conteste: así se
- * sigue atendiendo sin pagar. Si no queda ninguno, se deja el preferido para que la llamada falle con
- * `TopeAlcanzado`, que es un motivo que se entiende, y no con una lista vacía.
+ * Con el tope de gasto alcanzado, los de pago (OpenAI y Claude) salen de la lista si queda un motor de la máquina
+ * que conteste: así se sigue atendiendo sin pagar. Si no queda ninguno, se deja el preferido para que la llamada
+ * falle con `TopeAlcanzado`, que es un motivo que se entiende, y no con una lista vacía.
+ *
+ * 🪤 Si el preferido se acaba de caer (está en su minuto de enfriamiento) y hay otro que contesta, el preferido va
+ * al FINAL, no al principio. Al principio, cada mensaje de ese minuto esperaría a que OpenAI agote su tiempo —hasta
+ * 60 segundos si lo que falla es la red— antes de llegar al respaldo. Pasado el minuto vuelve a ir primero. Lo que
+ * nunca contestó desde el arranque no está «enfriando» y sigue yendo primero: si alguien lo levanta después, así
+ * se entera aiva.
  */
 export function fallbackOrder(preferred: Engine): Engine[] {
   const seen = new Set<Engine>();
   const out: Engine[] = [];
   const sinPagar = agotado();
-  for (const e of [preferred, roleEngine('heavy'), roleEngine('light'), ...ENGINES]) {
+  for (const e of [preferred, roleEngine('heavy'), roleEngine('light'), ...ENGINES, ...RESPALDOS]) {
     if (seen.has(e)) continue;
     seen.add(e);
-    if (sinPagar && e === 'openai') continue;
+    if (sinPagar && DE_PAGO.has(e)) continue;
     if (e === preferred || isAvailable(e)) out.push(e);
   }
+  if (out.length > 1 && out[0] === preferred && enfriando(preferred)) out.push(out.shift()!);
   if (!out.length) out.push(preferred);
   return out;
 }
@@ -105,7 +135,11 @@ const state: Record<Engine, { available: boolean; retryAt: number; reason?: stri
   ollama: { available: false, retryAt: 0 },
   apple: { available: false, retryAt: 0 },
   openai: { available: false, retryAt: 0 },
+  anthropic: { available: false, retryAt: 0 },
 };
+
+/** Se cayó hace menos de un minuto (ver markDown). */
+const enfriando = (e: Engine): boolean => !state[e].available && state[e].retryAt > Date.now();
 
 function enginesInUse(): Set<Engine> {
   if (env.llmEngine !== 'router') return new Set([env.llmEngine]);
@@ -132,6 +166,10 @@ export async function probarMotor(engine: Engine): Promise<{ available: boolean;
     const p = await probeOpenAI(ROLES.map(openaiModel));
     return { available: p.ok, reason: p.reason };
   }
+  if (engine === 'anthropic') {
+    const p = await probeAnthropic(ROLES.map(anthropicModel));
+    return { available: p.ok, reason: p.reason };
+  }
   const o = await checkOllama();
   return {
     available: o.ok && !o.missing.includes(env.chatModel),
@@ -141,6 +179,8 @@ export async function probarMotor(engine: Engine): Promise<{ available: boolean;
 
 export async function probeEngines(): Promise<Record<Engine, { available: boolean; reason?: string }>> {
   const inUse = enginesInUse();
+  // Claude se sondea a la vez que los demás: es otra ida y vuelta por la red, y no tiene por qué sumarse al arranque.
+  const claude = env.anthropicApiKey ? probeAnthropic(ROLES.map(anthropicModel)) : Promise.resolve({ ok: false, reason: 'sin ANTHROPIC_API_KEY' });
   const o = await checkOllama();
   state.ollama = {
     available: o.ok && !o.missing.includes(env.chatModel),
@@ -159,6 +199,10 @@ export async function probeEngines(): Promise<Record<Engine, { available: boolea
   } else {
     state.openai = { available: false, retryAt: 0, reason: 'sin OPENAI_API_KEY' };
   }
+  const c = await claude;
+  // 🪤 Con llave y sin respuesta, se vuelve a probar en un minuto en vez de darlo por perdido hasta el próximo
+  // reinicio: un respaldo que se apaga para siempre por un tropiezo de red al arrancar no respalda nada.
+  state.anthropic = { available: c.ok, retryAt: !c.ok && env.anthropicApiKey ? Date.now() + COOLDOWN_MS : 0, reason: c.reason };
   return engineStatus();
 }
 
@@ -181,7 +225,8 @@ function markUp(e: Engine) {
 /** Errores que indican que el motor no está operativo (no errores de una petición concreta). */
 function isOutage(e: Engine, err: unknown): boolean {
   if (e === 'apple') return err instanceof AppleError && ['not_installed', 'unavailable', 'crashed', 'timeout'].includes(err.code);
-  if (e === 'openai') return err instanceof EngineError && ['not_configured', 'network', 'auth', 'server'].includes(err.code);
+  if (e === 'openai') return err instanceof EngineError && ['not_configured', 'network', 'auth', 'server', 'sin_saldo'].includes(err.code);
+  if (e === 'anthropic') return err instanceof EngineError && ['not_configured', 'network', 'auth', 'server', 'sin_saldo', 'sin_modelo'].includes(err.code);
   return err instanceof Error && /conectar con Ollama|fetch failed|ECONNREFUSED|not found/i.test(err.message);
 }
 
@@ -225,7 +270,7 @@ export async function generate(engine: Engine, input: GenerateInput): Promise<st
   const usage = { task: input.task ?? ((input.role ?? 'light') as Task), userId: input.sessionId };
   // 🪤 El freno de último recurso, para cualquiera que llame a un modelo. Quien sabe qué hacer en ese caso (el
   // agente, el análisis) lo mira antes; esto es para que ningún camino olvidado se salte el tope.
-  if (engine === 'openai' && agotado()) throw new TopeAlcanzado();
+  if (DE_PAGO.has(engine) && agotado()) throw new TopeAlcanzado();
   try {
     let out: string;
     // Lo que cambia en cada turno: información encontrada, nombre del cliente y nota.
@@ -252,6 +297,19 @@ export async function generate(engine: Engine, input: GenerateInput): Promise<st
     } else if (engine === 'ollama') {
       const messages: ChatMessage[] = [{ role: 'system', content: `${input.persona}\n\n${turn}` }, ...input.history, { role: 'user', content: input.userText }];
       out = await chat({ messages, temperature: input.temperature, numPredict: input.maxTokens ?? 350, usage });
+    } else if (engine === 'anthropic') {
+      // Claude no acepta instrucciones de sistema a mitad de la conversación: lo del turno va pegado al mensaje del
+      // cliente, que es también lo último, así que no estorba a la caché (ver anthropic.ts).
+      const ultimo = turn ? `${turn}\n\n## Mensaje del cliente\n${input.userText}` : input.userText;
+      out = await anthropicChat({
+        system: input.persona,
+        messages: [...input.history, { role: 'user', content: ultimo }],
+        temperature: input.temperature,
+        maxTokens: input.maxTokens ?? 350,
+        model: anthropicModel(input.role),
+        cacheHistorial: true,
+        usage,
+      });
     } else {
       // OpenAI reutiliza el prefijo idéntico más largo (desde 1024 tokens): la persona es igual para todos los clientes
       // y el historial crece turno a turno; lo del turno va al final para no romper ese prefijo.
@@ -273,7 +331,7 @@ export async function generate(engine: Engine, input: GenerateInput): Promise<st
 
 export async function classify(engine: Engine, input: ClassifyInput): Promise<string> {
   const usage = { task: input.task ?? ((input.role ?? 'gate') as Task), userId: input.userId };
-  if (engine === 'openai' && agotado()) throw new TopeAlcanzado();
+  if (DE_PAGO.has(engine) && agotado()) throw new TopeAlcanzado();
   try {
     let out: string;
     if (engine === 'apple') {
@@ -287,6 +345,15 @@ export async function classify(engine: Engine, input: ClassifyInput): Promise<st
         schema: input.schema,
       });
       out = r.content;
+    } else if (engine === 'anthropic') {
+      out = await anthropicChat({
+        system: input.instructions,
+        messages: [{ role: 'user', content: input.prompt }],
+        maxTokens: 300,
+        schema: input.schema,
+        model: anthropicModel(input.role),
+        usage,
+      });
     } else {
       const messages: ChatMessage[] = [
         { role: 'system', content: input.instructions },
@@ -314,5 +381,5 @@ function toJsonSchema(spec: SchemaSpec): Record<string, unknown> {
 }
 
 export function engineStatus(): Record<Engine, { available: boolean; reason?: string }> {
-  return { ollama: { ...state.ollama }, apple: { ...state.apple }, openai: { ...state.openai } };
+  return { ollama: { ...state.ollama }, apple: { ...state.apple }, openai: { ...state.openai }, anthropic: { ...state.anthropic } };
 }

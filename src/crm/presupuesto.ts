@@ -17,7 +17,9 @@
 // paga. Con una ventana móvil, lo gastado hace 29 días saldría de la cuenta a una hora cualquiera y el asistente
 // volvería a contestar a mitad de una tarde sin que nadie hubiera subido nada.
 //
-// 🪤 Solo se cuenta y se corta lo que cuesta, que es OpenAI. Ollama y Apple corren en la máquina y no tienen tope.
+// 🪤 Solo se cuenta y se corta lo que cuesta, que es OpenAI y Claude (el respaldo). Ollama y Apple corren en la
+// máquina y no tienen tope. Lo que gasta Claude cuenta en el mismo tope: un respaldo que no lo respetara sería la
+// forma de saltárselo justo el mes en que OpenAI falla.
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { costUsd } from '../llm/usage.js';
@@ -97,14 +99,15 @@ export function mesDe(ahora: number): { desde: number; hasta: number; clave: str
 function gastadoEntre(desde: number, hasta: number): { usd: number; sinPrecio: boolean } {
   const filas = getDb()
     .prepare(
-      `SELECT engine, model, SUM(input_tokens) entrada, SUM(cached_tokens) cache, SUM(output_tokens) salida, SUM(COALESCE(segundos, 0)) segundos
+      `SELECT engine, model, SUM(input_tokens) entrada, SUM(cached_tokens) cache, SUM(COALESCE(cache_write_tokens, 0)) guardados, SUM(output_tokens) salida,
+              SUM(COALESCE(segundos, 0)) segundos
        FROM llm_usage WHERE ts >= ? AND ts < ? GROUP BY engine, model`,
     )
-    .all(desde, hasta) as { engine: string; model: string; entrada: number; cache: number; salida: number; segundos: number }[];
+    .all(desde, hasta) as { engine: string; model: string; entrada: number; cache: number; guardados: number; salida: number; segundos: number }[];
   let usd = 0;
   let sinPrecio = false;
   for (const f of filas) {
-    const c = costUsd(f.engine, f.model, f.entrada, f.cache, f.salida, f.segundos);
+    const c = costUsd(f.engine, f.model, f.entrada, f.cache, f.salida, f.segundos, f.guardados);
     if (c === null) sinPrecio = true;
     else usd += c;
   }
