@@ -419,8 +419,10 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     if (!getContact(id)) return c.json({ error: 'no existe' }, 404);
     // `a` es a quién se le entrega. Sin nombre queda «del equipo», que es lo que pasaba antes siempre y deja a
     // todos mirándose: una conversación entregada a nadie no la recoge nadie.
-    const aQuien = String(body.a ?? '').trim().slice(0, 40) || 'admin';
-    const por = quienHace(c);
+    const por = quienHace(c, undefined, 'admin');
+    // 🪤 Sin `a` es quien aprieta «Tú» (o empieza a escribir): la toma él. Antes quedaba «admin», y la ficha decía
+    // «admin está atendiendo» y «La lleva el equipo» cuando había una persona con nombre al teclado.
+    const aQuien = String(body.a ?? '').trim().slice(0, 40) || por;
     let contact = setHumanMode(id, Boolean(body.on), aQuien);
     // Entregársela a alguien por su nombre lo deja a cargo del cliente, no solo de esta conversación. Y queda
     // quién se la entregó: «Laura tomó la conversación» no dice que fue Bryan quien se la pasó.
@@ -460,7 +462,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       if (r.fallo) return c.json({ error: `no salió: ${r.fallo}. Quedó marcado en la conversación para volver a intentarlo.`, fallo: r.fallo }, 502);
       return c.json({ ok: true });
     } catch (err) {
-      return c.json({ error: `${(err as Error).message}. Quedó marcado en la conversación para volver a intentarlo.` }, 500);
+      return c.json({ error: `${(err as Error).message}. Quedó marcado en la conversación para volver a intentarlo.`, fallo: (err as Error).message }, 500);
     }
   });
 
@@ -508,7 +510,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     } catch (err) {
       // 🪤 El archivo ya se guardó y el mensaje ya está en la conversación: NO se borra. Que el envío falle no
       // significa que no haya pasado nada — el equipo tiene que ver qué intentó mandar para poder reintentarlo.
-      return c.json({ error: (err as Error).message, medio }, 500);
+      return c.json({ error: (err as Error).message, fallo: (err as Error).message, medio }, 500);
     }
   });
 

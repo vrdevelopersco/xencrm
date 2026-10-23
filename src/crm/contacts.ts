@@ -262,7 +262,10 @@ export function setHumanMode(id: string, on: boolean, by: string, motivo?: strin
   getDb().prepare('UPDATE users SET human_by = ?, human_since = ? WHERE id = ?').run(on ? by : null, on ? Date.now() : null, id);
   // 🪤 Quien la toma queda a cargo SOLO si nadie lo estaba. Si una compañera contesta por Laura un día que Laura no
   // vino, el cliente sigue siendo de Laura: quitárselo por responder una vez sería castigar a quien ayuda.
-  if (on && esPersona(by)) getDb().prepare("UPDATE users SET responsable = ? WHERE id = ? AND (responsable IS NULL OR responsable = '')").run(by.trim(), id);
+  // La llave maestra (consola.ts) tampoco queda a cargo: es la puerta de emergencia, no alguien del equipo. En la
+  // historia sí sale con ese nombre, que es lo que se quiere saber de quien entró por ahí.
+  if (on && esPersona(by) && by.trim().toLowerCase() !== 'llave maestra')
+    getDb().prepare("UPDATE users SET responsable = ? WHERE id = ? AND (responsable IS NULL OR responsable = '')").run(by.trim(), id);
   const c = updateContact(id, { humanMode: on });
   addEvent(id, on ? 'human_on' : 'human_off', motivo ? { by, motivo } : { by });
   emitEvent('handoff', id, motivo ? { on, by, motivo } : { on, by });

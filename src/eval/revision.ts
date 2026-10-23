@@ -142,6 +142,20 @@ setHumanMode(vale, false, 'bot');
 check('🪤 y sigue a cargo cuando vuelve a contestar el asistente', getContact(vale)?.responsable === 'Laura' && getContact(vale)?.humanBy === null);
 setHumanMode(vale, true, 'Pedro');
 check('🪤 si una compañera ayuda un día, el cliente sigue siendo de quien era', getContact(vale)?.responsable === 'Laura');
+ficha('web:toma', 'web', 'Paula');
+await pedir('/contacts/web:toma/human', { method: 'POST', body: { on: true }, quien: 'Laura' });
+check('🪤 apretar «Tú» la toma quien la aprieta, con su nombre (no «admin»)', getContact('web:toma')?.humanBy === 'Laura' && getContact('web:toma')?.responsable === 'Laura', JSON.stringify(getContact('web:toma')));
+ficha('web:toma2', 'web', 'Elena');
+// Si la última palabra fuera del cliente, el paso sería «Contestar». Un instante después, para no empatar en la hora.
+await new Promise((listo) => setTimeout(listo, 5));
+appendMessage('web:toma2', 'assistant', 'Claro, ya te paso con alguien del equipo.');
+await pedir('/contacts/web:toma2/human', { method: 'POST', body: { on: true } });
+check('con el token a secas y sin nombre, como antes: «admin», sin nadie a cargo', getContact('web:toma2')?.humanBy === 'admin' && getContact('web:toma2')?.responsable === null);
+const { proximoPaso, contextoDelPaso } = await import('../crm/proximo.js');
+check('y la ficha no dice «admin está atendiendo»', proximoPaso(getContact('web:toma2')!, contextoDelPaso()).texto === 'El equipo está atendiendo', proximoPaso(getContact('web:toma2')!, contextoDelPaso()).texto);
+ficha('web:toma3', 'web', 'Rosa');
+await pedir('/contacts/web:toma3/human', { method: 'POST', body: { on: true }, quien: 'Llave maestra' });
+check('quien entra con la llave maestra la atiende, pero no queda a cargo', getContact('web:toma3')?.humanBy === 'Llave maestra' && getContact('web:toma3')?.responsable === null);
 ficha('web:resp2', 'web', 'Sofía');
 setHumanMode('web:resp2', true, 'bot');
 setHumanMode('web:resp2', true, 'admin');
@@ -157,7 +171,8 @@ await pedir(`/contacts/${vale}`, { method: 'PATCH', body: { responsable: 'Laura'
 check('dejarlo igual no ensucia la historia', eventos(vale, 'responsable').length === nResp);
 setHumanMode(vale, false, 'bot');
 const cuentas = (await (await pedir('/cuentas?yo=laura')).json()) as { mios: number };
-check('🪤 «Míos» cuenta lo que está a cargo de uno aunque lo atienda el asistente', cuentas.mios === 2, JSON.stringify(cuentas));
+// Las de Laura: Valentina (a cargo, la atiende el asistente), Juliana (le contestó desde el tablero) y Paula (la tomó).
+check('🪤 «Míos» cuenta lo que está a cargo de uno aunque lo atienda el asistente', cuentas.mios === 3, JSON.stringify(cuentas));
 check('esDe no distingue mayúsculas ni espacios', esDe(getContact(vale)!, '  LAURA ') && !esDe(getContact(vale)!, 'Pedro') && !esDe(getContact(vale)!, ''));
 check('quien la atiende ahora también la ve en «Míos»', esDe({ responsable: null, humanMode: true, humanBy: 'Pedro' }, 'pedro'));
 await pedir(`/contacts/${vale}`, { method: 'PATCH', body: { responsable: null }, quien: 'Laura' });
@@ -261,6 +276,7 @@ const secciones = (deHoy.match(/\{ t: '/g) || []).length;
 const tonos = ((js.match(/var TONOS = \[([^\]]*)\]/)?.[1] ?? '').match(/'[a-z]+'/g) || []).length;
 check('🪤 cada recuadro de Hoy tiene su color (antes los grupos corrían a todos los demás un puesto)', secciones > 0 && secciones === tonos, `${secciones} recuadros y ${tonos} colores`);
 check('el tablero manda quién es en cada llamada', /headers\['x-aiva-quien'\] = encodeURIComponent\(state\.name\)/.test(js));
+check('🪤 si no salió pero quedó guardado, el cajón se vacía: si no, el cliente lo recibiría dos veces', /if \(r\.fallo\) \{ \$\('reply'\)\.value = ''; quitarAdjunto\(\); \}/.test(js));
 check('🪤 todo cambio de etapa pasa por la pregunta de por qué se perdió', (js.match(/method: 'PATCH', body: \{ stage:/g) || []).length === 1 && (js.match(/cambiarEtapa\(c, /g) || []).length >= 4,
   'el único PATCH de etapa directo debe ser el de «¿Cómo les fue? → vendido»');
 check('«Míos» del tablero sigue la misma regla que el servidor', /function esMia\(c\) \{ return Boolean\(state\.name\) && \(mismoNombre\(c\.responsable, state\.name\) \|\| \(Boolean\(c\.humanMode\) && mismoNombre\(c\.humanBy, state\.name\)\)\); \}/.test(js));

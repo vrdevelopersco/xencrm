@@ -12,7 +12,7 @@
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { listAppointments } from './appointments.js';
-import { estaCerrada, type Contact } from './contacts.js';
+import { esPersona, estaCerrada, type Contact } from './contacts.js';
 import { isSnoozed } from './followup.js';
 import { listVerifications } from './verifications.js';
 
@@ -123,7 +123,8 @@ export function proximoPaso(c: Contact, ctx: ContextoPaso): ProximoPaso {
   }
 
   // Conversación viva: no hay que hacer nada, pero sí saber quién la tiene.
-  if (c.humanMode) return paso('atiende', `${c.humanBy} está atendiendo`);
+  // «bot», «admin» y «equipo» no son el nombre de nadie (ver esPersona): la ficha no puede decir «admin está atendiendo».
+  if (c.humanMode) return paso('atiende', `${esPersona(c.humanBy) ? c.humanBy : 'El equipo'} está atendiendo`);
   return paso('atiende', `${business.agent.name || 'Aiva'} está atendiendo`);
 }
 

@@ -1078,7 +1078,13 @@
       envio = api('/contacts/' + encodeURIComponent(state.current) + '/reply', { method: 'POST', body: { text: text, by: state.name } });
     }
     envio.then(function (r) {
-      if (r && r.error) { toast('No se pudo enviar: ' + r.error); return; }
+      if (r && r.error) {
+        toast('No se pudo enviar: ' + r.error);
+        // 🪤 Si quedó guardado y marcado, el texto ya está en la conversación con su «Volver a intentar»: dejarlo
+        // también en el cajón invita a darle Enviar otra vez y que el cliente lo reciba dos veces.
+        if (r.fallo) { $('reply').value = ''; quitarAdjunto(); }
+        return;
+      }
       $('reply').value = '';
       quitarAdjunto();
     }).catch(function () { toast('No se pudo enviar.'); })
