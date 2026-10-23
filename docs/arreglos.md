@@ -39,11 +39,16 @@ campos vacíos, que son justo «los 14 datos pendientes» del PDF. De lo que sí
 - 🪤 **Colores de Hoy.** Diez recuadros, nueve colores: desde que entró «Te escribieron en un grupo», cada uno salía
   con el del vecino.
 
-Son 87 comprobaciones nuevas en `test:revision` y 9 más en `test:consola`, con un cliente de mentira que devuelve
-lo que le llega. Se metieron 24 roturas a propósito y todas las detecta. Las capturas con Chrome, en fácil y en
+- **Tomar la conversación con nombre** (`597c893`). La prueba del ZIP por la consola enseñó «admin está atendiendo»:
+  apretar «Tú» no decía quién. Ahora la toma quien la aprieta, y «Próximo paso» dice «El equipo» si no hay nombre.
+  La llave maestra atiende pero no queda a cargo. Y si la respuesta quedó guardada sin salir, el cajón se vacía:
+  dejarla escrita invitaba a mandarla dos veces.
+
+Son 94 comprobaciones nuevas en `test:revision` y 9 más en `test:consola`, con un cliente de mentira que devuelve
+lo que le llega. Se metieron 28 roturas a propósito y todas las detecta. Las capturas con Chrome, en fácil y en
 completo, a 1440 y a 390 px, sacaron dos cosas que ninguna prueba veía: el puntaje seguía en la cabecera de la
 conversación (`renderChat` reescribía la clase) y la ventana del motivo salía con el borde negro del navegador.
-Batería completa: 2249 ✓, 0 ✗.
+Batería completa: 2254 ✓, 0 ✗.
 
 ## 2026-10-22
 
