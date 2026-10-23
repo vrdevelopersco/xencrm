@@ -629,6 +629,8 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 #today .panel[data-tono=calientes]{--tono:var(--warn)}
 #today .panel[data-tono=recordar]{--tono:var(--brand)}
 #today .panel[data-tono=pasadas]{--tono:var(--ok)}
+/* Lo de los grupos es lo único donde alguien espera en público: el mismo rojo que «Esperan tu respuesta». */
+#today .panel[data-tono=grupos]{--tono:var(--bad)}
 #today .panel h3{border-bottom:2px solid color-mix(in srgb,var(--tono) 45%,transparent);padding-bottom:8px}
 #today .panel h3 .chip{background:color-mix(in srgb,var(--tono) 85%,var(--text));color:var(--panel);border-color:transparent;font-weight:700}
 /* 🪤 Aquí vivía el bloc de notas: cabezal de cartón con su costura, perforación de arrancar, papel con
@@ -1302,6 +1304,42 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
 .list .tools .filters button:hover{background:var(--row-hover)}
 .list .tools .filters button.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
 .list .tools .filters button.leidas{border-color:transparent;background:none;color:var(--brand)}
+
+/* ---------- modo fácil (ver «modo fácil» en admin.js) ----------
+   Lo que no es del día a día lleva .solo-completo y se esconde aquí. No se quita del documento: vuelve con el
+   interruptor, sin recargar. */
+:root[data-modo="facil"] .solo-completo{display:none!important}
+.solo-completo[hidden]{display:none}
+.estado-modo{margin-left:auto;font-size:12px;color:var(--muted);font-weight:600}
+[data-modo-toggle][aria-pressed="true"] .estado-modo{color:var(--brand)}
+.ver-todo{text-align:center;padding:4px 0 12px}
+
+/* Un mensaje que no le llegó al cliente: se ve distinto y dice qué hacer. El borde punteado y la palabra, no solo
+   el color, que el rojo solo no lo distingue todo el mundo. */
+.bubble.fallo{outline:1px dashed var(--bad);outline-offset:2px}
+.no-salio{display:block;margin-top:6px;font-size:12px;color:var(--bad)}
+.no-salio .linkbtn{font-size:12px}
+
+/* Por qué se perdió */
+/* La misma piel que la ficha (dialog.perfil): sin el borde negro que el navegador le pone a un <dialog>. */
+dialog.perdida{border:0;border-radius:14px;padding:20px 22px;background:var(--panel);color:var(--text);
+  width:min(460px,calc(100% - 32px));box-shadow:0 20px 60px rgba(16,24,40,.22)}
+dialog.perdida::backdrop{background:rgba(16,24,40,.45)}
+dialog.perdida b{font-size:16px}
+dialog.perdida label{display:block;margin-top:12px;margin-bottom:4px}
+dialog.perdida input{width:100%}
+.motivos{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.motivos .motivo{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;min-height:32px}
+.motivos .motivo:hover{background:var(--row-hover)}
+.motivos .motivo[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--on-brand);font-weight:600}
+.motivo-perdida{margin-top:4px}
+#ven-perdidas .panel{margin-top:16px}
+#ven-perdidas h3{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:15px}
+.motivos-lista{list-style:none;margin:8px 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.motivos-lista li{display:grid;grid-template-columns:minmax(120px,240px) minmax(60px,420px) 2ch;gap:12px;align-items:center;font-size:13px}
+.motivos-lista .barra{height:8px;border-radius:999px;background:var(--bg);overflow:hidden}
+.motivos-lista .barra i{display:block;height:100%;background:var(--bad)}
+.motivos-lista .n{font-variant-numeric:tabular-nums;font-weight:600}
 </style>
 </head>
 <body>
@@ -1327,7 +1365,8 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
            Análisis, como pestañas arriba de la pantalla (ver AREAS en admin.js). Quien empieza ve cinco puertas;
            quien quiere exprimir aiva encuentra todo a un clic más. -->
       <button class="rb" data-view="clientes" data-tip="Clientes" aria-label="Clientes"><i class="ic" data-ic="users"></i><span class="badge" id="badge-seg"></span><span class="cuenta" id="cuenta-cli"></span></button>
-      <button class="rb" data-view="analysis" data-tip="Análisis" aria-label="Análisis"><i class="ic" data-ic="chart"></i></button>
+      <!-- En el modo fácil no va (ver «modo fácil» en admin.js): los números grandes ya están en Hoy. -->
+      <button class="rb solo-completo" data-view="analysis" data-tip="Análisis" aria-label="Análisis"><i class="ic" data-ic="chart"></i></button>
     </nav>
     <!-- Listas guardadas (calientes, las mías) y las fichas fijadas: lo que se quiere a un clic. Se llena desde
          pintarListas(); en el celular no va, porque el riel de abajo no tiene sitio. -->
@@ -1341,6 +1380,8 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
     <span hidden id="foot-nombre">asesor</span>
     <span hidden id="conn">● conectando…</span>
     <button hidden id="theme-btn">🌙</button>
+    <button hidden id="modo-btn">Modo fácil</button>
+    <button hidden id="modo-equipo-btn">Modo fácil para el equipo</button>
     <button hidden id="sound-btn">🔔</button>
     <button hidden id="logout-btn">Salir</button>
   </aside>
@@ -1361,6 +1402,7 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
   <div class="more-sheet" id="more-sheet" hidden>
     <div class="more-grid" id="more-grid" role="group" aria-label="Más secciones"></div>
     <div class="more-foot">
+      <button class="btn" data-proxy="modo-btn">Modo fácil</button>
       <button class="btn" data-proxy="theme-btn">Tema claro u oscuro</button>
       <button class="btn" data-proxy="sound-btn">Sonido de avisos</button>
       <button class="btn" data-proxy="logout-btn">Salir</button>
@@ -1385,11 +1427,13 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
             <div class="filters" id="filters">
               <button data-f="all" class="on">Todos</button>
               <button data-f="unread">Sin leer</button>
-              <button data-f="human">Con una persona</button>
+              <!-- Las que están a cargo de quien mira o que está atendiendo. Sin nombre no hay «míos». -->
+              <button data-f="mios" id="f-mios" hidden>Míos</button>
+              <button data-f="human" class="solo-completo">Con una persona</button>
               <button data-f="hot">Prospectos</button>
-              <button data-rol="interes" data-f="stage:interesado" hidden>Interesados</button>
-              <button data-rol="cita" data-f="stage:cita_agendada" hidden>Con cita</button>
-              <button data-f="archived">Archivados</button>
+              <button data-rol="interes" data-f="stage:interesado" class="solo-completo" hidden>Interesados</button>
+              <button data-rol="cita" data-f="stage:cita_agendada" class="solo-completo" hidden>Con cita</button>
+              <button data-f="archived" class="solo-completo">Archivados</button>
               <!-- Para el día que se atendió todo desde el teléfono y el tablero sigue en rojo. -->
               <button class="leidas" id="marcar-leidas">Marcar todo como leído</button>
             </div>
@@ -1403,7 +1447,7 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
             <span class="who" id="chat-name"></span>
             <span class="chip" id="chat-channel"></span>
             <span class="chip" id="chat-stage"></span>
-            <span class="meta-line" id="chat-temp"></span>
+            <span class="meta-line solo-completo" id="chat-temp"></span>
             <span class="grow"></span>
             <div class="seg-row">
               <span class="small muted">Responde:</span>
@@ -1450,7 +1494,7 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
     <section class="view" id="view-pipeline">
       <div class="topbar"><h1>Prospectos</h1><span class="muted small">Arrastra una tarjeta, o usa «Mover…», para cambiar de etapa</span><span class="grow"></span><select id="pip-sede" aria-label="Qué sede mirar" hidden></select></div>
       <!-- Cuánto hay en juego y dónde: las cifras de arriba y la barra por etapa. Ver pintarCifrasEmbudo(). -->
-      <div class="pip-cifras" id="pip-cifras"></div>
+      <div class="pip-cifras solo-completo" id="pip-cifras"></div>
       <div class="board" id="board"></div>
       <div class="sr-only" id="board-status" role="status"></div>
     </section>
@@ -1598,7 +1642,7 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
       <div class="topbar"><h1>Ventas</h1><span class="grow"></span>
         <div class="tabs" id="ven-dias"><button data-d="30">30 días</button><button class="on" data-d="90">90 días</button><button data-d="365">Un año</button></div>
       </div>
-      <div class="pad"><div class="kpis" id="ven-kpis"></div><div id="ven-lista"></div></div>
+      <div class="pad"><div class="kpis" id="ven-kpis"></div><div id="ven-lista"></div><div id="ven-perdidas"></div></div>
     </section>
 
     <section class="view" id="view-seguimientos">
@@ -1765,6 +1809,20 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
   <div class="fila" style="gap:8px;margin-top:14px;justify-content:flex-end">
     <button class="btn" onclick="document.getElementById('dlg-grupos').close()">Ahora no</button>
     <button class="btn primary" id="grupos-si">Sí, que los vea</button>
+  </div>
+</dialog>
+
+<!-- Por qué se perdió: se pregunta al pasar una ficha a la etapa de perdido. Es opcional (ver cambiarEtapa). -->
+<dialog id="dlg-perdida" class="perdida" aria-labelledby="perdida-t">
+  <b id="perdida-t">¿Por qué se perdió?</b>
+  <div class="small muted" id="perdida-quien"></div>
+  <div class="motivos" id="perdida-motivos" role="group" aria-label="Motivos"></div>
+  <label class="small" for="perdida-otro">Otro motivo</label>
+  <input type="text" id="perdida-otro" maxlength="120" autocomplete="off" placeholder="Con tus palabras">
+  <div class="small muted">Si no lo sabes, déjalo así: se puede decir después desde la ficha.</div>
+  <div class="fila" style="gap:8px;margin-top:14px;justify-content:flex-end">
+    <button class="btn" type="button" id="perdida-cancelar">No moverla</button>
+    <button class="btn primary" type="button" id="perdida-ok">Pasar a Perdido</button>
   </div>
 </dialog>
 

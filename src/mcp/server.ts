@@ -30,7 +30,8 @@ export function createMcpServer(): McpServer {
         return {
           name: h.title,
           price: m.price,
-          price_formatted: formatPrice(Number(m.price), String(m.currency ?? business.business.currency)),
+          // Sin precio es «sin precio», no «NaN COP»: el mismo criterio que el buscador (retriever.ts).
+          price_formatted: m.price != null ? formatPrice(Number(m.price), String(m.currency ?? business.business.currency)) : 'sin precio',
           in_stock: m.inStock !== false,
           category: m.category,
           description: m.description,

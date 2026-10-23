@@ -56,6 +56,11 @@ export interface Contact {
   messageCount: number;
   /** Archivada: no sale en listas ni en el embudo. Vuelve sola si el cliente escribe de nuevo. */
   archived: boolean;
+  /**
+   * La persona del equipo a cargo de este cliente. NO es quien lleva la conversación ahora (`humanBy`): esa se
+   * va cuando el asistente vuelve a contestar, y el cliente sigue siendo de alguien. Ver setResponsable.
+   */
+  responsable: string | null;
 }
 
 const SELECT = `SELECT u.*, (SELECT COUNT(*) FROM messages m WHERE m.user_id = u.id AND m.role = 'user') AS message_count, (SELECT MAX(ts) FROM analyses a WHERE a.user_id = u.id) AS score_at FROM users u`;
@@ -99,6 +104,7 @@ function rowToContact(r: Record<string, unknown>): Contact {
     lastMessageAt,
     messageCount: Number(r.message_count ?? 0),
     archived: Boolean(r.archived),
+    responsable: (r.responsable as string | null) || null,
   };
 }
 
@@ -238,19 +244,64 @@ export function updateContact(id: string, patch: ContactPatch, opts: { silent?: 
   return c;
 }
 
+/** Valores internos de quién hizo algo que no son el nombre de nadie: el asistente, el token a secas, «el equipo». */
+export const esPersona = (by: string | null | undefined): by is string => Boolean(by && !['bot', 'admin', 'equipo', 'el equipo'].includes(by.trim().toLowerCase()));
+
+/**
+ * ¿Es de `yo`? Lo es si está a su cargo o si la está atendiendo ahora. La misma regla que «Míos» en el tablero
+ * (esMia en admin.js): si las dos se separan, la cifra de la barra y la lista dirían cosas distintas.
+ */
+export function esDe(c: Pick<Contact, 'responsable' | 'humanMode' | 'humanBy'>, yo: string): boolean {
+  const n = (s: string | null | undefined) => (s ?? '').trim().toLowerCase();
+  const y = n(yo);
+  return Boolean(y) && (n(c.responsable) === y || (c.humanMode && n(c.humanBy) === y));
+}
+
 /** `motivo`: por qué se pasó a una persona cuando no fue porque la pidieron («tope»: el tope de gasto de IA). */
 export function setHumanMode(id: string, on: boolean, by: string, motivo?: string): Contact | null {
   getDb().prepare('UPDATE users SET human_by = ?, human_since = ? WHERE id = ?').run(on ? by : null, on ? Date.now() : null, id);
+  // 🪤 Quien la toma queda a cargo SOLO si nadie lo estaba. Si una compañera contesta por Laura un día que Laura no
+  // vino, el cliente sigue siendo de Laura: quitárselo por responder una vez sería castigar a quien ayuda.
+  if (on && esPersona(by)) getDb().prepare("UPDATE users SET responsable = ? WHERE id = ? AND (responsable IS NULL OR responsable = '')").run(by.trim(), id);
   const c = updateContact(id, { humanMode: on });
   addEvent(id, on ? 'human_on' : 'human_off', motivo ? { by, motivo } : { by });
   emitEvent('handoff', id, motivo ? { on, by, motivo } : { on, by });
   return c;
 }
 
-export function setStage(id: string, stage: Stage, opts: { locked?: boolean; by?: string } = {}): Contact | null {
-  const prev = getContact(id)?.stage;
-  const c = updateContact(id, { stage, ...(opts.locked !== undefined ? { stageLocked: opts.locked } : {}) });
-  if (prev !== stage) addEvent(id, 'stage', { from: prev, to: stage, by: opts.by ?? 'bot' });
+/**
+ * Cambia la etapa. `motivo` es por qué se perdió, cuando la etapa nueva es la de perdido: se guarda en la ficha
+ * (`data.motivo_perdida`) y en la historia. Al salir de perdido se quita de la ficha —ya no es verdad— y en la
+ * historia se queda, que es lo que pasó.
+ */
+export function setStage(id: string, stage: Stage, opts: { locked?: boolean; by?: string; motivo?: string | null } = {}): Contact | null {
+  const antes = getContact(id);
+  const prev = antes?.stage;
+  const motivo = rolDe(stage) === 'perdido' ? (opts.motivo ?? '').trim().slice(0, 120) : '';
+  const data = { ...(antes?.data ?? {}) } as Record<string, unknown>;
+  const teniaMotivo = 'motivo_perdida' in data;
+  if (motivo) data.motivo_perdida = motivo;
+  else if (rolDe(stage) !== 'perdido') delete data.motivo_perdida;
+  const cambiaData = motivo ? data.motivo_perdida !== antes?.data?.motivo_perdida : teniaMotivo && !('motivo_perdida' in data);
+  const c = updateContact(id, { stage, ...(opts.locked !== undefined ? { stageLocked: opts.locked } : {}), ...(cambiaData ? { data } : {}) });
+  if (prev !== stage) addEvent(id, 'stage', { from: prev, to: stage, by: opts.by ?? 'bot', ...(motivo ? { motivo } : {}) });
+  else if (motivo && cambiaData) addEvent(id, 'motivo_perdida', { motivo, by: opts.by ?? 'bot' });
+  return c;
+}
+
+/**
+ * Quién está a cargo de este cliente. Null lo deja sin nadie. Lo cambia una persona a propósito (desde la ficha o
+ * al entregarle la conversación a alguien), y por eso deja rastro: «Bryan se lo pasó a Laura».
+ */
+export function setResponsable(id: string, nombre: string | null, by: string): Contact | null {
+  const antes = getContact(id);
+  if (!antes) return null;
+  const nuevo = nombre?.trim().slice(0, 40) || null;
+  if ((antes.responsable ?? null) === nuevo) return antes;
+  getDb().prepare('UPDATE users SET responsable = ? WHERE id = ?').run(nuevo, id);
+  addEvent(id, 'responsable', { de: antes.responsable, a: nuevo, by });
+  const c = getContact(id);
+  if (c) emitEvent('contact', id, { contact: c });
   return c;
 }
 
@@ -301,11 +352,11 @@ export function deleteContactsByPrefix(prefix: string): number {
 }
 
 /** Archiva o desarchiva: no borra nada, solo la saca (o la devuelve) de las listas. */
-export function setArchived(id: string, on: boolean): Contact | null {
+export function setArchived(id: string, on: boolean, by?: string): Contact | null {
   getDb().prepare('UPDATE users SET archived = ? WHERE id = ?').run(on ? 1 : 0, id);
   const c = getContact(id);
   if (c) {
-    addEvent(id, on ? 'archivada' : 'desarchivada');
+    addEvent(id, on ? 'archivada' : 'desarchivada', esPersona(by) ? { by } : {});
     emitEvent('contact', id, { contact: c });
   }
   return c;

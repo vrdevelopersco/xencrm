@@ -425,3 +425,50 @@ La de Vocero, en aiva: pasos que se marcan solos, con el motivo de lo que falta.
   lleva («Abrir el perfil»), igual en Hoy y en la guía.
 - **Para quien administra.** Los pasos llevan a pantallas que un asesor no toca; el asesor sigue viendo el
   tutorial en Hoy.
+
+## El modo fácil (2026-10-23)
+
+Quien revisó aiva para DUNOR pidió un tablero sencillo, y el usuario lo dijo así: aiva puede seguir siendo lo
+más completo, pero DUNOR quiere un «aiva modo fácil», con un interruptor para no dañar lo hecho. Es la regla de
+siempre (sencillo por fuera, todo a un clic adentro) con un interruptor en vez de un nivel más de menú.
+
+| Se esconde en el modo fácil | Se queda |
+|---|---|
+| Análisis (el riel queda en cuatro) y la pestaña Seguimientos | Hoy, Conversaciones, Calendario, Clientes (Lista · Por etapa) |
+| El puntaje: la fila «¿Prospecto?», «Por qué ese puntaje», la línea de la cabecera, la columna de Clientes y las pastillas «0 · frío» | La pastilla «caliente», que sí pide hacer algo |
+| «La lleva», «Llegó por», «Volvió», «Desde» | Etapa, Próximo paso, Valor y **A cargo** |
+| El «¿por qué?» de cada respuesta, las cifras de arriba de Por etapa | La conversación entera, con sus marcas |
+| Filtros «Con una persona», por etapa y «Archivados» | Todos · Sin leer · **Míos** · Prospectos |
+| El asistente y Trazabilidad, en Configuración | Guía, Perfil, El negocio, Canales y Lo que sabe |
+| En Hoy, los recuadros vacíos | Los que tienen algo, o «Todo al día» si no hay nada |
+
+Reglas:
+
+- **Esconder, nunca quitar.** Lo escondido lleva la clase `solo-completo` y lo apaga una sola regla de CSS
+  (`:root[data-modo="facil"]`). Ni un `if` por pantalla: así lo que se agregue mañana se esconde marcándolo, y no
+  hay dos versiones del tablero que mantener.
+- **Dos interruptores de dos dueños.** El del cliente (Configuración › *Modo fácil para el equipo*, solo quien
+  administra) vive en su base, en `settings`, y no en `aiva.config.json`: la configuración de cada cliente en
+  Hostinger es la de sus datos y el ZIP no la pisa. El de cada quien (Configuración › *Modo fácil*) vive en su
+  navegador y manda sobre el del cliente. Quien cambia el del equipo pasa a verlo como su equipo.
+- **El interruptor dice cómo está** («Sí»/«No»), y en Hoy, abajo, «Ver todo lo de aiva». Un modo que no se sabe
+  que existe es una función que se perdió.
+- 🪤 **Lo que se pinta con JavaScript reescribe la clase.** La línea del puntaje de la cabecera tenía
+  `solo-completo` en el HTML y `renderChat` le ponía `className` entero: el modo fácil la seguía enseñando. Se vio
+  en la captura, no en las pruebas; `test:revision` vigila ahora ese caso.
+- **Sin decir nada, completo.** HRC y CONFIA siguen como estaban; DUNOR se pone en fácil desde su tablero.
+
+### Lo que también salió de la revisión
+
+- **A cargo** no es **La lleva**: la lleva quien contesta ahora (se borra cuando vuelve el asistente); a cargo es de
+  quién es el cliente, y se queda. Lo pone quien toma la conversación si no había nadie, «Entregar a», o la ficha.
+  «Míos» es lo que está a cargo de uno o lo que uno atiende ahora, con la misma regla en el servidor (`esDe`) y en
+  el tablero (`esMia`).
+- **Por qué se perdió** se pregunta al pasar a perdido, desde cualquiera de los cuatro caminos (la ficha, el
+  perfil, arrastrar y «Mover…»), y es opcional: una pregunta obligatoria para mover una tarjeta enseña a contestar
+  cualquier cosa. Ventas cuenta los motivos y, aparte y a la vista, las que no dijeron por qué.
+- **Lo que no le llegó al cliente** se marca en el mensaje (borde punteado y la palabra, no solo el rojo), con el
+  motivo y «Volver a intentar».
+- 🪤 **Los colores de Hoy estaban corridos un puesto** desde que entró «Te escribieron en un grupo»: diez recuadros
+  y nueve colores, así que «Esperan tu respuesta» salía azul en vez de rojo. `test:revision` compara las dos cuentas.
+

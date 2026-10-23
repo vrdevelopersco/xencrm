@@ -527,14 +527,21 @@ export function mountConsola(app: Hono) {
     const url = new URL(urlDe(cliente) + ruta);
     for (const [k, v] of Object.entries(c.req.query())) if (!CREDENCIAL.has(k)) url.searchParams.set(k, v);
     const metodo = c.req.method;
-    const cuerpo = metodo === 'GET' || metodo === 'HEAD' ? undefined : await c.req.text();
+    // 🪤 El cuerpo va en BYTES y con el tipo con que llegó. Leído como texto y reenviado como JSON, un adjunto
+    // (un formulario con una foto) llegaba al cliente roto y sin su separador, y el tablero decía «falta el
+    // archivo»: mandar un archivo funcionaba con el token a secas y fallaba justo entrando por aquí.
+    const cuerpo = metodo === 'GET' || metodo === 'HEAD' ? undefined : new Uint8Array(await c.req.arrayBuffer());
+    const tipo = c.req.header('content-type') || 'application/json';
+    // Quién es, para la historia de cada ficha (channels/admin.ts, quienHace). Sale de la cuenta, no del navegador:
+    // lo que mande el navegador en esa cabecera no pasa de aquí.
+    const nombre = quien.usuario?.nombre || (quien.esSuper ? 'Llave maestra' : '');
     // El flujo en vivo (SSE) no puede llevar reloj: se queda abierto a propósito.
     const esFlujo = resto.endsWith('admin/api/stream');
     const esLaPagina = resto === 'admin';
     try {
       const r = await llamarACliente(cliente, url.pathname + url.search, {
         method: metodo,
-        headers: { 'x-admin-token': token, ...(cuerpo ? { 'content-type': 'application/json' } : {}) },
+        headers: { 'x-admin-token': token, ...(nombre ? { 'x-aiva-quien': encodeURIComponent(nombre) } : {}), ...(cuerpo?.length ? { 'content-type': tipo } : {}) },
         body: cuerpo,
         ...(esFlujo ? {} : { esperaMs: 15000 }),
       });
@@ -780,10 +787,12 @@ export function mountConsola(app: Hono) {
     for (const [k, v] of Object.entries(c.req.query())) if (!CREDENCIAL.has(k)) url.searchParams.set(k, v);
     const method = c.req.method;
     const body = method === 'GET' || method === 'HEAD' ? undefined : await c.req.text();
+    // Lo que se cambie desde la consola también queda con nombre en la historia de la ficha (ver arriba, /c/:slug).
+    const nombre = actorDe(c)?.nombre || (c.get('esSuper' as never) ? 'Llave maestra' : '');
     try {
       const r = await llamarACliente(cliente, url.pathname + url.search, {
         method,
-        headers: { 'x-admin-token': token, ...(body ? { 'content-type': 'application/json' } : {}) },
+        headers: { 'x-admin-token': token, ...(nombre ? { 'x-aiva-quien': encodeURIComponent(nombre) } : {}), ...(body ? { 'content-type': 'application/json' } : {}) },
         body,
         esperaMs: 8000,
       });

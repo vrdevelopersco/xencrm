@@ -76,15 +76,25 @@ export interface StoredMessage {
   media?: Medio | null;
   /** El turno del asistente que lo produjo (crm/turnos.ts): para ver por qué contestó eso. */
   turno?: string | null;
+  /** Si no le llegó al cliente, por qué (crm/outbox.ts). Null o ausente: salió, o es un mensaje que entró. */
+  fallo?: string | null;
 }
 
 export function getMessages(userId: string, limit = 50): StoredMessage[] {
   const rows = getDb()
-    .prepare('SELECT id, role, author, by, content, intent, ts, media, turno FROM messages WHERE user_id = ? ORDER BY ts DESC, id DESC LIMIT ?')
+    .prepare('SELECT id, role, author, by, content, intent, ts, media, turno, fallo FROM messages WHERE user_id = ? ORDER BY ts DESC, id DESC LIMIT ?')
     .all(userId, limit) as unknown as (StoredMessage & { media: string | null })[];
   // 🪤 Un `media` ilegible no puede tumbar la conversación entera: se enseña el mensaje sin su archivo, que es
   // infinitamente mejor que una pantalla en blanco donde había un historial.
   return rows.reverse().map((r) => ({ ...r, media: parseMedio(r.media) }));
+}
+
+/** Un mensaje de esta conversación, por su número. Para volver a mandar uno que no salió. */
+export function getMessage(userId: string, id: number): StoredMessage | null {
+  const r = getDb()
+    .prepare('SELECT id, role, author, by, content, intent, ts, media, turno, fallo FROM messages WHERE user_id = ? AND id = ?')
+    .get(userId, id) as unknown as (StoredMessage & { media: string | null }) | undefined;
+  return r ? { ...r, media: parseMedio(r.media) } : null;
 }
 
 function parseMedio(crudo: string | null): Medio | null {

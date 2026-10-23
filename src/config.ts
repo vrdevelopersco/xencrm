@@ -270,6 +270,15 @@ export const BusinessConfigSchema = z.object({
           { id: 'perdido', label: 'Perdido', rol: 'perdido' },
         ])
         .refine((s) => new Set(s.map((x) => x.id)).size === s.length, 'hay dos etapas con el mismo identificador'),
+      /**
+       * Por qué se pierde un prospecto: lo que se ofrece al pasarlo a la etapa de perdido. Son de cada negocio (una
+       * boutique pierde por la fecha del evento; una financiera, porque no aprobaron), y siempre se puede escribir
+       * otro o no decir nada: preguntar no puede convertirse en un trámite para mover una tarjeta.
+       */
+      motivosPerdida: z
+        .array(z.string().min(1).max(60))
+        .max(12)
+        .default(['Precio', 'Compró en otro lado', 'Dejó de contestar', 'No teníamos lo que buscaba', 'La fecha no le servía']),
       fields: z
         .array(z.object({ name: z.string().regex(/^[a-z_][a-z0-9_]*$/), description: z.string() }))
         .default([{ name: 'producto_interes', description: 'Producto o servicio que le interesa al cliente, si lo dijo' }]),

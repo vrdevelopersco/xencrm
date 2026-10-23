@@ -114,8 +114,10 @@
   function abierta(c) { var r = rol(c.stage); return r !== 'ganado' && r !== 'perdido'; }
   // Lo mismo que «calientes» en Hoy y en la barra: abierta y con 60 o más.
   function esCaliente(c) { return abierta(c) && (c.score || 0) >= 60; }
-  // «Míos»: las que tiene quien está mirando, por el nombre con el que responde. Sin nombre no hay «míos».
-  function esMia(c) { return Boolean(state.name) && Boolean(c.humanMode) && c.humanBy === state.name; }
+  // «Míos»: las que están a cargo de quien mira, o que está atendiendo ahora, por el nombre con el que responde.
+  // Sin nombre no hay «míos». 🪤 La misma regla que esDe en crm/contacts.ts: es la que da la cifra de la barra.
+  function mismoNombre(a, b) { return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase(); }
+  function esMia(c) { return Boolean(state.name) && (mismoNombre(c.responsable, state.name) || (Boolean(c.humanMode) && mismoNombre(c.humanBy, state.name))); }
   /** La etapa como pastilla: punto de color Y el nombre. El punto solo no lo distingue todo el mundo. */
   function pastillaEtapa(stage) {
     return '<span class="chip etapa stage-' + esc(rol(stage) || 'activo') + '"><i class="punto" aria-hidden="true"></i>' + esc(etiquetaEtapa(stage)) + '</span>';
@@ -314,6 +316,9 @@
   function api(path, opts) {
     opts = opts || {};
     var headers = { 'x-admin-token': state.token };
+    // Quién está haciendo esto, para la historia de cada ficha. Entrando por la consola, la consola la cambia por
+    // el nombre de la cuenta; con el token a secas, vale el nombre con que se responde (channels/admin.ts).
+    if (state.name) headers['x-aiva-quien'] = encodeURIComponent(state.name);
     if (opts.body) headers['content-type'] = 'application/json';
     return fetch(BASE + '/admin/api' + path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined }).then(function (r) {
       if (r.status === 401) { showLogin('Token inválido'); throw new Error('401'); }
@@ -395,17 +400,20 @@
     { view: 'guia', ic: 'check', lbl: 'Guía de inicio', soloAdmin: true },
     { view: 'profile', ic: 'store', lbl: 'Perfil del negocio' },
     { view: 'negocio', ic: 'sliders', lbl: 'El negocio' },
-    { view: 'agent', ic: 'bot', lbl: 'El asistente' },
+    { view: 'agent', ic: 'bot', lbl: 'El asistente', soloCompleto: true },
     { view: 'channels', ic: 'plug', lbl: 'Canales' },
     { view: 'knowledge', ic: 'book', lbl: 'Lo que sabe' },
     // 🪤 Solo para quien administra, y es por RUIDO, no por secreto. Quien atiende todo el día no necesita ver
     // llamadas al modelo ni centavos en cada pantalla; mezclarlo con lo del día a día hace que se deje de leer
     // todo. Quien entra con el token a secas lo ve igual: con ese token puede llamar a la ruta directamente, y
     // esconder un botón no protege nada — creerse protegido por eso sí hace daño.
-    { view: 'trazas', ic: 'chart', lbl: 'Trazabilidad', soloAdmin: true }
+    { view: 'trazas', ic: 'chart', lbl: 'Trazabilidad', soloAdmin: true, soloCompleto: true },
+    // Cómo entra todo el equipo. Quien administra lo decide; cada quien puede verlo distinto desde «Tú».
+    { proxy: 'modo-equipo-btn', ic: 'users', lbl: 'Modo fácil para el equipo', soloAdmin: true, modo: 'equipo' }
   ];
   var CFG_TUYO = [
     { proxy: 'foot-user', ic: 'user', lbl: 'Con qué nombre respondes' },
+    { proxy: 'modo-btn', ic: 'sliders', lbl: 'Modo fácil', modo: 'yo' },
     { proxy: 'theme-btn', ic: 'sun', lbl: 'Tema claro u oscuro' },
     { proxy: 'sound-btn', ic: 'bell', lbl: 'Sonido de avisos' },
     { proxy: 'logout-btn', ic: 'salir', lbl: 'Salir' }
@@ -429,8 +437,11 @@
 
   function itemCfg(d, clase) {
     var b = document.createElement('button');
-    b.className = clase;
-    b.innerHTML = '<i class="ic" data-ic="' + d.ic + '"></i>' + esc(d.lbl);
+    b.className = clase + (d.soloCompleto ? ' solo-completo' : '');
+    b.innerHTML = '<i class="ic" data-ic="' + d.ic + '"></i>' + esc(d.lbl) +
+      // Los interruptores dicen cómo están, en palabras: un botón que cambia algo y no dice qué hay hoy obliga a probar.
+      (d.modo ? '<span class="estado-modo" data-modo-estado="' + d.modo + '"></span>' : '');
+    if (d.modo) { b.setAttribute('data-modo-toggle', d.modo); b.setAttribute('aria-pressed', 'false'); }
     if (d.view) { b.setAttribute('data-view', d.view); b.onclick = function () { cerrarCfg(); go(d.view); }; }
     else b.onclick = function () { cerrarCfg(); closeMore(); $(d.proxy).click(); };
     return b;
@@ -502,6 +513,58 @@
     if (!$('cfg-pop').hidden && !$('cfg-pop').contains(e.target) && !$('cfg-btn').contains(e.target)) cerrarCfg();
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('cfg-pop').hidden) cerrarCfg(true); });
+
+  // ---------- modo fácil ----------
+  // DUNOR pidió un aiva «sencillo de usar», y aiva es mucho más que eso. El modo fácil ESCONDE lo que no es del día
+  // a día —el puntaje y su porqué, Análisis, Seguimientos, la configuración del asistente, las trazas, los filtros
+  // de más— y no quita nada: lo escondido lleva la clase `solo-completo` y vuelve con un clic. Es la regla de
+  // siempre (sencillo por fuera, todo a un clic adentro), con un interruptor en vez de un nivel más de menú.
+  //
+  // Dos interruptores, de dos dueños distintos: el del cliente (cómo entra todo su equipo, lo pone quien administra
+  // y vive en su base) y el de cada quien (cómo lo ve uno, en su navegador). El de cada quien manda.
+  var SOLO_COMPLETO_VISTAS = { analysis: 1, ventas: 1, seguimientos: 1, agent: 1, trazas: 1 };
+  var FILTROS_COMPLETOS = /^(human|archived|stage:)/;
+  function modoMio() { try { return localStorage.getItem(LLAVE('modo')) || ''; } catch (e) { return ''; } }
+  function modoDelEquipo() {
+    if (state.modoCliente) return state.modoCliente;
+    try { return localStorage.getItem(LLAVE('modoCliente')) || 'completo'; } catch (e) { return 'completo'; }
+  }
+  function esFacil() { return (modoMio() || modoDelEquipo()) === 'facil'; }
+  function aplicarModo() {
+    var facil = esFacil();
+    document.documentElement.setAttribute('data-modo', facil ? 'facil' : 'completo');
+    document.querySelectorAll('[data-modo-toggle]').forEach(function (b) {
+      var on = b.getAttribute('data-modo-toggle') === 'equipo' ? modoDelEquipo() === 'facil' : facil;
+      b.setAttribute('aria-pressed', String(on));
+    });
+    document.querySelectorAll('[data-modo-estado]').forEach(function (el) {
+      el.textContent = (el.getAttribute('data-modo-estado') === 'equipo' ? modoDelEquipo() === 'facil' : facil) ? 'Sí' : 'No';
+    });
+    return facil;
+  }
+  /** Después de cambiar de modo: lo que estaba a la vista se vuelve a pintar, y si se escondió, se va a Hoy. */
+  function trasCambiarDeModo(facil) {
+    if (facil && FILTROS_COMPLETOS.test(state.filter)) state.filter = 'all';
+    go(facil && SOLO_COMPLETO_VISTAS[state.view] ? 'today' : state.view);
+  }
+  $('modo-btn').onclick = function () {
+    var nuevo = esFacil() ? 'completo' : 'facil';
+    try { localStorage.setItem(LLAVE('modo'), nuevo); } catch (e) {}
+    trasCambiarDeModo(aplicarModo());
+    toast(nuevo === 'facil' ? 'Modo fácil: lo del día a día. Lo demás vuelve con este mismo botón.' : 'Ahora ves todo lo de aiva');
+  };
+  $('modo-equipo-btn').onclick = function () {
+    var nuevo = modoDelEquipo() === 'facil' ? 'completo' : 'facil';
+    api('/tablero/modo', { method: 'PUT', body: { modo: nuevo } }).then(function (r) {
+      if (!r || r.error) { toast('No se pudo: ' + ((r && r.error) || 'sin respuesta')); return; }
+      state.modoCliente = r.modo;
+      // Quien lo cambia pasa a verlo como lo verá su equipo: si no, lo cambiaría sin ver qué cambió.
+      try { localStorage.setItem(LLAVE('modoCliente'), r.modo); localStorage.removeItem(LLAVE('modo')); } catch (e) {}
+      trasCambiarDeModo(aplicarModo());
+      toast(r.modo === 'facil' ? 'Tu equipo entra en modo fácil. Cada quien puede ver todo desde Configuración › Modo fácil.' : 'Tu equipo entra viendo todo');
+    });
+  };
+  aplicarModo();
   function openMore() { $('more-sheet').hidden = false; $('nav-more').setAttribute('aria-expanded', 'true'); var first = $('more-grid').querySelector('button'); if (first) first.focus(); }
   function closeMore(returnFocus) {
     if ($('more-sheet').hidden) return;
@@ -533,6 +596,7 @@
       iconos(cfg);
     }
     cfg.querySelectorAll('[data-view]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
+    aplicarModo(); // los interruptores de aquí nacen tarde: que digan cómo están
   }
 
   // ---------- las áreas y sus pestañas ----------
@@ -544,7 +608,8 @@
   // 🪤 Pestañas en la barra de arriba y NO en el panel de la sección: ese panel le quita 212 px al tablero y a la
   // tabla, que son justo las pantallas que necesitan el ancho (por eso se quitó también de Conversaciones).
   var AREAS = [
-    { id: 'clientes', lbl: 'Clientes', subs: [{ view: 'clientes', lbl: 'Lista' }, { view: 'pipeline', lbl: 'Por etapa', cuenta: 'cuenta-pip' }, { view: 'seguimientos', lbl: 'Seguimientos' }] },
+    // Seguimientos no va en el modo fácil: los calientes que esperan ya salen en Hoy, que es donde se miran.
+    { id: 'clientes', lbl: 'Clientes', subs: [{ view: 'clientes', lbl: 'Lista' }, { view: 'pipeline', lbl: 'Por etapa', cuenta: 'cuenta-pip' }, { view: 'seguimientos', lbl: 'Seguimientos', soloCompleto: true }] },
     { id: 'analisis', lbl: 'Análisis', subs: [{ view: 'analysis', lbl: 'Resumen' }, { view: 'ventas', lbl: 'Ventas' }] }
   ];
   var AREA_DE = {};
@@ -557,7 +622,7 @@
     g.setAttribute('role', 'group');
     g.setAttribute('aria-label', 'Qué ver en ' + a.lbl);
     g.innerHTML = a.subs.map(function (x) {
-      return '<button data-sub="' + x.view + '" aria-pressed="false">' + esc(x.lbl) + (x.cuenta ? '<span class="n-tab" id="' + x.cuenta + '"></span>' : '') + '</button>';
+      return '<button data-sub="' + x.view + '" aria-pressed="false"' + (x.soloCompleto ? ' class="solo-completo"' : '') + '>' + esc(x.lbl) + (x.cuenta ? '<span class="n-tab" id="' + x.cuenta + '"></span>' : '') + '</button>';
     }).join('');
     g.querySelectorAll('[data-sub]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-sub')); }; });
     a.tabs = g;
@@ -630,6 +695,8 @@
     if (state.filter === 'archived') params.push('archived=1');
     return api('/contacts' + (params.length ? '?' + params.join('&') : '')).then(function (list) {
       if (state.filter === 'unread') list = list.filter(function (c) { return c.unread > 0; });
+      if (state.filter === 'mios') list = list.filter(esMia);
+      if ($('f-mios')) $('f-mios').hidden = !state.name;
       if (state.filter === 'hot') list = list.filter(function (c) { return c.score >= 60 || rol(c.stage) === 'cita'; });
       state.contacts = list; renderRows(); updateBadges();
     });
@@ -685,7 +752,8 @@
   function verdictChip(c) { var v = verdict(c); return '<span class="chip ' + v.cls + (isStale(c) ? ' stale' : '') + '" title="Probabilidad ' + c.score + (c.scoreAt ? ' · calculada hace ' + rel(c.scoreAt) : '') + '">' + esc(v.label) + '</span>'; }
   function isStale(c) { return c.scoreAt && c.lastMessageAt && c.lastMessageAt > c.scoreAt + 20000; }
   function tempLabel(t) { return t === 'frio' ? 'frío' : t; } // el valor interno va sin tilde; la palabra, con
-  function scoreChip(c) { return '<span class="chip t-' + c.temperature + (isStale(c) ? ' stale' : '') + '" title="' + (c.scoreAt ? 'Calculado hace ' + rel(c.scoreAt) : 'Sin análisis') + '">' + c.score + ' · ' + tempLabel(c.temperature) + (isStale(c) ? ' (desactualizado)' : '') + '</span>'; }
+  // En el modo fácil solo queda la de «caliente»: es la única que pide hacer algo. «0 · frío» es una cuenta interna.
+  function scoreChip(c) { return '<span class="chip t-' + c.temperature + (c.temperature === 'caliente' ? '' : ' solo-completo') + (isStale(c) ? ' stale' : '') + '" title="' + (c.scoreAt ? 'Calculado hace ' + rel(c.scoreAt) : 'Sin análisis') + '">' + c.score + ' · ' + tempLabel(c.temperature) + (isStale(c) ? ' (desactualizado)' : '') + '</span>'; }
   function sentIcon(s) { return { positivo: '😊 positivo', neutral: '😐 neutral', negativo: '😠 negativo' }[s] || s; }
   function updateBadges() {
     var unread = state.contacts.reduce(function (a, c) { return a + (c.unread || 0); }, 0);
@@ -732,7 +800,9 @@
     var top = (c.scoreFactors || []).slice().sort(function (a, b) { return Math.abs(b.points) - Math.abs(a.points); })[0];
     var v = verdict(c);
     $('chat-temp').innerHTML = '<b>' + esc(v.label) + '</b> · ' + c.score + (top ? ' · ' + esc(top.label) : '') + (c.scoreAt ? ' <span title="Calculado hace ' + rel(c.scoreAt) + '">· hace ' + rel(c.scoreAt) + '</span>' : '');
-    $('chat-temp').className = 'meta-line' + (isStale(c) ? ' stale' : ''); $('chat-temp').title = isStale(c) ? 'Hay mensajes nuevos: el puntaje se recalcula en unos segundos' : '';
+    // 🪤 La clase se reescribe entera en cada pintado: el `solo-completo` del HTML se perdía aquí y el modo fácil
+    // seguía enseñando el puntaje en la cabecera de cada conversación.
+    $('chat-temp').className = 'meta-line solo-completo' + (isStale(c) ? ' stale' : ''); $('chat-temp').title = isStale(c) ? 'Hay mensajes nuevos: el puntaje se recalcula en unos segundos' : '';
     var who = $('chat-who'); if (!who) { who = document.createElement('span'); who.id = 'chat-who'; who.className = 'chip who'; $('chat-temp').after(who); }
     who.hidden = !c.humanMode; who.textContent = c.humanMode ? 'La lleva ' + whoHas(c) + (c.humanSince ? ' · desde hace ' + rel(c.humanSince) : '') : '';
     setMode(c.humanMode);
@@ -767,10 +837,26 @@
     var label = who === 'customer' ? 'Cliente' : who === 'human' ? (msg.by ? esc(msg.by) + ' (equipo)' : 'Equipo') : esc(state.agentName || 'Aiva');
     // «¿por qué?»: el turno que produjo esta respuesta (src/crm/turnos.ts). Solo para quien administra, por ruido.
     var porQue = who === 'bot' && msg.turno && esAdmin()
-      ? '<button class="por-que" type="button" data-turno="' + esc(msg.turno) + '" aria-expanded="false">¿por qué?</button>' : '';
-    return '<div class="bubble ' + who + '"><span class="who">' + label + '</span>' + adjunto(msg.media) + esc(msg.content) +
-      '<span class="ts">' + hhmm(msg.ts) + porQue + '</span></div>';
+      ? '<button class="por-que solo-completo" type="button" data-turno="' + esc(msg.turno) + '" aria-expanded="false">¿por qué?</button>' : '';
+    // 🪤 Lo que no le llegó al cliente se dice EN el mensaje, con el motivo y cómo volver a mandarlo. Quien lo
+    // mandó vio el error en ese momento; quien abra la conversación mañana solo lo sabe si queda aquí.
+    var noSalio = msg.fallo && who !== 'customer'
+      ? '<span class="no-salio"><b>No le llegó.</b> ' + esc(msg.fallo) + ' <button class="linkbtn" type="button" data-reintentar="' + esc(String(msg.id)) + '">Volver a intentar</button></span>' : '';
+    return '<div class="bubble ' + who + (msg.fallo ? ' fallo' : '') + '"><span class="who">' + label + '</span>' + adjunto(msg.media) + esc(msg.content) +
+      noSalio + '<span class="ts">' + hhmm(msg.ts) + porQue + '</span></div>';
   }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-reintentar]');
+    if (!b || !state.current) return;
+    var id = state.current;
+    b.disabled = true; b.textContent = 'Mandando…';
+    api('/contacts/' + encodeURIComponent(id) + '/mensajes/' + encodeURIComponent(b.getAttribute('data-reintentar')) + '/reintentar', { method: 'POST' })
+      .then(function (r) {
+        toast(r && r.error ? 'Tampoco salió: ' + r.error : 'Ahora sí le llegó');
+        if (state.current === id) openContact(id);
+      })
+      .catch(function () { b.disabled = false; b.textContent = 'Volver a intentar'; toast('No pude intentarlo otra vez.'); });
+  });
 
   // Las guardas como se dicen: lo que el asistente iba a decir y por qué no salió así.
   function guardaLegible(g) {
@@ -986,7 +1072,7 @@
       fd.append('texto', text);
       fd.append('by', state.name || '');
       envio = fetch(BASE + '/admin/api/contacts/' + encodeURIComponent(state.current) + '/adjunto', {
-        method: 'POST', headers: { 'x-admin-token': state.token }, body: fd,
+        method: 'POST', headers: state.name ? { 'x-admin-token': state.token, 'x-aiva-quien': encodeURIComponent(state.name) } : { 'x-admin-token': state.token }, body: fd,
       }).then(function (r) { return r.json(); });
     } else {
       envio = api('/contacts/' + encodeURIComponent(state.current) + '/reply', { method: 'POST', body: { text: text, by: state.name } });
@@ -1085,9 +1171,10 @@
     var c = d.contact, data = c.data || {}, h = d.historia || {};
     var borradores = borradoresDelPerfil(c.id);
     // Lo mismo que esconde la ficha completa: lo que no es algo que la persona contó, sino cuentas internas.
-    var ocultos = { booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1, pospuesto_desde: 1, valor: 1, sede: 1 };
+    var ocultos = { booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1, pospuesto_desde: 1, valor: 1, sede: 1, motivo_perdida: 1 };
     var capturados = Object.keys(data).filter(function (k) { return !ocultos[k] && data[k] !== '' && data[k] != null && typeof data[k] !== 'object'; });
-    var fila = function (k, html) { return '<dt>' + esc(k) + '</dt><dd>' + html + '</dd>'; };
+    // Lo que se esconde en el modo fácil lleva la clase en la fila: el dato y su rótulo se van juntos.
+    var fila = function (k, html, clase) { return '<dt' + (clase ? ' class="' + clase + '"' : '') + '>' + esc(k) + '</dt><dd' + (clase ? ' class="' + clase + '"' : '') + '>' + html + '</dd>'; };
     var factors = (c.scoreFactors || []).map(function (f) { return '<li><span>' + esc(f.label) + '</span><span class="' + (f.points >= 0 ? 'pos' : 'neg') + '">' + (f.points >= 0 ? '+' : '') + f.points + '</span></li>'; }).join('') || '<li class="muted">Aún sin análisis.</li>';
     var etapas = (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '"' + (e.id === c.stage ? ' selected' : '') + '>' + esc(e.label) + '</option>'; }).join('');
     var appts = d.appointments.map(function (a) { return '<div class="appt ' + a.status + '"><span class="t">' + esc(a.label || '') + '</span><span class="grow small muted">' + esc(a.service) + ' · ' + esc(estadoCita(a.status)) + '</span></div>'; }).join('') || '<span class="muted small">Sin citas.</span>';
@@ -1110,17 +1197,18 @@
         : '') +
       '<dl class="det">' +
         // La etapa se cambia aquí mismo: es lo que más se toca, y no tiene por qué esperar a «Corregir datos».
-        fila('Etapa', '<select id="f-etapa" aria-label="Etapa">' + etapas + '</select>') +
+        fila('Etapa', '<select id="f-etapa" aria-label="Etapa">' + etapas + '</select>' + motivoHtml(c, 'f-motivo')) +
         // «Nunca el número solo»: el veredicto primero y el puntaje de respaldo. El porqué, detrás de un clic.
         fila('¿Prospecto?', '<span class="' + (viejo ? 'stale' : '') + '"><b>' + esc(v.label) + '</b> · ' + esc(String(c.score == null ? '—' : c.score)) + '</span>' +
-          (viejo ? '<div class="small" style="color:var(--warn)">Hay mensajes nuevos: se recalcula solo.</div>' : '')) +
+          (viejo ? '<div class="small" style="color:var(--warn)">Hay mensajes nuevos: se recalcula solo.</div>' : ''), 'solo-completo') +
         fila('Próximo paso', pasoHtml(c.proximo)) +
         fila('Valor', valorHtml(c)) +
-        fila('La lleva', llevaHtml(c)) +
-        (d.origen && d.origen.fuente ? fila('Llegó por', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : '')) + (d.origen.titular ? '<div class="small muted">«' + esc(d.origen.titular) + '»</div>' : '')) : '') +
+        fila('A cargo', responsableHtml(c, 'f-resp')) +
+        fila('La lleva', llevaHtml(c), 'solo-completo') +
+        (d.origen && d.origen.fuente ? fila('Llegó por', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : '')) + (d.origen.titular ? '<div class="small muted">«' + esc(d.origen.titular) + '»</div>' : ''), 'solo-completo') : '') +
         (variasSedes() && data.sede ? fila('Sede', esc(nombreSede(data.sede))) : '') +
       '</dl>' +
-      '<details class="perfil-por" data-k="por"><summary>Por qué ese puntaje</summary>' +
+      '<details class="perfil-por solo-completo" data-k="por"><summary>Por qué ese puntaje</summary>' +
         '<ul class="factors">' + factors + '</ul>' +
         (c.sentiment ? '<div class="small muted" style="margin-top:6px">Ánimo: ' + sentIcon(c.sentiment) + (data.urgencia ? ' · urgencia ' + esc(data.urgencia) : '') + '</div>' : '') +
         '<div class="small muted" style="margin-top:6px">' + (c.scoreBase > c.score ? 'Llegó a ' + c.scoreBase + ' cuando hablaron. ' : '') + (c.scoreAt ? 'Calculado hace ' + rel(c.scoreAt) + '. ' : '') +
@@ -1159,12 +1247,16 @@
     };
     engancharBorrarNotas($('details'), c.id, function (events) { d.events = events; renderDetails(); });
     $('f-etapa').onchange = function () {
-      api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: { stage: $('f-etapa').value } }).then(function (r) {
-        if (r && r.error) { toast(r.error); return; }
-        toast('Etapa: ' + etiquetaEtapa($('f-etapa').value));
+      var nueva = $('f-etapa').value;
+      cambiarEtapa(c, nueva, function (r) {
+        if (!r) { $('f-etapa').value = c.stage; return; }
+        if (r.error) { toast(r.error); return; }
+        toast('Etapa: ' + etiquetaEtapa(nueva));
         openContact(c.id); loadContacts();
       });
     };
+    if ($('f-motivo')) $('f-motivo').onclick = function () { cambiarEtapa(c, c.stage, function (r) { if (r && !r.error) openContact(c.id); }); };
+    engancharResponsable($('f-resp'), c, function () { openContact(c.id); loadContacts(); });
     $('f-save').onclick = function () {
       api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: { name: $('f-name').value, phone: $('f-phone').value, tags: $('f-tags').value.split(',').map(function (t) { return t.trim(); }).filter(Boolean), notes: $('f-notes').value } })
         .then(function (r) {
@@ -1291,11 +1383,19 @@
         ? '<div class="panel help-first" role="alert"><span class="grow"><b>La dirección pública no responde.</b> <span class="small">' + esc(publicDetail(t.public)) + '</span></span><button class="btn primary" data-go="channels">Ver en Canales</button></div>'
         : '';
       // Cada sección con su color: lo urgente no puede verse igual que lo que ya está resuelto.
-      var TONOS = ['verificar', 'esperan', 'persona', 'pasadas', 'recordar', 'citas', 'calientes', 'leidas', 'proximas'];
-      $('today').innerHTML = down + bannerDeHoy() + sections.map(function (s, i) {
-        return '<div class="panel" data-tono="' + (TONOS[i] || '') + '"><h3>' + esc(s.t) + '<span class="chip">' + s.n + '</span></h3>' +
+      var TONOS = ['verificar', 'esperan', 'grupos', 'persona', 'pasadas', 'recordar', 'citas', 'calientes', 'leidas', 'proximas'];
+      sections.forEach(function (s, i) { s.tono = TONOS[i] || ''; });
+      // 🪤 En el modo fácil solo sale lo que tiene algo. Nueve recuadros, siete diciendo «nada pendiente», es lo
+      // que hacía sentir a aiva complicado: hay que leerlos todos para descubrir que no hay que hacer nada.
+      var facil = esFacil();
+      var visibles = facil ? sections.filter(function (s) { return s.n > 0; }) : sections;
+      $('today').innerHTML = down + bannerDeHoy() + visibles.map(function (s) {
+        return '<div class="panel" data-tono="' + s.tono + '"><h3>' + esc(s.t) + '<span class="chip">' + s.n + '</span></h3>' +
           (s.html || '<div class="ok">' + esc(s.empty) + '</div>') + '</div>';
-      }).join('');
+      }).join('') +
+        (facil && !visibles.length ? '<div class="panel" data-tono="leidas"><h3>Todo al día</h3><div class="ok">Nadie espera respuesta, no hay citas hoy y ' + esc(state.agentName || 'Aiva') + ' supo contestar todo.</div></div>' : '') +
+        (facil ? '<div class="ver-todo small muted">Estás en el modo fácil. <button class="linkbtn" type="button" id="hoy-ver-todo">Ver todo lo de aiva</button></div>' : '');
+      if ($('hoy-ver-todo')) $('hoy-ver-todo').onclick = function () { $('modo-btn').click(); };
       $('today').querySelectorAll('.row').forEach(function (r) {
         r.onclick = function () { go('inbox'); openContact(r.getAttribute('data-id')); };
         r.oncontextmenu = function (e) { e.preventDefault(); abrirMenu(e.clientX, e.clientY, r.getAttribute('data-id')); };
@@ -1487,6 +1587,7 @@
     pintarSedesPip();
     api('/contacts?limit=2000').then(function (todos) {
       var list = todos.filter(deLaSede);
+      state.pipeLista = list;
       pintarCifrasEmbudo(list);
       // Al redibujar (también por un evento en vivo) el foco no se pierde: vuelve a la misma tarjeta.
       var active = document.activeElement && document.activeElement.closest ? document.activeElement.closest('#board .card') : null;
@@ -1554,10 +1655,104 @@
   }
   function moveCard(id, stage) {
     if (!id || !stage) return;
-    api('/contacts/' + encodeURIComponent(id), { method: 'PATCH', body: { stage: stage } }).then(function (r) {
-      $('board-status').textContent = r && r.error ? 'No se pudo mover: ' + r.error : 'Movida a ' + (state.stageLabels[stage] || stage) + '.';
+    var c = (state.pipeLista || []).find(function (x) { return x.id === id; }) || { id: id };
+    if (c.stage === stage) return;
+    cambiarEtapa(c, stage, function (r) {
+      // Sin respuesta es que se arrepintió en la pregunta de por qué se perdió: la tarjeta vuelve a su sitio.
+      $('board-status').textContent = !r ? 'Se quedó donde estaba.' : r.error ? 'No se pudo mover: ' + r.error : 'Movida a ' + (state.stageLabels[stage] || stage) + '.';
       loadPipeline(id);
     });
+  }
+
+  // ---------- por qué se perdió ----------
+  // 🪤 Se pregunta al pasar a perdido, en una ventana y no con un campo más de la ficha: es el único momento en
+  // que alguien sabe la respuesta. Pero es OPCIONAL —el botón mueve igual sin motivo—: una pregunta obligatoria
+  // para mover una tarjeta enseña a contestar cualquier cosa, y entonces el informe miente.
+  var perdida = null;
+  function cambiarEtapa(c, stage, listo) {
+    if (rol(stage) !== 'perdido') { pedirEtapa(c.id, stage, null, listo); return; }
+    var dlg = $('dlg-perdida');
+    perdida = { c: c, stage: stage, listo: listo, elegido: '', hecho: false };
+    $('perdida-quien').textContent = nameOf(c);
+    $('perdida-ok').textContent = c.stage === stage ? 'Guardar' : 'Pasar a ' + etiquetaEtapa(stage);
+    $('perdida-otro').value = '';
+    $('perdida-motivos').innerHTML = (state.motivosPerdida || []).map(function (m) {
+      return '<button type="button" class="motivo" aria-pressed="false" data-motivo="' + esc(m) + '">' + esc(m) + '</button>';
+    }).join('');
+    Array.prototype.forEach.call($('perdida-motivos').querySelectorAll('[data-motivo]'), function (b) {
+      b.onclick = function () {
+        var on = b.getAttribute('aria-pressed') !== 'true';
+        Array.prototype.forEach.call($('perdida-motivos').querySelectorAll('[data-motivo]'), function (x) { x.setAttribute('aria-pressed', String(on && x === b)); });
+        perdida.elegido = on ? b.getAttribute('data-motivo') : '';
+        if (on) $('perdida-otro').value = '';
+      };
+    });
+    dlg.showModal();
+    var primero = $('perdida-motivos').querySelector('button');
+    (primero || $('perdida-otro')).focus();
+  }
+  function pedirEtapa(id, stage, motivo, listo) {
+    var body = { stage: stage };
+    if (motivo) body.motivo = motivo;
+    api('/contacts/' + encodeURIComponent(id), { method: 'PATCH', body: body }).then(function (r) { listo(r || {}); });
+  }
+  if ($('dlg-perdida')) {
+    // Escribir otro motivo apaga el que estuviera escogido: los dos a la vez no se sabría cuál vale.
+    $('perdida-otro').oninput = function () {
+      if (!$('perdida-otro').value.trim()) return;
+      perdida.elegido = '';
+      Array.prototype.forEach.call($('perdida-motivos').querySelectorAll('[data-motivo]'), function (x) { x.setAttribute('aria-pressed', 'false'); });
+    };
+    $('perdida-ok').onclick = function () {
+      if (!perdida) return;
+      var p = perdida, motivo = p.elegido || $('perdida-otro').value.trim();
+      p.hecho = true;
+      $('dlg-perdida').close();
+      pedirEtapa(p.c.id, p.stage, motivo || null, p.listo);
+    };
+    $('perdida-cancelar').onclick = function () { $('dlg-perdida').close(); };
+    // Cerrar con Escape o con «No moverla» es lo mismo: la ficha se queda en su etapa y quien llamó lo sabe.
+    $('dlg-perdida').addEventListener('close', function () {
+      var p = perdida; perdida = null;
+      if (p && !p.hecho) p.listo(null);
+    });
+  }
+  /** Debajo de la etapa, si está perdida: por qué, o el botón para decirlo. */
+  function motivoHtml(c, id) {
+    if (rol(c.stage) !== 'perdido') return '';
+    var m = c.data && c.data.motivo_perdida;
+    return '<div class="small muted motivo-perdida">' + (m ? 'Por qué: ' + esc(m) + ' · ' : '') +
+      '<button class="linkbtn" type="button" id="' + id + '">' + (m ? 'Cambiar' : 'Decir por qué') + '</button></div>';
+  }
+
+  // ---------- quién está a cargo ----------
+  // 🪤 «La lleva» es quién contesta AHORA, y se borra cuando el asistente vuelve a atender. «A cargo» es de quién es
+  // el cliente, y se queda: lo que pedía quien revisó aiva era poder decir «este es de Laura» y filtrarlo.
+  function genteDelEquipo(c) {
+    var nombres = equipoDisponible().map(function (u) { return u.nombre; });
+    // Con el token a secas no se sabe quién es el equipo: por lo menos uno mismo.
+    if (!nombres.length && state.name) nombres.push(state.name);
+    if (c.responsable && !nombres.some(function (n) { return mismoNombre(n, c.responsable); })) nombres.unshift(c.responsable);
+    return nombres;
+  }
+  function responsableHtml(c, id) {
+    return '<select id="' + id + '" aria-label="Quién está a cargo">' +
+      '<option value=""' + (c.responsable ? '' : ' selected') + '>Nadie todavía</option>' +
+      genteDelEquipo(c).map(function (n) {
+        return '<option value="' + esc(n) + '"' + (mismoNombre(n, c.responsable) ? ' selected' : '') + '>' + esc(n) + (mismoNombre(n, state.name) ? ' (tú)' : '') + '</option>';
+      }).join('') + '</select>';
+  }
+  function engancharResponsable(sel, c, listo) {
+    if (!sel) return;
+    sel.onchange = function () {
+      var a = sel.value || null;
+      api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: { responsable: a } }).then(function (r) {
+        if (r && r.error) { toast(r.error); sel.value = c.responsable || ''; return; }
+        toast(a ? 'A cargo: ' + a : 'Sin nadie a cargo');
+        cuentasLuego();
+        listo();
+      });
+    };
   }
 
   // ---------- calendario (vista semanal tipo agenda) ----------
@@ -3289,7 +3484,7 @@
     };
     $('cli-tabla').innerHTML = (cli.q ? '<div class="cli-resumen">Buscando «' + esc(cli.q) + '»</div>' : '') +
       '<table class="cli-tabla"><thead><tr>' +
-        th('nombre', 'Quién') + '<th>Etapa</th>' + th('puntaje', 'Puntaje', 'num') + th('valor', 'Valor', 'num') + th('paso', 'Próximo paso') + '<th>La lleva</th>' + th('vez', 'Última vez', 'num') +
+        th('nombre', 'Quién') + '<th>Etapa</th>' + th('puntaje', 'Puntaje', 'num solo-completo') + th('valor', 'Valor', 'num') + th('paso', 'Próximo paso') + '<th>A cargo</th><th class="solo-completo">La lleva</th>' + th('vez', 'Última vez', 'num') +
       '</tr></thead><tbody>' +
       list.map(function (c) {
         var v = verdict(c);
@@ -3300,19 +3495,20 @@
             '<div class="dato">' + esc([c.phone, channelIcon(c.channel), variasSedes() && c.data && c.data.sede ? nombreSede(c.data.sede) : ''].filter(Boolean).join(' · ')) + '</div></td>' +
           '<td data-rot="Etapa">' + pastillaEtapa(c.stage) + '</td>' +
           // El puntaje nunca solo: va con su veredicto en palabras, que es la regla de siempre.
-          '<td data-rot="Puntaje" class="num">' + (c.score == null ? '—' : c.score) + '<div class="dato">' + esc(v && v.label ? v.label : '') + '</div></td>' +
+          '<td data-rot="Puntaje" class="num solo-completo">' + (c.score == null ? '—' : c.score) + '<div class="dato">' + esc(v && v.label ? v.label : '') + '</div></td>' +
           '<td data-rot="Valor" class="num">' + valorHtml(c) + '</td>' +
           '<td data-rot="Próximo paso" class="proximo">' + pasoHtml(c.proximo) +
             (c.summary || c.recap ? '<div class="quiere" title="' + esc(c.summary || c.recap) + '">' + esc(c.summary || c.recap) + '</div>' : '') + '</td>' +
-          '<td data-rot="La lleva">' + llevaHtml(c) + '</td>' +
+          '<td data-rot="A cargo">' + (c.responsable ? '<span class="lleva persona"><span class="ini" aria-hidden="true">' + esc(inicialesDe(c.responsable)) + '</span><span class="nom">' + esc(c.responsable) + '</span></span>' : '<span class="muted">—</span>') + '</td>' +
+          '<td data-rot="La lleva" class="solo-completo">' + llevaHtml(c) + '</td>' +
           '<td data-rot="Última vez" class="num dato">' + esc(rel(c.lastMessageAt)) + '</td>' +
         '</tr>';
       }).join('') + '</tbody>' +
       // Al pie, cuántos y cuánto suman. Lo que no tiene precio se dice al lado: una suma baja por falta de precios
       // y un mes malo son dos problemas muy distintos.
-      '<tfoot><tr><td colspan="3">' + list.length + (list.length === 1 ? ' persona' : ' personas') + '</td>' +
-        '<td class="num">' + (suma ? '<span class="dato">Suma</span> <b>' + esc(plata(suma)) + '</b>' : '') + '</td>' +
-        '<td colspan="3" class="dato">' + (sinPrecio && suma ? sinPrecio + ' sin precio' : '') + '</td></tr></tfoot></table>';
+      '<tfoot><tr><td colspan="2">' + list.length + (list.length === 1 ? ' persona' : ' personas') + '</td>' +
+        '<td class="solo-completo"></td><td class="num">' + (suma ? '<span class="dato">Suma</span> <b>' + esc(plata(suma)) + '</b>' : '') + '</td>' +
+        '<td colspan="2" class="dato">' + (sinPrecio && suma ? sinPrecio + ' sin precio' : '') + '</td><td class="solo-completo"></td><td></td></tr></tfoot></table>';
     enganchaClientes();
   }
 
@@ -3436,9 +3632,9 @@
     var notas = (d.events || []).filter(function (e) { return e.type === 'nota' && e.payload && e.payload.texto; });
     var citas = d.appointments || [];
     var data = c.data || {};
-    var ocultos = { booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1, pospuesto_desde: 1, valor: 1, sede: 1 };
+    var ocultos = { booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1, pospuesto_desde: 1, valor: 1, sede: 1, motivo_perdida: 1 };
     var capturados = Object.keys(data).filter(function (k) { return !ocultos[k] && data[k] !== '' && data[k] != null && typeof data[k] !== 'object'; });
-    var fila = function (k, html) { return '<dt>' + esc(k) + '</dt><dd>' + html + '</dd>'; };
+    var fila = function (k, html, clase) { return '<dt' + (clase ? ' class="' + clase + '"' : '') + '>' + esc(k) + '</dt><dd' + (clase ? ' class="' + clase + '"' : '') + '>' + html + '</dd>'; };
 
     $('pf-cuerpo').innerHTML =
       '<div class="ficha-cols"><div class="ficha-main">' +
@@ -3451,15 +3647,16 @@
           }).join('') +
         '</div><div id="pf-tab" role="tabpanel"></div>' +
       '</div><aside class="ficha-lado"><h4>Detalles</h4><dl class="det">' +
-        fila('Etapa', '<select id="pf-etapa" aria-label="Etapa">' + (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '"' + (e.id === c.stage ? ' selected' : '') + '>' + esc(e.label) + '</option>'; }).join('') + '</select>') +
-        fila('Puntaje', esc((c.score == null ? '—' : c.score) + (ver && ver.label ? ' · ' + ver.label : ''))) +
+        fila('Etapa', '<select id="pf-etapa" aria-label="Etapa">' + (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '"' + (e.id === c.stage ? ' selected' : '') + '>' + esc(e.label) + '</option>'; }).join('') + '</select>' + motivoHtml(c, 'pf-motivo')) +
+        fila('Puntaje', esc((c.score == null ? '—' : c.score) + (ver && ver.label ? ' · ' + ver.label : '')), 'solo-completo') +
         fila('Valor', v.valor ? esc(plata(v.valor)) + ' <span class="muted small">' + esc(v.origen === 'a mano' ? 'a mano' : 'del catálogo') + '</span>' : '<span class="muted">sin precio</span>') +
-        fila('La lleva', llevaHtml(c)) +
+        fila('A cargo', responsableHtml(c, 'pf-resp')) +
+        fila('La lleva', llevaHtml(c), 'solo-completo') +
         fila('Próximo paso', pasoHtml(c.proximo)) +
-        fila('Volvió', esc(h.volvio ? h.volvio + (h.volvio === 1 ? ' vez' : ' veces') : 'no ha vuelto')) +
+        fila('Volvió', esc(h.volvio ? h.volvio + (h.volvio === 1 ? ' vez' : ' veces') : 'no ha vuelto'), 'solo-completo') +
         fila('Última vez', esc(c.lastMessageAt ? 'hace ' + rel(c.lastMessageAt) : '—')) +
-        fila('Desde', esc(h.desde ? new Date(h.desde).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—')) +
-        (d.origen && d.origen.fuente ? fila('Llegó por', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : ''))) : '') +
+        fila('Desde', esc(h.desde ? new Date(h.desde).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'), 'solo-completo') +
+        (d.origen && d.origen.fuente ? fila('Llegó por', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : '')), 'solo-completo') : '') +
         (variasSedes() && data.sede ? fila('Sede', esc(nombreSede(data.sede))) : '') +
       '</dl>' +
       (capturados.length ? '<h4>Lo que contó</h4><dl class="det">' + capturados.map(function (k) { return fila(etiquetaDato(k), esc(data[k])); }).join('') + '</dl>' : '') +
@@ -3484,13 +3681,17 @@
     });
     // La etapa se cambia aquí mismo, sin pasar por «Corregir»: es lo que más se toca.
     $('pf-etapa').onchange = function () {
-      api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: { stage: $('pf-etapa').value } }).then(function (r) {
-        if (r && r.error) { toast(r.error); return; }
-        toast('Etapa: ' + etiquetaEtapa($('pf-etapa').value));
+      var nueva = $('pf-etapa').value;
+      cambiarEtapa(c, nueva, function (r) {
+        if (!r) { $('pf-etapa').value = c.stage; return; }
+        if (r.error) { toast(r.error); return; }
+        toast('Etapa: ' + etiquetaEtapa(nueva));
         recargarListas();
         abrirPerfil(c.id, PF_LISTA);
       });
     };
+    if ($('pf-motivo')) $('pf-motivo').onclick = function () { cambiarEtapa(c, c.stage, function (r) { if (r && !r.error) abrirPerfil(c.id, PF_LISTA); }); };
+    engancharResponsable($('pf-resp'), c, function () { recargarListas(); abrirPerfil(c.id, PF_LISTA); });
     $('pf-guardar').onclick = function () {
       var valor = Number($('pf-f-valor').value);
       var cuerpo = {
@@ -3573,6 +3774,8 @@
    * 🪤 Lo que no se sabe nombrar no se enseña. Un tipo de evento nuevo saldría aquí como su nombre interno, y
    * eso es peor que no salir.
    */
+  /** «nombre, teléfono y nota fija». */
+  function enLista(xs) { return xs.length < 2 ? String(xs[0] || '') : xs.slice(0, -1).join(', ') + ' y ' + xs[xs.length - 1]; }
   function historiaHtml(d, opts) {
     opts = opts || {};
     var agente = state.agentName || 'Aiva';
@@ -3582,16 +3785,21 @@
       var p = e.payload || {}, t = null, tipo = 'evento';
       switch (e.type) {
         case 'nota': if (!p.texto) return; items.push({ ts: e.ts, tipo: 'nota', id: e.id, por: p.por || 'El equipo', texto: p.texto }); return;
-        case 'stage': t = quien(p.by) + ' la pasó de ' + (state.stageLabels[p.from] || p.from || '—') + ' a ' + (state.stageLabels[p.to] || p.to); tipo = 'etapa'; break;
+        case 'stage': t = quien(p.by) + ' la pasó de ' + (state.stageLabels[p.from] || p.from || '—') + ' a ' + (state.stageLabels[p.to] || p.to) + (p.motivo ? ' · ' + p.motivo : ''); tipo = 'etapa'; break;
+        case 'motivo_perdida': t = quien(p.by) + ' dijo por qué se perdió: ' + p.motivo; tipo = 'etapa'; break;
+        case 'responsable': t = p.a ? (p.a === p.by ? p.a + ' quedó a cargo' : quien(p.by) + ' dejó a ' + p.a + ' a cargo') : quien(p.by) + ' la dejó sin nadie a cargo'; tipo = 'traspaso'; break;
+        case 'entregada': t = quien(p.by) + ' se la entregó a ' + p.a; tipo = 'traspaso'; break;
+        case 'editado': if (!(p.campos || []).length) return; t = quien(p.by) + ' corrigió ' + enLista(p.campos); break;
+        case 'nota_borrada': t = quien(p.by) + ' borró una nota'; break;
         case 'human_on': t = p.by === 'bot' ? agente + ' la pasó al equipo' + (p.motivo === 'tope' ? ' (se llegó al tope de gasto)' : '') : quien(p.by) + ' tomó la conversación'; tipo = 'traspaso'; break;
         case 'human_off': t = agente + ' volvió a atenderla'; tipo = 'traspaso'; break;
         case 'appointment_booked': t = 'Cita agendada' + (p.startsAt ? ' para el ' + new Date(p.startsAt).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }) : '') + (p.by && p.by !== 'bot' ? ' por ' + quien(p.by) : ''); tipo = 'cita'; break;
-        case 'appointment_updated': if (!p.status) return; t = 'La cita quedó ' + estadoCita(p.status); tipo = 'cita'; break;
+        case 'appointment_updated': if (!p.status) return; t = 'La cita quedó ' + estadoCita(p.status) + (p.by && p.by !== 'bot' ? ' · ' + quien(p.by) : ''); tipo = 'cita'; break;
         case 'reminder_reply': t = 'Contestó el recordatorio de la cita'; tipo = 'cita'; break;
         case 'followup_snooze': t = 'Seguimiento pospuesto ' + (p.days || 7) + ' días'; break;
-        case 'archivada': t = 'Se archivó'; break;
-        case 'desarchivada': t = 'Volvió a las listas'; break;
-        case 'contacts_merged': t = 'Se unió con otra ficha de la misma persona'; break;
+        case 'archivada': t = p.by ? quien(p.by) + ' la archivó' : 'Se archivó'; break;
+        case 'desarchivada': t = p.by ? quien(p.by) + ' la devolvió a las listas' : 'Volvió a las listas'; break;
+        case 'contacts_merged': t = (p.by ? quien(p.by) + ' la unió' : 'Se unió') + ' con otra ficha de la misma persona'; break;
         case 'cross_channel': t = 'Escribió también por otro canal'; break;
         default: return;
       }
@@ -3802,6 +4010,16 @@
           }).join('') + '</tbody></table></div>'
         : '<div class="empty">Todavía no hay ventas en este periodo. Una ficha cuenta como venta cuando pasa a la etapa de ganado.</div>';
       engancharFichas($('ven-lista'));
+      // 🪤 Las que no dicen motivo se cuentan aparte y a la vista: sin eso, «Precio: 3» parecería el problema cuando
+      // de veinte perdidas nadie dijo nada de diecisiete.
+      var pd = d.perdidas || { cuantas: 0, motivos: [], sinMotivo: 0 };
+      $('ven-perdidas').innerHTML = pd.cuantas
+        ? '<div class="panel"><h3>Por qué se pierden<span class="chip">' + pd.cuantas + '</span></h3>' +
+          (pd.motivos.length ? '<ul class="motivos-lista">' + pd.motivos.map(function (m) {
+            return '<li><span class="t">' + esc(m.motivo) + '</span><span class="barra" aria-hidden="true"><i style="width:' + Math.round(100 * m.n / pd.cuantas) + '%"></i></span><span class="n">' + m.n + '</span></li>';
+          }).join('') + '</ul>' : '') +
+          (pd.sinMotivo ? '<div class="small muted">' + pd.sinMotivo + (pd.sinMotivo === 1 ? ' se perdió' : ' se perdieron') + ' sin decir por qué. Se pregunta al pasarla a la etapa de perdido.</div>' : '') + '</div>'
+        : '';
     });
   }
 
@@ -3920,8 +4138,8 @@
     es.addEventListener('message', function (e) {
       var ev = JSON.parse(e.data), p = ev.payload;
       if (state.current === ev.userId && state.detail) {
-        state.detail.messages.push({ role: p.role, author: p.author, by: p.by, content: p.content, ts: p.ts });
-        var m = $('msgs'); m.insertAdjacentHTML('beforeend', bubble({ role: p.role, author: p.author, by: p.by, content: p.content, ts: p.ts })); m.scrollTop = m.scrollHeight;
+        state.detail.messages.push({ id: p.id, role: p.role, author: p.author, by: p.by, content: p.content, ts: p.ts });
+        var m = $('msgs'); m.insertAdjacentHTML('beforeend', bubble({ id: p.id, role: p.role, author: p.author, by: p.by, content: p.content, ts: p.ts })); m.scrollTop = m.scrollHeight;
         if (p.author === 'customer') api('/contacts/' + encodeURIComponent(ev.userId)).then(function () {}); // marca leído
       }
       if (p.author === 'customer') {
@@ -3929,6 +4147,11 @@
       }
       if (state.view === 'inbox') loadContacts();
       if (state.view === 'today') loadToday();
+    });
+    // Un mensaje que no salió (o que salió al reintentarlo): la conversación abierta se vuelve a pintar con su marca.
+    es.addEventListener('message_estado', function (e) {
+      var ev = JSON.parse(e.data);
+      if (state.current === ev.userId) openContact(ev.userId);
     });
     // Aiva dejó algo listo: si estás en esa conversación aparece sola; si no, suena y se avisa.
     es.addEventListener('propuesta', function (e) {
@@ -4031,7 +4254,12 @@
       document.title = me.agent + ' · Tablero';
       return api('/stats');
     }).then(function (s) {
-      state.stageLabels = s.stageLabels; state.stages = s.stages || []; state.moneda = s.moneda || 'COP'; etapasDelNegocio(); pintarListas(); cargarCuentas(); cargarFijados(); pintarQuienSoy(); connect(); loadNotifs(); loadCalendar();
+      state.stageLabels = s.stageLabels; state.stages = s.stages || []; state.moneda = s.moneda || 'COP'; state.motivosPerdida = s.motivosPerdida || [];
+      // El modo que puso el cliente se recuerda para el próximo arranque: así se pinta bien desde el primer cuadro.
+      state.modoCliente = s.modo === 'facil' ? 'facil' : 'completo';
+      try { localStorage.setItem(LLAVE('modoCliente'), state.modoCliente); } catch (e) {}
+      aplicarModo();
+      etapasDelNegocio(); pintarListas(); cargarCuentas(); cargarFijados(); pintarQuienSoy(); connect(); loadNotifs(); loadCalendar();
       // Enlace directo a una conversación (p. ej. desde la cita en Google Calendar): /admin#c=<id>
       var m = /^#c=(.+)$/.exec(location.hash);
       if (m) { go('inbox'); openContact(decodeURIComponent(m[1])); history.replaceState(null, '', location.pathname); } else go('today');

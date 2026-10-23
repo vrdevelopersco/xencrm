@@ -7,7 +7,7 @@ import { empezarALimpiar } from './crm/medios.js';
 import { startBackups } from './rag/backup.js';
 import { empezarRetencion } from './crm/retencion.js';
 import { apple } from './llm/apple.js';
-import { countDocs, getDb } from './rag/store.js';
+import { countDocs, getDb, productosConPrecioRoto } from './rag/store.js';
 
 console.log(`\n🌱 ${business.agent.name} · asistente de ${business.business.name}`);
 // El letrero dice lo que de verdad se está usando: con los roles en OpenAI, nombrar el modelo local y la URL de
@@ -38,6 +38,15 @@ if (env.calendarBusyIcs.length) console.log(`   calendario: ${env.calendarBusyIc
 const docs = countDocs();
 console.log(`   índice: ${docs.product ?? 0} productos, ${docs.knowledge ?? 0} fragmentos de info`);
 if (!docs.product && !docs.knowledge) console.warn('⚠️  Índice vacío. Ejecuta `pnpm ingest` para cargar el catálogo y la info de la tienda.');
+// 🪤 Los productos sin precio quedaron indexados con «Precio: undefined COP» hasta el 2026-10-23, y el índice no se
+// rehace solo: hasta que alguien tocara el catálogo, Lo que sabe seguiría enseñándolo. Se rehace aquí una vez, sin
+// esperar: son unas pocas fichas, y el arranque no tiene por qué aguardar a los embeddings.
+if (productosConPrecioRoto()) {
+  void import('./rag/ingest.js')
+    .then(({ runIngest }) => runIngest({ only: 'products' }))
+    .then(() => console.log('[ingest] catálogo reindexado: ya no dice «undefined» donde no hay precio'))
+    .catch((err) => console.error('[ingest] no pude reindexar el catálogo:', (err as Error).message));
+}
 
 if (env.webEnabled) {
   const { startWeb } = await import('./channels/web.js');

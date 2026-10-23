@@ -50,7 +50,7 @@ export function keeperOf(a: Contact, b: Contact): { keep: Contact; drop: Contact
 const better = (a: Stage, b: Stage) => (STAGES.indexOf(a) >= STAGES.indexOf(b) ? a : b);
 
 /** Une `dropId` dentro de `keepId` y devuelve la ficha resultante. */
-export function mergeContacts(keepId: string, dropId: string): Contact {
+export function mergeContacts(keepId: string, dropId: string, by?: string): Contact {
   const keep = getContact(keepId);
   const drop = getContact(dropId);
   if (!keep || !drop) throw new Error('alguna de las dos fichas ya no existe');
@@ -65,7 +65,7 @@ export function mergeContacts(keepId: string, dropId: string): Contact {
     const note = `Se unió la ficha de ${drop.channel} (${drop.id})${drop.name && drop.name !== keep.name ? `, a nombre de ${drop.name}` : ''}.`;
     db.prepare(
       `UPDATE users SET name = ?, phone = ?, stage = ?, stage_locked = ?, score = ?, score_factors = ?, sentiment = ?, human_mode = ?, human_by = ?, human_since = ?,
-       data = ?, tags = ?, notes = ?, summary = ?, unread = ?, first_seen = ?, last_seen = ?, last_message_at = ? WHERE id = ?`,
+       responsable = ?, data = ?, tags = ?, notes = ?, summary = ?, unread = ?, first_seen = ?, last_seen = ?, last_message_at = ? WHERE id = ?`,
     ).run(
       keep.name ?? drop.name,
       keep.phone ?? drop.phone,
@@ -77,6 +77,7 @@ export function mergeContacts(keepId: string, dropId: string): Contact {
       keep.humanMode || drop.humanMode ? 1 : 0,
       keep.humanBy ?? drop.humanBy,
       keep.humanSince ?? drop.humanSince,
+      keep.responsable ?? drop.responsable,
       JSON.stringify(data),
       JSON.stringify(tags),
       [notes, note].filter(Boolean).join('\n'),
@@ -94,7 +95,7 @@ export function mergeContacts(keepId: string, dropId: string): Contact {
     throw err;
   }
   forgetSiblings(); // las fichas cambiaron
-  addEvent(keepId, 'contacts_merged', { from: dropId, channel: drop.channel });
+  addEvent(keepId, 'contacts_merged', { from: dropId, channel: drop.channel, ...(by ? { by } : {}) });
   const merged = getContact(keepId)!;
   emitEvent('contact', keepId, { contact: merged, merged: dropId });
   return merged;

@@ -1,7 +1,7 @@
 // Envío de mensajes hacia el cliente desde fuera del agente (respuestas humanas, confirmaciones, recordatorios).
 import { business } from '../config.js';
 import { aprenderDeLaRespuesta } from './historial.js';
-import { appendMessage, type Author } from '../agent/memory.js';
+import { appendMessage, getMessage, type Author } from '../agent/memory.js';
 import { getContact, updateContact } from './contacts.js';
 import type { Medio } from './medios.js';
 import { emitEvent } from './events.js';
@@ -138,7 +138,7 @@ export async function sendToContact(
   text: string,
   author: Author = 'human',
   opts: { by?: string; medio?: Medio | null } = {},
-): Promise<void> {
+): Promise<{ id: number; fallo: string | null }> {
   const c = getContact(userId);
   if (!c) throw new Error(`contacto ${userId} no existe`);
   // Se revisa antes de guardar nada: un mensaje que Meta va a rechazar no debe aparecer como enviado.
@@ -167,9 +167,51 @@ export async function sendToContact(
       console.error('[outbox] no pude guardar lo aprendido:', (err as Error).message);
     }
   }
+  // 🪤 El mensaje se guarda ANTES de salir (así se ve en el tablero al instante), y por eso un envío que falla
+  // tiene que quedar marcado: si no, en la conversación queda como dicho algo que el cliente nunca recibió, y
+  // quien atiende se entera cuando el cliente pregunta. Quien lo mandó ve el error en ese momento; quien abra la
+  // conversación después, solo lo sabe si queda escrito en el mensaje.
   if (!send) {
-    console.warn(`[outbox] el canal ${c.channel} no tiene emisor registrado; el mensaje quedó guardado`);
-    return;
+    console.warn(`[outbox] el canal ${c.channel} no tiene emisor registrado; el mensaje quedó guardado sin salir`);
+    return { id, fallo: marcarFallo(userId, id, `${nombreDelCanal(c.channel)} no está conectado`) };
   }
-  await send(userId, conFirma(text, author, c.channel), medio);
+  try {
+    await send(userId, conFirma(text, author, c.channel), medio);
+  } catch (err) {
+    marcarFallo(userId, id, (err as Error).message || 'el canal no lo aceptó');
+    throw err;
+  }
+  return { id, fallo: null };
+}
+
+const NOMBRES_DE_CANAL: Record<string, string> = { whatsapp: 'WhatsApp', meta: 'WhatsApp oficial', web: 'El chat del sitio' };
+const nombreDelCanal = (canal: string): string => NOMBRES_DE_CANAL[canal] ?? canal;
+
+/** Deja escrito en el mensaje que no salió, y por qué. Null lo da por entregado. Devuelve lo que quedó. */
+export function marcarFallo(userId: string, messageId: number, motivo: string | null): string | null {
+  const texto = motivo ? motivo.slice(0, 200) : null;
+  getDb().prepare('UPDATE messages SET fallo = ? WHERE id = ? AND user_id = ?').run(texto, messageId, userId);
+  emitEvent('message_estado', userId, { id: messageId, fallo: texto });
+  return texto;
+}
+
+/**
+ * Vuelve a mandar un mensaje que no salió, tal cual (con su archivo, si lo llevaba). No crea otro: es el mismo
+ * mensaje, y si sale se le quita la marca. Si tampoco esta vez sale, la marca dice el error nuevo.
+ */
+export async function reintentarMensaje(userId: string, messageId: number): Promise<{ ok: boolean; error?: string }> {
+  const c = getContact(userId);
+  const m = getMessage(userId, messageId);
+  if (!c || !m || m.role !== 'assistant') return { ok: false, error: 'ese mensaje no existe' };
+  if (!m.fallo) return { ok: true }; // ya había salido: no se manda dos veces
+  if (!replyWindow(userId).open) return { ok: false, error: WINDOW_CLOSED };
+  const send = senders.get(c.channel);
+  if (!send) return { ok: false, error: marcarFallo(userId, messageId, `${nombreDelCanal(c.channel)} no está conectado`) ?? '' };
+  try {
+    await send(userId, conFirma(m.content, m.author, c.channel), m.media ?? null);
+  } catch (err) {
+    return { ok: false, error: marcarFallo(userId, messageId, (err as Error).message || 'el canal no lo aceptó') ?? '' };
+  }
+  marcarFallo(userId, messageId, null);
+  return { ok: true };
 }

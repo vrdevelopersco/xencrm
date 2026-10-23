@@ -180,7 +180,8 @@ const porDondeVa = new Map<string, 'red' | 'socket'>();
 export interface LlamadaOpts {
   method?: string;
   headers?: Record<string, string>;
-  body?: string;
+  /** Tal cual llegó: texto, o los bytes de un formulario con archivo. */
+  body?: string | Uint8Array;
   /** Milisegundos sin respuesta antes de rendirse. Sin esto se espera indefinidamente: el flujo en vivo no lleva reloj. */
   esperaMs?: number;
 }

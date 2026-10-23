@@ -261,6 +261,9 @@ function migrate(d: DatabaseSync) {
   // El número normalizado (con indicativo). Buscar "la misma persona" por aquí es una consulta indexada; antes
   // había que recorrer todos los contactos en cada mensaje.
   addUser('number', 'TEXT');
+  // Quién del equipo está a cargo del cliente. Aparte de human_by, que se vacía cuando vuelve a contestar el
+  // asistente: el cliente sigue siendo de alguien aunque hoy lo atienda aiva (crm/contacts.ts, setResponsable).
+  addUser('responsable', 'TEXT');
   d.exec('CREATE INDEX IF NOT EXISTS users_number ON users(number)');
   const appts = cols('appointments');
   // Recordatorio del día antes: estado (enviado, a_mano, no_hace_falta), cuándo, por qué, y qué respondió el cliente.
@@ -283,6 +286,8 @@ function migrate(d: DatabaseSync) {
   // cara que la entrada normal), y sumado a la entrada el informe diría menos de lo que se paga.
   if (!cols('llm_usage').has('cache_write_tokens')) d.exec('ALTER TABLE llm_usage ADD COLUMN cache_write_tokens INTEGER NOT NULL DEFAULT 0');
   if (!messages.has('turno')) d.exec('ALTER TABLE messages ADD COLUMN turno TEXT');
+  // Por qué no le llegó al cliente un mensaje que sí quedó en la conversación (crm/outbox.ts). Vacío: salió.
+  if (!messages.has('fallo')) d.exec('ALTER TABLE messages ADD COLUMN fallo TEXT');
   d.exec('CREATE INDEX IF NOT EXISTS llm_usage_turno ON llm_usage(turno)');
   d.exec(`
     CREATE TABLE IF NOT EXISTS turnos (
@@ -424,6 +429,11 @@ export function productsMentionedIn(text: string): string[] {
   }
   const t = ' ' + fold(text) + ' ';
   return titleCache.filter((p) => p.keys.some((k) => t.includes(' ' + k + ' ') || t.includes(' ' + k))).map((p) => p.id);
+}
+
+/** Fichas de producto indexadas antes del arreglo del precio vacío (ver index.ts): dicen «Precio: undefined». */
+export function productosConPrecioRoto(): number {
+  return Number((getDb().prepare("SELECT COUNT(*) n FROM docs WHERE kind = 'product' AND content LIKE '%Precio: undefined%'").get() as { n: number }).n);
 }
 
 export function countDocs(): Record<string, number> {

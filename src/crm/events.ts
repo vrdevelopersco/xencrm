@@ -3,6 +3,8 @@ import { EventEmitter } from 'node:events';
 
 export type CrmEventType =
   | 'message'
+  /** Un mensaje que ya estaba en la conversación cambió de estado: no salió, o salió al reintentarlo. */
+  | 'message_estado'
   | 'contact'
   | 'analysis'
   | 'appointment'

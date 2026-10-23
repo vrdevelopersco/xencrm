@@ -119,10 +119,17 @@ export async function fetchShopify(storeUrl: string): Promise<Product[]> {
   return out;
 }
 
+/** ¿Trae un precio de verdad? Vacío, «undefined» o letras no son un precio, y cero sí lo es (un regalo, una muestra). */
+const tienePrecio = (v: unknown): boolean => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
+
 export function productToDoc(p: Product): Doc {
   const currency = p.currency ?? business.business.currency;
+  // 🪤 Un producto sin precio es normal: DUNOR no pone precio a ninguno, porque se define en la cita. Escrito con
+  // plantilla a secas salía «Precio: undefined COP» en la ficha, y eso fue lo primero que vio quien revisó aiva
+  // al buscar en Lo que sabe. Sin precio, la línea no va: si el negocio explica cómo se cobra, eso está en su
+  // ficha técnica, y el asistente ya recibe «sin precio» del buscador (retriever.ts).
   const variants = Array.isArray(p.variants)
-    ? (p.variants as { title: string; price: string | number }[]).map((v) => `${v.title}: ${v.price}`).join(', ')
+    ? (p.variants as { title: string; price?: string | number }[]).map((v) => (tienePrecio(v.price) ? `${v.title}: ${v.price}` : v.title)).join(', ')
     : '';
   const specs = p.specs && Object.keys(p.specs).length ? Object.entries(p.specs).map(([k, v]) => `${k}: ${v}`).join('; ') : '';
   const content = [
@@ -131,7 +138,7 @@ export function productToDoc(p: Product): Doc {
     p.description,
     specs ? `Ficha técnica: ${specs}` : '',
     p.tags?.length ? `Etiquetas: ${p.tags.join(', ')}` : '',
-    `Precio: ${p.price} ${currency}`,
+    tienePrecio(p.price) ? `Precio: ${p.price} ${currency}` : '',
     variants ? `Variantes: ${variants}` : '',
     p.inStock === false ? 'Estado: agotado' : 'Estado: disponible',
   ]
@@ -145,7 +152,7 @@ export function productToDoc(p: Product): Doc {
     url: p.url,
     meta: {
       source: 'catalog',
-      price: p.price,
+      price: tienePrecio(p.price) ? Number(p.price) : null,
       currency,
       category: p.category ?? null,
       tags: p.tags ?? [],

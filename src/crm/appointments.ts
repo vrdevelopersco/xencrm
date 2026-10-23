@@ -232,13 +232,20 @@ export function setCustomerReply(id: number, reply: NonNullable<Appointment['rep
   return appt;
 }
 
-export function bookAppointment(userId: string, startsAt: Date, opts: { service?: string; notes?: string; by?: string; sede?: string | null } = {}): Appointment {
+export function bookAppointment(
+  userId: string,
+  startsAt: Date,
+  opts: { service?: string; notes?: string; by?: string; sede?: string | null; desdeElTablero?: boolean } = {},
+): Appointment {
   // 🪤 Con varias sedes, la cita dice en cuál o no se agenda. Escoger una por defecto mandaría a alguien a la
   // otra punta de la ciudad; el flujo de citas siempre la pregunta, y el tablero la pide.
   if (sedes().length > 1 && !sedes().some((s) => s.id === opts.sede)) throw new Error('falta decir en qué sede');
   const ag = agendaDe(opts.sede);
   // Desde el tablero se puede agendar encima de un evento personal del dueño: la persona sabe lo que hace.
-  if (!isSlotFree(startsAt, { includeBusy: opts.by !== 'admin', sede: ag.sede?.id })) throw new Error('ese espacio ya no está disponible');
+  // 🪤 Se dice con su propio aviso y no mirando si `by` es «admin»: desde que el tablero firma con el nombre de quien
+  // agenda (2026-10-23), `by` es «Bryan», y la cita habría chocado con el calendario del dueño.
+  const desdeElTablero = opts.desdeElTablero ?? opts.by === 'admin';
+  if (!isSlotFree(startsAt, { includeBusy: !desdeElTablero, sede: ag.sede?.id })) throw new Error('ese espacio ya no está disponible');
   const endsAt = new Date(startsAt.getTime() + ag.durationMin * 60_000);
   const r = getDb()
     .prepare('INSERT INTO appointments (user_id, starts_at, ends_at, service, location, sede, status, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')

@@ -12,10 +12,10 @@ import { retratoDelNegocio } from '../rag/retrato.js';
 import { cerrarPropuesta, ponerSugiereConPersona, propuestaDe, propuestasPendientes, sugiereConPersona, verPropuesta } from '../crm/propuestas.js';
 import { genteDelGrupo } from '../crm/grupo-gente.js';
 import { getMessages } from '../agent/memory.js';
-import { addEvent, contactNumber, deleteContact, rolDe, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
+import { addEvent, contactNumber, deleteContact, esDe, esPersona, rolDe, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setResponsable, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
 import { availableSlots, bookAppointment, formatSlot, listAppointments, setReminder, updateAppointment } from '../crm/appointments.js';
-import { llevaArchivos, replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
+import { llevaArchivos, reintentarMensaje, replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
 import { appointmentsCsv, contactsCsv } from '../crm/export.js';
 import { isSnoozed, snoozeFollowup } from '../crm/followup.js';
 import { reminderTime, remindersBoard } from '../crm/reminders.js';
@@ -99,6 +99,44 @@ function forBoard<T extends Contact>(list: T[]) {
 
 export const ADMIN_TOKEN = env.adminToken || randomBytes(12).toString('hex');
 
+/**
+ * Quién está haciendo esto, para la historia de la ficha. Lo dice la cabecera `x-aiva-quien`: la consola la pone
+ * con el nombre de la cuenta con que se entró (y tira la que mande el navegador), y el tablero abierto con el
+ * token a secas manda el nombre con que responde. Si no hay ninguna, lo que venga en el cuerpo, y si no, «equipo».
+ *
+ * 🪤 Antes todo lo del tablero quedaba como «admin», y la historia decía «El equipo la pasó a Perdido»: con tres
+ * personas atendiendo, eso no le sirve a nadie para saber a quién preguntar.
+ */
+export function quienHace(c: { req: { header(nombre: string): string | undefined } }, delCuerpo?: unknown, siNadie = 'equipo'): string {
+  const h = c.req.header('x-aiva-quien');
+  if (h) {
+    try {
+      const n = decodeURIComponent(h).trim().slice(0, 40);
+      if (n) return n;
+    } catch {
+      /* una cabecera mal escrita no tumba la petición: se usa lo siguiente */
+    }
+  }
+  return String(delCuerpo ?? '').trim().slice(0, 40) || siNadie;
+}
+
+const NOMBRE_DEL_CAMPO: Record<string, string> = { name: 'nombre', phone: 'teléfono', notes: 'nota fija', tags: 'etiquetas' };
+/** Qué cambió de verdad entre la ficha y lo que se manda a guardar. Guardar sin tocar nada no deja rastro. */
+function camposCambiados(antes: Contact, patch: Record<string, unknown>): string[] {
+  const out: string[] = [];
+  for (const [k, nombre] of Object.entries(NOMBRE_DEL_CAMPO)) {
+    if (!(k in patch)) continue;
+    const a = JSON.stringify((antes as unknown as Record<string, unknown>)[k] ?? null);
+    const b = JSON.stringify(patch[k] ?? null);
+    if (a !== b) out.push(nombre);
+  }
+  if (patch.data && JSON.stringify((patch.data as Record<string, unknown>).valor ?? null) !== JSON.stringify(antes.data.valor ?? null)) out.push('valor');
+  return out;
+}
+
+/** El modo del tablero para este cliente (ver PUT /admin/api/tablero/modo). Sin decir nada, completo: así estaba. */
+const modoDelTablero = (): 'facil' | 'completo' => (getSetting<string>('tablero.modo', 'completo') === 'facil' ? 'facil' : 'completo');
+
 /** El nombre corto de este cliente, el mismo que usa el respaldo. */
 const soyElCliente = (): string => (process.env.AIVA_SLUG ?? business.business.name).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -175,7 +213,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       total: todos.length,
       abiertos: abiertos.length,
       calientes: abiertos.filter((x) => x.score >= 60).length,
-      mios: yo ? todos.filter((x) => x.humanMode && x.humanBy === yo).length : 0,
+      mios: yo ? todos.filter((x) => esDe(x, yo)).length : 0,
     });
   });
 
@@ -252,7 +290,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   // Archivar (sale de las listas, vuelve si el cliente escribe) y borrar (no se deshace).
   app.post('/admin/api/contacts/:id/archive', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { on?: boolean };
-    const contact = setArchived(c.req.param('id'), body.on !== false);
+    const contact = setArchived(c.req.param('id'), body.on !== false, quienHace(c));
     return contact ? c.json({ contact }) : c.json({ error: 'no existe' }, 404);
   });
   app.delete('/admin/api/contacts/:id', (c) => {
@@ -290,7 +328,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     if (!me || !other) return c.json({ error: 'alguna de las dos fichas no existe' }, 404);
     try {
       const { keep, drop } = keeperOf(me, other);
-      const contact = mergeContacts(keep.id, drop.id);
+      const contact = mergeContacts(keep.id, drop.id, quienHace(c));
       reemplazarEnFijados(drop.id, keep.id); // quien la tenía fijada sigue teniéndola, ahora la que quedó
       return c.json({ contact, keptId: keep.id, droppedId: drop.id });
     } catch (err) {
@@ -300,12 +338,17 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   app.patch('/admin/api/contacts/:id', async (c) => {
     const id = c.req.param('id');
-    const body = (await c.req.json().catch(() => ({}))) as { name?: string; phone?: string; stage?: Stage; notes?: string; tags?: string[]; data?: Record<string, unknown> };
-    if (!getContact(id)) return c.json({ error: 'no existe' }, 404);
+    const body = (await c.req.json().catch(() => ({}))) as {
+      name?: string; phone?: string; stage?: Stage; motivo?: string; notes?: string; tags?: string[]; data?: Record<string, unknown>; responsable?: string | null;
+    };
+    const antes = getContact(id);
+    if (!antes) return c.json({ error: 'no existe' }, 404);
+    const por = quienHace(c);
     if (body.stage) {
       if (!STAGES.includes(body.stage)) return c.json({ error: 'etapa inválida' }, 400);
-      setStage(id, body.stage, { locked: true, by: 'admin' });
+      setStage(id, body.stage, { locked: true, by: por, motivo: typeof body.motivo === 'string' ? body.motivo : null });
     }
+    if (body.responsable !== undefined) setResponsable(id, body.responsable, por);
     const patch: Record<string, unknown> = {};
     if (body.name !== undefined) patch.name = body.name.trim() || null;
     if (body.phone !== undefined) patch.phone = body.phone.trim() || null;
@@ -324,6 +367,11 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       patch.data = junto;
     }
     const contact = updateContact(id, patch);
+    // 🪤 Lo que se corrige a mano queda en la historia con el nombre de quien lo hizo. La etapa y el responsable
+    // ya dejan el suyo; esto cubre el resto. Sin los valores: cuál campo y quién, que es lo que se pregunta cuando
+    // alguien dice «yo no le cambié el teléfono».
+    const cambiados = camposCambiados(antes, patch);
+    if (cambiados.length) addEvent(id, 'editado', { campos: cambiados, by: por });
     return c.json({ contact });
   });
 
@@ -342,7 +390,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const texto = String(body.texto ?? '').trim();
     if (!texto) return c.json({ error: 'la nota está vacía' }, 400);
     if (texto.length > 2000) return c.json({ error: 'la nota va hasta 2.000 letras' }, 400);
-    addEvent(id, 'nota', { texto, por: String(body.por ?? '').trim().slice(0, 40) || 'el equipo' });
+    addEvent(id, 'nota', { texto, por: quienHace(c, body.por, 'el equipo') });
     emitEvent('contact', id, { nota: true });
     return c.json({ ok: true, events: listEvents(id, 200) }, 201);
   });
@@ -352,6 +400,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const id = c.req.param('id');
     const r = getDb().prepare("DELETE FROM events WHERE id = ? AND user_id = ? AND type = 'nota'").run(Number(c.req.param('evento')), id);
     if (!r.changes) return c.json({ error: 'esa nota no existe' }, 404);
+    // La nota se va, pero que alguien la borró se queda: es lo único de la historia que se puede quitar.
+    addEvent(id, 'nota_borrada', { by: quienHace(c) });
     emitEvent('contact', id, { nota: true });
     return c.json({ ok: true, events: listEvents(id, 200) });
   });
@@ -370,7 +420,14 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     // `a` es a quién se le entrega. Sin nombre queda «del equipo», que es lo que pasaba antes siempre y deja a
     // todos mirándose: una conversación entregada a nadie no la recoge nadie.
     const aQuien = String(body.a ?? '').trim().slice(0, 40) || 'admin';
-    const contact = setHumanMode(id, Boolean(body.on), aQuien);
+    const por = quienHace(c);
+    let contact = setHumanMode(id, Boolean(body.on), aQuien);
+    // Entregársela a alguien por su nombre lo deja a cargo del cliente, no solo de esta conversación. Y queda
+    // quién se la entregó: «Laura tomó la conversación» no dice que fue Bryan quien se la pasó.
+    if (body.on && esPersona(body.a)) {
+      contact = setResponsable(id, aQuien, por) ?? contact;
+      if (aQuien !== por) addEvent(id, 'entregada', { a: aQuien, by: por });
+    }
     return c.json({ contact });
   });
 
@@ -399,11 +456,18 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     if (!replyWindow(id).open) return c.json({ error: WINDOW_CLOSED }, 409); // antes de tomar el control
     if (!contact.humanMode) setHumanMode(id, true, by); // responder a mano toma el control
     try {
-      await sendToContact(id, text, 'human', { by });
+      const r = await sendToContact(id, text, 'human', { by });
+      if (r.fallo) return c.json({ error: `no salió: ${r.fallo}. Quedó marcado en la conversación para volver a intentarlo.`, fallo: r.fallo }, 502);
       return c.json({ ok: true });
     } catch (err) {
-      return c.json({ error: (err as Error).message }, 500);
+      return c.json({ error: `${(err as Error).message}. Quedó marcado en la conversación para volver a intentarlo.` }, 500);
     }
+  });
+
+  // Volver a mandar un mensaje que quedó marcado como «no salió». Es el mismo mensaje: no se repite en la conversación.
+  app.post('/admin/api/contacts/:id/mensajes/:mensaje/reintentar', async (c) => {
+    const r = await reintentarMensaje(c.req.param('id'), Number(c.req.param('mensaje')));
+    return r.ok ? c.json({ ok: true }) : c.json({ error: r.error }, 502);
   });
 
   /**
@@ -438,7 +502,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     }
     if (!contact.humanMode) setHumanMode(id, true, by); // mandar algo a mano toma el control, igual que responder
     try {
-      await sendToContact(id, texto, 'human', { by, medio });
+      const r = await sendToContact(id, texto, 'human', { by, medio });
+      if (r.fallo) return c.json({ error: `no salió: ${r.fallo}. Quedó marcado en la conversación para volver a intentarlo.`, fallo: r.fallo, medio }, 502);
       return c.json({ ok: true, medio });
     } catch (err) {
       // 🪤 El archivo ya se guardó y el mensaje ya está en la conversación: NO se borra. Que el envío falle no
@@ -501,6 +566,16 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       .filter((v) => v.cuando >= desde)
       .sort((a, b) => b.cuando - a.cuando);
     const total = filas.reduce((a, v) => a + v.valor.valor, 0);
+    // Las que se perdieron en el mismo periodo, y por qué. Las que no dicen motivo van aparte y se cuentan:
+    // esconderlas haría creer que el precio es el problema cuando nadie dijo nada de la mayoría.
+    const perdidas = listContacts({ limit: 2000 })
+      .filter((x) => !x.archived && rolDe(x.stage) === 'perdido')
+      .filter((x) => (listEvents(x.id, 200).filter((e) => e.type === 'stage' && rolDe(String(e.payload.to ?? '') as Stage) === 'perdido').pop()?.ts ?? x.lastSeen) >= desde);
+    const porMotivo = new Map<string, number>();
+    for (const x of perdidas) {
+      const m = String(x.data.motivo_perdida ?? '').trim();
+      if (m) porMotivo.set(m, (porMotivo.get(m) ?? 0) + 1);
+    }
     return c.json({
       dias,
       total,
@@ -509,6 +584,12 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       sinPrecio: filas.filter((v) => !v.valor.valor).length,
       promedio: filas.length ? total / filas.filter((v) => v.valor.valor).length || 0 : 0,
       ventas: filas.slice(0, 200),
+      perdidas: {
+        cuantas: perdidas.length,
+        sinMotivo: perdidas.filter((x) => !String(x.data.motivo_perdida ?? '').trim()).length,
+        // Empatados, por orden alfabético: si no, dos que pesan igual cambiarían de puesto cada vez que se abre.
+        motivos: [...porMotivo].map(([motivo, n]) => ({ motivo, n })).sort((a, b) => b.n - a.n || a.motivo.localeCompare(b.motivo, 'es')),
+      },
     });
   });
 
@@ -1117,7 +1198,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     if (!body.userId || !body.startsAt) return c.json({ error: 'userId y startsAt requeridos' }, 400);
     if (!getContact(body.userId)) return c.json({ error: 'contacto no existe' }, 404);
     try {
-      const appt = bookAppointment(body.userId, new Date(body.startsAt), { notes: body.notes ?? 'Agendada desde el tablero', by: 'admin', sede: body.sede || null });
+      const appt = bookAppointment(body.userId, new Date(body.startsAt), { notes: body.notes ?? 'Agendada desde el tablero', by: quienHace(c), sede: body.sede || null, desdeElTablero: true });
       return c.json({ appointment: { ...appt, label: formatSlot(new Date(appt.startsAt)) } });
     } catch (err) {
       return c.json({ error: (err as Error).message }, 409);
@@ -1126,7 +1207,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   app.patch('/admin/api/appointments/:id', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { status?: 'confirmada' | 'cancelada' | 'completada' | 'no_asistio'; notes?: string };
-    const appt = updateAppointment(Number(c.req.param('id')), body, 'admin');
+    const appt = updateAppointment(Number(c.req.param('id')), body, quienHace(c));
     if (!appt) return c.json({ error: 'no existe' }, 404);
     return c.json({ appointment: { ...appt, label: formatSlot(new Date(appt.startsAt)) } });
   });
@@ -1139,7 +1220,20 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   });
 
   // La moneda va aquí porque el tablero la necesita desde el arranque para escribir cualquier valor.
-  app.get('/admin/api/stats', (c) => c.json({ ...stats(), stageLabels: STAGE_LABELS, stages: STAGE_DEFS, moneda: business.business.currency }));
+  app.get('/admin/api/stats', (c) =>
+    c.json({ ...stats(), stageLabels: STAGE_LABELS, stages: STAGE_DEFS, moneda: business.business.currency, motivosPerdida: business.crm.motivosPerdida, modo: modoDelTablero() }),
+  );
+
+  /**
+   * Cómo entra el equipo a este tablero: «fácil» (lo del día a día, sin puntajes ni motores) o «completo». Es del
+   * cliente y lo cambia quien lo administra; cada persona puede, además, verlo distinto en su navegador.
+   */
+  app.put('/admin/api/tablero/modo', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { modo?: string };
+    if (body.modo !== 'facil' && body.modo !== 'completo') return c.json({ error: 'el modo es «facil» o «completo»' }, 400);
+    setSetting('tablero.modo', body.modo);
+    return c.json({ modo: modoDelTablero() });
+  });
 
   // Vista "Hoy": lo que un asesor debe atender primero, cada fila abre la conversación.
   /**
