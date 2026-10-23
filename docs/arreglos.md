@@ -7,6 +7,44 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-10-23
+
+### Lo que salió de la revisión de DUNOR, y el modo fácil · `8fd13b9`
+Alguien de DUNOR (por la bitácora de entradas, bryan) dejó un PDF con catorce mejoras. La mitad ya existía y no
+se vio porque el tablero estaba sin datos: DUNOR lleva diez días sin recibir mensajes y el Perfil tiene catorce
+campos vacíos, que son justo «los 14 datos pendientes» del PDF. De lo que sí tenía razón salió esto:
+- **Modo fácil.** El usuario lo pidió así: aiva puede seguir con todo, pero DUNOR quiere un aiva fácil, con un
+  interruptor que no dañe lo hecho. Esconde (no quita) Análisis, Seguimientos, el puntaje y su porqué, «La lleva»,
+  el «¿por qué?» de cada respuesta, la configuración del asistente, los filtros de más y los recuadros vacíos de
+  Hoy. Lo pone el cliente para su equipo (en su base, no en `aiva.config.json`, que en Hostinger no se pisa) y
+  cada persona puede verlo distinto. Sin decir nada, completo. Reglas en `diseno-tablero.md`.
+- **«undefined COP».** Los cinco productos de DUNOR no tienen precio (se define en la cita) y la ficha indexada
+  decía «Precio: undefined COP». Sin precio, la línea ya no va; el catálogo que quedó así se reindexa solo al
+  arrancar.
+- **Mensajes que no salieron.** Se guardaban antes de salir y, si el canal fallaba, quedaban como dichos. Ahora
+  quedan marcados con el motivo («WhatsApp no está conectado») y se reintentan desde la burbuja, sin duplicarse.
+- **Quién hizo qué.** La historia decía «El equipo» para todo lo que se hacía desde el tablero. La consola manda
+  ahora el nombre de la cuenta en `x-aiva-quien` (y tira lo que mande el navegador), y quedan con nombre las
+  etapas, las correcciones de datos, las notas borradas, archivar, unir, entregar y las citas. 🪤 Agendar desde
+  el tablero se decidía por `by === 'admin'` para poder caer encima de un evento del dueño: con el nombre real
+  eso dejaba de cumplirse, y ahora va con su propio aviso.
+- **A cargo.** `users.responsable`: de quién es el cliente, aparte de quién lo atiende ahora, que se borraba cuando
+  volvía el asistente y vaciaba «Míos». Lo pone quien toma la conversación si no había nadie, «Entregar a» o la
+  ficha.
+- **Motivo de pérdida.** Se pregunta, opcional, al pasar a perdido por cualquier camino. Ventas lo resume y cuenta
+  aparte las que no dijeron por qué.
+- 🪤 **Adjuntos por la consola.** La consola leía el cuerpo como texto y lo reenviaba como JSON: una foto mandada
+  desde el tablero abierto por la consola llegaba rota y el cliente respondía «falta el archivo». Ahora va en bytes
+  y con su tipo. Bryan entra por la consola.
+- 🪤 **Colores de Hoy.** Diez recuadros, nueve colores: desde que entró «Te escribieron en un grupo», cada uno salía
+  con el del vecino.
+
+Son 87 comprobaciones nuevas en `test:revision` y 9 más en `test:consola`, con un cliente de mentira que devuelve
+lo que le llega. Se metieron 24 roturas a propósito y todas las detecta. Las capturas con Chrome, en fácil y en
+completo, a 1440 y a 390 px, sacaron dos cosas que ninguna prueba veía: el puntaje seguía en la cabecera de la
+conversación (`renderChat` reescribía la clase) y la ventana del motivo salía con el borde negro del navegador.
+Batería completa: 2249 ✓, 0 ✗.
+
 ## 2026-10-22
 
 ### Claude de respaldo: si OpenAI falla, contesta Claude · `b72db16`
