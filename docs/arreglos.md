@@ -9,6 +9,32 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-11-03
 
+### La ficha de cada persona y la entrada directa al tablero · `aaabde6`
+DUNOR mandó un audio con lo que quiere en los dos modos. De ahí salió esto:
+- **Más datos del cliente.** «Modificar contacto» solo dejaba nombre y teléfono. Ahora la ficha tiene correo,
+  WhatsApp (si es otro número), Instagram, Facebook y «Nos contactó por» (`crm.contactoPor`), para todos los
+  clientes y en los dos modos: se ven como enlaces y se escriben en *Corregir datos*, en la ficha completa y en
+  *Nuevo contacto*. Lo que contó (los campos de cada negocio, en DUNOR las medidas) también se corrige.
+- 🪤 **Lo corregido no lo pisa el análisis.** Cada análisis volvía a escribir lo que sacaba de la conversación encima
+  de lo que hubiera: una corrección duraba hasta el siguiente mensaje. Lo que escribe el equipo queda en
+  `data._amano` y el análisis lo respeta; borrar también lo marca.
+- **Se limpia lo pegado** (el enlace de Instagram queda en el usuario, el WhatsApp en dígitos), y lo que no se
+  puede limpiar se rechaza entero, sin guardar medio formulario. Se busca por correo o por Instagram, va al final
+  del Excel y queda en la historia con quién lo cambió.
+- **Entrar directo al tablero.** Quien atiende un solo cliente ya no pasa por la consola ni abre otra pestaña: al
+  entrar cae en su tablero. Vuelve a la consola (su Equipo, su cuenta) desde Configuración.
+- 🪤 **«Salir» desde el tablero no salía.** Llevaba a `/`, que en el despliegue es la portada, con la sesión abierta;
+  con la entrada directa, eso lo devolvía adentro. Ahora cierra la sesión. Y sin sesión el tablero manda a
+  `/consola`, no a la portada.
+- De paso: la ficha completa mandaba el `data` entero al guardar y podía pisar lo que el análisis captara mientras
+  estaba abierta; ahora manda solo el valor.
+
+Comprobado: `test:ficha` (58 comprobaciones), 13 errores metidos a propósito, los 13 atrapados; suite completa
+2.397 ✓, 0 ✗. Con el ZIP, por el espejo y con Chrome: una cuenta admin de DUNOR entró por su clave y cayó directo
+en su tablero (modo fácil, con candado), guardó correo, Instagram y «Nos contactó por» a través de la consola,
+volvió a la consola sin que la devolviera al tablero y «Salir» le cerró la sesión; el super-admin se quedó en la
+consola. Cero errores de JS.
+
 ### El candado del modo fácil · `33b8188`
 DUNOR quiso el tablero mucho más simple y que nadie de su lado se saliera de él. Se le preguntó al usuario quién
 quedaba adentro y dijo que todo DUNOR, bryan incluido: solo el super-admin quita el modo y ve lo avanzado.

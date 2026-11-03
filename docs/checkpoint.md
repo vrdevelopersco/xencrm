@@ -16,6 +16,9 @@ cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
   que no salieron, «undefined COP», adjuntos por la consola.
 - **El candado** (`33b8188`): con el modo fácil puesto, solo el super-admin lo quita y ve lo avanzado; todo DUNOR,
   bryan incluido, atiende y nada más. Lo cierra el servidor (`channels/candado.ts`, rol en `x-aiva-rol`).
+- **La ficha y la entrada directa** (`aaabde6`), del audio de DUNOR: correo, WhatsApp, Instagram, Facebook y «Nos
+  contactó por» en la ficha, lo que contó corregible (y el análisis no lo pisa), y quien atiende un solo cliente
+  entra directo a su tablero.
 
 **Después de subir.**
 
@@ -30,6 +33,8 @@ cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 - Con el candado, bryan ya no usa el simulador ni la configuración. Si DUNOR necesita algo de eso, se le quita el
   modo un rato desde la consola.
 - Pendiente de bryan: en qué pantalla y a qué hora «no respondió el simulador».
+- Del audio de DUNOR, falta: **Google Sheets** (tienen ahí las medidas de cada cliente; hace falta la hoja, sus
+  columnas y si aiva lee, escribe o las dos) y **Nexora**, la app de muestra que mandaron (no la hemos visto).
 - Lo decide el usuario: seguimiento automático (sugerencia: aiva propone, la persona aprueba), Instagram y
   Messenger, el módulo de alquileres, la retención (apagada en todos).
 - Esta máquina corre Node 26 (ICU 79): abrevia «sep» y no «sept». Las pruebas ya aceptan los dos.
