@@ -1320,6 +1320,8 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
 .estado-modo{margin-left:auto;font-size:12px;color:var(--muted);font-weight:600}
 [data-modo-toggle][aria-pressed="true"] .estado-modo{color:var(--brand)}
 .ver-todo{text-align:center;padding:4px 0 12px}
+/* «Lo que contó» dentro de Corregir datos: un rótulo que separa lo de contacto de lo que capta el negocio. */
+.pf-campos .sub-ficha{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:8px}
 
 /* Un mensaje que no le llegó al cliente: se ve distinto y dice qué hacer. El borde punteado y la palabra, no solo
    el color, que el rojo solo no lo distingue todo el mundo. */
@@ -1631,6 +1633,9 @@ dialog.perdida input{width:100%}
             <div class="small muted" style="margin-top:4px">Con el número, lo que escriba por WhatsApp cae en esta misma ficha.</div></div>
           <div class="ancho"><label for="nv-etapa">Etapa</label><select id="nv-etapa"></select></div>
           <div class="ancho" id="nv-sede-l" hidden><label for="nv-sede">Sede</label><select id="nv-sede"></select></div>
+          <!-- Correo, Instagram, Facebook y por dónde llegó: se pintan desde la ficha del negocio (ver «la ficha» en
+               admin.js). display:contents para que sean campos de esta misma rejilla, con su mismo espacio. -->
+          <div id="nv-ficha" style="display:contents"></div>
           <div class="ancho"><label for="nv-notas">Notas</label><textarea id="nv-notas" rows="2" placeholder="De dónde salió, qué quería…"></textarea></div>
         </div>
         <div class="fila" style="gap:8px"><button class="btn primary" id="nv-crear">Crear ficha</button><span class="grow"></span><span class="small" id="nv-msg" role="status"></span></div>

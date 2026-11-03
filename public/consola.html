@@ -845,9 +845,17 @@ dialog.panel{border-radius:16px 0 0 16px}
   // El color de la consola de esta persona. Lo pinta el CSS con `data-acento` en <html>; sin elegir, azul.
   function ponerAcento(a) { document.documentElement.setAttribute('data-acento', ACENTOS.indexOf(a) >= 0 ? a : 'azul'); }
 
+  function vaDirectoAlTablero(d) {
+    return Boolean(!d.super && d.usuario && (d.usuario.clientes || []).length === 1 && location.hash !== '#consola');
+  }
   function sesionLista() {
     return api('/yo').then(function (d) {
       yo = d.usuario; esSuper = d.super; puedeEquipo = Boolean(d.equipo); COLORES = d.colores || COLORES; ACENTOS = d.acentos || ACENTOS;
+      // 🪤 Quien atiende UN solo cliente no pasa por aquí: entra directo a su tablero. DUNOR lo pidió así —«que la
+      // misma página de inicio sea la del tablero»—: entrar, ver la consola y darle a «Abrir tablero» para que se
+      // abra otra página eran dos pantallas para llegar a la única que usan. Desde el tablero vuelven aquí con
+      // Configuración › Volver a la consola (#consola), que es donde está su Equipo y su cuenta.
+      if (vaDirectoAlTablero(d)) { location.replace('/c/' + encodeURIComponent(d.usuario.clientes[0]) + '/admin'); return; }
       pintarYo();
       ponerAcento(yo && yo.acento);
       $('nuevo').hidden = !esSuper;
@@ -1296,7 +1304,8 @@ dialog.panel{border-radius:16px 0 0 16px}
         // Lo de todos los días a la vista —abrir su tablero, ver más— y lo de una vez al mes en «⋯». Siete botones
         // en fila eran siete cosas que leer antes de encontrar la que se buscaba.
         '<div class="acciones">' +
-          '<a class="btn primary sm" href="' + esc(url) + '" target="_blank" rel="noopener">Abrir tablero</a>' +
+          // En otra pestaña solo para quien lleva varios clientes; con uno, en esta misma: es la única que usa.
+          '<a class="btn primary sm" href="' + esc(url) + '"' + (esSuper || (yo && (yo.clientes || []).length > 1) ? ' target="_blank" rel="noopener"' : '') + '>Abrir tablero</a>' +
           '<button class="btn sm ver-mas" aria-expanded="false">Ver más</button>' +
           '<details class="mas"><summary class="btn sm" aria-label="Más acciones de ' + esc(c.nombre) + '">⋯</summary><div class="menu">' +
             '<label>Prioridad <select class="prio" aria-label="Prioridad de ' + esc(c.nombre) + '">' +

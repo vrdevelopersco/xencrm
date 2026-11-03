@@ -12,6 +12,7 @@ import { touchUser } from '../agent/memory.js';
 import { getContact, numeroNormalizado, STAGES, updateContact, type Contact, type Stage } from './contacts.js';
 import { getDb } from '../rag/store.js';
 import { sedePorId } from './sedes.js';
+import { aplicarFicha } from './ficha.js';
 
 export interface Alta {
   name?: string;
@@ -20,6 +21,8 @@ export interface Alta {
   notes?: string;
   /** La sede a la que llegó, si el negocio tiene sedes (crm/sedes.ts). Sin ella sale en «Sin sede todavía». */
   sede?: string;
+  /** Correo, Instagram, por dónde nos contactó… (crm/ficha.ts). */
+  ficha?: Record<string, unknown>;
 }
 
 export interface Resultado {
@@ -56,6 +59,9 @@ export function darDeAlta(datos: Alta): Resultado {
   if (!nombre && !numero) throw new Error('dime al menos el nombre o el teléfono');
   if (datos.stage && !STAGES.includes(datos.stage)) throw new Error('etapa inválida');
   if (datos.sede && !sedePorId(datos.sede)) throw new Error('esa sede no existe');
+  // El correo, el Instagram… se revisan antes de dar de alta: con uno mal escrito no queda una ficha a medias.
+  const ficha = aplicarFicha({}, datos.ficha);
+  if ('error' in ficha) throw new Error(ficha.error);
 
   if (numero) {
     const ya = quienTieneElNumero(numero);
@@ -72,7 +78,7 @@ export function darDeAlta(datos: Alta): Resultado {
     phone: numero,
     ...(datos.stage ? { stage: datos.stage } : {}),
     ...(datos.notes ? { notes: String(datos.notes) } : {}),
-    ...(datos.sede ? { data: { ...(getContact(id)?.data ?? {}), sede: datos.sede } } : {}),
+    ...(datos.sede || ficha.cambiados.length ? { data: { ...(getContact(id)?.data ?? {}), ...ficha.data, ...(datos.sede ? { sede: datos.sede } : {}) } } : {}),
   });
   // Se relee en vez de usar lo que devuelve updateContact: así la ficha sale con todo lo que le haya puesto el
   // alta (el número normalizado en su columna, la etapa de entrada) y no con una versión a medio hacer.

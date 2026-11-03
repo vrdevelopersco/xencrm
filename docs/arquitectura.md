@@ -117,7 +117,7 @@ Una base SQLite por cliente (`DB_PATH`, WAL):
 | Tabla | Qué guarda |
 |---|---|
 | `docs` (+ `docs_fts`) | catálogo e información indexados, con su vector y su fuente (`knowledge`, `site`, `profile`) |
-| `users` | contactos: canal, nombre, teléfono, etapa (y si se fijó a mano), puntaje y factores, ánimo, modo humano y quién lo tiene, **quién está a cargo** (`responsable`, que no se borra cuando vuelve a contestar el asistente), datos capturados (el motivo de pérdida va en `data.motivo_perdida`), etiquetas, notas, resumen, archivada |
+| `users` | contactos: canal, nombre, teléfono, etapa (y si se fijó a mano), puntaje y factores, ánimo, modo humano y quién lo tiene, **quién está a cargo** (`responsable`, que no se borra cuando vuelve a contestar el asistente), datos capturados (el motivo de pérdida va en `data.motivo_perdida`; lo de contacto —`correo`, `whatsapp`, `instagram`, `facebook`, `contacto_por`— también va en `data`, y lo que el equipo escribió a mano queda en `data._amano`, que el análisis no pisa: `crm/ficha.ts`), etiquetas, notas, resumen, archivada |
 | `messages` | la conversación, con autor (`customer`, `bot`, `human`), quién del equipo escribió y, si no le llegó al cliente, **por qué** (`fallo`; se reintenta desde el tablero y es el mismo mensaje) |
 | `analyses` | cada análisis: motor, ánimo, señales, puntaje y factores (el costo está en `llm_usage`) |
 

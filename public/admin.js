@@ -350,7 +350,16 @@
   $('login-token').onkeydown = function (e) { if (e.key === 'Enter') $('login-btn').click(); };
   $('login-name').onkeydown = function (e) { if (e.key === 'Enter') $('login-token').focus(); };
   $('logout-btn').onclick = function () {
-    if (PORLACONSOLA) { location.href = '/'; return; } // de vuelta a la consola, que es de donde se vino
+    // 🪤 Entrando por la consola, «Salir» cierra la sesión de la consola. Antes llevaba a /, que en el despliegue es
+    // la portada, y la sesión seguía abierta: desde que quien lleva un solo cliente entra directo a su tablero,
+    // eso lo devolvía adentro sin haber salido. «Volver a la consola» es otra cosa y tiene su propio botón.
+    if (PORLACONSOLA) {
+      fetch('/api/salir', { method: 'POST' }).catch(function () {}).then(function () {
+        try { localStorage.removeItem('aiva.consola.sesion'); localStorage.removeItem('aiva.consola.token'); } catch (e) {}
+        location.href = '/consola';
+      });
+      return;
+    }
     try { localStorage.removeItem(LLAVE('token')); } catch (e) {}
     location.reload();
   };
@@ -475,7 +484,8 @@
       var consola = document.createElement('button');
       consola.className = 'item';
       consola.innerHTML = '<i class="ic" data-ic="grid"></i>Volver a la consola';
-      consola.onclick = function () { location.href = '/consola'; };
+      // #consola: quien atiende un solo cliente entra directo a su tablero, y sin esto volver aquí lo devolvería.
+      consola.onclick = function () { location.href = '/consola#consola'; };
       pop.appendChild(consola);
       pop.appendChild(document.createElement('hr'));
     }
@@ -1214,8 +1224,9 @@
     var d = state.detail; if (!d) return;
     var c = d.contact, data = c.data || {}, h = d.historia || {};
     var borradores = borradoresDelPerfil(c.id);
-    // Lo mismo que esconde la ficha completa: lo que no es algo que la persona contó, sino cuentas internas.
-    var ocultos = { booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1, pospuesto_desde: 1, valor: 1, sede: 1, motivo_perdida: 1 };
+    // Lo mismo que esconde la ficha completa: lo que no es algo que la persona contó, sino cuentas internas. Lo de
+    // contacto (correo, Instagram…) tampoco: tiene su propio bloque, con enlaces.
+    var ocultos = Object.assign({ booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1, pospuesto_desde: 1, valor: 1, sede: 1, motivo_perdida: 1 }, DE_CONTACTO);
     var capturados = Object.keys(data).filter(function (k) { return !ocultos[k] && data[k] !== '' && data[k] != null && typeof data[k] !== 'object'; });
     // Lo que se esconde en el modo fácil lleva la clase en la fila: el dato y su rótulo se van juntos.
     var fila = function (k, html, clase) { return '<dt' + (clase ? ' class="' + clase + '"' : '') + '>' + esc(k) + '</dt><dd' + (clase ? ' class="' + clase + '"' : '') + '>' + html + '</dd>'; };
@@ -1251,6 +1262,7 @@
         fila('La lleva', llevaHtml(c), 'solo-completo') +
         (d.origen && d.origen.fuente ? fila('Llegó por', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : '')) + (d.origen.titular ? '<div class="small muted">«' + esc(d.origen.titular) + '»</div>' : ''), 'solo-completo') : '') +
         (variasSedes() && data.sede ? fila('Sede', esc(nombreSede(data.sede))) : '') +
+        contactoHtml(c, fila) +
       '</dl>' +
       '<details class="perfil-por solo-completo" data-k="por"><summary>Por qué ese puntaje</summary>' +
         '<ul class="factors">' + factors + '</ul>' +
@@ -1270,6 +1282,7 @@
       '<details class="corregir" data-k="corregir"><summary>Corregir datos</summary><div class="pf-campos">' +
         '<div class="ancho"><label for="f-name">Nombre</label><input id="f-name" data-borrador value="' + esc(c.name || '') + '"></div>' +
         '<div class="ancho"><label for="f-phone">Teléfono</label><input id="f-phone" data-borrador inputmode="tel" value="' + esc(c.phone || '') + '"></div>' +
+        camposFichaHtml(c, 'f-x-', { borrador: true }) +
         '<div class="ancho"><label for="f-tags">Etiquetas, separadas por coma</label><input id="f-tags" data-borrador value="' + esc((c.tags || []).join(', ')) + '"></div>' +
         '<div class="ancho"><label for="f-notes">Nota fija</label><textarea id="f-notes" data-borrador rows="2" placeholder="Lo que siempre hay que saber de esta persona">' + esc(c.notes || '') + '</textarea></div>' +
       '</div><div class="fila" style="gap:8px;margin-top:10px"><button class="btn sm primary" id="f-save">Guardar</button></div>' +
@@ -1302,11 +1315,11 @@
     if ($('f-motivo')) $('f-motivo').onclick = function () { cambiarEtapa(c, c.stage, function (r) { if (r && !r.error) openContact(c.id); }); };
     engancharResponsable($('f-resp'), c, function () { openContact(c.id); loadContacts(); });
     $('f-save').onclick = function () {
-      api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: { name: $('f-name').value, phone: $('f-phone').value, tags: $('f-tags').value.split(',').map(function (t) { return t.trim(); }).filter(Boolean), notes: $('f-notes').value } })
+      api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: { name: $('f-name').value, phone: $('f-phone').value, tags: $('f-tags').value.split(',').map(function (t) { return t.trim(); }).filter(Boolean), notes: $('f-notes').value, ficha: leerFicha('f-x-') } })
         .then(function (r) {
           if (r && r.error) { toast(r.error); return; }
           // Guardado: lo escrito ya no es un borrador que haya que proteger del siguiente repintado.
-          ['f-name', 'f-phone', 'f-tags', 'f-notes'].forEach(function (id) { $(id).defaultValue = $(id).value; });
+          ['f-name', 'f-phone', 'f-tags', 'f-notes'].concat(idsDeFicha('f-x-')).forEach(function (id) { if ($(id)) $(id).defaultValue = $(id).value; });
           toast('Ficha guardada'); openContact(c.id); loadContacts();
         });
     };
@@ -3548,7 +3561,8 @@
           '<td data-rot="Quién"><button class="quien" data-id="' + esc(c.id) + '">' + esc(nameOf(c)) + '</button>' +
             (esCaliente(c) ? ' <span class="fuego" title="Caliente: puntaje de 60 para arriba">🔥</span>' : '') +
             (estaFijado(c.id) ? ' <span class="fijo" title="Fijado">★</span>' : '') +
-            '<div class="dato">' + esc([c.phone, channelIcon(c.channel), variasSedes() && c.data && c.data.sede ? nombreSede(c.data.sede) : ''].filter(Boolean).join(' · ')) + '</div></td>' +
+            // Sin teléfono (llegó por Instagram, por ejemplo), lo que sí se tenga para ubicarlo: su @ o su correo.
+            '<div class="dato">' + esc([c.phone || (c.data && c.data.instagram ? '@' + c.data.instagram : '') || (c.data && c.data.correo) || '', channelIcon(c.channel), variasSedes() && c.data && c.data.sede ? nombreSede(c.data.sede) : ''].filter(Boolean).join(' · ')) + '</div></td>' +
           '<td data-rot="Etapa">' + pastillaEtapa(c.stage) + '</td>' +
           // El puntaje nunca solo: va con su veredicto en palabras, que es la regla de siempre.
           '<td data-rot="Puntaje" class="num solo-completo">' + (c.score == null ? '—' : c.score) + '<div class="dato">' + esc(v && v.label ? v.label : '') + '</div></td>' +
@@ -3691,7 +3705,7 @@
     var notas = (d.events || []).filter(function (e) { return e.type === 'nota' && e.payload && e.payload.texto; });
     var citas = d.appointments || [];
     var data = c.data || {};
-    var ocultos = { booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1, pospuesto_desde: 1, valor: 1, sede: 1, motivo_perdida: 1 };
+    var ocultos = Object.assign({ booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1, pospuesto_desde: 1, valor: 1, sede: 1, motivo_perdida: 1 }, DE_CONTACTO);
     var capturados = Object.keys(data).filter(function (k) { return !ocultos[k] && data[k] !== '' && data[k] != null && typeof data[k] !== 'object'; });
     var fila = function (k, html, clase) { return '<dt' + (clase ? ' class="' + clase + '"' : '') + '>' + esc(k) + '</dt><dd' + (clase ? ' class="' + clase + '"' : '') + '>' + html + '</dd>'; };
 
@@ -3717,11 +3731,13 @@
         fila('Desde', esc(h.desde ? new Date(h.desde).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'), 'solo-completo') +
         (d.origen && d.origen.fuente ? fila('Llegó por', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : '')), 'solo-completo') : '') +
         (variasSedes() && data.sede ? fila('Sede', esc(nombreSede(data.sede))) : '') +
+        contactoHtml(c, fila) +
       '</dl>' +
       (capturados.length ? '<h4>Lo que contó</h4><dl class="det">' + capturados.map(function (k) { return fila(etiquetaDato(k), esc(data[k])); }).join('') + '</dl>' : '') +
       '<details class="corregir"><summary>Corregir datos</summary><div class="pf-campos">' +
         '<div class="ancho"><label for="pf-f-nombre">Nombre</label><input id="pf-f-nombre" value="' + esc(c.name || '') + '"></div>' +
         '<div class="ancho"><label for="pf-f-tel">Teléfono</label><input id="pf-f-tel" value="' + esc(c.phone || '') + '"></div>' +
+        camposFichaHtml(c, 'pf-x-') +
         // 🪤 El valor a mano manda sobre el del catálogo, y se dice aquí: si no, quien lo escriba no sabrá por
         // qué su número sobrevive a un reindexado y el deducido no.
         '<div class="ancho"><label for="pf-f-valor">Valor (manda sobre el del catálogo)</label><input id="pf-f-valor" type="number" min="0" value="' + (v.origen === 'a mano' ? v.valor : '') + '" placeholder="' + (v.valor ? v.valor : 'sin precio') + '"></div>' +
@@ -3757,7 +3773,10 @@
         name: $('pf-f-nombre').value.trim(),
         phone: $('pf-f-tel').value.trim(),
         notes: $('pf-f-notas').value.trim(),
-        data: Object.assign({}, c.data || {}, { valor: Number.isFinite(valor) && valor > 0 ? valor : undefined }),
+        // Solo el valor, no el `data` entero: el servidor lo mezcla con lo que haya, y mandarlo todo pisaba lo que el
+        // análisis hubiera captado mientras la ficha estaba abierta. Vacío va como 0, que el servidor lee como «quitarlo».
+        data: { valor: Number.isFinite(valor) && valor > 0 ? valor : 0 },
+        ficha: leerFicha('pf-x-'),
       };
       $('pf-msg').textContent = 'Guardando…';
       api('/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: cuerpo }).then(function (r) {
@@ -3902,12 +3921,76 @@
   }
 
 
+  // ---------- la ficha: lo de contacto y lo que capta el negocio (crm/ficha.ts) ----------
+  // DUNOR lo pidió así: «modificar contacto» solo dejaba nombre y teléfono, y quien llega por Instagram no tenía
+  // dónde dejar su usuario. Los campos los dice el servidor (/stats): los de contacto valen para todos, y los del
+  // negocio son los que aiva capta de la conversación (en DUNOR, la talla o las medidas). Se ven igual en los dos
+  // modos: atender bien a alguien no es «avanzado».
+  var DE_CONTACTO = { correo: 1, whatsapp: 1, instagram: 1, facebook: 1, contacto_por: 1 };
+  function fichaDelNegocio() { return state.ficha || { contacto: [], contactoPor: [], delNegocio: [] }; }
+  /** Lo de contacto que tiene, como algo que se toca: escribirle, abrir su Instagram. Solo lo que hay. */
+  function contactoHtml(c, fila) {
+    var data = c.data || {};
+    return fichaDelNegocio().contacto.map(function (x) {
+      var v = data[x.k];
+      if (!v) return '';
+      var s = String(v), html = esc(s);
+      if (x.k === 'correo') html = '<a href="mailto:' + esc(s) + '">' + esc(s) + '</a>';
+      else if (x.k === 'whatsapp') html = '<a target="_blank" rel="noopener" href="https://wa.me/' + esc(s.replace(/\D/g, '')) + '">' + esc(s) + '</a>';
+      else if (x.k === 'instagram') html = '<a target="_blank" rel="noopener" href="https://instagram.com/' + encodeURIComponent(s) + '">@' + esc(s) + '</a>';
+      // Un nombre con espacios no es un enlace: es como aparece, y se busca a mano.
+      else if (x.k === 'facebook' && !/\s/.test(s)) html = '<a target="_blank" rel="noopener" href="https://facebook.com/' + esc(s) + '">' + esc(s) + '</a>';
+      return fila(x.etiqueta, html);
+    }).join('');
+  }
+  /**
+   * Los campos de la ficha para «Corregir datos». `p` es el prefijo de sus id: la de la conversación y la completa
+   * pueden estar pintadas a la vez.
+   */
+  function camposFichaHtml(c, p, opts) {
+    opts = opts || {};
+    var data = c.data || {}, f = fichaDelNegocio(), b = opts.borrador ? ' data-borrador' : '';
+    var campo = function (k, etiqueta, entrada) { return '<div class="ancho"><label for="' + p + k + '">' + esc(etiqueta) + '</label>' + entrada + '</div>'; };
+    // 🪤 Sin type="email": esa regla de estilo es otra y el correo salía redondo entre campos cuadrados. El teclado
+    // del celular lo da inputmode; que sea un correo lo revisa el servidor.
+    var PISTAS = { correo: ' inputmode="email" autocomplete="off" placeholder="nombre@correo.com"', whatsapp: ' inputmode="tel" placeholder="Si es otro número"', instagram: ' autocomplete="off" placeholder="@usuario"', facebook: ' autocomplete="off" placeholder="Usuario o nombre como aparece"' };
+    var contacto = f.contacto.filter(function (x) { return !(opts.sin && opts.sin[x.k]); }).map(function (x) {
+      if (x.k === 'contacto_por') {
+        return campo(x.k, x.etiqueta, '<select id="' + p + x.k + '"><option value="">Sin decir</option>' +
+          f.contactoPor.map(function (o) { return '<option' + (o === data[x.k] ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>');
+      }
+      return campo(x.k, x.etiqueta, '<input id="' + p + x.k + '"' + b + ' value="' + esc(data[x.k] || '') + '"' + (PISTAS[x.k] || '') + '>');
+    }).join('');
+    if (opts.soloContacto || !f.delNegocio.length) return contacto;
+    // Lo del negocio, con lo que aiva ya captó escrito: aquí se corrige, y lo corregido el análisis ya no lo pisa.
+    return contacto + '<div class="ancho sub-ficha">Lo que contó</div>' + f.delNegocio.map(function (x) {
+      var val = data[x.k] == null ? '' : String(data[x.k]);
+      // Lo largo (unas medidas completas) en dos renglones: en un campo de una línea se leía solo el principio.
+      var entrada = val.length > 40
+        ? '<textarea id="' + p + x.k + '"' + b + ' rows="2" title="' + esc(x.ayuda || '') + '">' + esc(val) + '</textarea>'
+        : '<input id="' + p + x.k + '"' + b + ' value="' + esc(val) + '" title="' + esc(x.ayuda || '') + '">';
+      return campo(x.k, etiquetaDato(x.k), entrada);
+    }).join('');
+  }
+  function idsDeFicha(p) {
+    var f = fichaDelNegocio();
+    return f.contacto.concat(f.delNegocio).map(function (x) { return p + x.k; });
+  }
+  /** Lo que se escribió en los campos de la ficha que estén pintados con ese prefijo. */
+  function leerFicha(p) {
+    var f = fichaDelNegocio(), out = {};
+    f.contacto.concat(f.delNegocio).forEach(function (x) { var el = $(p + x.k); if (el) out[x.k] = el.value.trim(); });
+    return out;
+  }
+
   // ---------- dar de alta a alguien a mano ----------
   $('cli-nuevo').onclick = function () {
     $('nv-nombre').value = '';
     $('nv-tel').value = '';
     $('nv-notas').value = '';
     $('nv-msg').textContent = '';
+    // WhatsApp no: el teléfono de arriba ya es su WhatsApp.
+    $('nv-ficha').innerHTML = camposFichaHtml({ data: {} }, 'nv-x-', { soloContacto: true, sin: { whatsapp: 1 } });
     $('nv-etapa').innerHTML = (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.label) + '</option>'; }).join('');
     // Con varias sedes, a cuál llegó: si no, sale en Prospectos como «sin sede» aunque haya entrado por una.
     $('nv-sede-l').hidden = !variasSedes();
@@ -3921,7 +4004,7 @@
     var tel = $('nv-tel').value.trim();
     if (!nombre && !tel) { $('nv-msg').textContent = 'Dime al menos el nombre o el teléfono.'; return; }
     $('nv-msg').textContent = 'Creando…';
-    api('/contacts', { method: 'POST', body: { name: nombre, phone: tel, stage: $('nv-etapa').value, notes: $('nv-notas').value.trim(), sede: variasSedes() ? $('nv-sede').value || undefined : undefined } })
+    api('/contacts', { method: 'POST', body: { name: nombre, phone: tel, stage: $('nv-etapa').value, notes: $('nv-notas').value.trim(), sede: variasSedes() ? $('nv-sede').value || undefined : undefined, ficha: leerFicha('nv-x-') } })
       .then(function (r) {
         if (!r || r.error) { $('nv-msg').textContent = (r && r.error) || 'No se pudo crear.'; return; }
         $('dlg-nuevo').close();
@@ -4315,6 +4398,7 @@
       return api('/stats');
     }).then(function (s) {
       state.stageLabels = s.stageLabels; state.stages = s.stages || []; state.moneda = s.moneda || 'COP'; state.motivosPerdida = s.motivosPerdida || [];
+      state.ficha = s.ficha || null;
       // El modo que puso el cliente se recuerda para el próximo arranque: así se pinta bien desde el primer cuadro.
       state.modoCliente = s.modo === 'facil' ? 'facil' : 'completo';
       try { localStorage.setItem(LLAVE('modoCliente'), state.modoCliente); } catch (e) {}

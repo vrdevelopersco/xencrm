@@ -177,9 +177,10 @@ export function listContacts(opts: { stage?: Stage; humanMode?: boolean; q?: str
   }
   if (opts.q) {
     // También dentro de la conversación: "el vestido azul" aparece aunque no esté en el nombre ni en el resumen.
-    where.push('(u.name LIKE ? OR u.id LIKE ? OR u.phone LIKE ? OR u.summary LIKE ? OR EXISTS (SELECT 1 FROM messages m WHERE m.user_id = u.id AND m.content LIKE ?))');
+    // Y en los datos de la ficha: el correo, el Instagram o las medidas también se buscan (crm/ficha.ts).
+    where.push('(u.name LIKE ? OR u.id LIKE ? OR u.phone LIKE ? OR u.summary LIKE ? OR u.data LIKE ? OR EXISTS (SELECT 1 FROM messages m WHERE m.user_id = u.id AND m.content LIKE ?))');
     const like = `%${opts.q}%`;
-    params.push(like, like, like, like, like);
+    params.push(like, like, like, like, like, like);
   }
   const sql = `${SELECT}${where.length ? ' WHERE ' + where.join(' AND ') : ''} ORDER BY COALESCE(u.last_message_at, u.last_seen) DESC LIMIT ?`;
   params.push(opts.limit ?? 200);

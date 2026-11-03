@@ -279,6 +279,12 @@ export const BusinessConfigSchema = z.object({
         .array(z.string().min(1).max(60))
         .max(12)
         .default(['Precio', 'Compró en otro lado', 'Dejó de contestar', 'No teníamos lo que buscaba', 'La fecha no le servía']),
+      /** Las opciones de «Nos contactó por» en la ficha (crm/ficha.ts). Cada negocio puede poner las suyas. */
+      contactoPor: z
+        .array(z.string().min(1).max(40))
+        .min(1)
+        .max(12)
+        .default(['WhatsApp', 'Instagram', 'Facebook', 'El chat del sitio', 'Recomendación', 'En la tienda', 'Otro']),
       fields: z
         .array(z.object({ name: z.string().regex(/^[a-z_][a-z0-9_]*$/), description: z.string() }))
         .default([{ name: 'producto_interes', description: 'Producto o servicio que le interesa al cliente, si lo dijo' }]),

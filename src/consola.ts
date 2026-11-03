@@ -443,12 +443,16 @@ export function mountConsola(app: Hono) {
     return c.text(`Falló ${c.req.path}: ${err.message}`, 500);
   });
 
-  app.get('/', (c) => {
+  const puerta = (c: Context) => {
     const html = paginaConsola();
     return html
       ? c.html(html)
       : c.text(`No pude leer la página de la consola: ${porQueNo}\n\nEl archivo debería estar en public/consola.html, junto a dist/.`, 500);
-  });
+  };
+  app.get('/', puerta);
+  // La misma puerta donde la pone el despliegue (aiva.hrctechnologies.com/consola), para que mandar aquí funcione
+  // igual con el enrutador del paquete y con la consola corriendo sola.
+  app.get('/consola', puerta);
 
   // El logo de la casa. En el despliegue lo sirve el enrutador, pero la consola también corre sola (pnpm consola)
   // y ahí nadie más lo serviría.
@@ -512,7 +516,9 @@ export function mountConsola(app: Hono) {
    */
   app.all('/c/:slug/:resto{.*}', async (c) => {
     const quien = quienEs(c);
-    if (!quien) return c.redirect('/', 302); // sin sesión, a la puerta de la consola
+    // Sin sesión, a la puerta de la consola. 🪤 A /consola y no a /: en el despliegue, / es la portada, y quien
+    // tenía el tablero guardado caía en una página que no era ni el tablero ni dónde entrar.
+    if (!quien) return c.redirect('/consola', 302);
     const slug = c.req.param('slug');
     if (!alcanza(quien.usuario, slug)) return c.text('Ese cliente no es tuyo.', 403);
     const resto = c.req.param('resto') || '';

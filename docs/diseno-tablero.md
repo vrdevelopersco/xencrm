@@ -486,6 +486,22 @@ Reglas:
   (ya son filtros; los fijados se quedan), sin la insignia de Seguimientos, sin «Prospecto claro» ni «Posible
   prospecto» (se van con el puntaje) y sin «Bajar en Excel».
 
+### La ficha y la entrada directa (2026-11-03)
+
+DUNOR mandó un audio: «modificar contacto» solo dejaba nombre y teléfono, y al entrar había que pasar por la
+consola y darle a «Abrir tablero» para que se abriera otra página.
+
+- **Lo de contacto, para todos los clientes y en los dos modos**: correo, WhatsApp (si es otro número), Instagram,
+  Facebook y «Nos contactó por» (opciones en `crm.contactoPor`). Salen como enlaces que se tocan (`mailto:`,
+  `wa.me`, el perfil) y solo lo que hay. Atender bien a alguien no es «avanzado»: nada de esto lleva `solo-completo`.
+- **Lo que contó se corrige**, con los campos que capta cada negocio (`crm.fields`). Lo que escribe el equipo queda
+  marcado (`data._amano`) y el análisis no lo vuelve a pisar; borrar también marca.
+- **Se limpia, no se rechaza**: el Instagram o el Facebook pegados como enlace quedan en el usuario, el WhatsApp en
+  dígitos, el correo en minúscula. Lo que no se puede limpiar (un correo sin arroba) se rechaza entero, sin guardar
+  la mitad del formulario, y lo escrito se queda en pantalla para corregirlo.
+- **Quien atiende un solo cliente entra directo a su tablero** al iniciar sesión. Vuelve a la consola (su Equipo, su
+  cuenta) desde Configuración › Volver a la consola, y «Salir» cierra la sesión de verdad.
+
 ### Lo que también salió de la revisión
 
 - **A cargo** no es **La lleva**: la lleva quien contesta ahora (se borra cuando vuelve el asistente); a cargo es de

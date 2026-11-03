@@ -39,6 +39,7 @@ import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes,
 import { apagarClaveDelCliente, claveDelCliente, encenderClaveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente } from '../motores.js';
 import { ponerTope, presupuesto } from '../crm/presupuesto.js';
 import { frenoDelCandado } from './candado.js';
+import { aplicarFicha, camposEditables, CAMPOS_DE_CONTACTO } from '../crm/ficha.js';
 import { DIAS_MAXIMO, DIAS_MINIMO, DIAS_SUGERIDOS, politica as politicaDeRetencion, ponerPolitica, ultimaPasada, vistaPrevia } from '../crm/retencion.js';
 import { agendaDe } from '../crm/sedes.js';
 import { turnoDe } from '../crm/turnos.js';
@@ -242,7 +243,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   // Dar de alta a alguien a mano: el que llegó por el local, por una llamada o con una tarjeta. Lo delicado
   // —qué dirección se le pone para que no nazca duplicada— está en crm/alta.ts, con sus pruebas.
   app.post('/admin/api/contacts', async (c) => {
-    const body = (await c.req.json().catch(() => ({}))) as { name?: string; phone?: string; stage?: Stage; notes?: string; sede?: string };
+    const body = (await c.req.json().catch(() => ({}))) as { name?: string; phone?: string; stage?: Stage; notes?: string; sede?: string; ficha?: Record<string, unknown> };
     try {
       const r = darDeAlta(body);
       return c.json(r, r.yaExistia ? 200 : 201);
@@ -347,10 +348,14 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   app.patch('/admin/api/contacts/:id', async (c) => {
     const id = c.req.param('id');
     const body = (await c.req.json().catch(() => ({}))) as {
-      name?: string; phone?: string; stage?: Stage; motivo?: string; notes?: string; tags?: string[]; data?: Record<string, unknown>; responsable?: string | null;
+      name?: string; phone?: string; stage?: Stage; motivo?: string; notes?: string; tags?: string[]; data?: Record<string, unknown>; responsable?: string | null; ficha?: Record<string, unknown>;
     };
     const antes = getContact(id);
     if (!antes) return c.json({ error: 'no existe' }, 404);
+    // La ficha (correo, Instagram, las medidas…) se revisa antes de tocar nada: un formulario con un correo mal
+    // escrito no guarda la mitad y deja la otra mitad perdida.
+    const ficha = body.ficha === undefined ? null : aplicarFicha(antes.data, body.ficha);
+    if (ficha && 'error' in ficha) return c.json({ error: ficha.error }, 400);
     const por = quienHace(c);
     if (body.stage) {
       if (!STAGES.includes(body.stage)) return c.json({ error: 'etapa inválida' }, 400);
@@ -374,11 +379,16 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       if (!Number.isFinite(v) || v <= 0) delete junto.valor;
       patch.data = junto;
     }
+    if (ficha?.cambiados.length) {
+      const sobre = (patch.data as Record<string, unknown> | undefined) ?? antes.data;
+      const conFicha = aplicarFicha(sobre, body.ficha);
+      if (!('error' in conFicha)) patch.data = conFicha.data;
+    }
     const contact = updateContact(id, patch);
     // 🪤 Lo que se corrige a mano queda en la historia con el nombre de quien lo hizo. La etapa y el responsable
     // ya dejan el suyo; esto cubre el resto. Sin los valores: cuál campo y quién, que es lo que se pregunta cuando
     // alguien dice «yo no le cambié el teléfono».
-    const cambiados = camposCambiados(antes, patch);
+    const cambiados = [...camposCambiados(antes, patch), ...(ficha?.cambiados ?? [])];
     if (cambiados.length) addEvent(id, 'editado', { campos: cambiados, by: por });
     return c.json({ contact });
   });
@@ -1231,7 +1241,11 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   // La moneda va aquí porque el tablero la necesita desde el arranque para escribir cualquier valor.
   app.get('/admin/api/stats', (c) =>
-    c.json({ ...stats(), stageLabels: STAGE_LABELS, stages: STAGE_DEFS, moneda: business.business.currency, motivosPerdida: business.crm.motivosPerdida, modo: modoDelTablero() }),
+    c.json({
+      ...stats(), stageLabels: STAGE_LABELS, stages: STAGE_DEFS, moneda: business.business.currency, motivosPerdida: business.crm.motivosPerdida, modo: modoDelTablero(),
+      // Lo que se puede escribir en la ficha de cada persona (crm/ficha.ts): lo de contacto y lo que capta este negocio.
+      ficha: { contacto: CAMPOS_DE_CONTACTO, contactoPor: business.crm.contactoPor, delNegocio: business.crm.fields.filter((f) => camposEditables().includes(f.name) && !CAMPOS_DE_CONTACTO.some((x) => x.k === f.name)).map((f) => ({ k: f.name, ayuda: f.description })) },
+    }),
   );
 
   /**

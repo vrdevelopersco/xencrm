@@ -1,5 +1,6 @@
 // Análisis comercial por turno: sentimiento, interés, urgencia, objeciones y datos capturados,
 // con un puntaje explicable de probabilidad de cita/venta. Corre en segundo plano tras cada respuesta.
+import { escritosAMano } from './ficha.js';
 import { business } from '../config.js';
 import { classify, roleEngine, fallbackOrder, iaAgotada, modeloDe } from '../llm/engines.js';
 import { fueraDelTurno } from './turnos.js';
@@ -249,12 +250,14 @@ export async function analyzeContact(userId: string, opts: { full?: boolean } = 
       s.interes = Math.max(s.interes, 3);
     }
 
-    // Datos capturados: lo nuevo no vacío pisa lo anterior; lo demás se conserva.
+    // Datos capturados: lo nuevo no vacío pisa lo anterior; lo demás se conserva. Lo que el equipo escribió a mano
+    // en la ficha no se toca (crm/ficha.ts): si no, cada análisis deshacía la corrección.
     const data: Record<string, unknown> = { ...c.data };
+    const aMano = escritosAMano(c.data);
     const capture: Record<string, string> = { presupuesto: s.presupuesto, ciudad: s.ciudad, telefono: s.telefono, objecion: s.objecion, nombre: s.nombre };
     for (const field of business.crm.fields) capture[field.name] = String(s[field.name] ?? '');
-    for (const [k, v] of Object.entries(capture)) if (v) data[k] = v;
-    if (rules.correo) data.correo = rules.correo;
+    for (const [k, v] of Object.entries(capture)) if (v && !aMano.has(k)) data[k] = v;
+    if (rules.correo && !aMano.has('correo')) data.correo = rules.correo;
     data.urgencia = s.urgencia;
     data.interes = s.interes;
 

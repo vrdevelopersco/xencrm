@@ -2,6 +2,7 @@
 // llevárselos cuando quiera. Separador ";" y BOM, que es lo que Excel en español abre bien de una vez.
 import { listAppointments, tzParts } from './appointments.js';
 import { contactNumber, listContacts, STAGE_LABELS, type Contact } from './contacts.js';
+import { CAMPOS_DE_CONTACTO, camposEditables, etiquetaDeCampo } from './ficha.js';
 
 const BOM = '﻿';
 
@@ -37,9 +38,17 @@ const data = (c: Contact, key: string) => {
 
 /** Los contactos como hoja de cálculo (sin los archivados). */
 export function contactsCsv(): string {
+  // Al final, para no correrle las columnas a quien ya tenga una hoja armada sobre este archivo: lo de contacto de
+  // la ficha (crm/ficha.ts) y los datos de este negocio que no estaban ya arriba (en DUNOR, las medidas).
+  const yaArriba = new Set(['prenda', 'servicio', 'ocasion', 'fecha_evento', 'presupuesto', 'ciudad']);
+  const extra = camposEditables().filter((k) => !yaArriba.has(k));
+  const rotulo = (k: string) => {
+    const e = CAMPOS_DE_CONTACTO.find((x) => x.k === k)?.etiqueta ?? etiquetaDeCampo(k);
+    return e.charAt(0).toUpperCase() + e.slice(1);
+  };
   const head = [
     'Nombre', 'Teléfono', 'Canal', 'Etapa', 'Puntaje', 'Temperatura', 'Qué busca', 'Ocasión', 'Fecha del evento',
-    'Presupuesto', 'Ciudad', 'Etiquetas', 'Notas', 'Resumen', 'Primer contacto', 'Último mensaje',
+    'Presupuesto', 'Ciudad', 'Etiquetas', 'Notas', 'Resumen', 'Primer contacto', 'Último mensaje', ...extra.map(rotulo),
   ];
   const lines = listContacts({ limit: 100000 }).map((c) =>
     row([
@@ -59,6 +68,7 @@ export function contactsCsv(): string {
       c.summary ?? '',
       stamp(c.firstSeen),
       stamp(c.lastMessageAt),
+      ...extra.map((k) => data(c, k)),
     ]),
   );
   return BOM + [row(head), ...lines].join('\r\n') + '\r\n';

@@ -141,12 +141,16 @@ aparta. Se apaga en **Configuración › El asistente › Cuando la llevas tú**
   tener claro qué quiere; dar el nombre o preguntar el precio pesan poco. Son pesos **estimados** con las primeras
   conversaciones del negocio: se afinan cuando haya unas 20 citas con su resultado marcado en Hoy › *¿Cómo les
   fue?*.
+- **Correo, WhatsApp, Instagram, Facebook y Nos contactó por**: lo de contacto que se tenga, para tocarlo y
+  escribirle o abrir su perfil. Solo sale lo que está escrito.
 - **Lo que contó**: lo que el asistente entendió de la conversación, sin preguntarlo (servicio, prenda, ocasión,
-  fecha del evento, presupuesto…). Se llena solo mientras conversa.
+  fecha del evento, la talla o las medidas…). Se llena solo mientras conversa, y se corrige en *Corregir datos*.
 - **Citas** y **Historia**: lo último que pasó, con una caja para dejar una nota sin salir de la conversación.
   **Ver la ficha completa** abre la historia entera.
-- **Corregir datos** (se abre con un clic): nombre, teléfono, etiquetas y nota fija, con **Guardar**. Ahí mismo
-  están **Archivar** y **Borrar**. Si mientras escribes llega un mensaje o un análisis nuevo, lo que llevabas
+- **Corregir datos** (se abre con un clic): nombre, teléfono, correo, WhatsApp si es otro número, Instagram,
+  Facebook, por dónde nos contactó, lo que contó, etiquetas y nota fija, con **Guardar**. El Instagram o el
+  Facebook se pueden pegar como enlace: queda el usuario. Lo que corrijas a mano el asistente ya no lo cambia. Ahí
+  mismo están **Archivar** y **Borrar**. Si mientras escribes llega un mensaje o un análisis nuevo, lo que llevabas
   escrito no se pierde.
 - **Escribirle por WhatsApp** abre desde tu propio número, no desde el del negocio: sirve para buscarlo por fuera
   del tablero (si llegó por el chat del sitio o ya pasaron las 24 horas de WhatsApp oficial).
