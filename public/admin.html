@@ -90,6 +90,9 @@ input[type=text],input[type=search],input[type=password],input[type=email],input
 textarea{resize:vertical;min-height:70px}
 .muted{color:var(--muted)}.small{font-size:12px}
 .chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 9px;font-size:12px;border:1px solid var(--glass-border);background:var(--glass-strong)}
+/* 🪤 `inline-flex` le gana al [hidden] del navegador: «La lleva …» escondido salía como una pastilla vacía en la
+   cabecera de cada conversación que no llevaba nadie. */
+.chip[hidden]{display:none}
 /* El color va por el papel de la etapa (inicio, activo, interés, cita, ganado, perdido): el embudo lo pone cada negocio. */
 .chip.stage-inicio{background:var(--bg)}.chip.stage-activo{background:var(--me)}.chip.stage-interes{background:var(--warn-soft);color:var(--warn)}.chip.stage-cita{background:var(--cita-soft);color:var(--cita)}.chip.stage-ganado{background:var(--ok-soft);color:var(--ok)}.chip.stage-perdido{background:var(--bad-soft);color:var(--bad)}
 .chip.t-caliente{background:var(--si-soft);color:var(--si);border-color:transparent}.chip.t-tibio{background:var(--warn-soft);color:var(--warn);border-color:transparent}.chip.t-frio{background:var(--bg);color:var(--muted)}
@@ -1310,6 +1313,10 @@ dialog.perfil.ficha[open]{display:flex;flex-direction:column}
    interruptor, sin recargar. */
 :root[data-modo="facil"] .solo-completo{display:none!important}
 .solo-completo[hidden]{display:none}
+/* El candado: con el modo fácil puesto, quien no es super-admin no se sale de él ni ve la configuración. Lo que
+   cierra de verdad es el servidor (channels/candado.ts); esto solo no enseña puertas que no abren. */
+:root[data-manda="no"] .solo-quien-manda{display:none!important}
+:root[data-candado="si"] .de-quien-administra{display:none!important}
 .estado-modo{margin-left:auto;font-size:12px;color:var(--muted);font-weight:600}
 [data-modo-toggle][aria-pressed="true"] .estado-modo{color:var(--brand)}
 .ver-todo{text-align:center;padding:4px 0 12px}
@@ -1364,7 +1371,7 @@ dialog.perdida input{width:100%}
       <!-- 🪤 Cinco secciones, no ocho. Prospectos, Seguimientos y Ventas no se fueron: viven DENTRO de Clientes y de
            Análisis, como pestañas arriba de la pantalla (ver AREAS en admin.js). Quien empieza ve cinco puertas;
            quien quiere exprimir aiva encuentra todo a un clic más. -->
-      <button class="rb" data-view="clientes" data-tip="Clientes" aria-label="Clientes"><i class="ic" data-ic="users"></i><span class="badge" id="badge-seg"></span><span class="cuenta" id="cuenta-cli"></span></button>
+      <button class="rb" data-view="clientes" data-tip="Clientes" aria-label="Clientes"><i class="ic" data-ic="users"></i><span class="badge solo-completo" id="badge-seg"></span><span class="cuenta" id="cuenta-cli"></span></button>
       <!-- En el modo fácil no va (ver «modo fácil» en admin.js): los números grandes ya están en Hoy. -->
       <button class="rb solo-completo" data-view="analysis" data-tip="Análisis" aria-label="Análisis"><i class="ic" data-ic="chart"></i></button>
     </nav>
@@ -1402,7 +1409,7 @@ dialog.perdida input{width:100%}
   <div class="more-sheet" id="more-sheet" hidden>
     <div class="more-grid" id="more-grid" role="group" aria-label="Más secciones"></div>
     <div class="more-foot">
-      <button class="btn" data-proxy="modo-btn">Modo fácil</button>
+      <button class="btn solo-quien-manda" data-proxy="modo-btn">Modo fácil</button>
       <button class="btn" data-proxy="theme-btn">Tema claro u oscuro</button>
       <button class="btn" data-proxy="sound-btn">Sonido de avisos</button>
       <button class="btn" data-proxy="logout-btn">Salir</button>
@@ -1413,7 +1420,8 @@ dialog.perdida input{width:100%}
     <!-- Hoy -->
     <section class="view active" id="view-today">
       <div class="topbar"><h1 id="today-title">Hoy</h1><span class="muted small" id="today-sub"></span><span class="grow"></span><button class="btn sm" id="today-refresh">Actualizar</button></div>
-      <div class="kpis" id="kpis"></div>
+      <!-- Los números de arriba no van en el modo fácil: lo que pide hacer algo ya está en los recuadros. -->
+      <div class="kpis solo-completo" id="kpis"></div>
       <div class="today" id="today"></div>
     </section>
     <!-- Conversaciones -->
@@ -1585,7 +1593,7 @@ dialog.perdida input{width:100%}
         <h1>Clientes</h1>
         <span class="grow"></span>
         <input type="search" id="cli-q" placeholder="Buscar por nombre, teléfono o lo que dijo…">
-        <button class="btn sm" id="cli-csv">Bajar en Excel</button>
+        <button class="btn sm solo-completo" id="cli-csv">Bajar en Excel</button>
         <button class="btn sm primary" id="cli-nuevo">Nuevo contacto</button>
       </div>
       <!-- Las pestañas, cada una con su número: se pintan en renderClientes(). -->

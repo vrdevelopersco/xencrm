@@ -80,6 +80,8 @@ export interface EstadoCliente {
   presupuesto?: { tope: number | null; gastado: number; porcentaje: number | null; nivel: string } | null;
   /** El commit que corre en ese cliente (src/version.ts). */
   version?: string;
+  /** Cómo entra su equipo al tablero: con el modo fácil, y su candado, o viéndolo todo (channels/candado.ts). */
+  modo?: 'facil' | 'completo';
 }
 
 const pesoUrgencia = { alta: 3, media: 2, baja: 1 } as const;
@@ -191,6 +193,7 @@ export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
     negocio: String(me.business ?? cliente.nombre),
     agente: String(me.agent ?? ''),
     version: me.version ? String(me.version) : undefined,
+    modo: stats?.modo === 'facil' ? 'facil' : 'completo',
     logo: Boolean(me.logo),
     contactos: Number(stats?.total ?? 0),
     calientes: Number(stats?.hot ?? 0),
@@ -535,13 +538,15 @@ export function mountConsola(app: Hono) {
     // Quién es, para la historia de cada ficha (channels/admin.ts, quienHace). Sale de la cuenta, no del navegador:
     // lo que mande el navegador en esa cabecera no pasa de aquí.
     const nombre = quien.usuario?.nombre || (quien.esSuper ? 'Llave maestra' : '');
+    // Y con qué rol, para el candado del modo fácil (channels/candado.ts). También de la sesión, nunca del navegador.
+    const miRol = quien.esSuper ? 'super' : quien.usuario?.rol || 'asesor';
     // El flujo en vivo (SSE) no puede llevar reloj: se queda abierto a propósito.
     const esFlujo = resto.endsWith('admin/api/stream');
     const esLaPagina = resto === 'admin';
     try {
       const r = await llamarACliente(cliente, url.pathname + url.search, {
         method: metodo,
-        headers: { 'x-admin-token': token, ...(nombre ? { 'x-aiva-quien': encodeURIComponent(nombre) } : {}), ...(cuerpo?.length ? { 'content-type': tipo } : {}) },
+        headers: { 'x-admin-token': token, 'x-aiva-rol': miRol, ...(nombre ? { 'x-aiva-quien': encodeURIComponent(nombre) } : {}), ...(cuerpo?.length ? { 'content-type': tipo } : {}) },
         body: cuerpo,
         ...(esFlujo ? {} : { esperaMs: 15000 }),
       });
@@ -564,11 +569,10 @@ export function mountConsola(app: Hono) {
         // aquí nunca se escribió, así que leerlo daba vacío siempre y el tablero se quedaba sin saber quién
         // atiende — que es justo el fallo que se estaba persiguiendo.
         const soy = quien.usuario?.nombre || (quien.esSuper ? 'Llave maestra' : '');
-        // 🪤 Y su ROL, para que el tablero pueda guardar lo que no es del día a día —el gasto, las llamadas al
-        // modelo— detrás de una sección que solo ve quien administra. Quien entra con el token a secas no pasa
-        // por aquí y lo ve todo: es su token, y con él puede llamar a cualquier ruta igual. Esto ordena la
-        // pantalla de quien atiende, no guarda un secreto; confundir las dos cosas lleva a creerse protegido.
-        const miRol = quien.esSuper ? 'super' : quien.usuario?.rol || 'asesor';
+        // 🪤 Y su ROL (`miRol`, el mismo que va en `x-aiva-rol`), para que el tablero pueda guardar lo que no es del
+        // día a día —el gasto, las llamadas al modelo— detrás de una sección que solo ve quien administra. Quien
+        // entra con el token a secas no pasa por aquí y lo ve todo: es su token, y con él puede llamar a cualquier
+        // ruta igual. Esto ORDENA la pantalla; lo que cierra de verdad es el candado del servidor (channels/candado.ts).
         const html = (await r.text()).replace(
           '</head>',
           `<script>window.AIVA_CONSOLA=${JSON.stringify(slug)};window.AIVA_EQUIPO=${JSON.stringify(equipo)};window.AIVA_QUIEN=${JSON.stringify(soy)};window.AIVA_ROL=${JSON.stringify(miRol)}</script></head>`,
@@ -789,10 +793,11 @@ export function mountConsola(app: Hono) {
     const body = method === 'GET' || method === 'HEAD' ? undefined : await c.req.text();
     // Lo que se cambie desde la consola también queda con nombre en la historia de la ficha (ver arriba, /c/:slug).
     const nombre = actorDe(c)?.nombre || (c.get('esSuper' as never) ? 'Llave maestra' : '');
+    const rol = c.get('esSuper' as never) ? 'super' : actorDe(c)?.rol || 'asesor';
     try {
       const r = await llamarACliente(cliente, url.pathname + url.search, {
         method,
-        headers: { 'x-admin-token': token, ...(nombre ? { 'x-aiva-quien': encodeURIComponent(nombre) } : {}), ...(body ? { 'content-type': 'application/json' } : {}) },
+        headers: { 'x-admin-token': token, 'x-aiva-rol': rol, ...(nombre ? { 'x-aiva-quien': encodeURIComponent(nombre) } : {}), ...(body ? { 'content-type': 'application/json' } : {}) },
         body,
         esperaMs: 8000,
       });

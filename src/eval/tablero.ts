@@ -374,7 +374,8 @@ check('🪤 «Mover…» sigue en cada tarjeta: en el celular no se puede arrast
   'quitarlo deja el tablero sin forma de mover nada desde el teléfono (diseno-tablero.md, 2026-09-21)');
 check('y compacto, al pie, con 44 px al tacto', /\.card \.cifra \.card-move\{width:auto;max-width:104px/.test(html) && /@media \(pointer:coarse\)\{\.card \.cifra \.card-move\{min-height:44px/.test(html));
 check('🪤 sin precios sale UNA cifra que lleva a cargarlos, no dos «Sin precios»', /cifra\('abierto', 'Valor en juego'/.test(js) && /\$\('pip-precios'\)\.onclick = function \(\) \{ go\('knowledge'\); \}/.test(js));
-check('🪤 la insignia de seguimientos se pide con las cuentas, no solo al entrar a Seguimientos', /pintarListas\(\);\s*api\('\/seguimientos'\)\.then\(pintarInsigniaSeg\)/.test(js));
+// En el modo fácil no se pide: Seguimientos no está y su insignia no llevaría a nada (ver eval/candado.ts).
+check('🪤 la insignia de seguimientos se pide con las cuentas, no solo al entrar a Seguimientos', /pintarListas\(\);\s*(\/\/[^\n]*\n\s*)*if \(!esFacil\(\)\) api\('\/seguimientos'\)\.then\(pintarInsigniaSeg\)/.test(js));
 check('🪤 un archivo que ya se borró dice que ya no está, no que algo falló', /estado === 404 \? 'Esta foto ya no está guardada'/.test(js) && /estado === 404 \? 'Ese archivo ya no está guardado\.'/.test(js));
 const agenteJs = readFileSync(new URL('../agent/agent.ts', import.meta.url), 'utf8');
 check('🪤 una respuesta rápida que solo se propuso no cuenta como usada', /if \(!acompana\) anotarUso\(rapida\.respuesta\.id\)/.test(agenteJs));
@@ -386,7 +387,8 @@ check('la guía está en Configuración, arriba de todo y solo para quien admini
   'la entrada tiene que ir primera en CFG_CLIENTE y con soloAdmin, que se filtra con visiblePara en los tres menús');
 check('la guía es una pantalla de Configuración que se carga al entrar', /CFG_VIEWS = \{ guia: 1,/.test(js) && /if \(view === 'guia'\) cargarGuia\(\);/.test(js) && html.includes('id="view-guia"'));
 check('🪤 en Hoy, la tarjeta de la guía es solo para quien administra; el asesor sigue con el tutorial',
-  /function bannerDeHoy\(\) \{\s*if \(!esAdmin\(\)\) return helpBanner\(\);/.test(js) && /function pintarGuiaEnHoy\(\) \{\s*if \(!esAdmin\(\)/.test(js) && /\+ bannerDeHoy\(\) \+/.test(js));
+  // Con el candado tampoco (ver eval/candado.ts), y por eso la condición lleva algo más después de esAdmin().
+  /function bannerDeHoy\(\) \{[^}]*?if \(!esAdmin\(\)( \|\| enCandado\(\))?\) return helpBanner\(\);/.test(js) && /function pintarGuiaEnHoy\(\) \{\s*if \(!esAdmin\(\)/.test(js) && /\+ bannerDeHoy\(\) \+/.test(js));
 check('🪤 un paso hecho lo dice el servidor, no el navegador: la guía no guarda pasos en localStorage',
   !/localStorage\.setItem\(LLAVE\('guia-(paso|hecho)/.test(guiaJs) && (guiaJs.match(/localStorage\.setItem/g) || []).length === 1 && /LLAVE\('guia-oculta'\)/.test(guiaJs),
   'lo único que se guarda en el navegador es «Ocultar por ahora»');

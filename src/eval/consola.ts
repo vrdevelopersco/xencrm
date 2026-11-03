@@ -145,17 +145,17 @@ const eco = createServer((req, res) => {
   req.on('data', (t: Buffer) => trozos.push(t));
   req.on('end', () => {
     res.setHeader('content-type', 'application/json');
-    res.end(JSON.stringify({ tipo: req.headers['content-type'] ?? '', quien: req.headers['x-aiva-quien'] ?? '', token: req.headers['x-admin-token'] ?? '', cuerpo: Buffer.concat(trozos).toString('base64') }));
+    res.end(JSON.stringify({ tipo: req.headers['content-type'] ?? '', quien: req.headers['x-aiva-quien'] ?? '', rol: req.headers['x-aiva-rol'] ?? '', token: req.headers['x-admin-token'] ?? '', cuerpo: Buffer.concat(trozos).toString('base64') }));
   });
 });
 await new Promise<void>((listo) => eco.listen(39001, 'localhost', () => listo()));
-type Eco = { tipo: string; quien: string; token: string; cuerpo: string };
+type Eco = { tipo: string; quien: string; rol: string; token: string; cuerpo: string };
 // Una foto de mentira con los bytes que más se rompen al leerlos como texto: el cero, el 0xFF y una «ñ» suelta.
 const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff, 0xfe, 0xf1, 0x0d, 0x0a, 0x1a]);
 const formulario = new FormData();
 formulario.append('archivo', new Blob([bytes], { type: 'image/png' }), 'traje.png');
 formulario.append('texto', 'Así queda el azul');
-const envio = new Request('http://local/c/financiera-del-caribe/admin/api/contacts/web:1/adjunto', { method: 'POST', body: formulario, headers: { cookie: `aiva_consola=${sesionAna}`, 'x-aiva-quien': 'Otra Persona' } });
+const envio = new Request('http://local/c/financiera-del-caribe/admin/api/contacts/web:1/adjunto', { method: 'POST', body: formulario, headers: { cookie: `aiva_consola=${sesionAna}`, 'x-aiva-quien': 'Otra Persona', 'x-aiva-rol': 'super' } });
 const tipoEnviado = envio.headers.get('content-type') ?? '';
 const cuerpoEnviado = Buffer.from(await envio.clone().arrayBuffer()).toString('base64');
 const llego = (await (await app.request(envio)).json()) as Eco;
@@ -163,12 +163,20 @@ check('🪤 un adjunto llega al cliente con sus bytes intactos', llego.cuerpo ==
 check('🪤 y con su tipo y su separador, no como JSON', /^multipart\/form-data; boundary=/.test(llego.tipo) && llego.tipo === tipoEnviado, llego.tipo);
 check('el token del cliente lo pone la consola', llego.token === tokenDe('financiera-del-caribe'));
 check('quién hace las cosas sale de la cuenta, no de lo que mande el navegador', llego.quien === 'Ana', llego.quien);
+// El candado del modo fácil (channels/candado.ts) se decide en el cliente con este rol: si el navegador pudiera
+// ponerlo, un asesor se diría super-admin y el candado no cerraría nada.
+check('🪤 y con qué rol, también de la cuenta: un asesor no se dice super-admin', llego.rol === 'asesor', llego.rol);
 const json = (await (await app.request('http://local/c/financiera-del-caribe/admin/api/contacts/web:1', { method: 'PATCH', headers: { cookie: `aiva_consola=${sesionAna}`, 'content-type': 'application/json' }, body: JSON.stringify({ stage: 'perdido', motivo: 'Precio' }) })).json()) as Eco;
 check('lo de siempre (JSON) sigue llegando igual', json.tipo === 'application/json' && Buffer.from(json.cuerpo, 'base64').toString('utf8') === '{"stage":"perdido","motivo":"Precio"}', JSON.stringify(json));
 const sinCuerpo = (await (await comoAna('/c/financiera-del-caribe/admin/api/stats')).json()) as Eco;
 check('una consulta sin cuerpo no lleva tipo', sinCuerpo.tipo === '' && sinCuerpo.cuerpo === '', JSON.stringify(sinCuerpo));
 const porLaApi = (await (await pedir('/api/c/financiera-del-caribe/contacts/web:1', { method: 'PATCH', body: '{"responsable":"Ana"}' })).json()) as Eco;
 check('lo que cambia la consola por su API también lleva nombre', decodeURIComponent(porLaApi.quien) === 'Llave maestra', porLaApi.quien);
+check('y su rol: la llave maestra es super-admin', porLaApi.rol === 'super', porLaApi.rol);
+nuevoUsuario({ usuario: 'bryan', nombre: 'Bryan', clave: 'clave-de-prueba', rol: 'admin', clientes: ['financiera-del-caribe'] });
+const sesionBryan = abrir({ usuario: 'bryan', nombre: 'Bryan', rol: 'admin', clientes: ['financiera-del-caribe'], activo: true, desde: '2026-11-03' });
+const comoBryan = (await (await app.request('http://local/c/financiera-del-caribe/admin/api/stats', { headers: { cookie: `aiva_consola=${sesionBryan}` } })).json()) as Eco;
+check('el admin del cliente llega como admin, no como super: el candado también es para él', comoBryan.rol === 'admin', comoBryan.rol);
 nuevoUsuario({ usuario: 'andres', nombre: 'Andrés Núñez', clave: 'clave-de-prueba', rol: 'asesor', clientes: ['financiera-del-caribe'] });
 const sesionAndres = abrir({ usuario: 'andres', nombre: 'Andrés Núñez', rol: 'asesor', clientes: ['financiera-del-caribe'], activo: true, desde: '2026-10-23' });
 const conTilde = (await (await app.request('http://local/c/financiera-del-caribe/admin/api/stats', { headers: { cookie: `aiva_consola=${sesionAndres}` } })).json()) as Eco;

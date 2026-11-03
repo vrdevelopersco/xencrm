@@ -90,7 +90,8 @@ const mediodia = (() => {
 check('hoy', /^hoy, /.test(cuandoCorto(mediodia, mediodia)), cuandoCorto(mediodia, mediodia));
 check('mañana', /^mañana, /.test(cuandoCorto(mediodia + DIA, mediodia)));
 check('ayer', /^ayer, /.test(cuandoCorto(mediodia - DIA, mediodia)));
-check('más lejos: día de la semana y fecha, sin puntos', /^el \w+ \d{1,2} \w+, /.test(cuandoCorto(mediodia + 4 * DIA, mediodia)) && !/\./.test(cuandoCorto(mediodia + 4 * DIA, mediodia).split(',')[0] ?? ''), cuandoCorto(mediodia + 4 * DIA, mediodia));
+// 🪤 Con letras y no con \w: «sáb» y «mié» llevan tilde, y la prueba fallaba solo los días en que cuatro más caían ahí.
+check('más lejos: día de la semana y fecha, sin puntos', /^el \p{L}+ \d{1,2} \p{L}+, /u.test(cuandoCorto(mediodia + 4 * DIA, mediodia)) && !/\./.test(cuandoCorto(mediodia + 4 * DIA, mediodia).split(',')[0] ?? ''), cuandoCorto(mediodia + 4 * DIA, mediodia));
 
 console.log('— La lista del tablero');
 const app = new Hono();

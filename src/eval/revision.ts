@@ -268,7 +268,8 @@ check('el puntaje y su porqué se esconden; la etapa y quién está a cargo, no'
 check('el «¿por qué?» de cada respuesta, también', /class="por-que solo-completo"/.test(js));
 check('🪤 el puntaje de la cabecera de la conversación también (su clase se reescribe al pintar)', /\$\('chat-temp'\)\.className = 'meta-line solo-completo'/.test(js) && /id="chat-temp"/.test(html));
 check('de las pastillas de puntaje queda solo «caliente»', /c\.temperature === 'caliente' \? '' : ' solo-completo'/.test(js));
-check('hay un interruptor para uno y otro para todo el equipo (este, solo para quien administra)', /proxy: 'modo-btn'[^}]*modo: 'yo'/.test(js) && /proxy: 'modo-equipo-btn'[^}]*soloAdmin: true[^}]*modo: 'equipo'/.test(js) && /id="modo-btn"/.test(html) && /id="modo-equipo-btn"/.test(html));
+// Desde el 2026-11-03 los dos son solo de quien administra aiva: es el candado (ver eval/candado.ts).
+check('hay un interruptor para uno y otro para todo el equipo (los dos, solo para quien administra aiva)', /proxy: 'modo-btn'[^}]*modo: 'yo'[^}]*soloSuper: true/.test(js) && /proxy: 'modo-equipo-btn'[^}]*soloSuper: true[^}]*modo: 'equipo'/.test(js) && /id="modo-btn"/.test(html) && /id="modo-equipo-btn"/.test(html));
 check('y en el celular también se llega', /data-proxy="modo-btn"/.test(html));
 check('🪤 en el modo fácil Hoy enseña solo lo que tiene algo, y cómo ver todo', /facil \? sections\.filter\(function \(s\) \{ return s\.n > 0; \}\)/.test(js) && /id="hoy-ver-todo"/.test(js));
 const deHoy = js.slice(js.indexOf('function loadToday()'), js.indexOf("var TONOS"));

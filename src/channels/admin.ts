@@ -38,6 +38,7 @@ import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
 import { apagarClaveDelCliente, claveDelCliente, encenderClaveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente } from '../motores.js';
 import { ponerTope, presupuesto } from '../crm/presupuesto.js';
+import { frenoDelCandado } from './candado.js';
 import { DIAS_MAXIMO, DIAS_MINIMO, DIAS_SUGERIDOS, politica as politicaDeRetencion, ponerPolitica, ultimaPasada, vistaPrevia } from '../crm/retencion.js';
 import { agendaDe } from '../crm/sedes.js';
 import { turnoDe } from '../crm/turnos.js';
@@ -160,6 +161,13 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const porLaUrl = c.req.path.endsWith('/admin/api/stream') ? c.req.query('token') : undefined;
     const token = c.req.header('x-admin-token') ?? porLaUrl;
     if (token !== ADMIN_TOKEN) return c.json({ error: 'no autorizado' }, 401);
+    await next();
+  });
+  // El candado del modo fácil (channels/candado.ts). Después del token: sin token no se le dice a nadie qué hay.
+  app.use('/admin/api/*', async (c, next) => {
+    const ruta = c.req.path.replace(/^.*?\/admin\/api\//, '');
+    const freno = frenoDelCandado(ruta, c.req.method, c.req.header('x-aiva-rol'), modoDelTablero());
+    if (freno) return c.json({ error: freno }, 403);
     await next();
   });
 
@@ -1228,7 +1236,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   /**
    * Cómo entra el equipo a este tablero: «fácil» (lo del día a día, sin puntajes ni motores) o «completo». Es del
-   * cliente y lo cambia quien lo administra; cada persona puede, además, verlo distinto en su navegador.
+   * cliente y lo cambia solo quien administra aiva (el candado de más arriba frena a los demás); con el modo fácil
+   * puesto, nadie más se sale de él (channels/candado.ts).
    */
   app.put('/admin/api/tablero/modo', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { modo?: string };

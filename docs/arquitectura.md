@@ -282,6 +282,10 @@ al pasar cada petición. Tres detalles que lo hacen funcionar:
    normal y un `EventSource` no pueden poner cabeceras.
 3. La consola le deja una **marca** a la página al pasarla (`window.AIVA_CONSOLA`). Sin eso el tablero, al no
    encontrar un token en el navegador, enseñaba su pantalla de token aunque no hiciera falta ninguno.
+4. Cada petición lleva **quién y con qué rol**, sacados de la sesión y nunca del navegador: `x-aiva-quien` (el
+   nombre, para la historia de cada ficha) y `x-aiva-rol` (`super`, `admin` o `asesor`). Con el modo fácil puesto,
+   el cliente usa el rol para el candado (`channels/candado.ts`): quien no es super-admin solo hace lo del día a
+   día. El token a secas no lleva rol y no tiene candado.
 
 Por la consola solo se llega al tablero de un cliente, no al resto de su instancia, y quien atiende a un cliente
 no entra a los otros ni sabiéndose la dirección.

@@ -385,7 +385,11 @@
   // Un área (Clientes, Análisis) se abre en la pestaña donde se dejó: quien vive en «Por etapa» no tiene por qué
   // pasar por la lista cada vez. AREA_DE y ultimaDelArea están más abajo, con las pestañas.
   document.querySelectorAll('.rail .nav button').forEach(function (b) {
-    b.onclick = function () { var v = b.getAttribute('data-view'), a = AREA_DE[v]; go(a && ultimaDelArea[a.id] ? ultimaDelArea[a.id] : v); };
+    b.onclick = function () {
+      var v = b.getAttribute('data-view'), a = AREA_DE[v], ultima = a && ultimaDelArea[a.id];
+      // 🪤 La pestaña recordada puede ser una que el modo fácil esconde (Seguimientos): se abría sin pestaña marcada.
+      go(ultima && !(esFacil() && SOLO_COMPLETO_VISTAS[ultima]) ? ultima : v);
+    };
   });
   if ($('marca-btn')) $('marca-btn').onclick = function () { go('today'); };
 
@@ -408,12 +412,14 @@
     // todo. Quien entra con el token a secas lo ve igual: con ese token puede llamar a la ruta directamente, y
     // esconder un botón no protege nada — creerse protegido por eso sí hace daño.
     { view: 'trazas', ic: 'chart', lbl: 'Trazabilidad', soloAdmin: true, soloCompleto: true },
-    // Cómo entra todo el equipo. Quien administra lo decide; cada quien puede verlo distinto desde «Tú».
-    { proxy: 'modo-equipo-btn', ic: 'users', lbl: 'Modo fácil para el equipo', soloAdmin: true, modo: 'equipo' }
+    // Cómo entra todo el equipo. Lo decide quien administra aiva y nadie más: es el candado (ver «modo fácil»).
+    { proxy: 'modo-equipo-btn', ic: 'users', lbl: 'Modo fácil para el equipo', soloSuper: true, modo: 'equipo' }
   ];
+  // Todo lo de «Este cliente» es configuración: con el candado puesto no se enseña (ver «modo fácil»).
+  CFG_CLIENTE.forEach(function (d) { d.candado = true; });
   var CFG_TUYO = [
     { proxy: 'foot-user', ic: 'user', lbl: 'Con qué nombre respondes' },
-    { proxy: 'modo-btn', ic: 'sliders', lbl: 'Modo fácil', modo: 'yo' },
+    { proxy: 'modo-btn', ic: 'sliders', lbl: 'Modo fácil', modo: 'yo', soloSuper: true },
     { proxy: 'theme-btn', ic: 'sun', lbl: 'Tema claro u oscuro' },
     { proxy: 'sound-btn', ic: 'bell', lbl: 'Sonido de avisos' },
     { proxy: 'logout-btn', ic: 'salir', lbl: 'Salir' }
@@ -422,9 +428,15 @@
    * Quién entró. Por la consola llega su rol; con el token a secas no hay rol y se ve todo, que es lo correcto:
    * ese token ya abre cualquier ruta.
    */
+  function rolDeQuienEntro() { return typeof window.AIVA_ROL === 'string' ? window.AIVA_ROL : ''; }
   function esAdmin() {
-    var r = typeof window.AIVA_ROL === 'string' ? window.AIVA_ROL : '';
+    var r = rolDeQuienEntro();
     return !r || r === 'super' || r === 'admin';
+  }
+  /** Quién manda en el modo fácil: quien administra aiva, o el token a secas. La misma regla que channels/candado.ts. */
+  function mandaEnElModo() {
+    var r = rolDeQuienEntro();
+    return !r || r === 'super';
   }
 
   // 🪤 El menú de Configuración se pinta en TRES sitios —el desplegable, la lista de la sección y el menú del
@@ -432,12 +444,12 @@
   // buscaba el botón antes de abrir ningún menú y lo encontró igual. Un filtro repartido por tres sitios es un
   // filtro que algún día se aplica en dos.
   function visiblePara(d) {
-    return !d.soloAdmin || esAdmin();
+    return (!d.soloAdmin || esAdmin()) && (!d.soloSuper || mandaEnElModo());
   }
 
   function itemCfg(d, clase) {
     var b = document.createElement('button');
-    b.className = clase + (d.soloCompleto ? ' solo-completo' : '');
+    b.className = clase + (d.soloCompleto ? ' solo-completo' : '') + (d.candado ? ' de-quien-administra' : '');
     b.innerHTML = '<i class="ic" data-ic="' + d.ic + '"></i>' + esc(d.lbl) +
       // Los interruptores dicen cómo están, en palabras: un botón que cambia algo y no dice qué hay hoy obliga a probar.
       (d.modo ? '<span class="estado-modo" data-modo-estado="' + d.modo + '"></span>' : '');
@@ -467,11 +479,13 @@
       pop.appendChild(consola);
       pop.appendChild(document.createElement('hr'));
     }
-    pop.appendChild(grupo('Este cliente', 'cfg-biz'));
+    var deEsteCliente = grupo('Este cliente', 'cfg-biz'), raya = document.createElement('hr');
+    deEsteCliente.classList.add('de-quien-administra'); raya.className = 'de-quien-administra';
+    pop.appendChild(deEsteCliente);
     CFG_CLIENTE.filter(visiblePara).forEach(function (d) { pop.appendChild(itemCfg(d, 'item')); });
-    pop.appendChild(document.createElement('hr'));
+    pop.appendChild(raya);
     pop.appendChild(grupo('Tú', 'cfg-yo'));
-    CFG_TUYO.forEach(function (d) { pop.appendChild(itemCfg(d, 'item')); });
+    CFG_TUYO.filter(visiblePara).forEach(function (d) { pop.appendChild(itemCfg(d, 'item')); });
     pop.appendChild(document.createElement('hr'));
     var ayuda = itemCfg({ view: 'help', ic: 'help', lbl: 'Ayuda' }, 'item');
     pop.appendChild(ayuda);
@@ -520,19 +534,29 @@
   // de más— y no quita nada: lo escondido lleva la clase `solo-completo` y vuelve con un clic. Es la regla de
   // siempre (sencillo por fuera, todo a un clic adentro), con un interruptor en vez de un nivel más de menú.
   //
-  // Dos interruptores, de dos dueños distintos: el del cliente (cómo entra todo su equipo, lo pone quien administra
-  // y vive en su base) y el de cada quien (cómo lo ve uno, en su navegador). El de cada quien manda.
+  // Dos interruptores, y los dos son de quien administra aiva: el del cliente (cómo entra todo su equipo, vive en su
+  // base) y el suyo (cómo lo ve él, en su navegador, para revisar lo avanzado sin sacar a nadie del modo).
+  //
+  // 🪤 El CANDADO. Con el modo fácil puesto, nadie más se sale de él: ni el admin del cliente. DUNOR lo pidió así
+  // —un aiva sencillo del que nadie de su lado se salga sin querer—, y por eso quien no manda no tiene interruptor
+  // propio y tampoco ve la configuración del cliente. El servidor cumple la misma regla (channels/candado.ts):
+  // aquí solo se dejan de enseñar puertas que allá no abren.
   var SOLO_COMPLETO_VISTAS = { analysis: 1, ventas: 1, seguimientos: 1, agent: 1, trazas: 1 };
+  var VISTAS_DE_QUIEN_ADMINISTRA = { guia: 1, profile: 1, negocio: 1, agent: 1, channels: 1, knowledge: 1, trazas: 1, analysis: 1, ventas: 1, seguimientos: 1 };
   var FILTROS_COMPLETOS = /^(human|archived|stage:)/;
   function modoMio() { try { return localStorage.getItem(LLAVE('modo')) || ''; } catch (e) { return ''; } }
   function modoDelEquipo() {
     if (state.modoCliente) return state.modoCliente;
     try { return localStorage.getItem(LLAVE('modoCliente')) || 'completo'; } catch (e) { return 'completo'; }
   }
-  function esFacil() { return (modoMio() || modoDelEquipo()) === 'facil'; }
+  function esFacil() { return ((mandaEnElModo() && modoMio()) || modoDelEquipo()) === 'facil'; }
+  /** Con el candado puesto: modo fácil y quien entró no manda en él. */
+  function enCandado() { return !mandaEnElModo() && modoDelEquipo() === 'facil'; }
   function aplicarModo() {
     var facil = esFacil();
     document.documentElement.setAttribute('data-modo', facil ? 'facil' : 'completo');
+    document.documentElement.setAttribute('data-manda', mandaEnElModo() ? 'si' : 'no');
+    document.documentElement.setAttribute('data-candado', enCandado() ? 'si' : 'no');
     document.querySelectorAll('[data-modo-toggle]').forEach(function (b) {
       var on = b.getAttribute('data-modo-toggle') === 'equipo' ? modoDelEquipo() === 'facil' : facil;
       b.setAttribute('aria-pressed', String(on));
@@ -561,11 +585,15 @@
       // Quien lo cambia pasa a verlo como lo verá su equipo: si no, lo cambiaría sin ver qué cambió.
       try { localStorage.setItem(LLAVE('modoCliente'), r.modo); localStorage.removeItem(LLAVE('modo')); } catch (e) {}
       trasCambiarDeModo(aplicarModo());
-      toast(r.modo === 'facil' ? 'Tu equipo entra en modo fácil. Cada quien puede ver todo desde Configuración › Modo fácil.' : 'Tu equipo entra viendo todo');
+      toast(r.modo === 'facil'
+        ? 'El equipo de ' + (state.bizName || 'este cliente') + ' entra en modo fácil y no puede salirse. Tú ves todo desde Configuración › Modo fácil.'
+        : 'El equipo de ' + (state.bizName || 'este cliente') + ' entra viendo todo');
     });
   };
   aplicarModo();
-  function openMore() { $('more-sheet').hidden = false; $('nav-more').setAttribute('aria-expanded', 'true'); var first = $('more-grid').querySelector('button'); if (first) first.focus(); }
+  // 🪤 Los íconos de aquí se pintan al abrir: el primer iconos() corre antes de que armarCfg cree estos botones, y
+  // en el celular todo «Más» salía con el hueco del ícono vacío.
+  function openMore() { iconos($('more-grid')); $('more-sheet').hidden = false; $('nav-more').setAttribute('aria-expanded', 'true'); var first = $('more-grid').querySelector('button'); if (first) first.focus(); }
   function closeMore(returnFocus) {
     if ($('more-sheet').hidden) return;
     $('more-sheet').hidden = true; $('nav-more').setAttribute('aria-expanded', 'false');
@@ -643,6 +671,14 @@
   }
 
   function go(view, opts) {
+    // 🪤 Con el candado, lo de quien administra no se abre por ninguna puerta: no solo el menú, también un aviso
+    // del sistema, el «cárgalos» de los precios o la última pantalla que el navegador recordaba.
+    if (enCandado() && VISTAS_DE_QUIEN_ADMINISTRA[view]) {
+      // Desde una pantalla que sí puede ver, se queda donde estaba. Si ya estaba en una de esas (el candado se
+      // puso mientras miraba), a Hoy.
+      if (state.view !== view && !VISTAS_DE_QUIEN_ADMINISTRA[state.view]) { toast('Eso lo maneja quien administra aiva.'); return; }
+      view = 'today';
+    }
     // Perfil y El negocio no son pantallas: son configuración, y se abren en un modal encima de lo que estabas
     // haciendo. Así no se pierde de vista la conversación ni hay que volver a navegar.
     if (view === 'profile' || view === 'negocio') { abrirConfig(view); return; }
@@ -749,7 +785,9 @@
   // Quién lleva la conversación: si la pasó el bot, la tiene el equipo hasta que alguien la tome.
   // 🪤 «bot» y «admin» no son nombres (regla de diseno-tablero.md): «La lleva admin» no le dice a nadie quién es.
   function whoHas(c) { return c.humanBy && c.humanBy !== 'bot' && c.humanBy !== 'admin' ? c.humanBy : 'el equipo'; }
-  function verdictChip(c) { var v = verdict(c); return '<span class="chip ' + v.cls + (isStale(c) ? ' stale' : '') + '" title="Probabilidad ' + c.score + (c.scoreAt ? ' · calculada hace ' + rel(c.scoreAt) : '') + '">' + esc(v.label) + '</span>'; }
+  // «Prospecto claro» y «Posible prospecto» salen del puntaje: en el modo fácil se van con él. Los de la etapa
+  // (con cita, cliente, perdido) se quedan, que esos los entiende cualquiera.
+  function verdictChip(c) { var v = verdict(c); return '<span class="chip ' + v.cls + (v.cls === 'v-si' || v.cls === 'v-posible' ? ' solo-completo' : '') + (isStale(c) ? ' stale' : '') + '" title="Probabilidad ' + c.score + (c.scoreAt ? ' · calculada hace ' + rel(c.scoreAt) : '') + '">' + esc(v.label) + '</span>'; }
   function isStale(c) { return c.scoreAt && c.lastMessageAt && c.lastMessageAt > c.scoreAt + 20000; }
   function tempLabel(t) { return t === 'frio' ? 'frío' : t; } // el valor interno va sin tilde; la palabra, con
   // En el modo fácil solo queda la de «caliente»: es la única que pide hacer algo. «0 · frío» es una cuenta interna.
@@ -1235,7 +1273,7 @@
         '<div class="ancho"><label for="f-tags">Etiquetas, separadas por coma</label><input id="f-tags" data-borrador value="' + esc((c.tags || []).join(', ')) + '"></div>' +
         '<div class="ancho"><label for="f-notes">Nota fija</label><textarea id="f-notes" data-borrador rows="2" placeholder="Lo que siempre hay que saber de esta persona">' + esc(c.notes || '') + '</textarea></div>' +
       '</div><div class="fila" style="gap:8px;margin-top:10px"><button class="btn sm primary" id="f-save">Guardar</button></div>' +
-      '<div class="feed-row" style="margin-top:14px"><button class="btn sm" id="arch-btn">' + (c.archived ? 'Devolver a las listas' : 'Archivar') + '</button><button class="btn sm" id="del-btn">Borrar</button></div><div class="small" id="del-msg" role="status"></div>' +
+      '<div class="feed-row" style="margin-top:14px"><button class="btn sm" id="arch-btn">' + (c.archived ? 'Devolver a las listas' : 'Archivar') + '</button><button class="btn sm de-quien-administra" id="del-btn">Borrar</button></div><div class="small" id="del-msg" role="status"></div>' +
       '<div class="small muted" style="margin-top:10px">' + esc(channelIcon(c.channel)) + ' · ' + esc(c.id) + '</div></details>';
     devolverBorradores(borradores);
     bindArchive();
@@ -1400,7 +1438,7 @@
           (s.html || '<div class="ok">' + esc(s.empty) + '</div>') + '</div>';
       }).join('') +
         (facil && !visibles.length ? '<div class="panel" data-tono="leidas"><h3>Todo al día</h3><div class="ok">Nadie espera respuesta, no hay citas hoy y ' + esc(state.agentName || 'Aiva') + ' supo contestar todo.</div></div>' : '') +
-        (facil ? '<div class="ver-todo small muted">Estás en el modo fácil. <button class="linkbtn" type="button" id="hoy-ver-todo">Ver todo lo de aiva</button></div>' : '');
+        (facil && mandaEnElModo() ? '<div class="ver-todo small muted">Estás en el modo fácil. <button class="linkbtn" type="button" id="hoy-ver-todo">Ver todo lo de aiva</button></div>' : '');
       if ($('hoy-ver-todo')) $('hoy-ver-todo').onclick = function () { $('modo-btn').click(); };
       $('today').querySelectorAll('.row').forEach(function (r) {
         r.onclick = function () { go('inbox'); openContact(r.getAttribute('data-id')); };
@@ -1524,7 +1562,10 @@
     $('notif-list').innerHTML = state.notifs.length ? state.notifs.map(function (n) { return '<div class="n' + (n.id > state.notifSeen ? ' unseen' : '') + '" data-id="' + esc(n.userId) + '"><b>' + esc(n.title) + '</b><span>' + esc(n.body) + ' · ' + rel(n.ts) + '</span></div>'; }).join('') : '<div class="empty">Nada todavía.</div>';
     $('notif-list').querySelectorAll('.n').forEach(function (el) { el.onclick = function () { $('notif').classList.remove('open'); var id = el.getAttribute('data-id'); if (id === 'system') go('agent'); else { go('inbox'); openContact(id); } }; });
   }
-  function loadNotifs() { api('/notifications').then(function (list) { state.notifs = list; renderNotifs(); }); }
+  // Con el candado no van los avisos del sistema (los motores, el enlace público): quien atiende no puede hacer nada
+  // con ellos y llevan a pantallas que no ve. Quien administra aiva los sigue viendo.
+  function avisoParaMi(n) { return !(enCandado() && n && (n.userId === 'system' || n.kind === 'public' || n.kind === 'engine')); }
+  function loadNotifs() { api('/notifications').then(function (list) { state.notifs = Array.isArray(list) ? list.filter(avisoParaMi) : list; renderNotifs(); }); }
   $('bell-btn').onclick = function (e) { e.stopPropagation(); $('notif').classList.toggle('open'); };
   document.addEventListener('click', function (e) { if (!$('notif').contains(e.target) && e.target !== $('bell-btn')) $('notif').classList.remove('open'); });
   $('notif-clear').onclick = function () { state.notifSeen = state.notifs.length ? Math.max.apply(null, state.notifs.map(function (n) { return n.id; })) : 0; try { localStorage.setItem(LLAVE('notifSeen'), String(state.notifSeen)); } catch (e) {} renderNotifs(); };
@@ -1581,7 +1622,8 @@
         return n ? '<i data-rol="' + esc(e.rol || '') + '" style="flex:' + n + '" title="' + esc(e.label + ': ' + plataCorta(n)) + '"></i>' : '';
       }).join('') + '</div>' : '');
     if ($('pip-precios')) $('pip-precios').onclick = function () { go('knowledge'); };
-    api('/ventas?days=30').then(function (v) {
+    // Las cifras no se ven en el modo fácil, y con el candado el servidor ni las da: no se piden.
+    if (!esFacil()) api('/ventas?days=30').then(function (v) {
       var b = el.querySelector('[data-k=vendido]');
       if (!b || !v || v.error) return;
       b.querySelector('.n').textContent = v.total ? plataCorta(v.total) : (v.cuantas ? 'Sin precios' : '—');
@@ -2130,11 +2172,13 @@
         ['¿Para qué sirve «¿Cómo les fue?» en Hoy?', 'Cuando una cita ya pasó, marca si el cliente vino, no vino o compró. Así el tablero sabe cómo terminó cada prospecto y, con el tiempo, el puntaje se ajusta a lo que de verdad pasa en el negocio.'],
         ['¿Qué significan «Confirmó» y «No puede» en una cita?', 'Es lo que respondió el cliente al recordatorio. Si no puede, ' + ag + ' ya le ofreció moverla o cancelarla, y te avisa.'],
         ['¿Por qué no puedo escribirle a un cliente de WhatsApp oficial?', 'WhatsApp solo deja escribir hasta 24 horas después del último mensaje del cliente. Pasado ese tiempo, toca esperar a que vuelva a escribir o usar una plantilla aprobada por Meta. El tablero lo avisa antes de que escribas.'],
-        ['¿Qué pasa si dejo algo del Perfil vacío?', 'Queda «Por confirmar». Si un cliente pregunta por eso, ' + ag + ' no lo supone: responde «' + verify + '» y la pregunta te llega a Hoy.'],
-        ['¿Cómo le enseño a ' + ag + ' una frase que no entendió?', 'En Agente › Frases que no entendimos, dale «Enseñar» y escribe qué quiere decir (por ejemplo, «a la hora del cafecito» quiere decir «a las 3»). Solo se guarda si con eso ya la entiende.'],
-        ['¿«Caliente» y «Prospecto claro» son lo mismo?', 'Sí: es el mismo puntaje. En tarjetas y avisos se dice con temperatura (frío, tibio, caliente); en la ficha, con el veredicto. Los colores coinciden.'],
-        ['En el celular, ¿dónde están Perfil, Canales o Salir?', 'En «Más», el último botón de la barra de abajo: ahí están Análisis, Perfil, Agente, Canales, Lo que sabe, Ayuda, el tema, el sonido y Salir.'],
-        ['¿Qué es «Lo que sabe»?', 'La información que ' + ag + ' tiene de ' + biz + ': el catálogo y los textos del negocio. Sirve para buscar qué sabe de un tema.'],
+        // El tercer dato dice cuándo NO va: 'candado' si habla de algo que con el candado no se ve, 'facil' si es del
+        // puntaje, que el modo fácil esconde. Una respuesta que manda a una pantalla que no está confunde más que no tenerla.
+        ['¿Qué pasa si dejo algo del Perfil vacío?', 'Queda «Por confirmar». Si un cliente pregunta por eso, ' + ag + ' no lo supone: responde «' + verify + '» y la pregunta te llega a Hoy.', 'candado'],
+        ['¿Cómo le enseño a ' + ag + ' una frase que no entendió?', 'En Agente › Frases que no entendimos, dale «Enseñar» y escribe qué quiere decir (por ejemplo, «a la hora del cafecito» quiere decir «a las 3»). Solo se guarda si con eso ya la entiende.', 'candado'],
+        ['¿«Caliente» y «Prospecto claro» son lo mismo?', 'Sí: es el mismo puntaje. En tarjetas y avisos se dice con temperatura (frío, tibio, caliente); en la ficha, con el veredicto. Los colores coinciden.', 'facil'],
+        ['En el celular, ¿dónde están Perfil, Canales o Salir?', 'En «Más», el último botón de la barra de abajo: ahí están Análisis, Perfil, Agente, Canales, Lo que sabe, Ayuda, el tema, el sonido y Salir.', 'candado'],
+        ['¿Qué es «Lo que sabe»?', 'La información que ' + ag + ' tiene de ' + biz + ': el catálogo y los textos del negocio. Sirve para buscar qué sabe de un tema.', 'candado'],
       ],
       never: ['Inventar precios, fechas, políticas o productos: lo que no sabe, lo verifica con el equipo.', 'Elegir una fecha por su cuenta: las citas salen siempre de la agenda real.', 'Cancelar o mover una cita sin que el cliente lo confirme.', 'Escribir por WhatsApp oficial fuera de las 24 horas sin plantilla.', 'Seguir respondiendo cuando una persona del equipo tomó la conversación.'],
     };
@@ -2143,14 +2187,19 @@
     helpSet('aiva.help.seen', true);
     api('/agent').then(function (a) {
       var h = helpContent(a), done = helpGet('aiva.help.done') || {};
-      var count = h.steps.filter(function (s, i) { return done[i]; }).length;
+      // Con el candado no van los pasos que llevan a lo de quien administra. Cada paso guarda su número de siempre,
+      // que es con el que se recuerda si ya se hizo.
+      var pasos = h.steps.map(function (s, i) { return { s: s, i: i }; }).filter(function (x) { return !(enCandado() && VISTAS_DE_QUIEN_ADMINISTRA[x.s.view]); });
+      var faq = h.faq.filter(function (q) { return !(q[2] === 'candado' && enCandado()) && !(q[2] === 'facil' && esFacil()); });
+      var count = pasos.filter(function (x) { return done[x.i]; }).length;
       $('help').innerHTML =
-        '<div class="panel"><b>Tutorial rápido</b><div class="small muted" id="help-progress">' + count + ' de ' + h.steps.length + ' hechos</div>' +
-        h.steps.map(function (s, i) {
+        '<div class="panel"><b>Tutorial rápido</b><div class="small muted" id="help-progress">' + count + ' de ' + pasos.length + ' hechos</div>' +
+        pasos.map(function (x) {
+          var s = x.s, i = x.i;
           return '<div class="help-step' + (done[i] ? ' done' : '') + '" data-step="' + i + '"><span class="n" aria-hidden="true">' + (done[i] ? '✓' : i + 1) + '</span><h3>' + esc(s.title) + '</h3><p>' + esc(s.text) + '</p>' +
             '<div class="feed-row"><button class="btn" data-go="' + s.view + '">' + esc(s.go) + '</button><button class="btn" data-done="' + i + '" aria-pressed="' + Boolean(done[i]) + '">' + (done[i] ? 'Hecho ✓' : 'Ya lo hice') + '</button></div></div>';
         }).join('') + '</div>' +
-        '<div class="panel help-faq"><b>Preguntas frecuentes</b>' + h.faq.map(function (q) { return '<details><summary>' + esc(q[0]) + '</summary><p>' + esc(q[1]) + '</p></details>'; }).join('') + '</div>' +
+        '<div class="panel help-faq"><b>Preguntas frecuentes</b>' + faq.map(function (q) { return '<details><summary>' + esc(q[0]) + '</summary><p>' + esc(q[1]) + '</p></details>'; }).join('') + '</div>' +
         '<div class="panel"><b>Lo que ' + esc(a.agent.name) + ' nunca hace</b><ul class="ch-steps">' + h.never.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
       $('help').querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
       $('help').querySelectorAll('[data-done]').forEach(function (b) {
@@ -2237,7 +2286,8 @@
     try { return Number(localStorage.getItem(LLAVE('guia-oculta')) || 0) > Date.now(); } catch (e) { return false; }
   }
   function bannerDeHoy() {
-    if (!esAdmin()) return helpBanner();
+    // Con el candado tampoco: cada paso de la guía lleva a la configuración, que es de quien administra aiva.
+    if (!esAdmin() || enCandado()) return helpBanner();
     // Un sitio reservado: se llena cuando llega la guía. Con lo último que se supo, para que Hoy no salte.
     return '<div id="guia-hoy" class="guia-hoy-sitio">' + tarjetaGuiaHoy() + '</div>';
   }
@@ -3546,7 +3596,8 @@
       if ($('cuenta-pip')) $('cuenta-pip').textContent = n.abiertos ? String(n.abiertos) : '';
       if ($('cuenta-cli')) $('cuenta-cli').textContent = n.total ? String(n.total) : '';
       pintarListas();
-      api('/seguimientos').then(pintarInsigniaSeg);
+      // La insignia de Clientes cuenta Seguimientos, que en el modo fácil no está: un «1» que no lleva a nada.
+      if (!esFacil()) api('/seguimientos').then(pintarInsigniaSeg);
     });
   }
   // Se recalcula cuando algo cambia, pero no a cada evento: una conversación viva manda varios por minuto.
@@ -3558,11 +3609,13 @@
     var listas = [{ k: 'calientes', ic: '🔥', t: 'Calientes', n: n.calientes }];
     if (state.name) listas.push({ k: 'mios', ic: inicialesDe(state.name), t: 'Míos', n: n.mios, ini: true });
     var fij = fijados();
-    el.innerHTML = '<div class="rl-t">Listas</div>' +
+    // En el modo fácil no van: Calientes y Míos ya son filtros de Conversaciones y de Clientes. Los fijados sí,
+    // que los puso uno mismo.
+    el.innerHTML = '<div class="solo-completo"><div class="rl-t">Listas</div>' +
       listas.map(function (l) {
         return '<button class="rl-i" data-lista="' + l.k + '"><span class="rl-ic' + (l.ini ? ' ini' : '') + '" aria-hidden="true">' + esc(l.ic) + '</span>' +
           '<span class="rl-n">' + esc(l.t) + '</span><span class="cuenta">' + (l.n ? l.n : '') + '</span></button>';
-      }).join('') +
+      }).join('') + '</div>' +
       (fij.length ? '<div class="rl-t">Fijados</div>' + fij.map(function (f) {
         return '<button class="rl-i" data-fijado="' + esc(f.id) + '" title="' + esc(f.nombre) + '"><span class="rl-ic ini" aria-hidden="true">' + esc(inicialesDe(f.nombre)) + '</span><span class="rl-n">' + esc(f.nombre) + '</span></button>';
       }).join('') : '');
@@ -4197,6 +4250,7 @@
     setInterval(function () { if (state.view === 'calendar' && cal.mode === 'week') renderCalendar(); }, 60000); // mueve la línea de "ahora"
     es.addEventListener('notification', function (e) {
       var ev = JSON.parse(e.data), n = ev.payload.notification;
+      if (!avisoParaMi(n)) return;
       state.notifs.unshift(n); if (state.notifs.length > 100) state.notifs.pop();
       renderNotifs();
       if (n.kind === 'verify') { beep(); toast(n.body, function () { go('today'); }, { titulo: n.title, icono: 'bell' }); }

@@ -447,16 +447,44 @@ Reglas:
 - **Esconder, nunca quitar.** Lo escondido lleva la clase `solo-completo` y lo apaga una sola regla de CSS
   (`:root[data-modo="facil"]`). Ni un `if` por pantalla: así lo que se agregue mañana se esconde marcándolo, y no
   hay dos versiones del tablero que mantener.
-- **Dos interruptores de dos dueños.** El del cliente (Configuración › *Modo fácil para el equipo*, solo quien
-  administra) vive en su base, en `settings`, y no en `aiva.config.json`: la configuración de cada cliente en
-  Hostinger es la de sus datos y el ZIP no la pisa. El de cada quien (Configuración › *Modo fácil*) vive en su
-  navegador y manda sobre el del cliente. Quien cambia el del equipo pasa a verlo como su equipo.
-- **El interruptor dice cómo está** («Sí»/«No»), y en Hoy, abajo, «Ver todo lo de aiva». Un modo que no se sabe
-  que existe es una función que se perdió.
+- **Dos interruptores, los dos de quien administra aiva** (desde el 2026-11-03, ver «El candado» abajo). El del
+  cliente (Configuración › *Modo fácil para el equipo*, o «⋯ › Poner el modo fácil» en la consola) vive en su base,
+  en `settings`, y no en `aiva.config.json`: la configuración de cada cliente en Hostinger es la de sus datos y el
+  ZIP no la pisa. El suyo (Configuración › *Modo fácil*) vive en su navegador, para revisar lo avanzado sin sacar
+  a nadie del modo. Quien cambia el del equipo pasa a verlo como su equipo.
+- **El interruptor dice cómo está** («Sí»/«No»), y en Hoy, abajo, «Ver todo lo de aiva» (solo para quien manda).
+  Un modo que no se sabe que existe es una función que se perdió.
 - 🪤 **Lo que se pinta con JavaScript reescribe la clase.** La línea del puntaje de la cabecera tenía
   `solo-completo` en el HTML y `renderChat` le ponía `className` entero: el modo fácil la seguía enseñando. Se vio
   en la captura, no en las pruebas; `test:revision` vigila ahora ese caso.
 - **Sin decir nada, completo.** HRC y CONFIA siguen como estaban; DUNOR se pone en fácil desde su tablero.
+
+### El candado (2026-11-03)
+
+DUNOR quiso más: que se viera mucho más simple y que nadie de su lado pudiera salirse, ni su admin. Desde entonces,
+con el modo fácil puesto, **solo el super-admin** lo quita y ve lo avanzado; el admin del cliente y los asesores
+atienden y nada más.
+
+| Con el candado | Quién |
+|---|---|
+| Prende o apaga el modo, ve lo avanzado desde su navegador | super-admin (y el token a secas) |
+| Atiende: contesta, adjunta, toma y entrega conversaciones, mueve etapas, anota, agenda, archiva, une fichas, contesta lo que aiva pregunta | todos |
+| Configura (Perfil, El negocio, Canales, El asistente, Lo que sabe, la guía), ve Análisis y Seguimientos, baja en Excel, borra fichas, el simulador | solo el super-admin |
+
+Reglas:
+
+- **Lo cierra el servidor, no el botón** (`src/channels/candado.ts`). La consola manda el rol en `x-aiva-rol`,
+  sacado de la sesión (y tira el que mande el navegador), y el cliente lo cumple según su modo. Sin esa cabecera
+  no hay candado: es el token a secas, que abre cualquier ruta igual.
+- 🪤 **Lo que se puede cambiar es una lista cerrada** de lo del día a día; lo que se puede leer es todo menos lo
+  avanzado. Así una ruta de configuración nueva nace cerrada para el candado, y el tablero no se queda en blanco
+  por cerrar de más lo que lee al arrancar.
+- **Ninguna puerta abre lo cerrado**: ni el menú, ni un aviso del sistema, ni el «cárgalos» de los precios, ni la
+  guía de inicio de Hoy, ni la Ayuda. `go()` frena las pantallas de quien administra, los avisos del sistema no le
+  llegan, y la Ayuda quita los pasos y preguntas que llevan a ellas.
+- **Más sencillo para todos en el modo fácil**: sin los números de arriba de Hoy, sin Calientes y Míos en el riel
+  (ya son filtros; los fijados se quedan), sin la insignia de Seguimientos, sin «Prospecto claro» ni «Posible
+  prospecto» (se van con el puntaje) y sin «Bajar en Excel».
 
 ### Lo que también salió de la revisión
 

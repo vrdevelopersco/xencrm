@@ -62,7 +62,9 @@ const contact = (data: Record<string, unknown>) => ({ id: 'x', data } as unknown
 const appt = { startsAt: Date.UTC(2026, 8, 24, 15), status: 'confirmada' } as Appointment;
 check(
   'recap completo',
-  recap(contact({ servicio: 'diseño a la medida', prenda: 'traje', ocasion: 'boda (novio)', fecha_evento: '6 de diciembre', presupuesto: 'no quiero gastar más de 2 millones', ciudad: 'Barranquilla', objecion: 'le queda lejos' }), appt),
+  // 🪤 El mes abreviado lo pone el ICU de Node, no aiva: hasta Node 24 era «sept» y en Node 26 (ICU 79) es «sep».
+  // Las dos se leen igual; la prueba es del orden y de los campos, no de la versión de Node.
+  recap(contact({ servicio: 'diseño a la medida', prenda: 'traje', ocasion: 'boda (novio)', fecha_evento: '6 de diciembre', presupuesto: 'no quiero gastar más de 2 millones', ciudad: 'Barranquilla', objecion: 'le queda lejos' }), appt).replace(' de sep,', ' de sept,'),
   'diseño a la medida · traje · boda (novio) · 6 de diciembre · hasta 2 millones · Barranquilla · cita jue, 24 de sept, 10:00 a. m. · lo frena: le queda lejos',
 );
 check('recap sin repetir (prenda dentro del servicio)', recap(contact({ servicio: 'alquiler de esmoquin', prenda: 'esmoquin' }), null), 'alquiler de esmoquin');

@@ -1289,7 +1289,8 @@ dialog.panel{border-radius:16px 0 0 16px}
               : '') +
             (e.gastoMes == null ? '' : ' · $' + Number(e.gastoMes).toFixed(2) + ' en IA (30 días)') +
             // Qué código corre en él: lo primero que hay que confirmar si algo cambió después de desplegar.
-            (e.version ? ' · <span title="Versión del código que corre">' + esc(e.version) + '</span>' : '') + '</div>' +
+            (e.version ? ' · <span title="Versión del código que corre">' + esc(e.version) + '</span>' : '') +
+            (e.modo === 'facil' ? ' · <span title="Su equipo solo ve lo del día a día y no puede salirse: lo quita un super-admin desde ⋯">modo fácil</span>' : '') + '</div>' +
         '</div>' +
         '<div class="vistazo">' + vistazo + '</div>' +
         // Lo de todos los días a la vista —abrir su tablero, ver más— y lo de una vez al mes en «⋯». Siete botones
@@ -1301,7 +1302,11 @@ dialog.panel{border-radius:16px 0 0 16px}
             '<label>Prioridad <select class="prio" aria-label="Prioridad de ' + esc(c.nombre) + '">' +
               Object.keys(PRIORIDADES).map(function (k) { return '<option value="' + k + '"' + (k === c.prioridad ? ' selected' : '') + '>' + PRIORIDADES[k] + '</option>'; }).join('') +
             '</select></label>' +
-            (esSuper ? '<hr><button class="btn sm respaldar" title="Bajar su configuración en un archivo">Respaldar su configuración</button>' +
+            (esSuper ? '<hr>' +
+              // El candado del modo fácil (channels/candado.ts): solo un super-admin lo pone o lo quita.
+              (e.arriba ? '<button class="btn sm modo-facil" data-modo="' + (e.modo === 'facil' ? 'facil' : 'completo') + '" title="Con el modo fácil, su equipo —el admin del cliente incluido— solo ve lo del día a día y no puede salirse">' +
+                (e.modo === 'facil' ? 'Quitar el modo fácil' : 'Poner el modo fácil') + '</button>' : '') +
+              '<button class="btn sm respaldar" title="Bajar su configuración en un archivo">Respaldar su configuración</button>' +
               '<button class="btn sm restaurar" title="Subir un respaldo y dejarlo como estaba">Restaurar un respaldo</button>' +
               '<button class="btn sm copiar" title="Copiar el token de su tablero">Copiar el token</button><hr><button class="btn sm baja">Dar de baja</button>' : '') +
           '</div></details>' +
@@ -1551,6 +1556,18 @@ dialog.panel{border-radius:16px 0 0 16px}
               cargar(); cargarPendientes();
             });
           };
+        };
+      });
+      $('lista').querySelectorAll('.modo-facil').forEach(function (b) {
+        b.onclick = function () {
+          var slug = b.closest('[data-slug]').getAttribute('data-slug');
+          var nuevo = b.getAttribute('data-modo') === 'facil' ? 'completo' : 'facil';
+          b.disabled = true;
+          cli(slug + '/tablero/modo', { method: 'PUT', body: { modo: nuevo } }).then(function (r) {
+            b.disabled = false;
+            if (!r || r.error) { alert('No se pudo cambiar el modo: ' + ((r && r.error) || 'sin respuesta')); return; }
+            cargar();
+          }).catch(function () { b.disabled = false; });
         };
       });
       $('lista').querySelectorAll('.copiar').forEach(function (b) {
