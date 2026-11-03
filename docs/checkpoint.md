@@ -3,37 +3,33 @@
 Dónde quedó el trabajo, para retomarlo sin releer la conversación. Se reescribe al cerrar cada sesión; el detalle de
 cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 
-## 2026-10-12, al cerrar
+## 2026-11-03, al cerrar
 
-**En producción: `53693f6`.** Lo subió el usuario en la tarde y se revisó en `/_salud`:
+**En producción: `5f8e6be`** (revisado en `pnpm salud`; arrancó hace 20 h y bryan entró a DUNOR hoy a las 14:39).
+**Por subir: el ZIP de `paquetes/aiva.zip`**, con el candado del modo fácil.
 
-| Qué | Estado |
-|---|---|
-| Versión | `53693f6`, Node 24 |
-| Procesos | confia, dunor, hrc y consola vivos, sin caídas |
-| Páginas | portada, consola y los tres tableros en 200 |
-| `pnpm test` | 1.865 comprobaciones, cero fallos |
+**Qué entró desde el checkpoint anterior.**
 
-**Qué entró hoy.**
+- **Claude de respaldo** (`b72db16`): entra detrás de los motores de la máquina si `ANTHROPIC_API_KEY` está en el
+  panel de Hostinger. La clave local vive en `~/aiva-credenciales/anthropic.txt`, nunca en el `.env` de la raíz.
+- **La revisión de DUNOR** (`8fd13b9`…`5f8e6be`): modo fácil, quién hizo qué, A cargo, motivo de pérdida, mensajes
+  que no salieron, «undefined COP», adjuntos por la consola.
+- **El candado** (`33b8188`): con el modo fácil puesto, solo el super-admin lo quita y ve lo avanzado; todo DUNOR,
+  bryan incluido, atiende y nada más. Lo cierra el servidor (`channels/candado.ts`, rol en `x-aiva-rol`).
 
-- **Mañana:** guardas contra inyección, tope de gasto por cliente, sedes, el «¿por qué?» de cada respuesta, claves
-  tapadas, retención automática (apagada) y sedes en el alta.
-- **Tarde:** el orden de un CRM tipo Attio en el tablero (próximo paso, valor, historia con notas, «3 de 23»,
-  fijados, listas), la consola con la piel del tablero y su color a gusto de cada quien, y la portada con la mitad
-  del texto.
+**Después de subir.**
+
+1. Consola › Clientes › DUNOR › «⋯» › **Poner el modo fácil** (solo lo ve el super-admin). Sin eso DUNOR sigue en
+   completo: el ZIP no lo prende solo.
+2. `pnpm salud` para confirmar la versión.
 
 **Para mirar.**
 
-- `/_salud` avisa que DUNOR no recibe mensajes hace 3 días y HRC hace 17. Viene de antes del despliegue. Si DUNOR
-  está atendiendo, conviene revisar su WhatsApp.
-- La clave de OpenAI del `.env` de la raíz de este Mac da 401. La buena termina en «MMA».
-- La retención sigue apagada en todos. Encenderla, con cuántos días y en qué clientes, lo decide el usuario.
-- «Míos» y los fijados van por el nombre con el que firma cada quien. Dos con el mismo nombre los comparten.
-
-**Cómo retomar.**
-
-```bash
-pnpm test                                        # todo, sin modelo
-curl -s https://aiva.hrctechnologies.com/_salud  # qué corre y si está bien
-pnpm paquete                                     # el ZIP para Hostinger
-```
+- DUNOR y HRC no reciben mensajes (HRC hace 39 días). Si DUNOR está atendiendo, hay que revisar su WhatsApp.
+- El Perfil de DUNOR sigue vacío y sus productos sin precio. Con el candado lo llenan desde la llave maestra.
+- Con el candado, bryan ya no usa el simulador ni la configuración. Si DUNOR necesita algo de eso, se le quita el
+  modo un rato desde la consola.
+- Pendiente de bryan: en qué pantalla y a qué hora «no respondió el simulador».
+- Lo decide el usuario: seguimiento automático (sugerencia: aiva propone, la persona aprueba), Instagram y
+  Messenger, el módulo de alquileres, la retención (apagada en todos).
+- Esta máquina corre Node 26 (ICU 79): abrevia «sep» y no «sept». Las pruebas ya aceptan los dos.

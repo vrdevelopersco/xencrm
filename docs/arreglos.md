@@ -7,6 +7,38 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-11-03
+
+### El candado del modo fácil · `33b8188`
+DUNOR quiso el tablero mucho más simple y que nadie de su lado se saliera de él. Se le preguntó al usuario quién
+quedaba adentro y dijo que todo DUNOR, bryan incluido: solo el super-admin quita el modo y ve lo avanzado.
+- **Lo cierra el servidor.** `channels/candado.ts`: la consola manda el rol en `x-aiva-rol`, de la sesión y no del
+  navegador, y con el modo fácil quien no es super-admin solo cambia lo del día a día (una lista cerrada: una ruta
+  nueva nace cerrada) y no lee Ventas, Seguimientos, trazas, exportaciones ni el simulador. El modo lo cambia solo
+  el super-admin, también en completo: si no, el candado se abría desde adentro.
+- **El tablero no enseña puertas cerradas.** Sin la configuración del cliente ni los interruptores propios, sin
+  la guía de inicio en Hoy (bryan, por ser admin, la veía y lo mandaba al Perfil), sin «Borrar» una ficha, sin los
+  avisos del sistema. `go()` frena las pantallas de quien administra aunque se llegue por un aviso, y la Ayuda
+  quita los pasos y las preguntas que llevan a ellas.
+- **Más sencillo para todos en el modo fácil.** Sin los cinco números de arriba de Hoy, sin Calientes y Míos en el
+  riel (ya son filtros), sin la insignia roja de Seguimientos en Clientes (contaba una pestaña escondida), sin
+  «Prospecto claro» ni «Posible prospecto» y sin «Bajar en Excel».
+- **La consola** lo pone y lo quita desde «⋯ › Poner el modo fácil» de cada cliente, y la tarjeta dice «modo fácil».
+- 🪤 **La pastilla vacía.** «La lleva …» escondido salía como una pastilla vacía en la cabecera de cada
+  conversación: `.chip` es `inline-flex` y le gana al `[hidden]` del navegador. Se vio en una captura.
+- 🪤 **«Más» en el celular sin íconos.** El primer `iconos()` corre antes de que existan esos botones.
+- 🪤 **Dos pruebas que fallaban por fuera del código.** Node 26 (ICU 79) abrevia «sep» y no «sept», y una prueba de
+  `proximo` usaba `\w`, que no acepta la tilde de «sáb» ni de «mié»: fallaba solo los días en que hoy más cuatro
+  caía ahí.
+
+Comprobado: `test:candado` (82 comprobaciones: la regla, el servidor con cada rol, el tablero con sus funciones
+de verdad y la consola), +3 en `test:consola` (el rol sale de la cuenta aunque el navegador diga «super»). 16
+errores metidos a propósito, los 16 atrapados. Suite completa 2.339 ✓, 0 ✗. Capturas en Chrome como admin del
+cliente en modo fácil, a 1440 y a 390. Con el ZIP y sus dos lanzadores, por el espejo y con Chrome: el super-admin
+lo puso desde «⋯» de la consola; una cuenta admin de DUNOR entró por su clave, quedó en fácil y con candado, solo
+vio «Tú» y Ayuda en Configuración, y el servidor le negó quitar el modo, Ventas, el Excel, la configuración y
+borrar (aunque el navegador mandara `x-aiva-rol: super`) y le dejó mover la etapa y anotar. Cero errores de JS.
+
 ## 2026-10-23
 
 ### Lo que salió de la revisión de DUNOR, y el modo fácil · `8fd13b9`
