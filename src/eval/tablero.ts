@@ -341,7 +341,8 @@ check('🪤 el borrador para retomar saluda con el nombre de verdad, no con «Vi
 check('los datos capturados se ven como palabras («Ocasión»), no como variables', (js.match(/fila\(etiquetaDato\(k\)/g) || []).length === 2 && /ocasion: 'ocasión'/.test(js));
 
 // El riel: cinco secciones. Lo demás vive dentro de un área, como pestañas; nada se quitó.
-const rielNuevo = html.slice(html.indexOf('<nav class="nav">'), html.indexOf('</nav>'));
+// 🪤 Hasta el </nav> de ESTE menú: el del modo fácil va antes en el riel y su </nav> cortaba la búsqueda en vacío.
+const rielNuevo = html.slice(html.indexOf('<nav class="nav">'), html.indexOf('</nav>', html.indexOf('<nav class="nav">')));
 const enRiel = [...rielNuevo.matchAll(/class="rb[^"]*" data-view="([a-z]+)"/g)].map((m) => m[1]);
 check('el riel tiene cinco secciones', enRiel.join(',') === 'today,inbox,calendar,clientes,analysis', enRiel.join(','));
 const areas = js.slice(js.indexOf('var AREAS = ['), js.indexOf('var AREA_DE'));

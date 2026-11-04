@@ -23,7 +23,7 @@ import { emitEvent, onEvent } from '../crm/events.js';
 import { listNotifications, startNotifications } from '../crm/notifications.js';
 import { usageSummary } from '../llm/usage.js';
 import { entrar as entrarALaConversacion, salir as salirDeLaConversacion, quienesEstan } from '../crm/presencia.js';
-import { actividadPorHora, nuevasPorDia, semanaContraSemana } from '../crm/series.js';
+import { actividadPorHora, citasPorDia, nuevasPorDia, semanaContraSemana } from '../crm/series.js';
 import { horarioDelNegocio, resumenTiempos } from '../crm/tiempos.js';
 import { origenDe, porCampana } from '../crm/origen.js';
 import { aQuienAvisar, loQueHayQueAvisar } from '../crm/vigilante.js';
@@ -1435,6 +1435,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       dias,
       zona: business.timezone,
       nuevas: nuevasPorDia(dias),
+      citas: citasPorDia(dias),
       actividad: actividadPorHora(dias),
       semana: semanaContraSemana(),
     });

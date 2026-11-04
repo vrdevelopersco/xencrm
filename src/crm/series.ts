@@ -64,6 +64,20 @@ export function nuevasPorDia(dias = 14, now = Date.now()): DiaNuevas[] {
   return [...porDia.values()];
 }
 
+/**
+ * Citas agendadas por día (el día en que se agendaron, no el de la cita). Es la segunda línea de la gráfica de
+ * Inicio: cuánta de la gente que llega termina con una cita, que es lo que en una boutique se vuelve venta.
+ */
+export function citasPorDia(dias = 14, now = Date.now()): { dia: string; citas: number }[] {
+  const filas = getDb().prepare('SELECT created_at ts FROM appointments WHERE created_at >= ?').all(now - dias * DIA) as { ts: number }[];
+  const porDia = new Map(ultimosDias(dias, now).map((dia) => [dia, 0]));
+  for (const f of filas) {
+    const dia = enLaZona(f.ts).dia;
+    if (porDia.has(dia)) porDia.set(dia, porDia.get(dia)! + 1);
+  }
+  return [...porDia].map(([dia, citas]) => ({ dia, citas }));
+}
+
 export interface Actividad {
   /** Las horas que de verdad tienen algo, para no pintar la madrugada vacía. */
   horas: number[];

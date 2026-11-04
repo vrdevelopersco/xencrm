@@ -32,8 +32,14 @@ const PUEDE_CAMBIAR: Array<[string, RegExp]> = [
   ['POST', /^propuestas\/[^/]+\/(enviar|descartar)$/],
 ];
 
-/** Lo avanzado que no se lee con el candado: números del negocio, exportaciones, trazas, lo que aprendió aiva. */
-const NO_PUEDE_LEER = /^(ventas|seguimientos|usage|series|origenes|tiempos|export|respaldo|historial|dictionary|presupuesto|retencion|motores|clave|turnos|prueba|vivo|backup|misses|avisos|public|importar)(\/|$)/;
+/**
+ * Lo avanzado que no se lee con el candado: el consumo, las exportaciones, las trazas, lo que aprendió aiva.
+ *
+ * 🪤 Ventas, Seguimientos y Analítica (series, orígenes, tiempos) SÍ se leen. Al principio no —se veían como lo
+ * avanzado—, pero DUNOR mandó el modo fácil que quería (Nexora) y esas tres están en su menú: son del día a día
+ * de quien vende, no de quien administra aiva. Lo que sigue cerrado es la configuración y lo que cuesta.
+ */
+const NO_PUEDE_LEER = /^(usage|export|respaldo|historial|dictionary|presupuesto|retencion|motores|clave|turnos|prueba|vivo|backup|misses|avisos|public|importar)(\/|$)/;
 
 const LEER = new Set(['GET', 'HEAD']);
 

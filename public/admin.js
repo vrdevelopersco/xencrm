@@ -55,7 +55,34 @@
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
     salir: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
     check: '<path d="M20 6L9 17l-5-5"/>',
-    alerta: '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'
+    alerta: '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+    // Los del modo fácil: los mismos dibujos de Nexora, que son los de Lucide.
+    inicio: '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+    analitica: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+    inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+    contacto: '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7 21v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>',
+    citas: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>',
+    kanban: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/>',
+    dolar: '<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>',
+    reloj: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    engranaje: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+    buscar: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    mas: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    abajo: '<path d="m6 9 6 6 6-6"/>',
+    derecha: '<path d="m9 18 6-6-6-6"/>',
+    cerrar: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    panel: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>',
+    burbuja: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+    embudo: '<path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>',
+    'mas-h': '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+    objetivo: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    chispa: '<path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/><path d="M20 3v4M22 5h-4M4 17v2M5 18H3"/>',
+    actividad: '<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>',
+    externo: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    escudo: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+    enviar: '<path d="M14.54 21.69a.5.5 0 0 0 .94-.03l6.5-19a.5.5 0 0 0-.64-.64l-19 6.5a.5.5 0 0 0-.02.94l7.93 3.18a2 2 0 0 1 1.11 1.11z"/><path d="m21.85 2.15-10.94 10.94"/>',
+    correo: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+    telefono: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'
   };
   // Dibuja los iconos de un trozo de página. Se llama también sobre lo que se crea después, que si no, sale vacío.
   function iconos(raiz) {
@@ -95,6 +122,8 @@
   // que para quien atiende es un código, no una persona. Se dice qué es, y las cuatro letras quedan solo para
   // distinguir a dos visitantes que escribieron a la misma hora.
   function short(id) { var m = /^(wa|meta|web|cli|mcp):(.*)$/.exec(id); if (!m) return id; var v = m[2].replace(/@.*$/, ''); return m[1] === 'web' ? 'Visitante del sitio · ' + v.slice(0, 4) : v; }
+  /** El canal sin su dibujito, para donde el color ya lo pone otra cosa (el punto verde del modo fácil). */
+  function canalSolo(ch) { return String(channelIcon(ch)).replace(/^[^\wÀ-ÿ]+\s*/, ''); }
   function channelIcon(ch) { return { whatsapp: '🟢 WhatsApp', meta: '🟢 WhatsApp', web: '🌐 Web', cli: '⌨️ CLI', mcp: '🔌 MCP' }[ch] || ch; }
   function nameOf(c) { return c.name || short(c.id); }
   // 🪤 Los datos que captura el análisis tienen nombre de variable (`ocasion`, `fecha_evento`, `talla_o_medidas`)
@@ -551,8 +580,12 @@
   // —un aiva sencillo del que nadie de su lado se salga sin querer—, y por eso quien no manda no tiene interruptor
   // propio y tampoco ve la configuración del cliente. El servidor cumple la misma regla (channels/candado.ts):
   // aquí solo se dejan de enseñar puertas que allá no abren.
-  var SOLO_COMPLETO_VISTAS = { analysis: 1, ventas: 1, seguimientos: 1, agent: 1, trazas: 1 };
-  var VISTAS_DE_QUIEN_ADMINISTRA = { guia: 1, profile: 1, negocio: 1, agent: 1, channels: 1, knowledge: 1, trazas: 1, analysis: 1, ventas: 1, seguimientos: 1 };
+  //
+  // 🪤 Analítica, Ventas y Seguimientos SÍ van en el modo fácil. Primero no iban —parecían lo avanzado—, pero DUNOR
+  // mandó la muestra de cómo lo quería (Nexora) y las tres están en su menú: son del que vende, no del que
+  // administra aiva. El servidor las abre igual (channels/candado.ts).
+  var SOLO_COMPLETO_VISTAS = { agent: 1, trazas: 1 };
+  var VISTAS_DE_QUIEN_ADMINISTRA = { guia: 1, profile: 1, negocio: 1, agent: 1, channels: 1, knowledge: 1, trazas: 1 };
   var FILTROS_COMPLETOS = /^(human|archived|stage:)/;
   function modoMio() { try { return localStorage.getItem(LLAVE('modo')) || ''; } catch (e) { return ''; } }
   function modoDelEquipo() {
@@ -564,6 +597,7 @@
   function enCandado() { return !mandaEnElModo() && modoDelEquipo() === 'facil'; }
   function aplicarModo() {
     var facil = esFacil();
+    mudarParaElFacil(facil);
     document.documentElement.setAttribute('data-modo', facil ? 'facil' : 'completo');
     document.documentElement.setAttribute('data-manda', mandaEnElModo() ? 'si' : 'no');
     document.documentElement.setAttribute('data-candado', enCandado() ? 'si' : 'no');
@@ -680,6 +714,122 @@
     try { localStorage.setItem(LLAVE('areas'), JSON.stringify(ultimaDelArea)); } catch (e) {}
   }
 
+  // ---------- el menú del modo fácil ----------
+  // 🪤 Es el de Nexora, la muestra que mandó DUNOR: dos grupos y cada pantalla con su puerta, sin pestañas
+  // adentro. Las mismas pantallas del completo —ninguna nueva—: lo que cambia es cómo se llega a ellas.
+  var MENU_FACIL = [
+    { grupo: 'Principal', items: [{ view: 'today', lbl: 'Inicio', ic: 'inicio' }, { view: 'analysis', lbl: 'Analítica', ic: 'analitica' }, { view: 'inbox', lbl: 'Inbox', ic: 'inbox', n: 'fx-n-inbox' }] },
+    { grupo: 'CRM', items: [{ view: 'clientes', lbl: 'Contactos', ic: 'contacto' }, { view: 'calendar', lbl: 'Citas', ic: 'citas', n: 'fx-n-citas' }, { view: 'pipeline', lbl: 'Pipeline', ic: 'kanban' }, { view: 'ventas', lbl: 'Ventas', ic: 'dolar' }, { view: 'seguimientos', lbl: 'Seguimientos', ic: 'reloj' }] }
+  ];
+  (function armarMenuFacil() {
+    var nav = $('nav-fx');
+    if (!nav) return;
+    nav.innerHTML = MENU_FACIL.map(function (g) {
+      return '<div class="fx-grupo">' + esc(g.grupo) + '</div><ul>' + g.items.map(function (x) {
+        return '<li><button class="fx-item" data-view="' + x.view + '"><i class="ic" data-ic="' + x.ic + '"></i><span>' + esc(x.lbl) + '</span>' +
+          (x.n ? '<span class="fx-n" id="' + x.n + '"></span>' : '') + '</button></li>';
+      }).join('') + '</ul>';
+    }).join('');
+    iconos(nav);
+    nav.querySelectorAll('[data-view]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-view')); }; });
+  })();
+  // Celular: el menú se abre desde la barra de arriba y se cierra al elegir, al tocar fuera o con Escape.
+  function menuFacil(abrir) {
+    var app = document.querySelector('.app');
+    if (!app) return;
+    var estaba = app.getAttribute('data-menu') === 'abierto';
+    if (abrir) app.setAttribute('data-menu', 'abierto'); else app.removeAttribute('data-menu');
+    if ($('fx-velo')) $('fx-velo').hidden = !abrir;
+    if ($('fx-abrir-menu')) $('fx-abrir-menu').setAttribute('aria-expanded', String(Boolean(abrir)));
+    if (abrir) { var a = document.querySelector('#nav-fx .fx-item.active') || document.querySelector('#nav-fx .fx-item'); if (a) a.focus(); }
+    else if (estaba && $('fx-abrir-menu') && onPhoneFacil()) $('fx-abrir-menu').focus();
+  }
+  function onPhoneFacil() { return window.matchMedia('(max-width: 900px)').matches; }
+  if ($('fx-abrir-menu')) $('fx-abrir-menu').onclick = function () { menuFacil(true); };
+  if ($('fx-cerrar-menu')) $('fx-cerrar-menu').onclick = function () { menuFacil(false); };
+  if ($('fx-velo')) $('fx-velo').onclick = function () { menuFacil(false); };
+
+  // ---------- la barra de arriba del modo fácil ----------
+  // Cada botón abre lo que ya existía: la búsqueda de Ctrl+K, la ficha nueva, la Ayuda, la campana, tu nombre.
+  // Ninguno trae una función propia, así que no hay dos formas distintas de hacer lo mismo.
+  function cerrarPopsFacil(menos) {
+    [['fx-crear', 'fx-crear-pop'], ['fx-yo', 'fx-yo-pop']].forEach(function (p) {
+      if (p[1] === menos || !$(p[1]) || $(p[1]).hidden) return;
+      $(p[1]).hidden = true; $(p[0]).setAttribute('aria-expanded', 'false');
+    });
+  }
+  function popFacil(boton, pop) {
+    if (!$(boton)) return;
+    $(boton).onclick = function (e) {
+      e.stopPropagation();
+      var abrir = $(pop).hidden;
+      cerrarPopsFacil(pop);
+      $(pop).hidden = !abrir;
+      $(boton).setAttribute('aria-expanded', String(abrir));
+      if (abrir) { iconos($(pop)); var b = $(pop).querySelector('button'); if (b) b.focus(); }
+    };
+  }
+  popFacil('fx-crear', 'fx-crear-pop');
+  popFacil('fx-yo', 'fx-yo-pop');
+  document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('.fx-pop')) cerrarPopsFacil(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var abierto = ['fx-crear-pop', 'fx-yo-pop'].filter(function (p) { return $(p) && !$(p).hidden; })[0];
+    if (abierto) { cerrarPopsFacil(); $(abierto === 'fx-crear-pop' ? 'fx-crear' : 'fx-yo').focus(); return; }
+    if (document.querySelector('.app[data-menu="abierto"]')) menuFacil(false);
+  });
+  document.querySelectorAll('[data-crear]').forEach(function (b) {
+    b.onclick = function (e) {
+      e.stopPropagation(); cerrarPopsFacil();
+      if (b.getAttribute('data-crear') === 'contacto') { $('cli-nuevo').click(); return; }
+      go('calendar');
+      setTimeout(function () { if ($('book-contact')) $('book-contact').focus(); }, 300);
+    };
+  });
+  // 🪤 Los de «tu cuenta» paran el clic: cada uno abre algo que se cierra al primer clic fuera de él, y este clic,
+  // al subir, contaba como «fuera» y lo cerraba en el mismo instante en que se abría.
+  document.querySelectorAll('[data-yo]').forEach(function (b) {
+    b.onclick = function (e) {
+      e.stopPropagation(); cerrarPopsFacil();
+      // El engranaje se abre junto a donde se tocó: arriba a la derecha, y no abajo en el menú.
+      if (b.getAttribute('data-yo') === 'cfg-btn') $('cfg-pop').classList.add('desde-arriba');
+      $(b.getAttribute('data-yo')).click();
+    };
+  });
+  if ($('cfg-btn')) $('cfg-btn').addEventListener('click', function (e) { if (e.isTrusted) $('cfg-pop').classList.remove('desde-arriba'); });
+  if ($('fx-buscar')) $('fx-buscar').onclick = function () { abrirPaleta(); };
+  if ($('fx-ayuda')) $('fx-ayuda').onclick = function () { go('help'); };
+  if ($('fx-campana')) $('fx-campana').onclick = function (e) { e.stopPropagation(); cerrarPopsFacil(); $('notif').classList.toggle('open'); };
+
+  // La cabecera de cada pantalla en el modo fácil: un título grande y una línea que dice para qué sirve. Va aparte
+  // del h1 del completo (que dice el ÁREA, con sus pestañas al lado) para no tocar ese.
+  function saludo() { var h = new Date().getHours(); return h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches'; }
+  function cabeceraFacil(view) {
+    var biz = state.bizName || 'tu negocio', nombre = (state.name || '').trim().split(/\s+/)[0];
+    var c = {
+      today: [saludo() + (nombre ? ', ' + nombre : ''), 'Este es el pulso de ' + biz + ' hoy.'],
+      analysis: ['Analítica', 'Cómo llega la gente, a qué horas escribe y cuánto se tarda en contestar.'],
+      clientes: ['Contactos', 'Todas las personas que han hablado con ' + biz + '.'],
+      calendar: ['Citas', 'La agenda de ' + biz + ': haz clic en un hueco libre para agendar.'],
+      pipeline: ['Pipeline', 'Mueve a cada persona entre etapas: arrastra la tarjeta o usa «Mover…».'],
+      ventas: ['Ventas', 'Lo que se vendió y lo que se perdió, con el porqué.'],
+      seguimientos: ['Seguimientos', 'A quién hay que escribirle y por qué.'],
+      help: ['Ayuda', 'Lo esencial del tablero en dos minutos.']
+    }[view];
+    var barra = document.querySelector('#view-' + view + ' > .topbar');
+    if (!barra) return;
+    var cab = barra.querySelector('.fx-cab');
+    if (!cab) {
+      cab = document.createElement('div');
+      cab.className = 'fx-cab solo-facil';
+      cab.innerHTML = '<h1></h1><p></p>';
+      barra.insertBefore(cab, barra.firstChild);
+    }
+    var h1 = barra.querySelector(':scope > h1');
+    cab.querySelector('h1').textContent = c ? c[0] : (h1 ? h1.textContent : '');
+    cab.querySelector('p').textContent = c ? c[1] : '';
+  }
+
   function go(view, opts) {
     // 🪤 Con el candado, lo de quien administra no se abre por ninguna puerta: no solo el menú, también un aviso
     // del sistema, el «cárgalos» de los precios o la última pantalla que el navegador recordaba.
@@ -701,6 +851,14 @@
     $('nav-more').classList.toggle('active', Boolean(CFG_VIEWS[view]));
     $('more-grid').querySelectorAll('[data-view]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
     closeMore();
+    // El menú del modo fácil marca la pantalla misma (allí no hay áreas con pestañas) y se cierra en el celular.
+    document.querySelectorAll('#nav-fx [data-view]').forEach(function (b) {
+      var on = b.getAttribute('data-view') === view;
+      b.classList.toggle('active', on);
+      if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+    cabeceraFacil(view);
+    menuFacil(false);
     document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('active', v.id === 'view-' + view); });
     if (view === 'today') loadToday();
     if (view === 'inbox') { if (opts && opts.filter) setFilter(opts.filter); else loadContacts(); }
@@ -744,9 +902,24 @@
       if (state.filter === 'mios') list = list.filter(esMia);
       if ($('f-mios')) $('f-mios').hidden = !state.name;
       if (state.filter === 'hot') list = list.filter(function (c) { return c.score >= 60 || rol(c.stage) === 'cita'; });
-      state.contacts = list; renderRows(); updateBadges();
+      state.contacts = list; renderRows(); updateBadges(); pintarFiltroFacil();
     });
   }
+  // Modo fácil: los mismos filtros, en un desplegable como los de Nexora, y la cuenta debajo del título.
+  function pintarFiltroFacil() {
+    var sel = $('fx-filtro');
+    if (!sel) return;
+    var opciones = Array.prototype.filter.call(document.querySelectorAll('#filters button[data-f]'), function (b) {
+      return !b.hidden && !b.classList.contains('solo-completo');
+    });
+    sel.innerHTML = opciones.map(function (b) {
+      var f = b.getAttribute('data-f');
+      return '<option value="' + esc(f) + '"' + (f === state.filter ? ' selected' : '') + '>' + esc(f === 'all' ? 'Todas las conversaciones' : b.textContent) + '</option>';
+    }).join('');
+    var n = state.contacts.length;
+    if ($('fx-inbox-n')) $('fx-inbox-n').textContent = n === 1 ? '1 conversación' : n + ' conversaciones';
+  }
+  if ($('fx-filtro')) $('fx-filtro').onchange = function () { setFilter($('fx-filtro').value); };
   function renderRows() {
     var el = $('rows');
     if (!state.contacts.length) { el.innerHTML = '<div class="empty">Nada por aquí con este filtro.</div>'; return; }
@@ -769,6 +942,9 @@
         ? '<span class="snip hit"><span class="who">' + esc(c.hit.role === 'user' ? nameOf(c) : state.agentName || 'Aiva') + ':</span> ' + mark(c.hit.content, state.q) + '</span>'
         : '<span class="snip"' + (c.summary ? ' title="' + esc(c.summary) + '"' : '') + '>' + esc(c.recap || c.summary || '') + '</span>';
       return '<div class="row' + (state.current === c.id ? ' sel' : '') + '" data-id="' + esc(c.id) + '">' +
+        // Modo fácil: las iniciales a la izquierda y, debajo del nombre, por dónde escribe y quién la tiene a cargo.
+        '<span class="fx-ini fx-ini-fila solo-facil" aria-hidden="true">' + esc(inicialesDe(nameOf(c))) + '</span>' +
+        '<div class="fx-canal solo-facil"><i></i>' + esc(canalSolo(c.channel)) + ' · ' + esc(c.responsable || 'Sin asignar') + '</div>' +
         '<div class="name"><span class="n">' + esc(nameOf(c)) + '</span>' + (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div>' +
         '<div class="time">' + rel(c.lastMessageAt) + '</div>' +
         // Segunda línea: lo que dijo, y las marcas que de verdad marcan algo. Las etiquetas no se encogen —una
@@ -806,6 +982,8 @@
   function updateBadges() {
     var unread = state.contacts.reduce(function (a, c) { return a + (c.unread || 0); }, 0);
     $('badge-unread').textContent = unread ? String(unread) : '';
+    // En el menú del modo fácil, como en Nexora: cuántas conversaciones tienen algo sin leer (no cuántos mensajes).
+    if ($('fx-n-inbox')) { var conAlgo = state.contacts.filter(function (c) { return c.unread > 0; }).length; $('fx-n-inbox').textContent = conAlgo ? String(conAlgo) : ''; }
   }
 
   function openContact(id, draft) {
@@ -854,6 +1032,16 @@
     var who = $('chat-who'); if (!who) { who = document.createElement('span'); who.id = 'chat-who'; who.className = 'chip who'; $('chat-temp').after(who); }
     who.hidden = !c.humanMode; who.textContent = c.humanMode ? 'La lleva ' + whoHas(c) + (c.humanSince ? ' · desde hace ' + rel(c.humanSince) : '') : '';
     setMode(c.humanMode);
+    // Modo fácil: la cabecera de Nexora. Quién responde va dicho en palabras, no solo en el color de la pastilla.
+    if ($('fx-chat-ini')) {
+      var agente = state.agentName || 'Aiva';
+      $('fx-chat-ini').textContent = inicialesDe(nameOf(c));
+      $('fx-chat-nombre').textContent = nameOf(c);
+      $('fx-chat-linea').innerHTML = (d.number ? '<span>+' + esc(d.number) + '</span>' : '') + '<span>' + esc(canalSolo(c.channel)) + '</span>' +
+        '<span class="fx-pill ' + (c.humanMode ? 'humano' : 'ia') + '"><i class="ic" data-ic="escudo"></i>' + esc(c.humanMode ? 'La lleva ' + whoHas(c) : agente + ' responde') + '</span>';
+      iconos($('fx-chat-linea'));
+      $('fx-control').textContent = c.humanMode ? 'Pasar a ' + agente : 'Tomar control';
+    }
     pintarPropuesta(d.propuesta);
     var m = $('msgs');
     // 🪤 Primero lo que ya estaba conversado antes de que aiva entrara. Sin esto, el tablero enseñaba media
@@ -1142,6 +1330,7 @@
   $('reply').onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); } };
   $('back-list').onclick = function () { $('inbox').setAttribute('data-pane', 'list'); };
   $('details-btn').onclick = function () { $('inbox').setAttribute('data-pane', 'details'); };
+  if ($('fx-control')) $('fx-control').onclick = function () { if (state.detail) $(state.detail.contact.humanMode ? 'seg-bot' : 'seg-human').click(); };
   if (window.innerWidth <= 900) { $('back-list').style.display = ''; $('details-btn').style.display = ''; }
 
   // Dos fichas de la misma persona (mismo número, otro canal): se pueden unir en una sola.
@@ -1243,6 +1432,7 @@
       // Quién es. En el celular este panel se ve solo, sin la conversación al lado, así que dice el nombre.
       '<div class="perfil-quien"><span class="ficha-ini" aria-hidden="true">' + esc(c.name ? inicialesDe(c.name) : '') + '</span>' +
         '<div class="ficha-titulo"><b>' + esc(nameOf(c)) + '</b><div class="small muted">' + esc(sub) + '</div></div></div>' +
+      '<button class="linkbtn fx-360 solo-facil" type="button" id="fx-ficha">Abrir la ficha completa <i class="ic" data-ic="externo"></i></button>' +
       (h.amago ? '<div class="pf-amago">⚠ Se le fue una venta: tuvo cita y no acabó en compra, y no tiene otra agendada.</div>' : '') +
       (c.summary ? '<p class="ficha-quiere">' + esc(c.summary) + '</p>' : '<p class="ficha-quiere muted">Todavía no se sabe qué busca: se llena solo mientras conversa.</p>') +
       (c.notes ? '<div class="perfil-nota"><b>Nota fija</b> ' + esc(c.notes) + '</div>' : '') +
@@ -1293,6 +1483,8 @@
     if (state.dups && state.dups.id === c.id) renderDuplicates(state.dups.list);
     $('back-chat').onclick = function () { $('inbox').setAttribute('data-pane', 'chat'); };
     $('chat-ficha').onclick = function () { abrirPerfil(c.id); };
+    $('fx-ficha').onclick = function () { abrirPerfil(c.id); };
+    iconos($('fx-ficha'));
     $('chat-nota-ok').onclick = function () {
       var texto = $('chat-nota').value.trim();
       if (!texto) { $('chat-nota').focus(); return; }
@@ -1449,10 +1641,11 @@
       $('today').innerHTML = down + bannerDeHoy() + visibles.map(function (s) {
         return '<div class="panel" data-tono="' + s.tono + '"><h3>' + esc(s.t) + '<span class="chip">' + s.n + '</span></h3>' +
           (s.html || '<div class="ok">' + esc(s.empty) + '</div>') + '</div>';
-      }).join('') +
-        (facil && !visibles.length ? '<div class="panel" data-tono="leidas"><h3>Todo al día</h3><div class="ok">Nadie espera respuesta, no hay citas hoy y ' + esc(state.agentName || 'Aiva') + ' supo contestar todo.</div></div>' : '') +
-        (facil && mandaEnElModo() ? '<div class="ver-todo small muted">Estás en el modo fácil. <button class="linkbtn" type="button" id="hoy-ver-todo">Ver todo lo de aiva</button></div>' : '');
-      if ($('hoy-ver-todo')) $('hoy-ver-todo').onclick = function () { $('modo-btn').click(); };
+      }).join('');
+      // En el modo fácil, Inicio es el de Nexora (pintarInicio) y estos recuadros son la fila de lo que espera a
+      // alguien: si no hay nada, no hay fila —el «Todo al día» lo dice el resumen del día, a la derecha—.
+      $('today').hidden = facil && !$('today').childElementCount;
+      if (facil) pintarInicio(t, sections);
       $('today').querySelectorAll('.row').forEach(function (r) {
         r.onclick = function () { go('inbox'); openContact(r.getAttribute('data-id')); };
         r.oncontextmenu = function (e) { e.preventDefault(); abrirMenu(e.clientX, e.clientY, r.getAttribute('data-id')); };
@@ -1511,6 +1704,185 @@
       });
     });
   }
+  // ---------- Inicio en el modo fácil ----------
+  // El de Nexora: cuatro números, cómo va la semana, dónde está cada persona, lo último que pasó y el resumen del
+  // día. 🪤 Todo sale de lo que aiva ya sabe —/today, /series, /stats, las notificaciones—; ninguna cifra se
+  // estima ni se rellena para que la tarjeta no quede vacía: si no hay datos, la tarjeta lo dice.
+  var FX = { dias: 7, serie: null };
+  function pintarInicio(t, sections) {
+    var r = t.resumen || {};
+    var tarjetas = [
+      { k: 'activas', t: 'Conversaciones activas', ic: 'burbuja', tono: '', p: 'Ni ganadas ni perdidas', ir: function () { go('inbox', { filter: 'all' }); } },
+      { k: 'nuevos', t: 'Prospectos nuevos', ic: 'users', tono: 'violeta', p: 'Escribieron hoy por primera vez', ir: function () { go('inbox', { filter: 'all' }); } },
+      { k: 'calientes', t: 'Prospectos calientes', ic: 'objetivo', tono: 'verde', p: 'Con ganas de comprar', ir: function () { go('inbox', { filter: 'hot' }); } },
+      { k: 'citasHoy', t: 'Citas hoy', ic: 'reloj', tono: '', p: d2(), ir: function () { go('calendar'); } }
+    ];
+    $('fx-kpis').innerHTML = tarjetas.map(function (x) {
+      return '<button class="fx-kpi" data-k="' + x.k + '"><span class="fx-kpi-cab"><span class="t">' + esc(x.t) + '</span>' +
+        '<span class="fx-ic ' + x.tono + '"><i class="ic" data-ic="' + x.ic + '"></i></span></span>' +
+        '<span class="n">' + esc(r[x.k] == null ? '—' : String(r[x.k])) + '</span><span class="p">' + esc(x.p) + '</span></button>';
+    }).join('');
+    iconos($('fx-kpis'));
+    $('fx-kpis').querySelectorAll('.fx-kpi').forEach(function (b) {
+      var x = tarjetas.filter(function (y) { return y.k === b.getAttribute('data-k'); })[0];
+      if (x) b.onclick = x.ir;
+    });
+    pintarResumenDelDia(sections);
+    cargarSerieFacil();
+    api('/stats').then(pintarEtapasFacil).catch(function () {});
+    pintarActividadFacil();
+  }
+
+  // El resumen del día, en la tarjeta oscura: lo que espera a alguien, contado, y cada cosa lleva a su recuadro.
+  function pintarResumenDelDia(sections) {
+    // Lo que pide que alguien haga algo. Las citas de hoy, las próximas y lo ya leído no: eso se mira, no se atiende.
+    var pend = (sections || []).filter(function (s) { return s.n > 0 && ['citas', 'leidas', 'proximas'].indexOf(s.tono) < 0; });
+    var total = pend.reduce(function (a, s) { return a + s.n; }, 0);
+    var agente = state.agentName || 'Aiva';
+    $('fx-resumen').innerHTML = '<div class="fx-oscura-cab"><i class="ic" data-ic="chispa"></i>Resumen del día</div>' +
+      '<h2>' + (total ? (total === 1 ? 'Una cosa espera a alguien' : total + ' cosas esperan a alguien') : 'Todo al día') + '</h2>' +
+      '<p>' + esc(total ? 'Esto es lo que no puede esperar. Lo demás lo va llevando ' + agente + '.' : 'Nadie espera respuesta, no hay citas sin resultado y ' + agente + ' supo contestar todo.') + '</p>' +
+      '<div class="fx-caja">' + (pend.length
+        ? pend.map(function (s) { return '<button data-tono="' + s.tono + '"><span>' + esc(s.t) + '</span><b>' + s.n + '</b></button>'; }).join('')
+        : '<div class="nada">Nada pendiente por ahora.</div>') + '</div>' +
+      (mandaEnElModo() ? '<button class="fx-todo" type="button" id="hoy-ver-todo">Estás en el modo fácil · Ver todo lo de aiva</button>' : '');
+    iconos($('fx-resumen'));
+    $('fx-resumen').querySelectorAll('[data-tono]').forEach(function (b) {
+      b.onclick = function () {
+        var p = document.querySelector('#today .panel[data-tono="' + b.getAttribute('data-tono') + '"]');
+        if (p) { p.scrollIntoView({ behavior: 'smooth', block: 'start' }); p.classList.add('fx-resalta'); setTimeout(function () { p.classList.remove('fx-resalta'); }, 1600); }
+      };
+    });
+    if ($('hoy-ver-todo')) $('hoy-ver-todo').onclick = function () { $('modo-btn').click(); };
+  }
+
+  // Cómo va la semana: conversaciones nuevas (área azul) y citas agendadas (línea verde), por día.
+  function cargarSerieFacil() {
+    api('/series?dias=' + Math.max(7, FX.dias)).then(function (d) {
+      if (!d || d.error || !d.nuevas) { $('fx-serie').innerHTML = vacioFacil('No se pudo cargar', 'Vuelve a intentarlo con «Actualizar».'); return; }
+      var citas = {};
+      (d.citas || []).forEach(function (c) { citas[c.dia] = c.citas; });
+      FX.serie = d.nuevas.slice(-FX.dias).map(function (n) { return { dia: n.dia, a: n.total, b: citas[n.dia] || 0 }; });
+      var s = d.semana && d.semana.conversaciones;
+      $('fx-serie-sub').textContent = s
+        ? 'Esta semana: ' + s.ahora + (s.ahora === 1 ? ' conversación nueva' : ' conversaciones nuevas') + (s.delta == null ? '' : ' (' + (s.delta >= 0 ? '+' : '') + s.delta + ' % contra la anterior)')
+        : 'Conversaciones nuevas y citas agendadas';
+      dibujarSerieFacil();
+    }).catch(function () {});
+  }
+  function vacioFacil(t, d) { return '<div class="fx-vacio"><b>' + esc(t) + '</b><span>' + esc(d) + '</span></div>'; }
+  function diaCorto(iso) { return new Date(iso + 'T12:00:00').toLocaleDateString('es-CO', { weekday: 'short' }).replace('.', ''); }
+  function diaLargo(iso) { return new Date(iso + 'T12:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'short' }).replace('.', ''); }
+  /**
+   * La curva que pasa por los puntos sin pasarse de ellos (monótona, la de Fritsch y Carlson). 🪤 Una curva
+   * cualquiera bajaba de cero entre dos días sin nada y dibujaba «−0,4 conversaciones»: esta no sale de los datos.
+   */
+  function curvaSuave(p) {
+    var n = p.length, i;
+    if (n < 2) return n ? 'M' + p[0][0] + ',' + p[0][1] : '';
+    var d = [], m = [];
+    for (i = 0; i < n - 1; i++) d.push((p[i + 1][1] - p[i][1]) / (p[i + 1][0] - p[i][0]));
+    m[0] = d[0]; m[n - 1] = d[n - 2];
+    for (i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+    for (i = 0; i < n - 1; i++) {
+      if (d[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+      var a = m[i] / d[i], b = m[i + 1] / d[i], s = a * a + b * b;
+      if (s > 9) { var k = 3 / Math.sqrt(s); m[i] = k * a * d[i]; m[i + 1] = k * b * d[i]; }
+    }
+    var out = 'M' + p[0][0] + ',' + p[0][1];
+    for (i = 0; i < n - 1; i++) {
+      var h = (p[i + 1][0] - p[i][0]) / 3;
+      out += 'C' + (p[i][0] + h) + ',' + (p[i][1] + m[i] * h) + ' ' + (p[i + 1][0] - h) + ',' + (p[i + 1][1] - m[i + 1] * h) + ' ' + p[i + 1][0] + ',' + p[i + 1][1];
+    }
+    return out;
+  }
+  function dibujarSerieFacil() {
+    var caja = $('fx-serie'), datos = FX.serie;
+    if (!caja || !datos) return;
+    if (!datos.some(function (x) { return x.a || x.b; })) { caja.innerHTML = vacioFacil('Sin actividad todavía', 'Cuando lleguen conversaciones, aquí se ve cómo va cada día.'); return; }
+    var W = Math.max(280, caja.clientWidth), H = 288, izq = 30, der = 8, arr = 10, aba = 26;
+    var max = Math.max(1, Math.max.apply(null, datos.map(function (x) { return Math.max(x.a, x.b); })));
+    // Con aire arriba, como Nexora: el día más alto no toca el techo de la gráfica.
+    var tope = Math.ceil((max + 0.5) / 4) * 4, paso = (W - izq - der) / Math.max(1, datos.length - 1);
+    var X = function (i) { return izq + i * paso; }, Y = function (v) { return arr + (H - arr - aba) * (1 - v / tope); };
+    var pa = datos.map(function (x, i) { return [X(i), Y(x.a)]; }), pb = datos.map(function (x, i) { return [X(i), Y(x.b)]; });
+    var cada = Math.ceil(datos.length / 8);
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(datos.map(function (x) { return diaLargo(x.dia) + ': ' + x.a + ' nuevas, ' + x.b + ' citas'; }).join('; ')) + '">' +
+      '<defs><linearGradient id="fx-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#2563eb" stop-opacity=".24"/><stop offset="95%" stop-color="#2563eb" stop-opacity="0"/></linearGradient></defs>';
+    for (var g = 0; g <= 4; g++) {
+      var v = tope / 4 * g, y = Y(v);
+      svg += '<line class="rejilla" x1="' + izq + '" x2="' + (W - der) + '" y1="' + y + '" y2="' + y + '"/><text class="eje" x="' + (izq - 8) + '" y="' + (y + 4) + '" text-anchor="end">' + v + '</text>';
+    }
+    datos.forEach(function (x, i) { if (i % cada === 0 || i === datos.length - 1) svg += '<text class="eje" x="' + X(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(diaCorto(x.dia)) + '</text>'; });
+    var curva = curvaSuave(pa);
+    svg += '<path d="' + curva + 'L' + X(datos.length - 1) + ',' + Y(0) + 'L' + X(0) + ',' + Y(0) + 'Z" fill="url(#fx-grad)"/>' +
+      '<path class="linea-azul" d="' + curva + '"/><path class="linea-verde" d="' + curvaSuave(pb) + '"/>';
+    datos.forEach(function (x, i) {
+      svg += '<g class="col" data-i="' + i + '"><rect class="zona" x="' + (X(i) - paso / 2) + '" y="' + arr + '" width="' + paso + '" height="' + (H - arr - aba) + '"/>' +
+        '<circle class="punto" cx="' + X(i) + '" cy="' + Y(x.a) + '" r="4" stroke="#2563eb"/><circle class="punto" cx="' + X(i) + '" cy="' + Y(x.b) + '" r="4" stroke="#10b981"/></g>';
+    });
+    caja.innerHTML = svg + '</svg><div class="fx-globo" id="fx-globo" hidden></div>';
+    caja.querySelectorAll('.col').forEach(function (c) {
+      c.onmouseenter = function () {
+        var i = Number(c.getAttribute('data-i')), x = datos[i], gl = $('fx-globo');
+        gl.innerHTML = '<b>' + esc(diaLargo(x.dia)) + '</b><span class="a">Conversaciones nuevas: ' + x.a + '</span><br><span class="v">Citas agendadas: ' + x.b + '</span>';
+        gl.hidden = false;
+        var izqG = Math.min(Math.max(0, X(i) + 12), caja.clientWidth - gl.offsetWidth);
+        gl.style.left = (X(i) + 12 + gl.offsetWidth > caja.clientWidth ? X(i) - 12 - gl.offsetWidth : izqG) + 'px';
+        gl.style.top = Math.max(0, Math.min(Y(x.a), Y(x.b)) - 20) + 'px';
+      };
+      c.onmouseleave = function () { $('fx-globo').hidden = true; };
+    });
+  }
+  if ($('fx-serie-dias')) $('fx-serie-dias').onchange = function () { FX.dias = Number($('fx-serie-dias').value) || 7; cargarSerieFacil(); };
+  var fxResize;
+  window.addEventListener('resize', function () { clearTimeout(fxResize); fxResize = setTimeout(function () { if (esFacil() && state.view === 'today') dibujarSerieFacil(); }, 150); });
+
+  // Dónde está cada persona hoy: una barra por etapa, en el orden del embudo del negocio.
+  function pintarEtapasFacil(s) {
+    var caja = $('fx-etapas');
+    if (!caja || !s || !s.byStage) return;
+    var etapas = (state.stages || []).length ? state.stages : Object.keys(s.stageLabels || {}).map(function (k) { return { id: k, label: s.stageLabels[k] }; });
+    var max = Math.max(1, Math.max.apply(null, etapas.map(function (e) { return s.byStage[e.id] || 0; })));
+    if (!etapas.some(function (e) { return s.byStage[e.id]; })) { caja.innerHTML = vacioFacil('Nadie en el embudo todavía', 'Aquí se ve cuántas personas hay en cada etapa.'); return; }
+    caja.innerHTML = etapas.map(function (e) {
+      var n = s.byStage[e.id] || 0;
+      return '<button class="fx-barra" data-stage="' + esc(e.id) + '" title="Ver en el pipeline"><span class="nom">' + esc(e.label || e.id) + '</span>' +
+        '<span class="pista"><i style="width:' + Math.round((n / max) * 100) + '%"></i></span><span class="cuantos">' + n + '</span></button>';
+    }).join('');
+    caja.querySelectorAll('.fx-barra').forEach(function (b) { b.onclick = function () { go('pipeline'); }; });
+  }
+  if ($('fx-ir-pipeline')) $('fx-ir-pipeline').onclick = function () { go('pipeline'); };
+
+  // Lo último que pasó: los avisos (quién escribió por primera vez, quién pidió una persona, qué cita se agendó).
+  // Si el servidor acaba de arrancar y todavía no hay avisos, las últimas conversaciones: algo pasó, y es eso.
+  function pintarActividadFacil() {
+    var caja = $('fx-actividad');
+    if (!caja) return;
+    var tono = function (k) { return k === 'appointment' || k === 'recordatorio' ? ['citas', 'verde'] : k === 'handoff' || k === 'verify' ? ['user', 'ambar'] : k === 'new' ? ['users', ''] : k === 'hot' ? ['objetivo', 'verde'] : ['actividad', '']; };
+    var fila = function (x) {
+      return '<button class="fx-act" data-id="' + esc(x.id) + '"><span class="fx-ic ' + x.tono[1] + '"><i class="ic" data-ic="' + x.tono[0] + '"></i></span>' +
+        '<span class="cuerpo"><span class="t">' + esc(x.t) + '</span><span class="d">' + esc(x.d) + '</span></span><time>' + esc(x.cuando ? 'hace ' + rel(x.cuando) : '') + '</time></button>';
+    };
+    var pintar = function (lista) {
+      caja.innerHTML = lista.length ? lista.map(fila).join('') : vacioFacil('Sin actividad reciente', 'Aquí aparece lo que va pasando: quién escribe, quién pide una persona, qué cita se agenda.');
+      iconos(caja);
+      caja.querySelectorAll('.fx-act').forEach(function (b) {
+        b.onclick = function () { var id = b.getAttribute('data-id'); if (id && id !== 'system') { go('inbox'); openContact(id); } };
+      });
+    };
+    var avisos = (state.notifs || []).filter(avisoParaMi).slice(0, 5);
+    if (avisos.length) {
+      pintar(avisos.map(function (n) { return { id: n.userId, t: n.title, d: n.body, cuando: n.ts, tono: tono(n.kind) }; }));
+      return;
+    }
+    api('/contacts').then(function (l) {
+      pintar((Array.isArray(l) ? l : []).filter(function (c) { return c.lastMessageAt; }).sort(function (a, b) { return b.lastMessageAt - a.lastMessageAt; }).slice(0, 5)
+        .map(function (c) { return { id: c.id, t: nameOf(c) + ' escribió', d: c.recap || c.summary || channelIcon(c.channel), cuando: c.lastMessageAt, tono: ['burbuja', ''] }; }));
+    }).catch(function () { pintar([]); });
+  }
+  if ($('fx-ver-todo')) $('fx-ver-todo').onclick = function (e) { e.stopPropagation(); if ((state.notifs || []).length) $('notif').classList.add('open'); else go('inbox'); };
+
   // Citas que ya pasaron: el resultado queda registrado (y es el dato para calibrar el puntaje más adelante).
   function pastItem(a) {
     return '<div class="appt" data-appt="' + a.id + '" data-user="' + esc(a.userId) + '"><span class="grow stack"><span class="small muted">' + esc(a.label) + '</span><b>' + esc(a.contactName || short(a.userId)) + '</b></span>' +
@@ -1572,6 +1944,7 @@
   function renderNotifs() {
     var unseen = state.notifs.filter(function (n) { return n.id > state.notifSeen; }).length;
     $('badge-notif').textContent = unseen ? String(unseen) : '';
+    if ($('fx-punto')) $('fx-punto').hidden = !unseen;
     $('notif-list').innerHTML = state.notifs.length ? state.notifs.map(function (n) { return '<div class="n' + (n.id > state.notifSeen ? ' unseen' : '') + '" data-id="' + esc(n.userId) + '"><b>' + esc(n.title) + '</b><span>' + esc(n.body) + ' · ' + rel(n.ts) + '</span></div>'; }).join('') : '<div class="empty">Nada todavía.</div>';
     $('notif-list').querySelectorAll('.n').forEach(function (el) { el.onclick = function () { $('notif').classList.remove('open'); var id = el.getAttribute('data-id'); if (id === 'system') go('agent'); else { go('inbox'); openContact(id); } }; });
   }
@@ -1883,6 +2256,7 @@
       cal.todas = list;
       cal.appts = filtrarSede(list);
       $('badge-cal').textContent = list.filter(function (a) { return a.status === 'confirmada' && a.startsAt >= Date.now(); }).length || '';
+      if ($('fx-n-citas')) $('fx-n-citas').textContent = $('badge-cal').textContent;
       renderCalendar();
     });
     api('/contacts?limit=500').then(function (list) { $('book-contact').innerHTML = list.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(nameOf(c)) + '</option>'; }).join(''); });
@@ -3535,6 +3909,10 @@
     Array.prototype.forEach.call($('cli-filtros').querySelectorAll('button'), function (b) {
       b.onclick = function () { cli.grupo = b.dataset.g; renderClientes(); };
     });
+    // Modo fácil: los mismos grupos, con su número, en un desplegable.
+    if ($('fx-cli-grupo')) $('fx-cli-grupo').innerHTML = grupos.map(function (x) {
+      return '<option value="' + x.g + '"' + (x.g === cli.grupo ? ' selected' : '') + '>' + esc(x.t.replace(/^\S+\s(?=\S)/, function (m) { return /\w/.test(m) ? m : ''; })) + ' (' + cli.lista.filter(x.es).length + ')</option>';
+    }).join('');
 
     var orden = cli.orden || 'puntaje', al = cli.al || 1;
     var list = cli.lista.filter(g.es).sort(function (a, b) { return al * ORDEN_CLI[orden](a, b); });
@@ -3582,6 +3960,24 @@
     enganchaClientes();
   }
 
+  if ($('fx-cli-grupo')) $('fx-cli-grupo').onchange = function () { cli.grupo = $('fx-cli-grupo').value; renderClientes(); };
+  // 🪤 Lo que en el fácil va en otro sitio se MUDA, no se copia: el buscador de Contactos (debajo del título) y los
+  // controles del calendario (en su tarjeta). Dos copias serían dos estados que se desincronizan —se busca en una y
+  // la otra sigue diciendo otra cosa—. Cada pieza deja una marca donde vivía, para volver ahí en el completo.
+  //
+  // 🪤 La lista va DENTRO de la función: aplicarModo() la llama al arrancar, antes de llegar a esta parte del
+  // archivo, y una `var` de aquí todavía valía undefined. El error cortaba el arranque entero.
+  function mudarParaElFacil(facil) {
+    var marcasDeMudanza = mudarParaElFacil.marcas = mudarParaElFacil.marcas || {};
+    [['cli-q', 'fx-cli-herr', true], ['cal-prev', 'fx-cal-izq'], ['cal-next', 'fx-cal-izq'], ['cal-today', 'fx-cal-izq'], ['cal-label', 'fx-cal-izq'], ['cal-sede', 'fx-cal-izq'], ['cal-seg', 'fx-cal-der']].forEach(function (m) {
+      var el = $(m[0]), destino = $(m[1]);
+      if (!el || !destino) return;
+      if (!marcasDeMudanza[m[0]]) { marcasDeMudanza[m[0]] = document.createComment(' aquí vive #' + m[0] + ' en el completo '); el.parentNode.insertBefore(marcasDeMudanza[m[0]], el); }
+      var marca = marcasDeMudanza[m[0]];
+      if (facil && el.parentNode !== destino) { if (m[2]) destino.insertBefore(el, destino.firstChild); else destino.appendChild(el); }
+      if (!facil && el.previousSibling !== marca) marca.parentNode.insertBefore(el, marca.nextSibling);
+    });
+  }
   function enganchaClientes() {
     Array.prototype.forEach.call($('cli-tabla').querySelectorAll('.quien'), function (b) {
       // 🪤 Abre la FICHA, no el chat. Ir de golpe a la conversación obliga a leerse veinte mensajes para saber
@@ -4017,6 +4413,18 @@
   };
 
   $('pf-cerrar').onclick = function () { $('dlg-perfil').close(); };
+  // 🪤 En el modo fácil la ficha se ve como una página (la «Cliente 360» de Nexora), con el menú y la barra de
+  // arriba a la vista. Pero es un diálogo modal, y lo de fuera no responde: un clic en «Citas» no hacía nada. Aquí
+  // ese clic cierra la ficha y sigue hasta donde iba.
+  $('dlg-perfil').addEventListener('click', function (e) {
+    if (!esFacil() || e.target !== $('dlg-perfil')) return;
+    var caja = $('dlg-perfil').getBoundingClientRect();
+    if (e.clientX >= caja.left && e.clientX <= caja.right && e.clientY >= caja.top && e.clientY <= caja.bottom) return;
+    $('dlg-perfil').close();
+    var debajo = document.elementFromPoint(e.clientX, e.clientY);
+    var boton = debajo && debajo.closest && debajo.closest('button, a');
+    if (boton) boton.click();
+  });
   $('pf-chat').onclick = function () {
     if (!PF) return;
     $('dlg-perfil').close();
@@ -4357,6 +4765,9 @@
       if ($('subnav-biz')) $('subnav-biz').textContent = me.business;
       if ($('marca-ini')) $('marca-ini').textContent = (me.business || 'A').trim().charAt(0).toUpperCase();
       if ($('marca-btn')) $('marca-btn').title = me.business || 'Inicio';
+      if ($('fx-biz')) $('fx-biz').textContent = me.business || 'Tu negocio';
+      if ($('fx-yo-biz')) $('fx-yo-biz').textContent = me.business || '';
+      if ($('fx-logo')) $('fx-logo').textContent = (me.business || 'A').trim().charAt(0).toUpperCase();
       pintarQuienSoy();
       state.bizName = me.business; state.agentName = me.agent;
       // 🪤 El asistente no siempre se llama Aiva (el de DUNOR en el paquete se llama Arthur): lo que el HTML trae escrito
@@ -4372,6 +4783,11 @@
         img.onerror = function () { img.remove(); };
         var marca = $('marca-btn');
         if (marca) { marca.innerHTML = ''; marca.appendChild(img); }
+        if ($('fx-logo')) {
+          var otra = img.cloneNode(), inicial = $('fx-logo').textContent;
+          otra.onerror = function () { otra.remove(); $('fx-logo').textContent = inicial; };
+          $('fx-logo').textContent = ''; $('fx-logo').appendChild(otra);
+        }
       }
       // 🪤 Aquí se rellenaba el nombre de quien atiende con el del ASISTENTE, y quedaba guardado. Como todos los
       // clientes suelen llamar igual a su asistente, el operador acababa llamándose «Aiva» en todos: parecía que
@@ -4687,6 +5103,10 @@
     $('foot-ini').style.color = '#fff';
     $('foot-ini').style.borderColor = 'transparent';
     $('foot-user').title = 'Respondes como ' + nombre;
+    // Lo mismo en el menú y la barra del modo fácil.
+    if ($('fx-nombre')) $('fx-nombre').textContent = nombre;
+    if ($('fx-yo-ini')) $('fx-yo-ini').textContent = inicialesDe(nombre);
+    if ($('fx-yo-nombre')) $('fx-yo-nombre').textContent = nombre;
     // Quién responde ahora mismo se ve en el avatar del riel (sus iniciales y su color) y al pasar por encima.
   }
   var COLORES_PERFIL = ['#7b660f', '#2b5ea8', '#2c6b3f', '#a4231b', '#6b3fa0', '#0f6b73', '#8a5a08', '#4a4740'];

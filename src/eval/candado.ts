@@ -42,8 +42,12 @@ for (const rol of ['admin', 'asesor']) {
   check(`ni hace lo avanzado: borrar una ficha, reanalizar, el simulador, importar, respaldar`,
     !puede('contacts/web%3A1', 'DELETE', rol) && !puede('contacts/web%3A1/analyze', 'POST', rol) && !puede('prueba', 'POST', rol) && !puede('historial/importar', 'POST', rol) &&
     !puede('respaldo', 'POST', rol) && !puede('demo', 'POST', rol) && !puede('reindexar', 'POST', rol) && !puede('avisos', 'PUT', rol) && !puede('tiempos/acuerdo', 'PUT', rol));
-  check(`ni lee los números ni se lleva los datos`,
-    ['ventas', 'seguimientos', 'usage', 'series', 'origenes', 'tiempos', 'export/contactos', 'respaldo', 'historial', 'dictionary/export', 'presupuesto', 'turnos/9', 'prueba', 'vivo', 'misses'].every((r) => !puede(r, 'GET', rol)));
+  check(`ni lee el consumo ni se lleva los datos`,
+    ['usage', 'export/contactos', 'respaldo', 'historial', 'dictionary/export', 'presupuesto', 'turnos/9', 'prueba', 'vivo', 'misses'].every((r) => !puede(r, 'GET', rol)));
+  // 🪤 2026-11-04: Ventas, Seguimientos y Analítica están en el menú de Nexora, la muestra del modo fácil que mandó
+  // DUNOR: son de quien vende. Antes se cerraban; ahora se leen (y siguen sin poder configurarse).
+  check(`🪤 pero sí lee Ventas, Seguimientos y Analítica`, ['ventas', 'seguimientos', 'series', 'origenes', 'tiempos'].every((r) => puede(r, 'GET', rol)));
+  check(`y el acuerdo de tiempos de Analítica no lo cambia`, !puede('tiempos/acuerdo', 'PUT', rol));
 }
 check('🪤 una ruta que no está en la lista nace cerrada: lo de mañana no queda abierto por olvido', !puede('algo-nuevo', 'POST', 'asesor') && !puede('contacts/web%3A1/algo-nuevo', 'POST', 'asesor'));
 check('el método se lee sin importar mayúsculas', puede('contacts/web%3A1', 'patch', 'asesor') && !puede('config', 'put', 'asesor'));
@@ -74,17 +78,18 @@ for (const rol of ['admin', 'asesor']) {
   check(`${rol}: lee la lista`, (await pedir('/contacts', { rol })).status === 200);
   const config = await pedir('/config', { method: 'PUT', body: { negocio: { nombre: 'Otro' } }, rol });
   check(`${rol}: no toca la configuración, y dice por qué`, config.status === 403 && /modo fácil/.test(((await config.json()) as { error: string }).error));
-  check(`${rol}: no ve Ventas`, (await pedir('/ventas', { rol })).status === 403);
+  check(`${rol}: ve Ventas, que está en el menú del modo fácil`, (await pedir('/ventas', { rol })).status === 200);
+  check(`${rol}: no ve lo que cuesta aiva`, (await pedir('/usage', { rol })).status === 403);
   check(`${rol}: no se baja los clientes en Excel`, (await pedir('/export/contactos', { rol })).status === 403);
   const borra = await pedir(`/contacts/${encodeURIComponent(otro)}`, { method: 'DELETE', rol });
   check(`${rol}: no borra una ficha, y la ficha sigue ahí`, borra.status === 403 && Boolean(getContact(otro)));
   check(`${rol}: no se quita el modo`, (await pedir('/tablero/modo', { method: 'PUT', body: { modo: 'completo' }, rol })).status === 403);
 }
-check('el super-admin sí ve Ventas', (await pedir('/ventas', { rol: 'super' })).status === 200);
-check('🪤 el candado va DESPUÉS del token: sin token no se sabe ni que hay candado', (await app.request('/admin/api/ventas', { headers: { 'x-aiva-rol': 'asesor' } })).status === 401);
+check('el super-admin sí ve lo que cuesta', (await pedir('/usage', { rol: 'super' })).status === 200);
+check('🪤 el candado va DESPUÉS del token: sin token no se sabe ni que hay candado', (await app.request('/admin/api/usage', { headers: { 'x-aiva-rol': 'asesor' } })).status === 401);
 check('el token a secas borra (es su token)', (await pedir(`/contacts/${encodeURIComponent(otro)}`, { method: 'DELETE' })).status === 200 && !getContact(otro));
 check('el super-admin quita el modo', ((await (await pedir('/tablero/modo', { method: 'PUT', body: { modo: 'completo' }, rol: 'super' })).json()) as { modo: string }).modo === 'completo');
-check('y el asesor vuelve a como estaba', (await pedir('/ventas', { rol: 'asesor' })).status === 200);
+check('y el asesor vuelve a como estaba', (await pedir('/usage', { rol: 'asesor' })).status === 200);
 
 console.log('— El tablero no enseña lo que el servidor no abre');
 const js = readFileSync(new URL('../../public/admin.js', import.meta.url), 'utf8');
@@ -125,8 +130,9 @@ check('y la raíz las lleva puestas', /setAttribute\('data-manda'/.test(js) && /
 check('borrar una ficha es de quien administra', /class="btn sm de-quien-administra" id="del-btn"/.test(js));
 check('🪤 ninguna puerta abre lo de quien administra: go() lo frena aunque llegue por un aviso o un «cárgalos»', /if \(enCandado\(\) && VISTAS_DE_QUIEN_ADMINISTRA\[view\]\)/.test(funcion('go')));
 const vistas = /var VISTAS_DE_QUIEN_ADMINISTRA = \{([^}]*)\}/.exec(js)?.[1] ?? '';
-check('y esas son la configuración y lo avanzado', ['guia', 'profile', 'negocio', 'agent', 'channels', 'knowledge', 'trazas', 'analysis', 'ventas', 'seguimientos'].every((v) => new RegExp(`\\b${v}: 1`).test(vistas)), vistas);
-check('el «Ver todo lo de aiva» de Hoy es solo para quien puede verlo', /facil && mandaEnElModo\(\) \? '<div class="ver-todo/.test(js));
+check('y esas son la configuración y lo avanzado', ['guia', 'profile', 'negocio', 'agent', 'channels', 'knowledge', 'trazas'].every((v) => new RegExp(`\\b${v}: 1`).test(vistas)), vistas);
+check('🪤 Analítica, Ventas y Seguimientos no: están en el menú del modo fácil', ['analysis', 'ventas', 'seguimientos'].every((v) => !new RegExp(`\\b${v}: 1`).test(vistas)), vistas);
+check('el «Ver todo lo de aiva» de Inicio es solo para quien puede verlo', /\(mandaEnElModo\(\) \? '<button class="fx-todo" type="button" id="hoy-ver-todo">/.test(funcion('pintarResumenDelDia')));
 check('los avisos del sistema no le llegan a quien no puede atenderlos', /function avisoParaMi/.test(js) && /list\.filter\(avisoParaMi\)/.test(js) && /if \(!avisoParaMi\(n\)\) return;/.test(js));
 check('🪤 ni la guía de inicio de Hoy, que es toda de configuración (bryan, por ser admin, la veía)', /if \(!esAdmin\(\) \|\| enCandado\(\)\) return helpBanner\(\);/.test(funcion('bannerDeHoy')));
 check('la Ayuda no manda a pantallas cerradas', /enCandado\(\) && VISTAS_DE_QUIEN_ADMINISTRA\[x\.s\.view\]/.test(js) && /q\[2\] === 'candado' && enCandado\(\)/.test(js));

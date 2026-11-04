@@ -257,8 +257,10 @@ console.log('— El tablero (código fuente)');
 const html = readFileSync(new URL('../../public/admin.html', import.meta.url), 'utf8');
 const js = readFileSync(new URL('../../public/admin.js', import.meta.url), 'utf8');
 check('🪤 el modo fácil esconde con CSS lo marcado, no lo borra', /:root\[data-modo="facil"\] \.solo-completo\{display:none!important\}/.test(html));
-const riel = html.slice(html.indexOf('<nav class="nav">'), html.indexOf('</nav>'));
+const riel = html.slice(html.indexOf('<nav class="nav">'), html.indexOf('</nav>', html.indexOf('<nav class="nav">')));
 const delRiel = (vista: string) => riel.match(new RegExp(`<button[^>]*data-view="${vista}"[^>]*>`))?.[0] ?? '';
+// 🪤 2026-11-04: el modo fácil ya no usa este riel —tiene el menú de Nexora (ver eval/facil.ts)—, pero Análisis sigue
+// marcado: quien vea el completo con el menú viejo no lo pierde, y el fácil no lo enseña desde aquí.
 check('Análisis no va en el riel del modo fácil', /solo-completo/.test(delRiel('analysis')));
 check('🪤 lo del día a día sí: Hoy, Conversaciones, Calendario y Clientes', ['today', 'inbox', 'calendar', 'clientes'].every((v) => delRiel(v) && !/solo-completo/.test(delRiel(v))));
 check('Seguimientos, El asistente y Trazabilidad se esconden', /view: 'seguimientos', lbl: 'Seguimientos', soloCompleto: true/.test(js) && /view: 'agent'[^}]*soloCompleto: true/.test(js) && /view: 'trazas'[^}]*soloCompleto: true/.test(js));

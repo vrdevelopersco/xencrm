@@ -442,6 +442,9 @@ siempre (sencillo por fuera, todo a un clic adentro) con un interruptor en vez d
 | El asistente y Trazabilidad, en Configuración | Guía, Perfil, El negocio, Canales y Lo que sabe |
 | En Hoy, los recuadros vacíos | Los que tienen algo, o «Todo al día» si no hay nada |
 
+Desde el 2026-11-04 el modo fácil tiene el menú de Nexora y Analítica, Ventas y Seguimientos vuelven a él (ver
+«El modo fácil se viste de Nexora», abajo). Lo demás de esta tabla sigue igual.
+
 Reglas:
 
 - **Esconder, nunca quitar.** Lo escondido lleva la clase `solo-completo` y lo apaga una sola regla de CSS
@@ -469,7 +472,10 @@ atienden y nada más.
 |---|---|
 | Prende o apaga el modo, ve lo avanzado desde su navegador | super-admin (y el token a secas) |
 | Atiende: contesta, adjunta, toma y entrega conversaciones, mueve etapas, anota, agenda, archiva, une fichas, contesta lo que aiva pregunta | todos |
-| Configura (Perfil, El negocio, Canales, El asistente, Lo que sabe, la guía), ve Análisis y Seguimientos, baja en Excel, borra fichas, el simulador | solo el super-admin |
+| Configura (Perfil, El negocio, Canales, El asistente, Lo que sabe, la guía), ve lo que cuesta aiva, baja en Excel, borra fichas, el simulador | solo el super-admin |
+
+Desde el 2026-11-04, Analítica, Ventas y Seguimientos **sí** se ven con el candado: están en el menú de Nexora, la
+muestra del modo fácil (ver abajo), y son del que vende. Siguen cerradas la configuración y lo que cuesta.
 
 Reglas:
 
@@ -501,6 +507,38 @@ consola y darle a «Abrir tablero» para que se abriera otra página.
   la mitad del formulario, y lo escrito se queda en pantalla para corregirlo.
 - **Quien atiende un solo cliente entra directo a su tablero** al iniciar sesión. Vuelve a la consola (su Equipo, su
   cuenta) desde Configuración › Volver a la consola, y «Salir» cierra la sesión de verdad.
+
+### El modo fácil se viste de Nexora (2026-11-04)
+
+DUNOR mandó Nexora (un CRM hecho en ChatGPT, que por dentro se llama «Vindex IA») como muestra: «que se vea igual,
+pero en nuestro producto». El modo fácil tomó su piel y su estructura; aiva sigue igual por dentro. Para copiarla
+sin entrar con clave se armó en local con su propio código público y datos de ejemplo.
+
+| De Nexora | En aiva |
+|---|---|
+| El menú blanco con dos grupos: *Principal* (Inicio, Analítica, Inbox) y *CRM* (Contactos, Citas, Pipeline, Ventas, Seguimientos); abajo Configuración y quién eres | Las mismas pantallas de siempre, cada una con su puerta (`MENU_FACIL`): ninguna nueva |
+| La barra de arriba: buscar (⌘ K), «Crear», ayuda, avisos, tu cuenta | La búsqueda de Ctrl+K, la ficha nueva y la agenda, la Ayuda, la campana, tu nombre / Configuración / Salir |
+| Inicio: cuatro números, *Rendimiento comercial*, *Pipeline por etapa*, *Actividad reciente*, *Resumen inteligente* | Los números de /today, conversaciones nuevas y citas agendadas por día, cuántos hay en cada etapa, los avisos, y el resumen del día (lo que espera a alguien, contado). Los recuadros de Hoy con algo van al final |
+| Inbox en tres columnas; la conversación con «Tomar control»; el resumen al lado con «Abrir Cliente 360°» | La bandeja de siempre con iniciales y canal en cada fila; «Tomar control» toca el mismo Aiva/Tú; la ficha de al lado con «Lo que busca» |
+| Contactos en una tabla con buscador y filtro; Cliente 360 como página | La tabla de Clientes, el buscador y los grupos debajo del título; la ficha completa ocupa la zona de trabajo |
+| Citas, Pipeline, Ventas, Seguimientos, Analítica | Las de aiva, con sus controles en tarjetas y sus columnas grises |
+
+Reglas:
+
+- **Todo detrás del modo fácil.** Los estilos van en un bloque aparte (`Modo fácil: el aspecto de Nexora`) y cada
+  regla empieza por `:root[data-modo="facil"]` o es de una pieza que solo existe ahí (`fx-…`, `solo-facil`).
+  `test:facil` lee el bloque regla por regla: una suelta cambiaría también el completo.
+- **Se muda, no se copia.** El buscador de Contactos y los controles del calendario van a otro sitio en el fácil, y
+  se mudan (`mudarParaElFacil`): dos copias serían dos estados que se desincronizan. Cada pieza deja una marca
+  donde vivía y vuelve a su sitio exacto al quitar el modo en vivo.
+- **Nada inventado.** Ninguna cifra se estima para llenar una tarjeta: si no hay datos, la tarjeta lo dice. La curva
+  de la gráfica es monótona: no baja de cero entre dos días sin nada ni se pasa del día más alto.
+- 🪤 **La ficha como página sigue siendo un diálogo**, y lo de fuera no responde: un clic en el menú la cierra y
+  sigue hasta donde iba.
+- 🪤 **El celular no tiene la barra de abajo**: el menú se abre desde la barra de arriba, como en Nexora. Las reglas
+  de la barra de abajo del completo (`.rail nav` en fila, el alto que se le restaba al contenido) se anulan aquí.
+- **Los colores son los de Nexora** (la paleta pizarra y el azul 600), en tokens `--fx-…`, con su tema oscuro, y la
+  letra es Inter. Lo de aiva que no se rehízo toma los mismos tokens y no desentona.
 
 ### Lo que también salió de la revisión
 
