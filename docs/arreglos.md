@@ -7,6 +7,30 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-11-04
+
+### El modo fácil con el aspecto de Nexora · `7c2f4ec`
+DUNOR mandó Nexora (un CRM hecho en ChatGPT) como muestra: «que se vea igual, pero en nuestro producto». Como pide
+clave, se armó en local con su propio código público y datos de ejemplo, y se copió pantalla por pantalla.
+- **El marco de Nexora**: el menú blanco con *Principal* (Inicio, Analítica, Inbox) y *CRM* (Contactos, Citas,
+  Pipeline, Ventas, Seguimientos), la configuración y quién eres abajo; la barra de arriba con el buscador, «Crear»,
+  la Ayuda, la campana y tu cuenta. En el celular, el menú se abre desde arriba. Letra Inter, la paleta pizarra y el
+  azul 600, con su tema oscuro.
+- **Inicio**: cuatro números, cómo va la semana (conversaciones nuevas y citas agendadas por día: `/series` trae
+  ahora las citas), cuántos hay en cada etapa, lo último que pasó y el resumen del día. Los recuadros de Hoy con algo
+  pendiente siguen, al final, y el resumen lleva a cada uno.
+- **Las demás pantallas con su piel**: Inbox en tres columnas con «Tomar control»; Contactos con el buscador debajo
+  del título y la ficha completa como página; Citas con sus controles en una tarjeta; Pipeline con columnas grises.
+- **El candado deja leer Analítica, Ventas y Seguimientos**, que están en el menú de la muestra; la configuración
+  y lo que cuesta aiva siguen cerrados.
+- 🪤 Fallos que salieron en las capturas y no en las pruebas: Inicio no se escondía al cambiar de pantalla (una regla
+  le ponía `display` sin mirar si estaba activa); el arranque se cortaba por una lista usada antes de definirse; en
+  el celular el menú salía acostado y sobraba una franja gris abajo (reglas de la barra de abajo del completo); el
+  tablero por etapa empezaba corrido (el imán de las columnas); los campos sin `type` salían con el borde del
+  navegador.
+- **El completo no cambia**: todo vive detrás de `:root[data-modo="facil"]`, y `test:facil` (62 pruebas) lo vigila
+  regla por regla. Atrapó los 17 errores que se le metieron a propósito. Suite completa: 2.467 bien, 0 fallas.
+
 ## 2026-11-03
 
 ### La ficha de cada persona y la entrada directa al tablero · `aaabde6`
