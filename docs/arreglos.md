@@ -27,7 +27,12 @@ clave, se armó en local con su propio código público y datos de ejemplo, y se
   le ponía `display` sin mirar si estaba activa); el arranque se cortaba por una lista usada antes de definirse; en
   el celular el menú salía acostado y sobraba una franja gris abajo (reglas de la barra de abajo del completo); el
   tablero por etapa empezaba corrido (el imán de las columnas); los campos sin `type` salían con el borde del
-  navegador.
+  navegador. Con el ZIP salieron dos más (`2a3a44e`): la fila de una cita no cabía en el panel de al lado (300 px)
+  y las etapas en cero llevaban una rayita. Después se midió que ninguna pantalla se salga de lado, en escritorio y
+  en celular.
+- **Probado con el ZIP por la consola**, como en producción: bryan entra directo, las ocho secciones cargan, el
+  servidor sigue cerrando la configuración y lo que cuesta (403, también fingiendo ser super), «Tomar control»
+  funciona, la ficha se cierra al tocar el menú, y el super sigue viendo todo. Sin errores en el navegador.
 - **El completo no cambia**: todo vive detrás de `:root[data-modo="facil"]`, y `test:facil` (62 pruebas) lo vigila
   regla por regla. Atrapó los 17 errores que se le metieron a propósito. Suite completa: 2.467 bien, 0 fallas.
 

@@ -3,38 +3,40 @@
 Dónde quedó el trabajo, para retomarlo sin releer la conversación. Se reescribe al cerrar cada sesión; el detalle de
 cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 
-## 2026-11-03, al cerrar
+## 2026-11-04, al cerrar
 
-**En producción: `5f8e6be`** (revisado en `pnpm salud`; arrancó hace 20 h y bryan entró a DUNOR hoy a las 14:39).
-**Por subir: el ZIP de `paquetes/aiva.zip`**, con el candado del modo fácil.
+**En producción: `216264b`** (revisado en `pnpm salud`: la ficha y la entrada directa; bryan entró ayer a las 16:15).
+**Por subir: el ZIP de `paquetes/aiva.zip`**, con el modo fácil de Nexora.
 
 **Qué entró desde el checkpoint anterior.**
 
-- **Claude de respaldo** (`b72db16`): entra detrás de los motores de la máquina si `ANTHROPIC_API_KEY` está en el
-  panel de Hostinger. La clave local vive en `~/aiva-credenciales/anthropic.txt`, nunca en el `.env` de la raíz.
-- **La revisión de DUNOR** (`8fd13b9`…`5f8e6be`): modo fácil, quién hizo qué, A cargo, motivo de pérdida, mensajes
-  que no salieron, «undefined COP», adjuntos por la consola.
-- **El candado** (`33b8188`): con el modo fácil puesto, solo el super-admin lo quita y ve lo avanzado; todo DUNOR,
-  bryan incluido, atiende y nada más. Lo cierra el servidor (`channels/candado.ts`, rol en `x-aiva-rol`).
-- **La ficha y la entrada directa** (`aaabde6`), del audio de DUNOR: correo, WhatsApp, Instagram, Facebook y «Nos
-  contactó por» en la ficha, lo que contó corregible (y el análisis no lo pisa), y quien atiende un solo cliente
-  entra directo a su tablero.
+- **El modo fácil se viste de Nexora** (`7c2f4ec`, `2a3a44e`). DUNOR mandó Nexora (un CRM hecho en ChatGPT, por dentro
+  «Vindex IA») como muestra: «que se vea igual, pero en nuestro producto». Se armó en local con su código público
+  para copiarla sin entrar con clave. El fácil tiene su menú (Principal: Inicio, Analítica, Inbox; CRM: Contactos,
+  Citas, Pipeline, Ventas, Seguimientos), su barra de arriba y su Inicio; las demás pantallas, su piel. El completo
+  no cambia (`test:facil` lo vigila regla por regla). Reglas en `diseno-tablero.md` › «El modo fácil se viste de
+  Nexora».
+- **El candado deja leer Analítica, Ventas y Seguimientos** (están en el menú de la muestra). La configuración y lo
+  que cuesta aiva siguen cerrados para todo DUNOR menos el super-admin.
 
 **Después de subir.**
 
-1. Consola › Clientes › DUNOR › «⋯» › **Poner el modo fácil** (solo lo ve el super-admin). Sin eso DUNOR sigue en
-   completo: el ZIP no lo prende solo.
-2. `pnpm salud` para confirmar la versión.
+1. `pnpm salud` para confirmar la versión.
+2. DUNOR ya tiene el modo fácil puesto: bryan lo verá al entrar. Si alguien de DUNOR lo quiere ver sin el candado,
+   solo el super-admin lo quita, desde «⋯» en la consola.
 
 **Para mirar.**
 
+- Nexora tiene cosas que aiva no: «Oportunidades» con valor y fecha de cierre, «Tareas», ventas que se confirman a
+  mano con monto, campos personalizados y calificación con pesos. En aiva la venta es la etapa de ganado y el valor
+  sale del catálogo o se escribe en la ficha. Si DUNOR pide alguna, preguntar cuál antes de construir.
+- Del audio de DUNOR sigue faltando **Google Sheets** con las medidas: hace falta la hoja (o una copia con dos o tres
+  filas), sus columnas, si aiva lee, escribe o las dos, y con qué se reconoce a la misma persona.
 - DUNOR y HRC no reciben mensajes (HRC hace 39 días). Si DUNOR está atendiendo, hay que revisar su WhatsApp.
-- El Perfil de DUNOR sigue vacío y sus productos sin precio. Con el candado lo llenan desde la llave maestra.
-- Con el candado, bryan ya no usa el simulador ni la configuración. Si DUNOR necesita algo de eso, se le quita el
-  modo un rato desde la consola.
+- El Perfil de DUNOR sigue vacío y sus productos sin precio: «Valor del embudo» y Ventas salen sin plata. Con el
+  candado lo llena el super-admin.
 - Pendiente de bryan: en qué pantalla y a qué hora «no respondió el simulador».
-- Del audio de DUNOR, falta: **Google Sheets** (tienen ahí las medidas de cada cliente; hace falta la hoja, sus
-  columnas y si aiva lee, escribe o las dos) y **Nexora**, la app de muestra que mandaron (no la hemos visto).
 - Lo decide el usuario: seguimiento automático (sugerencia: aiva propone, la persona aprueba), Instagram y
   Messenger, el módulo de alquileres, la retención (apagada en todos).
 - Esta máquina corre Node 26 (ICU 79): abrevia «sep» y no «sept». Las pruebas ya aceptan los dos.
+- El Chrome sin pantalla de las pruebas a veces no arranca si quedó otro vivo: `pkill -f "perfil-"` y repetir.
