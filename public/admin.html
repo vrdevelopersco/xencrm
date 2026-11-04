@@ -1835,6 +1835,10 @@ dialog.perdida input{width:100%}
 :root[data-modo="facil"] .perfil-cab .grow{flex:1}
 :root[data-modo="facil"] dialog.perfil{border-radius:var(--fx-r-xl);box-shadow:var(--fx-sombra-pop)}
 :root[data-modo="facil"] dialog.perfil::backdrop{background:rgb(15 23 42/.4)}
+/* 🪤 El panel de al lado mide 300 px (320 en el completo): la fila de una cita no cabía y salía barra de lado. */
+:root[data-modo="facil"] .details .appt{flex-wrap:wrap;gap:4px 10px}
+:root[data-modo="facil"] .details .appt .t{min-width:0}
+.fx-barra .pista i.cero{min-width:0;width:0}
 /* ===== fin del modo fácil ===== */
 </style>
 </head>

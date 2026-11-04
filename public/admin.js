@@ -1848,7 +1848,8 @@
     caja.innerHTML = etapas.map(function (e) {
       var n = s.byStage[e.id] || 0;
       return '<button class="fx-barra" data-stage="' + esc(e.id) + '" title="Ver en el pipeline"><span class="nom">' + esc(e.label || e.id) + '</span>' +
-        '<span class="pista"><i style="width:' + Math.round((n / max) * 100) + '%"></i></span><span class="cuantos">' + n + '</span></button>';
+        // Cero es nada: ni una rayita, que se lee como «casi nada».
+        '<span class="pista"><i' + (n ? '' : ' class="cero"') + ' style="width:' + Math.round((n / max) * 100) + '%"></i></span><span class="cuantos">' + n + '</span></button>';
     }).join('');
     caja.querySelectorAll('.fx-barra').forEach(function (b) { b.onclick = function () { go('pipeline'); }; });
   }
