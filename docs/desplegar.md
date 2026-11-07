@@ -69,8 +69,9 @@ copiar. En esta máquina están juntas en `~/aiva-credenciales/` (permisos 700, 
 Opcionales del blindaje (2026-11-07; el porqué en `seguridad.md` › «El blindaje»):
 
 - `AIVA_IP` — cuántos saltos desde la derecha del `x-forwarded-for` está la dirección de verdad de quien llama.
-  Sin definir se usa la primera, que el alojamiento deja escribir a quien llama. Se mide con `/_salud` (con su
-  token) mandando una dirección inventada: `tuPeticion` enseña la cadena entera.
+  Sin definir, `0` (la última): es lo medido en Hostinger el 2026-11-07. `primera` vuelve a lo de antes, que deja
+  a quien llama escribir su dirección. Se mide con `/_salud` (con su token) mandando una dirección inventada:
+  `tuPeticion` enseña la cadena entera.
 - `TABLERO_DIRECTO=si` — vuelve a abrir el tablero de cada cliente por `/<cliente>/admin` con su token. Sin esto,
   solo se abre desde la consola.
 - `SEGURIDAD_CONTACTO` — a quién escribir según `security.txt` (por defecto, el de HRC: `laft@hrctechnologies.com`).

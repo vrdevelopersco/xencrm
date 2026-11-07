@@ -131,15 +131,22 @@ function cerradoDesdeFuera(ruta, env) {
  * lista de direcciones de la libreta. La dirección buena está más a la derecha, a tantos saltos del final como
  * servidores del alojamiento haya detrás de quien la anota.
  *
- * `AIVA_IP` dice cuántos: un número cuenta saltos desde la derecha (0 = el último). Sin definir se usa el
- * primero, como siempre, hasta medir cuántos pone el alojamiento (/_salud con su token enseña la cadena entera).
+ * Medido después de subir (2026-11-07, /_salud › tuPeticion): sin cabecera llega `R, R,R`; mandando `F` llega
+ * `F, R, F, R,R`; mandando `F1, F2`, `F1, F2, R, F1, F2, R,R`. Lo que mande el navegador queda siempre ANTES, y el
+ * último elemento es siempre la dirección de verdad: lo pone el último servidor del alojamiento.
+ *
+ * `AIVA_IP` dice cuántos saltos desde la derecha: un número (0 = el último, que es lo medido y lo de por defecto)
+ * o `primera` para volver a lo de antes. 🪤 Si algún día se pone Cloudflare delante, esto cambia ese mismo día:
+ * ver docs/seguridad.md.
  */
+const SALTOS_MEDIDOS = 0;
 function direccionDeQuienLlama(cabeceras, regla) {
   const lista = String((cabeceras && cabeceras['x-forwarded-for']) || '').split(',').map((s) => s.trim()).filter(Boolean);
   if (!lista.length) return '';
-  const r = String(regla == null ? '' : regla).trim();
-  if (!/^\d+$/.test(r)) return lista[0];
-  return lista[Math.max(0, lista.length - 1 - Number(r))];
+  const r = String(regla == null ? '' : regla).trim().toLowerCase();
+  if (r === 'primera') return lista[0];
+  const saltos = /^\d+$/.test(r) ? Number(r) : SALTOS_MEDIDOS;
+  return lista[Math.max(0, lista.length - 1 - saltos)];
 }
 
 /**

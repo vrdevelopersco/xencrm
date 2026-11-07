@@ -70,7 +70,13 @@ check('…pero lo de servicio no se abre nunca', borde.cerradoDesdeFuera('/_serv
 // 🪤 Medido en producción: el alojamiento AÑADE la dirección de verdad a la que mande el navegador. La primera la
 // escribe quien llama.
 const cadena = { 'x-forwarded-for': '203.0.113.8, 179.33.208.232, 10.0.0.1' };
-check('sin regla, la primera, como siempre (hasta medir el alojamiento)', borde.direccionDeQuienLlama(cadena, undefined) === '203.0.113.8');
+check('AIVA_IP=primera vuelve a lo de antes', borde.direccionDeQuienLlama(cadena, 'primera') === '203.0.113.8');
+// 🪤 La cadena tal como llegó a producción el 2026-11-07 mandando una dirección inventada (203.0.113.8): lo del
+// navegador queda antes y la de verdad (179.33.208.232) es la última. Sin regla, esa.
+const medida = { 'x-forwarded-for': '203.0.113.8, 179.33.208.232, 203.0.113.8, 179.33.208.232,179.33.208.232' };
+check('🪤 sin regla, la última: la que pone el alojamiento (medido en producción)', borde.direccionDeQuienLlama(medida, undefined) === '179.33.208.232'
+  && borde.direccionDeQuienLlama({ 'x-forwarded-for': '203.0.113.8, 198.51.100.7, 179.33.208.232, 203.0.113.8, 198.51.100.7, 179.33.208.232,179.33.208.232' }, '') === '179.33.208.232',
+  'el primer elemento lo escribe quien llama: con él se esquivan el freno de intentos y la lista de la libreta');
 check('AIVA_IP=0 es la última; AIVA_IP=1, la anterior', borde.direccionDeQuienLlama(cadena, '0') === '10.0.0.1' && borde.direccionDeQuienLlama(cadena, '1') === '179.33.208.232');
 check('y con más saltos que direcciones, la primera (no revienta)', borde.direccionDeQuienLlama(cadena, '9') === '203.0.113.8' && borde.direccionDeQuienLlama({}, '1') === '');
 const limpias = borde.sinSuplantar({ 'cf-connecting-ip': '1.1.1.1', 'X-Real-IP': '2.2.2.2', forwarded: 'for=3.3.3.3', 'true-client-ip': '4.4.4.4', 'x-forwarded-for': '5.5.5.5, 6.6.6.6', cookie: 'a=1' }, '6.6.6.6');

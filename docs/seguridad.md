@@ -86,13 +86,10 @@ Nada de esto es explotable hoy por un desconocido, pero conviene tenerlo escrito
   sin autenticación (solo se limita la extensión). Hace falta ser admin del cliente y reiniciar.
 - **El calendario `.ics`** lleva nombre, teléfono y resumen de cada cita detrás de un enlace secreto permanente
   que, por diseño, se pega en Google Calendar o en Outlook.
-- **La dirección de quien llama, todavía sin fijar del todo.** Medido el 2026-11-07: el alojamiento AÑADE la
-  dirección de verdad al `x-forwarded-for` que mande el navegador, así que el primer elemento lo escribe quien
-  llama. El enrutador ya manda hacia adentro una sola dirección y tira `cf-connecting-ip` y compañía, pero cuál
-  elemento es el bueno depende de cuántos servidores del alojamiento hay delante: se mide en producción con
-  `/_salud` (`tuPeticion`) y se fija con `AIVA_IP`. Hasta entonces se usa el primero, como antes: el tope por
-  dirección del chat público y las barreras por dirección del ingreso se esquivan inventándola. La barrera por
-  cuenta del ingreso no depende de la dirección.
+- **La dirección de quien llama depende del alojamiento.** Medido el 2026-11-07 en producción (`/_salud` ›
+  `tuPeticion`): lo que mande el navegador en `x-forwarded-for` queda siempre antes, y el último elemento es la
+  dirección de verdad. Eso es lo que usa el enrutador por defecto (`AIVA_IP=0`), y lo único que pasa hacia adentro.
+  Si el alojamiento cambia su cadena, hay que volver a medir: mandar una dirección inventada y mirar dónde queda.
   🪤 **Si algún día se pone Cloudflare delante** (es la vía para el WAF), la lectura cambia el MISMO día: hoy
   `borde.cjs` tira `cf-connecting-ip` porque cualquiera la puede mandar; con Cloudflare, esa pasa a ser la buena,
   pero solo si la petición viene de sus rangos. Migrar sin eso deja las barreras por dirección esquivables con una
@@ -124,7 +121,7 @@ violación de CSP dio cero.
 |---|---|---|
 | **El código entero, servido a quien no entró** | `/dunor/admin.js` (387 KB) y la consola (180 KB) se bajaban sin clave, con todos sus comentarios: cada ruta de la API, cada permiso que se comprueba y, en las notas 🪤, dónde estuvo cada fallo. El mapa completo, regalado. Ahora el tablero solo sale por la consola (con sesión), la consola sin sesión es solo la puerta (37 KB), y al ZIP el código va sin comentarios. | `src/borde.cjs` (`cerradoDesdeFuera`), `src/consola.ts` (`partirLaConsola`), `src/afinar.ts` |
 | **Lo de servicio, publicado** | `/_salud` sin token contaba la versión, la de Node, qué clientes hay y cuál lleva días sin mensajes; `/<cliente>/_servicio` y `/<cliente>/health`, el estado del WhatsApp, los motores y los modelos. La versión dice qué fallos probar; la lista de clientes, a quién. Ahora `/_salud` sin token dice `{"ok":true}` y lo de cada cliente no pasa del enrutador. | `src/paquete.ts`, `src/borde.cjs` |
-| **La dirección de quien llama la escribía él** | La bitácora anotó tal cual una dirección inventada en `x-forwarded-for` (medido en producción). Con eso se esquivan el freno de intentos y la lista de direcciones de la libreta. El enrutador ya manda una sola hacia adentro y tira las que se pueden inventar; falta fijar la posición buena (`AIVA_IP`, ver «Lo que sigue abierto»). | `src/borde.cjs` (`direccionDeQuienLlama`, `sinSuplantar`) |
+| **La dirección de quien llama la escribía él** | La bitácora anotó tal cual una dirección inventada en `x-forwarded-for` (medido en producción). Con eso se esquivan el freno de intentos y la lista de direcciones de la libreta. Ahora el enrutador toma la última —medido después de subir: la que pone el alojamiento—, manda solo esa hacia adentro y tira las que se pueden inventar. | `src/borde.cjs` (`direccionDeQuienLlama`, `sinSuplantar`) |
 | **La portada sin una sola cabecera; nada de HSTS, CSP ni `security.txt`** | Cada página se ponía las suyas, y la portada, que es del enrutador, no era de nadie. Ahora todo lo que sale del enrutador pasa por `blindar`: HSTS con preload, `nosniff`, `no-referrer`, `DENY`, ningún permiso del aparato, sin caché salvo que se diga, y una CSP con la huella de cada guion en línea de cada página. | `src/borde.cjs`, `src/cabeceras.ts` |
 | **Manejadores en línea** | Con la CSP puesta, un `onclick`/`onerror` escrito en la página no corre. Había tres: dos botones de cerrar del tablero y el logo de cada cliente en la consola, este armado dentro de una cadena de JavaScript — una búsqueda que pedía un espacio antes de `on` no lo vio; lo vio la CSP en Chrome. | `public/admin.html`, `public/consola.html` |
 | **La sesión, en el almacenamiento del navegador** | El login la devolvía en el cuerpo y la consola la guardaba ahí, donde la lee cualquier guion que llegue a correr en la página: un fallo de escape se llevaba la credencial a otro sitio. Ahora viaja solo en la galleta (`HttpOnly`, `Secure`, `SameSite=Strict`). | `src/consola.ts`, `public/consola.html` |
