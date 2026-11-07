@@ -7,6 +7,36 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-11-07
+
+### Blindaje contra quien desarma aiva desde fuera · `3c96d5d`
+El usuario lo pidió así: «blindarme ante ingeniería inversa necia». Se midió producción con el verificador del
+estándar de HRC (`~/proyectos/AUDITORIA-SEGURIDAD.md`, salido de la auditoría externa de HRC-Check) y se miró lo que
+se aprende de aiva sin entrar. Antes: portada **7 MAL**, consola **5 MAL**. En el ZIP: portada **0 MAL**. El detalle,
+fila por fila, en `seguridad.md` › «El blindaje».
+- **El código ya no se regala**: `/dunor/admin.js` (387 KB, con todos sus comentarios) se bajaba sin clave. El
+  tablero ahora solo sale por la consola, la consola sin sesión es solo la puerta (37 KB en vez de 180) y al ZIP lo
+  servido va sin comentarios (`src/afinar.ts`; 818 → 564 KB). `TABLERO_DIRECTO=si` reabre el tablero por su ruta.
+- **Lo de servicio, cerrado**: `/_salud` sin token dice `{"ok":true}`; `/<cliente>/_servicio` y `/health` no pasan
+  del enrutador (tampoco disfrazados: `/%61dmin`, `//admin`).
+- **Todo lo que sale del enrutador, blindado** (`src/borde.cjs`): HSTS con preload, `nosniff`, `no-referrer`,
+  `DENY`, ningún permiso del aparato, sin caché salvo que se diga, CSP con la huella de cada guion en línea, y
+  `security.txt`.
+- **La sesión, solo en la galleta** (`HttpOnly`, `Secure`, `SameSite=Strict`), borrada con sus atributos (en
+  producción salía sin ellos). Ni en el cuerpo del login ni en el almacenamiento del navegador. La llave maestra ya
+  no vale en la dirección.
+- **El freno de intentos, de verdad** (`src/ingreso.ts`): tres barreras —dirección, dirección y cuenta, cuenta con
+  1, 5, 15 y 60 minutos—, en disco (un despliegue ya no lo borra) y `Retry-After` en todo 429.
+- 🪤 **La dirección de quien llama la escribía él**: el alojamiento AÑADE la de verdad al `x-forwarded-for` que mande
+  el navegador, y la bitácora anotó tal cual una inventada. El enrutador ya manda una sola hacia adentro; falta medir
+  en producción cuál es la buena (`/_salud` › `tuPeticion`) y fijarla con `AIVA_IP`.
+- 🪤 **Lo que vio Chrome y no las búsquedas**: el logo de cada cliente en la consola traía un `onerror` armado
+  dentro de una cadena; la CSP lo frenó y quedaba la imagen rota. El recorrido en Chrome por todas las pantallas
+  (fácil, completo, consola, monitor, portada, demo y chat) terminó con **0 violaciones de CSP y 0 errores**, y las
+  fotos con y sin afinar salieron iguales (solo cambian las horas de los datos de ejemplo).
+- `pnpm test:blindaje`: atrapó los 12 errores metidos a propósito; dos se escapaban al principio (dos barreras del
+  freno que se tapaban entre sí) y se separaron. Suite completa: 2.558 bien, 0 fallas.
+
 ## 2026-11-04
 
 ### El modo fácil con el aspecto de Nexora · `7c2f4ec`
