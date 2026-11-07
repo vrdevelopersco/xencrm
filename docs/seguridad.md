@@ -93,6 +93,11 @@ Nada de esto es explotable hoy por un desconocido, pero conviene tenerlo escrito
   `/_salud` (`tuPeticion`) y se fija con `AIVA_IP`. Hasta entonces se usa el primero, como antes: el tope por
   dirección del chat público y las barreras por dirección del ingreso se esquivan inventándola. La barrera por
   cuenta del ingreso no depende de la dirección.
+  🪤 **Si algún día se pone Cloudflare delante** (es la vía para el WAF), la lectura cambia el MISMO día: hoy
+  `borde.cjs` tira `cf-connecting-ip` porque cualquiera la puede mandar; con Cloudflare, esa pasa a ser la buena,
+  pero solo si la petición viene de sus rangos. Migrar sin eso deja las barreras por dirección esquivables con una
+  cabecera, y nada avisa. Lo midió AIVA-CRYPTO en HRC-Check (su proxy hoy limpia la cabecera; con un proxy de
+  confianza delante, deja de hacerlo).
 - **No hay tope de tamaño de cuerpo** en ninguna ruta: se lee entero y se mide después.
 - **`style-src 'unsafe-inline'`, aceptado.** La CSP no deja correr ningún guion sin huella, pero sí estilos en
   línea: las pantallas pintan con `style="…"` en cientos de sitios. Un estilo inyectado desordena una pantalla; no

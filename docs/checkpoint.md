@@ -38,7 +38,9 @@ cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 **Para mirar.**
 
 - Del blindaje queda abierto: el WAF (llega poniendo Cloudflare o parecido delante, decisión de infraestructura), el
-  `server: hcdn` del alojamiento y `style-src 'unsafe-inline'` (riesgo aceptado, escrito en `seguridad.md`).
+  `server: hcdn` del alojamiento y `style-src 'unsafe-inline'` (riesgo aceptado, escrito en `seguridad.md`). 🪤 Si
+  se pone Cloudflare, la lectura de la dirección cambia ese mismo día (ver `seguridad.md`, la dirección de quien
+  llama): AIVA-CRYPTO ofreció revisarlo juntos.
 - Nexora tiene cosas que aiva no: «Oportunidades» con valor y fecha de cierre, «Tareas», ventas que se confirman a
   mano con monto, campos personalizados y calificación con pesos. Si DUNOR pide alguna, preguntar cuál.
 - Del audio de DUNOR sigue faltando **Google Sheets** con las medidas: la hoja (o una copia con dos o tres filas),
