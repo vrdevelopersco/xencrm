@@ -9,6 +9,17 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-11-07
 
+### Medido en producción, y la dirección de quien llama · `eaced5d`
+Subido el blindaje (`c9016c8`), se midió allá: HSTS y nuestra CSP llegan (el alojamiento suma la suya de
+`upgrade-insecure-requests`; el navegador aplica las dos); la galleta sale `HttpOnly; Secure; SameSite=Strict` y
+se borra igual; `/consola` sin sesión pesa 37 KB y no trae la consola; el tablero solo por la consola, y sin una
+nota 🪤; lo de servicio de cada cliente da 404, también disfrazado.
+- 🪤 **La cadena del `x-forwarded-for`**, medida con `/_salud` › `tuPeticion` mandando direcciones inventadas: sin
+  cabecera llega `R, R,R`; con `F`, `F, R, F, R,R`. Lo del navegador queda siempre antes y la última es la de verdad.
+  Esa es ahora la de por defecto (`AIVA_IP=0`); la cadena medida quedó como prueba en `test:blindaje`.
+- El verificador del estándar marca «CSP sin default-src» en producción: lee solo la última cabecera, que es la del
+  alojamiento. Se le avisó a AIVA-CRYPTO, que lo mantiene.
+
 ### Blindaje contra quien desarma aiva desde fuera · `3c96d5d`
 El usuario lo pidió así: «blindarme ante ingeniería inversa necia». Se midió producción con el verificador del
 estándar de HRC (`~/proyectos/AUDITORIA-SEGURIDAD.md`, salido de la auditoría externa de HRC-Check) y se miró lo que

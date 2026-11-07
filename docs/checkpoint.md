@@ -5,8 +5,10 @@ cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 
 ## 2026-11-07, al cerrar
 
-**En producción: `d7d17cb`** (el modo fácil de Nexora; revisado en `pnpm salud`).
-**Por subir: el ZIP de `paquetes/aiva.zip`**, con el blindaje (`3c96d5d`).
+**En producción: `c9016c8`** (el blindaje; subido y medido el 7-nov).
+**Por subir: el ZIP de `paquetes/aiva.zip`**, con la dirección de quien llama ya medida (`eaced5d`). Mientras no
+se suba, en producción manda la primera del `x-forwarded-for` (la que escribe quien llama), salvo que se ponga
+`AIVA_IP=0` en el panel.
 
 **Qué entró desde el checkpoint anterior.**
 
@@ -25,15 +27,12 @@ cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 **Después de subir.**
 
 1. `pnpm salud` para confirmar la versión.
-2. Medir de nuevo con el verificador: `https://aiva.hrctechnologies.com` y `/consola`. Antes estaban en 7 y 5 MAL. 🪤
-   El MAL de «sin security.txt» en `/consola` es del verificador, que lo busca debajo de esa ruta. Mirar a mano
-   que **HSTS y nuestra CSP** lleguen (el alojamiento suma su `upgrade-insecure-requests`: deben verse las dos).
-3. **Fijar `AIVA_IP`**: pedir `/_salud` con su token mandando `x-forwarded-for: 203.0.113.8` y mirar
-   `tuPeticion.xForwardedFor`. La dirección de verdad queda a la derecha de la inventada; contar cuántos saltos hay
-   desde la derecha y ponerlo en el panel (o como valor por defecto en `borde.cjs`, con su prueba).
-4. Que entrar siga funcionando como siempre: bryan entra directo a su tablero; el super, a la consola. Un enlace a la
-   consola desde WhatsApp abre la puerta y entra solo si la sesión sigue viva (la galleta es Strict).
-5. Avisarle a AIVA-CRYPTO la medida de HSTS y la CSP (lo dejó pendiente en el estándar, §A).
+2. Pedir `/_salud` con su token mandando `x-forwarded-for: 203.0.113.8`: `tuPeticion.elegida` tiene que ser la
+   dirección de verdad, no la inventada.
+3. Medido ya con `c9016c8` (no hace falta repetirlo salvo que algo cambie): verificador, HSTS, CSP, galleta, puerta,
+   404 de lo de adentro. 🪤 El verificador marca «CSP sin default-src» y «el servidor se identifica»: lo primero es
+   que lee solo la última CSP (la del alojamiento); lo segundo es el `server: hcdn` del alojamiento. En `/consola`
+   marca además «sin security.txt», porque lo busca debajo de esa ruta.
 
 **Para mirar.**
 
