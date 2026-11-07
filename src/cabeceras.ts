@@ -6,6 +6,24 @@
 // creyendo que pulsa otra cosa; y `no-referrer` evita que la dirección de esta página —con lo que lleve dentro—
 // viaje a los sitios que se abren desde aquí.
 import type { Context, Next } from 'hono';
+import { createRequire } from 'node:module';
+
+// La política de las páginas es la del borde (borde.cjs), para que el enrutador y lo de adentro digan lo mismo.
+const borde = createRequire(import.meta.url)('./borde.cjs') as { cspDePagina(html: string): string };
+
+/**
+ * La CSP de una página: solo corren los guiones de la casa y los en línea que ella misma trae, por su huella. Se
+ * calcula sobre la página TAL COMO SE SIRVE —ya con lo que se le reemplaza o se le inyecta—, que es lo que mide el
+ * navegador.
+ */
+export const cspDePagina = (html: string): string => borde.cspDePagina(html);
+
+/** Sirve una página con su CSP y sin caché (lo que se pinta cambia con la configuración del cliente). */
+export function paginaConCsp(c: Context, html: string) {
+  c.header('content-security-policy', cspDePagina(html));
+  c.header('cache-control', 'no-store');
+  return c.html(html);
+}
 
 export const CABECERAS: Record<string, string> = {
   'x-content-type-options': 'nosniff',

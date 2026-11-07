@@ -80,7 +80,7 @@ import { closeMisses, listMisses, noteMiss, MISS_KINDS, type MissKind } from '..
 import { answerVerification, dismissVerification, listVerifications } from '../crm/verifications.js';
 import { grupos as gruposDe, setGrupos, setModoCanal, setSoloEscucha, soloEscucha as soloEscuchaDe, type ChannelId } from './switches.js';
 import type { Contact } from '../crm/contacts.js';
-import { cabecerasDeSiempre, soloDesdeAqui } from '../cabeceras.js';
+import { cabecerasDeSiempre, paginaConCsp, soloDesdeAqui } from '../cabeceras.js';
 import { contextoDelPaso, proximoPaso } from '../crm/proximo.js';
 import { guardarFijados, leerFijados, reemplazarEnFijados } from '../crm/fijados.js';
 
@@ -150,7 +150,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   app.use('/admin.js', cabecerasDeSiempre);
   app.use('/admin/api/*', cabecerasDeSiempre);
   app.use('/admin/api/*', soloDesdeAqui);
-  app.get('/admin', (c) => c.html(readFileSync(new URL('../../public/admin.html', import.meta.url), 'utf8')));
+  app.get('/admin', (c) => paginaConCsp(c, readFileSync(new URL('../../public/admin.html', import.meta.url), 'utf8')));
   app.get('/admin.js', (c) =>
     c.body(readFileSync(new URL('../../public/admin.js', import.meta.url), 'utf8'), 200, { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'no-cache' }),
   );
@@ -1646,7 +1646,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   /** La pantalla del monitor. Va aparte del tablero a propósito: se mira en otro aparato mientras se presenta. */
   app.get('/admin/monitor', (c) =>
-    c.html(readFileSync(new URL('../../public/monitor.html', import.meta.url), 'utf8').replaceAll('__NEGOCIO__', business.business.name)),
+    paginaConCsp(c, readFileSync(new URL('../../public/monitor.html', import.meta.url), 'utf8').replaceAll('__NEGOCIO__', business.business.name)),
   );
 
   // ── Respuestas rápidas ────────────────────────────────────────────────────

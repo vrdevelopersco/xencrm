@@ -27,6 +27,7 @@ import { deDondeViene, direccionPermitida, libretaConfig } from '../crm/libreta-
 import { leerAdjunto, TOPE_ARCHIVO } from '../crm/adjuntos.js';
 import { irseSiQuedaHuerfano } from '../huerfano.js';
 import { metaConfigured, mountMeta } from './meta.js';
+import { paginaConCsp } from '../cabeceras.js';
 import { INSTANCE, startPublicCheck } from './public-check.js';
 import { createMcpServer } from '../mcp/server.js';
 
@@ -122,7 +123,7 @@ const abierta = (c: { env?: unknown; req: { param: (n: string) => string; header
 
 app.get('/libreta/:llave', (c) => {
   if (!abierta(c)) return c.notFound();
-  return c.html(readFileSync(new URL('../../public/libreta.html', import.meta.url), 'utf8').replaceAll('__NEGOCIO__', business.business.name));
+  return paginaConCsp(c, readFileSync(new URL('../../public/libreta.html', import.meta.url), 'utf8').replaceAll('__NEGOCIO__', business.business.name));
 });
 
 app.post('/libreta/:llave', async (c) => {
@@ -296,7 +297,7 @@ app.get('/widget.js', (c) => {
 
 app.get('/', (c) => {
   const html = readFileSync(new URL('../../public/demo.html', import.meta.url), 'utf8').replaceAll('__STORE_NAME__', business.business.name);
-  return c.html(html);
+  return paginaConCsp(c, html);
 });
 
 /**
@@ -353,7 +354,7 @@ app.get('/chat', (c) => {
     .replaceAll('__MARCA__', marca)
     .replaceAll('__ESTADO__', estado)
     .replaceAll('__CUERPO__', cuerpo);
-  return c.html(html);
+  return paginaConCsp(c, html);
 });
 
 // ---------- MCP remoto (Streamable HTTP, sin estado) ----------

@@ -5391,3 +5391,12 @@
 
   boot();
 })();
+
+// Los botones que solo cierran su diálogo (`data-cerrar="dlg-…"`). 🪤 Iban con `onclick` escrito en la página, y la
+// CSP no deja correr nada escrito en línea que no traiga su huella: con ella puesta, «Ahora no» y «Cerrar» dejaban
+// de hacer nada sin decir por qué.
+document.addEventListener('click', function (e) {
+  var b = e.target && e.target.closest && e.target.closest('[data-cerrar]');
+  var dlg = b && document.getElementById(b.getAttribute('data-cerrar'));
+  if (dlg && dlg.open) dlg.close();
+});

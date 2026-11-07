@@ -17,6 +17,9 @@ el archivo de usuarios.
 
 ## Lo que quedó probado
 
+El blindaje contra quien desarma la aplicación desde fuera (2026-11-07) tiene su batería aparte, `pnpm
+test:blindaje`, y su sección más abajo: «El blindaje».
+
 - **Entrar**: clave mala, usuario inexistente y mensaje idéntico en los dos casos (no delata qué cuentas
   existen). La galleta es HttpOnly y SameSite.
 - **Aislamiento**: quien atiende a un negocio solo ve ese negocio; no alcanza el tablero, el logo ni el token de
@@ -40,11 +43,12 @@ el archivo de usuarios.
   conversación inventado no devuelve nada de nadie.
 - **Lo que escribe un desconocido**: la función de escape del tablero y de la consola, y que el nombre de quien
   contestó no pueda meter etiquetas (ver abajo).
-- **Cabeceras**: `nosniff`, `DENY` y `no-referrer` en la consola y en el tablero.
+- **Cabeceras**: `nosniff`, `DENY` y `no-referrer` en la consola y en el tablero; en el despliegue, en TODO lo
+  que sale del enrutador, con HSTS, `Permissions-Policy` y CSP (`test:blindaje`).
 - **Webhook de Meta**: sin el secreto de la app no se acepta ningún aviso.
 - **Exportación**: una fórmula en el nombre sale como texto, y un teléfono sigue saliendo igual.
 - **Fuerza bruta**: probar claves a ciegas se frena (esta prueba va la última a propósito: el freno deja
-  bloqueado quince minutos a quien lo dispara).
+  bloqueado a quien lo dispara). Las tres barreras, una por una y con reloj, en `test:blindaje`.
 - **Otra página**: una petición lanzada desde un sitio ajeno no se ejecuta.
 
 ## Lo que se encontró y se arregló
@@ -80,19 +84,53 @@ Nada de esto es explotable hoy por un desconocido, pero conviene tenerlo escrito
   otro por fuera, lo arregla el super-admin.
 - **La ruta del logo no está confinada.** `marca.logo` acepta cualquier ruta del disco y `/brand/logo` se sirve
   sin autenticación (solo se limita la extensión). Hace falta ser admin del cliente y reiniciar.
-- **`/health` es público** y dice el nombre del negocio, el del asistente, el modelo y el estado de los motores.
 - **El calendario `.ics`** lleva nombre, teléfono y resumen de cada cita detrás de un enlace secreto permanente
   que, por diseño, se pega en Google Calendar o en Outlook.
-- **La dirección de quien llama se cree a pies juntillas** (`cf-connecting-ip`, `x-forwarded-for`), así que el
-  tope por dirección del chat público se esquiva cambiando esa cabecera. El tope por conversación sigue de pie.
+- **La dirección de quien llama, todavía sin fijar del todo.** Medido el 2026-11-07: el alojamiento AÑADE la
+  dirección de verdad al `x-forwarded-for` que mande el navegador, así que el primer elemento lo escribe quien
+  llama. El enrutador ya manda hacia adentro una sola dirección y tira `cf-connecting-ip` y compañía, pero cuál
+  elemento es el bueno depende de cuántos servidores del alojamiento hay delante: se mide en producción con
+  `/_salud` (`tuPeticion`) y se fija con `AIVA_IP`. Hasta entonces se usa el primero, como antes: el tope por
+  dirección del chat público y las barreras por dirección del ingreso se esquivan inventándola. La barrera por
+  cuenta del ingreso no depende de la dirección.
 - **No hay tope de tamaño de cuerpo** en ninguna ruta: se lee entero y se mide después.
-- **No hay CSP.** Las páginas traen estilos y guiones en línea, así que ponerla pide moverlos a archivos o usar
-  un sello por respuesta.
+- **`style-src 'unsafe-inline'`, aceptado.** La CSP no deja correr ningún guion sin huella, pero sí estilos en
+  línea: las pantallas pintan con `style="…"` en cientos de sitios. Un estilo inyectado desordena una pantalla; no
+  se lleva nada.
+- **Lo que pone el alojamiento y no se quita desde aquí**: `server: hcdn` en todas las respuestas, y su propia
+  `Content-Security-Policy: upgrade-insecure-requests`, que va además de la nuestra. Tampoco hay WAF: llegaría
+  poniendo un proveedor delante (Cloudflare o parecido), que es una decisión de infraestructura, no de código.
 - **Sin rotación de tokens.** Ni el del tablero ni el del calendario caducan ni se pueden revocar sin cambiar la
   variable de entorno y reiniciar.
 - **La consola queda publicada** en el despliegue en paquete: el enrutador manda a la consola todo lo que no sea
-  un cliente. Escucha en 127.0.0.1, pero el enrutador está delante. Con el freno de intentos ya no es una puerta
-  abierta, pero la llave maestra debe seguir siendo larga y aleatoria.
+  un cliente. Escucha en 127.0.0.1, pero el enrutador está delante. Sin sesión solo se sirve la puerta (el
+  formulario de entrar) y el ingreso tiene tres barreras, pero la llave maestra debe seguir siendo larga y
+  aleatoria.
+
+## El blindaje (2026-11-07)
+
+Se midió aiva en producción con el verificador del estándar de HRC (`~/proyectos/AUDITORIA-SEGURIDAD.md`), que
+nació de una auditoría externa de HRC-Check, y se miró además lo que se aprende de aiva sin entrar. El usuario lo
+pidió así: «blindarme ante ingeniería inversa necia». Antes: la portada **7 MAL** y la consola **5 MAL**. En el ZIP,
+antes de subir: la portada **0 MAL**. Pruebas en `pnpm test:blindaje`; el recorrido en Chrome contando cada
+violación de CSP dio cero.
+
+| Qué | Cómo se explotaba | Dónde |
+|---|---|---|
+| **El código entero, servido a quien no entró** | `/dunor/admin.js` (387 KB) y la consola (180 KB) se bajaban sin clave, con todos sus comentarios: cada ruta de la API, cada permiso que se comprueba y, en las notas 🪤, dónde estuvo cada fallo. El mapa completo, regalado. Ahora el tablero solo sale por la consola (con sesión), la consola sin sesión es solo la puerta (37 KB), y al ZIP el código va sin comentarios. | `src/borde.cjs` (`cerradoDesdeFuera`), `src/consola.ts` (`partirLaConsola`), `src/afinar.ts` |
+| **Lo de servicio, publicado** | `/_salud` sin token contaba la versión, la de Node, qué clientes hay y cuál lleva días sin mensajes; `/<cliente>/_servicio` y `/<cliente>/health`, el estado del WhatsApp, los motores y los modelos. La versión dice qué fallos probar; la lista de clientes, a quién. Ahora `/_salud` sin token dice `{"ok":true}` y lo de cada cliente no pasa del enrutador. | `src/paquete.ts`, `src/borde.cjs` |
+| **La dirección de quien llama la escribía él** | La bitácora anotó tal cual una dirección inventada en `x-forwarded-for` (medido en producción). Con eso se esquivan el freno de intentos y la lista de direcciones de la libreta. El enrutador ya manda una sola hacia adentro y tira las que se pueden inventar; falta fijar la posición buena (`AIVA_IP`, ver «Lo que sigue abierto»). | `src/borde.cjs` (`direccionDeQuienLlama`, `sinSuplantar`) |
+| **La portada sin una sola cabecera; nada de HSTS, CSP ni `security.txt`** | Cada página se ponía las suyas, y la portada, que es del enrutador, no era de nadie. Ahora todo lo que sale del enrutador pasa por `blindar`: HSTS con preload, `nosniff`, `no-referrer`, `DENY`, ningún permiso del aparato, sin caché salvo que se diga, y una CSP con la huella de cada guion en línea de cada página. | `src/borde.cjs`, `src/cabeceras.ts` |
+| **Manejadores en línea** | Con la CSP puesta, un `onclick`/`onerror` escrito en la página no corre. Había tres: dos botones de cerrar del tablero y el logo de cada cliente en la consola, este armado dentro de una cadena de JavaScript — una búsqueda que pedía un espacio antes de `on` no lo vio; lo vio la CSP en Chrome. | `public/admin.html`, `public/consola.html` |
+| **La sesión, en el almacenamiento del navegador** | El login la devolvía en el cuerpo y la consola la guardaba ahí, donde la lee cualquier guion que llegue a correr en la página: un fallo de escape se llevaba la credencial a otro sitio. Ahora viaja solo en la galleta (`HttpOnly`, `Secure`, `SameSite=Strict`). | `src/consola.ts`, `public/consola.html` |
+| **Salir no borraba la galleta con sus atributos** | Salía `Max-Age=0; Path=/` a secas (medido en producción): borrar no hereda los atributos del alta, y un navegador que los compara puede no darla por borrada. La sesión sí moría en el servidor. | `src/consola.ts` (`quitarGalleta`) |
+| **El freno de intentos olvidaba todo en cada despliegue** | Vivía en memoria, con una espera fija y sin la barrera del medio (dirección + cuenta). Ahora son tres barreras (10 por dirección en 15 min, 5 por dirección y cuenta en un minuto, y la cuenta con 1, 5, 15 y 60 minutos), en disco, y todo 429 trae `Retry-After` cuadrado con el texto. | `src/ingreso.ts` |
+| **La llave maestra por la dirección** | Se aceptaba en `?token=`, y lo que va en la dirección queda en los registros del alojamiento. Ahora solo por cabecera. | `src/consola.ts` (`quienEs`) |
+| **Los errores le contaban al de fuera qué se rompió** | `Falló /ruta: <mensaje interno>`. El detalle va al registro del servidor; afuera, la ruta y la hora. | `src/consola.ts` |
+
+🪤 **widget.js no se minifica.** Sus marcas van dentro de comillas simples y quien las llena escapa para esa
+comilla; el minificador las pasa a dobles (un saludo con `"` rompería la cadena) y pliega `'__SALUDO__' || …`.
+A ese solo se le quitan las líneas de comentario.
 
 ## Si algo de esto cambia
 

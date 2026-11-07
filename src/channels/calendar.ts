@@ -4,6 +4,7 @@ import type { HttpBindings } from '@hono/node-server';
 import { business } from '../config.js';
 import { getAppointment } from '../crm/appointments.js';
 import { FEED_TOKEN, appointmentIcs, appointmentsFeed, customerPage, validSig } from '../crm/calendar.js';
+import { paginaConCsp } from '../cabeceras.js';
 
 const ICS_HEADERS = { 'content-type': 'text/calendar; charset=utf-8', 'cache-control': 'no-cache' };
 
@@ -23,6 +24,6 @@ export function mountCalendar(app: Hono<{ Bindings: HttpBindings }>) {
       const name = business.business.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       return c.body(appointmentIcs(appt), 200, { ...ICS_HEADERS, 'content-disposition': `attachment; filename="cita-${name || 'aiva'}.ics"` });
     }
-    return c.html(customerPage(appt));
+    return paginaConCsp(c, customerPage(appt));
   });
 }

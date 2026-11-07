@@ -57,7 +57,7 @@ const app = new Hono();
 mountConsola(app);
 const comoAna = async (ruta: string, init: RequestInit = {}) => {
   const entrar = await app.request('http://local/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ usuario: 'ana', clave: 'clave-larga-1' }) });
-  const { sesion } = (await entrar.json()) as { sesion: string };
+  const sesion = /aiva_consola=([^;]*)/.exec(entrar.headers.get('set-cookie') ?? '')?.[1] ?? '';
   return app.request(`http://local${ruta}`, { ...init, headers: { 'x-consola-sesion': sesion, 'content-type': 'application/json', ...(init.headers ?? {}) } });
 };
 const maestra = (ruta: string, init: RequestInit = {}) =>
@@ -190,7 +190,7 @@ crearUsuario({ usuario: 'luis', nombre: 'Luis HRC', correo: 'luis@hrc.co', clave
 crearUsuario({ usuario: 'mixto', nombre: 'Atiende dos', correo: 'mixto@hrc.co', clave: 'clave-mixto-1', rol: 'asesor', clientes: ['dunor', 'confia'] });
 const como = async (usuario: string, clave: string) => {
   const r = await app.request('http://local/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ usuario, clave }) });
-  const { sesion } = (await r.json()) as { sesion: string };
+  const sesion = /aiva_consola=([^;]*)/.exec(r.headers.get('set-cookie') ?? '')?.[1] ?? '';
   return (ruta: string, init: RequestInit = {}) =>
     app.request(`http://local${ruta}`, { ...init, headers: { 'x-consola-sesion': sesion, 'content-type': 'application/json', ...(init.headers ?? {}) } });
 };

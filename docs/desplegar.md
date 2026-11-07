@@ -14,7 +14,9 @@ pnpm paquete midominio.com
 |---|---|
 | `/` | La portada: qué es aiva. Es lo único que ve quien llega al dominio pelado. |
 | `/consola` | La consola de vigilancia y atención: todos los clientes en una pantalla. |
-| `/dunor/` | El chat del sitio de ese cliente; su tablero en `/dunor/admin`. |
+| `/dunor/` | El chat del sitio de ese cliente. Su tablero se abre desde la consola (`/c/dunor/admin`): por `/dunor/admin` ya no se sirve (2026-11-07, ver `seguridad.md`). |
+| `/.well-known/security.txt` | A quién escribirle si alguien encuentra un fallo (RFC 9116). |
+| `/_salud` | Sin token, solo `{"ok":true}`. Con su token (`pnpm salud`), el diagnóstico entero. |
 | `/confia/`, `/hrc/`, … | Igual, uno por cliente dado de alta. |
 
 Adentro corre **un proceso por cliente** —cada uno con su base, su WhatsApp y su configuración— más uno para la
@@ -63,6 +65,17 @@ copiar. En esta máquina están juntas en `~/aiva-credenciales/` (permisos 700, 
 - `CONSOLA_TOKEN` — la llave maestra de la consola.
 - `TOKEN_<CLIENTE>` — el token del tablero de cada cliente (`TOKEN_DUNOR`, `TOKEN_CONFIA`, …). Es el mismo que
   está en `clientes/<slug>/.env` en la máquina donde se armó el paquete.
+
+Opcionales del blindaje (2026-11-07; el porqué en `seguridad.md` › «El blindaje»):
+
+- `AIVA_IP` — cuántos saltos desde la derecha del `x-forwarded-for` está la dirección de verdad de quien llama.
+  Sin definir se usa la primera, que el alojamiento deja escribir a quien llama. Se mide con `/_salud` (con su
+  token) mandando una dirección inventada: `tuPeticion` enseña la cadena entera.
+- `TABLERO_DIRECTO=si` — vuelve a abrir el tablero de cada cliente por `/<cliente>/admin` con su token. Sin esto,
+  solo se abre desde la consola.
+- `SEGURIDAD_CONTACTO` — a quién escribir según `security.txt` (por defecto, el de HRC: `laft@hrctechnologies.com`).
+- `AIVA_SIN_AFINAR=1` — al ARMAR el ZIP (no en el panel): deja el código servido legible, con sus comentarios,
+  para mirar un fallo en el servidor.
 
 Los motores (`LIGHT_ENGINE`, `HEAVY_ENGINE`, `GATE_ENGINE`, `ANALYSIS_ENGINE`, `EMBED_ENGINE`) **arrancan en
 `openai` solos**: en un hosting de apps no hay Ollama ni lo va a haber, y una variable que se olvide no puede

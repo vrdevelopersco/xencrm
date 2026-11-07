@@ -23,6 +23,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { afinarLoServido } from './afinar.js';
 import { leerIndice, rutas, type ClienteRef } from './clientes.js';
 
 const DOMINIO = (process.argv[2] ?? 'aiva.hrctechnologies.com').replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -49,6 +50,8 @@ const { createHash, timingSafeEqual } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
 
 const aqui = __dirname;
+// Lo que se le pone a todo lo que sale y lo que no se deja pasar hacia adentro (src/borde.cjs, con sus pruebas).
+const borde = require(join(aqui, 'dist', 'borde.cjs'));
 const PUERTO = Number(process.env.PORT || 3000);
 const { dominio, puertoInterno: puertoBase, clientes } = JSON.parse(readFileSync(join(aqui, 'clientes.json'), 'utf8'));
 
@@ -474,6 +477,11 @@ const PORTADA = (() => {
     return null;
   }
 })();
+// Las dos páginas que sirve el enrutador mismo, con la huella de lo que traen en línea: nada más corre en ellas.
+const CSP_ARRANCANDO = borde.cspDePagina(ARRANCANDO);
+const CSP_PORTADA = PORTADA ? borde.cspDePagina(PORTADA.toString('utf8')) : '';
+// Cuándo se armó el paquete, para que security.txt venza al año si nadie sube una versión.
+const ARMADO_EL = (function () { try { return JSON.parse(readFileSync(join(aqui, 'version.json'), 'utf8')).fecha; } catch (e) { return ''; } })();
 
 // Lo que la portada necesita al lado (el logo, por ahora). Un solo tramo, sin barras ni puntos dobles: nadie
 // pide "../../.env" por aquí. Y solo tipos que se sirven tal cual.
@@ -544,8 +552,12 @@ const conDestino = (puerta, puerto, resto) =>
  * no coinciden, y TODO lo que no sea abrir una página se cae con un 403. Entrar, contestar, guardar: todo. Y no
  * se ve en ninguna prueba del código, porque el código está bien; lo que faltaba era el dato.
  */
+//
+// 🪤 Y la dirección de quien llama va UNA sola, la que se decide aquí (ver borde.cjs, direccionDeQuienLlama). Lo
+// que el navegador diga de sí mismo en cf-connecting-ip o en la cola del x-forwarded-for no pasa: adentro se cree
+// a esas cabeceras para frenar intentos y para la lista de direcciones de la libreta.
 const paraAdentro = (cabeceras, puerto) => ({
-  ...cabeceras,
+  ...borde.sinSuplantar(cabeceras, borde.direccionDeQuienLlama(cabeceras, process.env.AIVA_IP)),
   'x-forwarded-host': cabeceras['x-forwarded-host'] || cabeceras.host,
   host: '127.0.0.1:' + puerto,
 });
@@ -726,14 +738,21 @@ async function bitacoraDeAccesos(url) {
 
 const servidor = http.createServer(async (pide, responde) => {
     const camino = (pide.url || '/').split('?')[0];
+    // 🪤 Toda respuesta de aquí abajo sale por borde.blindar, sin excepción: la portada no traía ni una cabecera
+    // porque cada página se las ponía por su cuenta y esta, que es del enrutador, no era de nadie.
     if (PORTADA && (camino === '/' || camino === '/index.html')) {
-      responde.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' });
+      responde.writeHead(200, borde.blindar({ 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache', 'content-security-policy': CSP_PORTADA }));
       responde.end(pide.method === 'HEAD' ? undefined : PORTADA);
+      return;
+    }
+    if (camino === '/.well-known/security.txt') {
+      responde.writeHead(200, borde.blindar({ 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=86400' }));
+      responde.end(pide.method === 'HEAD' ? undefined : borde.securityTxt(dominio, process.env.SEGURIDAD_CONTACTO, ARMADO_EL));
       return;
     }
     const suelto = archivoDeLaPortada(camino);
     if (suelto) {
-      responde.writeHead(200, { 'content-type': suelto.tipo, 'cache-control': 'public, max-age=86400' });
+      responde.writeHead(200, borde.blindar({ 'content-type': suelto.tipo, 'cache-control': 'public, max-age=86400' }));
       responde.end(pide.method === 'HEAD' ? undefined : suelto.cuerpo);
       return;
     }
@@ -742,14 +761,18 @@ const servidor = http.createServer(async (pide, responde) => {
     // no hay forma de saber si es memoria, un puerto pillado o un error del código. Esto lo dice en una
     // llamada, sin entrar al servidor ni mirar registros a ciegas.
     if (camino === '/_salud') {
-      // 🪤 Sin token. Esto se mira JUSTO cuando nada funciona, y en ese momento pedir una credencial que hay
-      // que ir a buscar al panel es poner una puerta delante del extintor. Lo que se enseña no abre nada: si
-      // este sitio está vivo y un cliente está caído, eso ya se ve desde fuera pidiéndole su página.
-      //
-      // Los pids y los puertos internos sí se guardan para quien traiga el token: no porque sean un secreto,
-      // sino porque no le sirven a nadie más.
+      // 🪤 Sin token, solo «estoy en pie». Antes contaba todo sin token —la versión, la de Node, qué clientes
+      // hay, cuál lleva días sin recibir un mensaje, los puertos de adentro— con la idea de no poner una puerta
+      // delante del extintor. Pero el extintor ya tiene su llave a mano: pnpm salud lee el token solo, y la llave
+      // maestra también abre. Lo que se quedaba abierto era para quien hace reconocimiento: la versión le dice
+      // qué fallos probar, y la lista de clientes, a quién.
       const token = (pide.headers['x-salud-token'] || pide.headers['x-consola-token'] || '').toString() || new URL(pide.url, 'http://x').searchParams.get('token') || '';
       const conToken = abreLaSalud(token);
+      if (!conToken) {
+        responde.writeHead(200, borde.blindar({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }));
+        responde.end(pide.method === 'HEAD' ? undefined : JSON.stringify({ ok: true }));
+        return;
+      }
       const mem = process.memoryUsage();
       const cuerpo = {
         arrancado: new Date(Date.now() - Math.round(process.uptime() * 1000)).toISOString(),
@@ -763,6 +786,15 @@ const servidor = http.createServer(async (pide, responde) => {
         // WhatsApp del cliente. Desde fuera no había forma de notarlo. Ahora lo primero que se dice es si este
         // tiene el mando o es un espejo, y a quién sigue.
         papel: soyElDueno ? 'con el mando' : 'espejo del ' + (mandoDe || 'otro lanzador'),
+        // 🪤 Cómo le llegó ESTA petición: la cadena entera de x-forwarded-for y la dirección que se eligió de
+        // ella. Es lo que hace falta para fijar AIVA_IP (ver borde.cjs): mandando una dirección inventada en esa
+        // cabecera, se ve en qué posición queda la de verdad.
+        tuPeticion: {
+          xForwardedFor: String(pide.headers['x-forwarded-for'] || ''),
+          otras: ['x-real-ip', 'forwarded', 'via', 'cf-connecting-ip', 'true-client-ip'].filter((k) => pide.headers[k]).map((k) => k + ': ' + pide.headers[k]),
+          elegida: borde.direccionDeQuienLlama(pide.headers, process.env.AIVA_IP),
+          regla: process.env.AIVA_IP === undefined ? 'la primera (AIVA_IP sin definir)' : 'AIVA_IP=' + process.env.AIVA_IP,
+        },
         enrutador: { puerto: PUERTO, memoriaMB: Math.round(mem.rss / 1048576) },
         // 🪤 Sin sondeo hecho NO se dice «todos contestan». El espejo nunca sondeaba y contestaba eso mismo
         // mientras el sitio entero daba 503: un diagnóstico que inventa buenas noticias cierra la única pista.
@@ -827,12 +859,20 @@ const servidor = http.createServer(async (pide, responde) => {
       // Con token, al final: quién ha entrado a la consola. Sin token no se dice ni que existe.
       // ?accesos=300 trae más líneas (100 si no se dice); ?usuario=dueno.dunor, solo las de esa persona.
       if (conToken) cuerpo.accesos = await bitacoraDeAccesos(pide.url);
-      responde.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      responde.writeHead(200, borde.blindar({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }));
       responde.end(JSON.stringify(cuerpo, null, 2));
       return;
     }
 
     const { puerto, ruta, prefijo } = haciaDonde(pide.url || '/');
+
+    // Lo de adentro de cada cliente que no se sirve desde fuera: su tablero (se abre desde la consola) y lo de
+    // servicio. Ver borde.cjs, cerradoDesdeFuera. Un 404 como cualquier ruta que no existe: ni se confirma.
+    if (prefijo && borde.cerradoDesdeFuera(ruta, process.env)) {
+      responde.writeHead(404, borde.blindar({ 'content-type': 'text/plain; charset=utf-8' }));
+      responde.end(pide.method === 'HEAD' ? undefined : 'No encontrado');
+      return;
+    }
 
     /**
      * 🪤 Reintentar antes de rendirse. El enrutador abre la puerta en medio segundo —obligatorio: si tarda
@@ -857,7 +897,7 @@ const servidor = http.createServer(async (pide, responde) => {
           if (prefijo && typeof cabeceras.location === 'string' && cabeceras.location.startsWith('/')) {
             cabeceras.location = prefijo + cabeceras.location;
           }
-          responde.writeHead(r.statusCode || 502, cabeceras);
+          responde.writeHead(r.statusCode || 502, borde.blindar(cabeceras));
           r.pipe(responde); // sin buffer: así el chat en vivo (SSE) sigue llegando mensaje a mensaje
         },
       );
@@ -883,7 +923,7 @@ const servidor = http.createServer(async (pide, responde) => {
           setTimeout(() => intentar(quedan - 1), 400);
           return;
         }
-        responde.writeHead(503, { 'content-type': 'text/html; charset=utf-8', 'retry-after': '3' });
+        responde.writeHead(503, borde.blindar({ 'content-type': 'text/html; charset=utf-8', 'retry-after': '3', 'content-security-policy': CSP_ARRANCANDO }));
         responde.end(pide.method === 'HEAD' ? undefined : ARRANCANDO);
       });
       pide.pipe(salida);
@@ -1010,6 +1050,9 @@ mkdirSync(join(dir, 'config'), { recursive: true });
 console.log('→ compilando a JavaScript…');
 execFileSync('node_modules/.bin/tsc', ['--noEmit', 'false', '--outDir', join(dir, 'dist')], { stdio: 'inherit' });
 cpSync(resolve('public'), join(dir, 'public'), { recursive: true });
+// El borde (cabeceras, lo que no pasa hacia adentro) lo cargan el lanzador y lo compilado: va junto a lo compilado.
+cpSync(resolve('src', 'borde.cjs'), join(dir, 'dist', 'borde.cjs'));
+if (process.env.AIVA_SIN_AFINAR !== '1') afinarLoServido(join(dir, 'public'));
 for (const c of clientes) {
   cpSync(rutas(c.slug).config, join(dir, 'config', `${c.slug}.json`));
   // Su marca (logos, favicon) viaja con él: sin esto, en el servidor apunta a archivos que no existen.
@@ -1099,7 +1142,7 @@ writeFileSync(
     `Al subirlo queda:`,
     `  https://${DOMINIO}/            la portada: qué es aiva`,
     `  https://${DOMINIO}/consola     la consola (tu pantalla)`,
-    ...clientes.map((c) => `  https://${DOMINIO}/${c.slug}/${' '.repeat(Math.max(1, 12 - c.slug.length))}${c.nombre}: su tablero en /${c.slug}/admin y su chat en /${c.slug}/`),
+    ...clientes.map((c) => `  https://${DOMINIO}/${c.slug}/${' '.repeat(Math.max(1, 12 - c.slug.length))}${c.nombre}: su chat; su tablero se abre desde la consola`),
     '',
     'En el panel, al desplegar:',
     '  Versión de Node ........ 24',
@@ -1115,6 +1158,13 @@ writeFileSync(
     'Variables de entorno: cópialas tal cual. Las que dicen «PONER» las reemplazas tú.',
     '',
     ...variables,
+    '',
+    'Opcionales del blindaje (ver docs/seguridad.md):',
+    '  AIVA_IP=1                 cuántos saltos desde la derecha del x-forwarded-for está la dirección de verdad.',
+    '                            Se mide con /_salud (con su token) mandando una dirección inventada.',
+    '  TABLERO_DIRECTO=si        vuelve a abrir el tablero de cada cliente por /<cliente>/admin con su token.',
+    '                            Sin esto, el tablero solo se abre desde la consola.',
+    '  SEGURIDAD_CONTACTO=mailto:alguien@dominio   a quién escribir según /.well-known/security.txt',
     '',
     '(PORT lo pone la plataforma: no lo definas. WhatsApp arranca apagado en cada cliente; se enciende',
     ' desde su tablero, en Canales, cuando vayan a escanear el código.)',

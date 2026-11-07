@@ -13,7 +13,8 @@ import { readFileSync, existsSync, rmSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { anotarAcceso, navegadorDe, tapado, type Acceso } from './accesos.js';
 import { actualizarCliente, CLIENTES_DIR, crearCliente, darDeBajaCliente, leerIndice, llamarACliente, PLANTILLAS, puertoLibre, tokenDe, urlDe, type ClienteRef } from './clientes.js';
-import { cabecerasDeSiempre, soloDesdeAqui } from './cabeceras.js';
+import { cabecerasDeSiempre, cspDePagina, soloDesdeAqui } from './cabeceras.js';
+import { anotarFalloDeIngreso, avisoDeFreno, entroBien, frenoDelIngreso } from './ingreso.js';
 import { abrirSesion, ACENTOS, actualizarComo, alcanza, borrarComo, cambiarLoMio, COLORES, colorDe, cerrarSesion, crearComo, equipoPara, leerUsuarios, manejaEquipo, quitarClienteDeUsuarios, sesionDe, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
 import { irseSiQuedaHuerfano } from './huerfano.js';
 import { deDondeViene, guardarLibretaConfig, libretaConfig } from './crm/libreta-config.js';
@@ -308,9 +309,15 @@ const SUPER_DE_EMERGENCIA: UsuarioPublico = {
 
 const porHttps = (c: Context) => c.req.header('x-forwarded-proto') === 'https' || c.req.url.startsWith('https:');
 const galletaDe = (c: Context) => getCookie(c, GALLETA);
+// `Strict`: el navegador no la manda en nada que nazca en otro sitio. Interfaz y API comparten origen, así que eso
+// cierra además las peticiones disparadas desde otra página (estándar de HRC, sección B), y queda soloDesdeAqui
+// detrás por si acaso.
 const ponerGalleta = (c: Context, sesion: string) =>
-  setCookie(c, GALLETA, sesion, { path: '/', httpOnly: true, sameSite: 'Lax', secure: porHttps(c), maxAge: 12 * 60 * 60 });
-const quitarGalleta = (c: Context) => deleteCookie(c, GALLETA, { path: '/' });
+  setCookie(c, GALLETA, sesion, { path: '/', httpOnly: true, sameSite: 'Strict', secure: porHttps(c), maxAge: 12 * 60 * 60 });
+// 🪤 Al borrarla se repiten TODOS los atributos del alta. Borrar no los hereda: salía `Max-Age=0; Path=/` a secas
+// (medido en producción el 2026-11-07), y un navegador que compara atributos puede no dar por borrada la original.
+// Aquí además la sesión se cierra en el servidor, pero la galleta tiene que irse igual.
+const quitarGalleta = (c: Context) => deleteCookie(c, GALLETA, { path: '/', httpOnly: true, sameSite: 'Strict', secure: porHttps(c) });
 
 /** Quién hace la petición, por cabecera o por galleta. `usuario` null con la llave maestra: alcanza a todos. */
 /**
@@ -342,46 +349,18 @@ function vedado(esSuper: boolean, ruta: string, metodo: string): string | null {
 }
 
 function quienEs(c: Context): { usuario: UsuarioPublico | null; esSuper: boolean } | null {
-  if ((c.req.header('x-consola-token') ?? c.req.query('token')) === CONSOLA_TOKEN) return { usuario: null, esSuper: true };
+  // 🪤 La llave maestra, solo por cabecera (para programas: pnpm salud, un guion). Se aceptaba también en la
+  // dirección (`?token=`), y lo que va en la dirección queda escrito en los registros del alojamiento.
+  if (c.req.header('x-consola-token') === CONSOLA_TOKEN) return { usuario: null, esSuper: true };
   const usuario = sesionDe(c.req.header('x-consola-sesion') ?? galletaDe(c));
   return usuario ? { usuario, esSuper: usuario.rol === 'super' } : null;
 }
 
-/**
- * 🪤 Freno para quien prueba claves a ciegas. Esta puerta abre la consola, y la consola alcanza el tablero de
- * TODOS los clientes: sin freno, la única defensa sería la longitud de la clave, y en un rato se prueban miles.
- *
- * Se cuenta por quien lo intenta (su dirección) y por la cuenta que intenta abrir, para que ni cambiar de
- * dirección ni cambiar de usuario den intentos nuevos. Un acierto borra la cuenta: a quien sabe su clave no se
- * le estorba.
- */
+// El freno para quien prueba claves a ciegas vive en ingreso.ts, con sus tres barreras y en disco.
 // 🪤 Lo que NO se reenvía a la instancia de un cliente. La llave maestra se acepta por `?token=`, y el proxy
 // copiaba la dirección entera: bastaba abrir `/c/<cliente>/admin?token=<llave>` para que la llave de TODOS los
 // clientes quedara escrita en el registro de acceso de la instancia de uno solo.
 const CREDENCIAL = new Set(['token', 'sesion', 'maestra', 'clave']);
-
-const fallos = new Map<string, { n: number; hasta: number }>();
-const VENTANA_FRENO = 15 * 60_000;
-const MAXIMO_FALLOS = 10;
-
-const frenado = (llaves: string[], now = Date.now()) =>
-  llaves.some((k) => {
-    const f = fallos.get(k);
-    return Boolean(f) && f!.hasta > now && f!.n >= MAXIMO_FALLOS;
-  });
-
-function anotarFallo(llaves: string[], now = Date.now()) {
-  for (const k of llaves) {
-    const f = fallos.get(k);
-    if (!f || f.hasta < now) fallos.set(k, { n: 1, hasta: now + VENTANA_FRENO });
-    else f.n++;
-  }
-}
-const olvidarFallos = (llaves: string[]) => llaves.forEach((k) => fallos.delete(k));
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, f] of fallos) if (f.hasta < now) fallos.delete(k);
-}, 60_000).unref();
 
 /** De dónde viene quien pide. Detrás del servidor del hosting, la de verdad llega en una cabecera. */
 const deDonde = (c: Context): string =>
@@ -433,21 +412,68 @@ function paginaConsola(): string | null {
   return laPagina;
 }
 
+/**
+ * La consola, en dos páginas: la puerta (solo el formulario de entrar) para quien no tiene sesión, y la consola
+ * entera para quien sí.
+ *
+ * 🪤 Antes la página era una sola y se le servía completa a cualquiera: 180 KB con el código de todas las
+ * pantallas —cada ruta de la API, cada permiso que se comprueba, cómo se arma cada llamada— a alguien que ni
+ * había escrito una clave. Ahora quien no entró solo se lleva el formulario.
+ *
+ * Se parten por sus marcas en public/consola.html (`<div id="login"`, `<div id="app"`, `<script id="guion-puerta">`,
+ * `<script id="guion-app">`), en ese orden. Si alguna falta, no se adivina: se dice, y test:blindaje lo vigila.
+ */
+export function partirLaConsola(html: string): { puerta: string; consola: string } | null {
+  const marcas = ['<div id="login"', '<div id="app"', '<script id="guion-puerta">', '<script id="guion-app">', '</body>'];
+  const pos = marcas.map((m) => (m === '</body>' ? html.lastIndexOf(m) : html.indexOf(m)));
+  if (pos.some((p, i) => p === -1 || (i > 0 && p <= pos[i - 1]!))) return null;
+  const [login, app, guionPuerta, guionApp, pie] = pos as [number, number, number, number, number];
+  const cabeza = html.slice(0, login);
+  return {
+    puerta: cabeza + html.slice(login, app) + html.slice(guionPuerta, guionApp) + html.slice(pie),
+    consola: cabeza + html.slice(app, guionPuerta) + html.slice(guionApp, pie) + html.slice(pie),
+  };
+}
+let lasPartes: { puerta: { html: string; csp: string }; consola: { html: string; csp: string } } | null | undefined;
+function partesDeLaConsola() {
+  if (lasPartes !== undefined) return lasPartes;
+  const html = paginaConsola();
+  const partes = html ? partirLaConsola(html) : null;
+  if (html && !partes) {
+    porQueNo = 'a public/consola.html le falta alguna de sus marcas (login, app, guion-puerta, guion-app)';
+    console.error('[consola]', porQueNo);
+  }
+  lasPartes = partes && {
+    puerta: { html: partes.puerta, csp: cspDePagina(partes.puerta) },
+    consola: { html: partes.consola, csp: cspDePagina(partes.consola) },
+  };
+  return lasPartes;
+}
+
 export function mountConsola(app: Hono) {
   app.use('*', cabecerasDeSiempre);
   app.use('*', soloDesdeAqui);
   // Un error dentro de la consola tiene que decir qué pasó. Un «Internal Server Error» a secas deja a quien lo
   // sufre sin nada que contar y a quien lo arregla adivinando.
+  //
+  // 🪤 Pero el detalle va al registro del servidor, no a la respuesta: un mensaje de error interno le cuenta a
+  // quien está tanteando qué hay detrás (rutas de archivos, nombres de funciones, qué se rompió con qué). A quien
+  // lo sufre le basta saber en qué ruta y cuándo, para buscarlo en el registro.
   app.onError((err, c) => {
     console.error('[consola]', c.req.method, c.req.path, '→', err);
-    return c.text(`Falló ${c.req.path}: ${err.message}`, 500);
+    return c.text(`Falló ${c.req.path}. El detalle quedó en el registro del servidor (${new Date().toISOString()}).`, 500);
   });
 
+  // La puerta o la consola entera, según haya sesión (ver partirLaConsola). La misma dirección sirve dos páginas
+  // distintas: por eso no se guarda en ninguna caché, y se avisa que depende de la galleta.
   const puerta = (c: Context) => {
-    const html = paginaConsola();
-    return html
-      ? c.html(html)
-      : c.text(`No pude leer la página de la consola: ${porQueNo}\n\nEl archivo debería estar en public/consola.html, junto a dist/.`, 500);
+    const partes = partesDeLaConsola();
+    if (!partes) return c.text(`No pude leer la página de la consola: ${porQueNo}`, 500);
+    const pagina = quienEs(c) ? partes.consola : partes.puerta;
+    c.header('content-security-policy', pagina.csp);
+    c.header('cache-control', 'no-store');
+    c.header('vary', 'cookie');
+    return c.html(pagina.html);
   };
   app.get('/', puerta);
   // La misma puerta donde la pone el despliegue (aiva.hrctechnologies.com/consola), para que mandar aquí funcione
@@ -465,29 +491,40 @@ export function mountConsola(app: Hono) {
 
   // Entrar con usuario y clave; la llave maestra (CONSOLA_TOKEN) sigue valiendo como super-admin.
   //
-  // La sesión sale por dos vías a la vez: en el cuerpo (para las llamadas del panel, que la mandan por cabecera) y
-  // en una galleta. La galleta es lo que permite abrir el tablero de un cliente aquí dentro: una navegación normal
-  // y un EventSource no pueden poner cabeceras, pero la galleta viaja sola.
+  // 🪤 La sesión sale SOLO en la galleta (HttpOnly: ningún guion de la página la lee). Antes iba también en el
+  // cuerpo, y la consola la guardaba en el almacenamiento del navegador: ahí la lee cualquier guion que llegue a
+  // correr en este origen, y un fallo de escape ya no robaba una pestaña abierta, se llevaba la credencial a otro
+  // sitio. Quien no es un navegador (un guion, las pruebas) la toma del Set-Cookie y la manda por cabecera.
   app.post('/api/entrar', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { usuario?: string; clave?: string; maestra?: string };
-    const quien = String(body.usuario ?? (body.maestra ? 'maestra' : '')).toLowerCase().slice(0, 64);
-    const llaves = [`d:${deDonde(c)}`, `u:${quien}`];
-    if (frenado(llaves)) {
-      anotar(c, { tipo: 'frenado', usuario: intentoFallido(body).usuario, motivo: 'demasiados intentos' });
-      return c.json({ error: 'Demasiados intentos. Espera unos minutos.' }, 429);
+    // La cuenta se cuenta por quién es, no por cómo la escribieron: con el usuario o con el correo es la misma, y
+    // alternar entre los dos no puede dar el doble de intentos.
+    const escrito = String(body.usuario ?? '').trim().toLowerCase().slice(0, 64);
+    const existente = escrito ? leerUsuarios().find((x) => x.usuario === escrito || (Boolean(x.correo) && x.correo === escrito)) : undefined;
+    const cuenta = body.maestra ? 'maestra' : existente?.usuario ?? escrito;
+    const ip = deDonde(c);
+    const freno = frenoDelIngreso(ip, cuenta);
+    if (freno) {
+      anotar(c, { tipo: 'frenado', usuario: intentoFallido(body).usuario, motivo: freno.motivo });
+      const aviso = avisoDeFreno(freno.hasta);
+      c.header('retry-after', String(aviso.segundos));
+      return c.json({ error: aviso.texto }, 429);
     }
     const conMaestra = Boolean(body.maestra) && body.maestra === CONSOLA_TOKEN;
     const u = conMaestra ? SUPER_DE_EMERGENCIA : body.usuario && body.clave ? verificar(body.usuario, body.clave) : null;
     if (!u) {
-      anotarFallo(llaves);
+      const { bloqueadaMin } = anotarFalloDeIngreso(ip, cuenta);
+      // Al cliente, siempre lo mismo; el motivo de verdad (usuario que no existe, cuenta desactivada, clave
+      // equivocada) queda en la bitácora, que es donde se averigua por qué alguien no puede entrar.
       anotar(c, { tipo: 'fallo', ...intentoFallido(body) });
-      return c.json({ error: conMaestra ? 'Llave maestra incorrecta' : 'Usuario o clave incorrectos' }, 401);
+      if (bloqueadaMin) anotar(c, { tipo: 'frenado', usuario: intentoFallido(body).usuario, motivo: `cuenta bloqueada ${bloqueadaMin} min` });
+      return c.json({ error: 'Usuario o clave incorrectos' }, 401);
     }
-    olvidarFallos(llaves);
+    entroBien(ip, cuenta);
     const sesion = abrirSesion(u, Date.now(), conMaestra);
     ponerGalleta(c, sesion);
     anotar(c, { tipo: 'entro', usuario: nombreDe(u), rol: u.rol });
-    return c.json({ sesion, usuario: u });
+    return c.json({ ok: true, usuario: u });
   });
   app.post('/api/salir', (c) => {
     const quien = sesionDe(c.req.header('x-consola-sesion') ?? galletaDe(c));
@@ -530,7 +567,9 @@ export function mountConsola(app: Hono) {
     // Abrir el tablero es lo que dice si alguien de verdad está mirando su negocio; sus llamadas de adentro, no.
     if (resto === 'admin') anotar(c, { tipo: 'tablero', usuario: nombreDe(quien.usuario), cliente: slug });
 
-    const ruta = resto === 'admin' || resto === 'admin.js' || resto.startsWith('admin/api/') ? `/${resto}` : null;
+    // El monitor (la pantalla que se mira en otro aparato durante una demostración) también entra por aquí: por la
+    // ruta del cliente ya no se sirve nada del tablero (borde.cjs, cerradoDesdeFuera).
+    const ruta = resto === 'admin' || resto === 'admin.js' || resto === 'admin/monitor' || resto.startsWith('admin/api/') ? `/${resto}` : null;
     if (!ruta) return c.text('No encontrado', 404);
 
     const url = new URL(urlDe(cliente) + ruta);
@@ -583,13 +622,19 @@ export function mountConsola(app: Hono) {
           '</head>',
           `<script>window.AIVA_CONSOLA=${JSON.stringify(slug)};window.AIVA_EQUIPO=${JSON.stringify(equipo)};window.AIVA_QUIEN=${JSON.stringify(soy)};window.AIVA_ROL=${JSON.stringify(miRol)}</script></head>`,
         );
+        // La CSP se saca de la página YA inyectada: la huella de ese guion cambia con cada quien que entra.
+        c.header('content-security-policy', cspDePagina(html));
+        c.header('cache-control', 'no-store');
         return c.html(html);
       }
+      const csp = r.headers.get('content-security-policy');
       return new Response(r.body, {
         status: r.status,
         headers: {
           'content-type': r.headers.get('content-type') ?? 'application/json',
           'cache-control': esFlujo ? 'no-cache' : (r.headers.get('cache-control') ?? 'no-cache'),
+          // La del cliente pasa tal cual (el monitor trae la suya, con la huella de su guion).
+          ...(csp ? { 'content-security-policy': csp } : {}),
         },
       });
     } catch {

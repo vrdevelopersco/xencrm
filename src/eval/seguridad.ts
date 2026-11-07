@@ -60,25 +60,30 @@ const entrar = async (usuario: string, clave: string) => {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ usuario, clave }),
   });
-  return { status: r.status, cuerpo: (await r.json()) as { sesion?: string; error?: string }, galleta: r.headers.get('set-cookie') ?? '' };
+  // La sesión sale de la galleta, como la ve un navegador: el cuerpo ya no la trae (ver más abajo).
+  const galleta = r.headers.get('set-cookie') ?? '';
+  return { status: r.status, cuerpo: (await r.json()) as { sesion?: string; error?: string }, galleta, sesion: /aiva_consola=([^;]*)/.exec(galleta)?.[1] ?? '' };
 };
 const conSesion = (sesion: string) => ({ 'x-consola-sesion': sesion });
 const pedir = (ruta: string, headers: Record<string, string> = {}, opts: RequestInit = {}) => consola.request(ruta, { ...opts, headers });
 
 // ---------- Entrar ----------
 const malo = await entrar('agente', 'la-que-no-es');
-check('una clave equivocada no entra', malo.status === 401 && !malo.cuerpo.sesion, JSON.stringify(malo.cuerpo));
+check('una clave equivocada no entra', malo.status === 401 && !malo.sesion, JSON.stringify(malo.cuerpo));
 const noExiste = await entrar('nadie', 'lo-que-sea');
-check('un usuario que no existe tampoco', noExiste.status === 401 && !noExiste.cuerpo.sesion);
+check('un usuario que no existe tampoco', noExiste.status === 401 && !noExiste.sesion);
 check('y el mensaje no delata si el usuario existe o no', malo.cuerpo.error === noExiste.cuerpo.error, `${malo.cuerpo.error} / ${noExiste.cuerpo.error}`);
 
 const suyo = await entrar('agente', 'clave-de-prueba-1');
-check('con la clave buena, entra', suyo.status === 200 && Boolean(suyo.cuerpo.sesion));
-const sesion = suyo.cuerpo.sesion!;
+check('con la clave buena, entra', suyo.status === 200 && Boolean(suyo.sesion));
+// 🪤 Estándar de HRC, sección B: si el cuerpo trae la sesión, alguien la guarda (la consola lo hacía, en el
+// almacenamiento del navegador, donde la lee cualquier guion que llegue a correr en la página).
+check('🪤 y el cuerpo NO trae la sesión: solo la galleta', suyo.cuerpo.sesion === undefined, JSON.stringify(suyo.cuerpo).slice(0, 120));
+const sesion = suyo.sesion;
 
 // 🪤 La galleta de sesión no puede leerse desde JavaScript ni viajar a otro sitio.
 check('la galleta de sesión es HttpOnly', /HttpOnly/i.test(suyo.galleta), suyo.galleta);
-check('y no se manda en peticiones que vengan de otro sitio (SameSite)', /SameSite=(Lax|Strict)/i.test(suyo.galleta), suyo.galleta);
+check('y no se manda en nada que nazca en otro sitio (SameSite=Strict)', /SameSite=Strict/i.test(suyo.galleta), suyo.galleta);
 
 // ---------- Nadie sin sesión ----------
 for (const ruta of ['/api/clientes', '/api/usuarios', '/api/pendientes', '/api/series', '/api/yo']) {
@@ -89,7 +94,7 @@ const inventada = await pedir('/api/clientes', conSesion('esta-sesion-me-la-inve
 check('una sesión inventada no vale', inventada.status === 401, `dio ${inventada.status}`);
 
 const laJefa = await entrar('jefa', 'clave-de-prueba-2');
-const sesionSuper = laJefa.cuerpo.sesion!;
+const sesionSuper = laJefa.sesion;
 
 // ---------- 🪤 Un cliente no puede ver a otro ----------
 const mis = (await (await pedir('/api/clientes', conSesion(sesion))).json()) as { clientes: { cliente: { slug: string } }[] };
@@ -146,22 +151,22 @@ check('ni sale en lo que devuelve la API', !JSON.stringify(yo).includes('clave-d
 
 // ---------- La sesión se acaba cuando tiene que acabarse ----------
 const otra = await entrar('agente', 'clave-de-prueba-1');
-await pedir('/api/salir', conSesion(otra.cuerpo.sesion!), { method: 'POST' });
-const despues = await pedir('/api/yo', conSesion(otra.cuerpo.sesion!));
+await pedir('/api/salir', conSesion(otra.sesion), { method: 'POST' });
+const despues = await pedir('/api/yo', conSesion(otra.sesion));
 check('al salir, esa sesión ya no vale', despues.status === 401, `dio ${despues.status}`);
 
 const tercera = await entrar('agente', 'clave-de-prueba-1');
 actualizarUsuario('agente', { activo: false });
-const desactivado = await pedir('/api/yo', conSesion(tercera.cuerpo.sesion!));
+const desactivado = await pedir('/api/yo', conSesion(tercera.sesion));
 check('🪤 desactivar a alguien le cierra la sesión que ya tenía', desactivado.status === 401, `dio ${desactivado.status}`);
 actualizarUsuario('agente', { activo: true });
 
 // 🪤 Cambiarle la clave a alguien tiene que echarlo. Si no, a una cuenta que se filtró se le cambia la clave
 // y quien entró sigue adentro doce horas más, que es lo contrario de lo que uno cree que acaba de hacer.
 const cuarta = await entrar('agente', 'clave-de-prueba-1');
-check('la sesión vale mientras la clave sea la misma', (await pedir('/api/yo', conSesion(cuarta.cuerpo.sesion!))).status === 200);
+check('la sesión vale mientras la clave sea la misma', (await pedir('/api/yo', conSesion(cuarta.sesion))).status === 200);
 actualizarUsuario('agente', { clave: 'otra-clave-distinta' });
-const traslaClave = await pedir('/api/yo', conSesion(cuarta.cuerpo.sesion!));
+const traslaClave = await pedir('/api/yo', conSesion(cuarta.sesion));
 check('🪤 cambiarle la clave a alguien cierra la sesión que tenía abierta', traslaClave.status === 401, `dio ${traslaClave.status}`);
 check('y con la clave nueva se entra normal', (await entrar('agente', 'otra-clave-distinta')).status === 200);
 actualizarUsuario('agente', { clave: 'clave-de-prueba-1' });

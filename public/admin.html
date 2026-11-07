@@ -2387,7 +2387,7 @@ dialog.perdida input{width:100%}
     <div class="muted">En un grupo escribe gente que nunca le escribió a tu negocio. Enciéndelo solo si te parece bien guardar lo que dicen ahí.</div>
   </div>
   <div class="fila" style="gap:8px;margin-top:14px;justify-content:flex-end">
-    <button class="btn" onclick="document.getElementById('dlg-grupos').close()">Ahora no</button>
+    <button class="btn" type="button" data-cerrar="dlg-grupos">Ahora no</button>
     <button class="btn primary" id="grupos-si">Sí, que los vea</button>
   </div>
 </dialog>
@@ -2410,7 +2410,7 @@ dialog.perdida input{width:100%}
   <div class="fila" style="gap:10px;align-items:baseline">
     <b id="vistazo-quien"></b><span class="grow"></span>
     <button class="btn sm primary" id="vistazo-abrir">Abrir la conversación</button>
-    <button class="btn sm" onclick="document.getElementById('dlg-vistazo').close()">Cerrar</button>
+    <button class="btn sm" type="button" data-cerrar="dlg-vistazo">Cerrar</button>
   </div>
   <div class="small muted" id="vistazo-meta"></div>
   <div id="vistazo-msjs" class="msgs"></div>

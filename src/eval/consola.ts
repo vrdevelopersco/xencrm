@@ -118,11 +118,14 @@ const entrada = await app.request('http://local/api/entrar', {
 });
 const galleta = entrada.headers.get('set-cookie') ?? '';
 const sesionMaestra = (await entrada.json()) as { sesion?: string; usuario?: { rol?: string } };
+// 🪤 La sesión sale SOLO en la galleta: en el cuerpo, la consola la guardaba en el navegador, donde la lee cualquier guion.
+check('el cuerpo de entrar no trae la sesión', sesionMaestra.sesion === undefined, JSON.stringify(sesionMaestra).slice(0, 90));
+const sesionDeMaestra = /aiva_consola=([^;]*)/.exec(galleta)?.[1] ?? '';
 check('con la llave maestra se abre sesión de super-admin', entrada.status === 200 && sesionMaestra.usuario?.rol === 'super', JSON.stringify(sesionMaestra).slice(0, 90));
 check('y la sesión sale en una galleta, que no se puede leer desde el navegador', /aiva_consola=/.test(galleta) && /HttpOnly/i.test(galleta), galleta);
 check('con una llave maestra equivocada, no', (await app.request('http://local/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ maestra: 'otra' }) })).status === 401);
 
-const conGalleta = (ruta: string) => app.request(`http://local${ruta}`, { headers: { cookie: `aiva_consola=${sesionMaestra.sesion}` } });
+const conGalleta = (ruta: string) => app.request(`http://local${ruta}`, { headers: { cookie: `aiva_consola=${sesionDeMaestra}` } });
 check('la galleta vale para la API', (await conGalleta('/api/yo')).status === 200);
 check('el tablero de un cliente se abre desde la consola', (await conGalleta('/c/financiera-del-caribe/admin/api/me')).status === 502, 'la instancia está apagada: 502 quiere decir que pasó el control');
 check('sin sesión, el tablero manda a la puerta', (await app.request('http://local/c/financiera-del-caribe/admin')).status === 302);

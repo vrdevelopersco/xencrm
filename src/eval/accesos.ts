@@ -92,7 +92,7 @@ const ultima = () => leerAccesos(base).at(-1);
 const archivo = () => readFileSync(rutaAccesos(base), 'utf8');
 
 const bien = await entrar({ usuario: 'dueno', clave: 'clave-del-dueno-1' });
-const { sesion } = (await bien.json()) as { sesion: string };
+const sesion = /aiva_consola=([^;]*)/.exec(bien.headers.get('set-cookie') ?? '')?.[1] ?? '';
 check('entrar deja su línea: quién, con qué rol, desde dónde y con qué',
   bien.status === 200 && ultima()?.tipo === 'entro' && ultima()?.usuario === 'dueno' && ultima()?.rol === 'admin' && ultima()?.ip === '190.24.1.2' && ultima()?.navegador === 'Chrome · Windows',
   JSON.stringify(ultima()));
@@ -135,8 +135,8 @@ check('pero no cada llamada de adentro: sería ruido', leerAccesos(base).filter(
 
 await comoDueno('/api/yo', { method: 'PATCH', body: JSON.stringify({ claveActual: 'clave-del-dueno-1', claveNueva: 'clave-nueva-del-dueno' }) });
 check('cambiarse la clave uno mismo queda, sin la clave', ultima()?.que === 'lo suyo: clave nueva' && ultima()?.por === 'dueno' && !/clave-nueva-del-dueno/.test(archivo()), JSON.stringify(ultima()));
-const otra = (await (await entrar({ usuario: 'dueno', clave: 'clave-nueva-del-dueno' })).json()) as { sesion: string };
-await app.request('http://local/api/salir', { method: 'POST', headers: { ...desde('190.24.1.2'), 'x-consola-sesion': otra.sesion } });
+const otra = /aiva_consola=([^;]*)/.exec((await entrar({ usuario: 'dueno', clave: 'clave-nueva-del-dueno' })).headers.get('set-cookie') ?? '')?.[1] ?? '';
+await app.request('http://local/api/salir', { method: 'POST', headers: { ...desde('190.24.1.2'), 'x-consola-sesion': otra } });
 check('salir se anota', ultima()?.tipo === 'salio' && ultima()?.usuario === 'dueno');
 
 // El freno va último: deja bloqueada esa dirección quince minutos.

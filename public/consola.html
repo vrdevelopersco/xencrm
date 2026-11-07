@@ -717,81 +717,21 @@ dialog.panel{border-radius:16px 0 0 16px}
   </form>
 </dialog>
 
-<script>
+<script id="guion-puerta">
+// La puerta: lo único que se le sirve a quien no ha entrado (ver partirLaConsola en src/consola.ts).
 (function () {
   var $ = function (id) { return document.getElementById(id); };
-  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
-  var token = localStorage.getItem('aiva.consola.token') || '';
-  var sesion = localStorage.getItem('aiva.consola.sesion') || '';
-  var yo = null, esSuper = false, puedeEquipo = false;
-  var equipoLeido = false; // si el equipo llegó de verdad: sin él no se puede decir que un cliente no tiene admin
-  // Cómo se le dice a cada rol en pantalla. «agente» es el nombre viejo del admin de un cliente (ver rolDe).
-  var ROL_UI = { super: 'Super-admin', admin: 'Admin del cliente', asesor: 'Asesor', agente: 'Admin del cliente' };
-  var LIB = { llave: '', ips: [], tuIp: '', clientes: [] }; // la libreta; se llena en cargarLibreta()
-  // Si algo se rompe dentro de una promesa y nadie lo atrapa, que al menos quede dicho. Sin esto, la pantalla se
-  // queda a medias y no hay ni un rastro de qué pasó.
-  addEventListener('unhandledrejection', function (e) {
-    if (e.reason && e.reason.sesion) return; // la sesión vencida ya se avisa en su sitio
-    console.error('[aiva] error sin atrapar:', e.reason);
-  });
+  // Lo que guardaban las versiones de antes. La sesión ya no vive en el navegador: va en una galleta que ningún
+  // guion de la página puede leer.
+  try { localStorage.removeItem('aiva.consola.sesion'); localStorage.removeItem('aiva.consola.token'); } catch (e) {}
+  // 🪤 La galleta es SameSite=Strict: llegando por un enlace desde otro sitio (un correo, WhatsApp) el navegador no
+  // la manda con esa primera página, y el servidor sirve la puerta aunque la sesión siga viva. Desde aquí sí viaja:
+  // se pregunta y, si vale, se entra sin volver a escribir la clave.
+  fetch('/api/yo').then(function (r) { if (r.ok) location.replace('/consola' + location.hash); }).catch(function () {});
+  $('login').hidden = false;
+  var aviso = { salio: 'Hasta luego', vencio: 'Vuelve a entrar' }[new URLSearchParams(location.search).get('m') || ''];
+  if (aviso) { $('login-msg').textContent = aviso; history.replaceState(null, '', location.pathname + location.hash); }
 
-  // 🪤 Lo único que puede sacar a alguien de la consola es que su sesión ya no valga (401). Nada más: ni un 404
-  // de un servidor a medio actualizar, ni una respuesta que no sea JSON, ni un error al pintar. Antes cualquiera
-  // de esas reventaba la promesa y terminaba en el `catch` de cargar(), que cerraba la sesión —el resultado era
-  // «entro y me saca», sin mensaje y sin pista de qué falló—. Ahora un fallo así vuelve como `{ error }`, que es
-  // lo que el resto del código ya sabe mostrar.
-  function api(path, opts) {
-    opts = opts || {};
-    var headers = {};
-    if (sesion) headers['x-consola-sesion'] = sesion;
-    if (token) headers['x-consola-token'] = token;
-    if (opts.body) headers['content-type'] = 'application/json';
-    return fetch('/api' + path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined })
-      .then(function (r) {
-        if (r.status === 401) {
-          entrar(false, 'Vuelve a entrar');
-          var fin = new Error('sesión vencida');
-          fin.sesion = true;
-          throw fin;
-        }
-        return r.text().then(function (t) {
-          try {
-            return t ? JSON.parse(t) : {};
-          } catch (e) {
-            console.error('[aiva] ' + path + ' contestó ' + r.status + ' y no es JSON:', t.slice(0, 200));
-            return { error: 'El servidor contestó ' + r.status + ' en ' + path + '. Puede estar a medio actualizar.' };
-          }
-        });
-      });
-  }
-  // 🪤 Entrar y salir tienen que BORRAR lo que había pintado. Sin esto, al salir de super-admin y entrar como
-  // alguien que atiende un solo cliente, esa persona alcanzaba a ver —unos segundos, hasta que llegaba /yo— la
-  // lista de todos los clientes de aiva, que es de lo peor que puede pasar en un producto multicliente.
-  function olvidarLoAnterior() {
-    yo = null; esSuper = false; puedeEquipo = false; equipoLeido = false;
-    window.__clientes = []; window.__usuarios = [];
-    pendientes = []; elegido = null;
-    $('lista').innerHTML = '';
-    $('equipo').innerHTML = '';
-    $('pend').innerHTML = '';
-    $('resumen').textContent = '';
-    $('n-pend').textContent = '';
-    $('yo-nombre').textContent = '…';
-    $('config-cuerpo').innerHTML = '';
-    $('config-nav').innerHTML = '';
-    LIB = { llave: '', ips: [], tuIp: '', clientes: [] };
-    GEN = null;
-    $('tab-equipo').hidden = true;   // hasta que /yo diga que maneja el equipo
-    $('tab-config').hidden = true;   // la configuración es del super-admin: toca a todos los clientes a la vez
-    $('nuevo').hidden = true;
-    if ($('dlg-atender').open) $('dlg-atender').close();
-  }
-
-  function entrar(ok, msg) {
-    if (!ok) olvidarLoAnterior();
-    $('login').hidden = ok; $('app').hidden = !ok;
-    if (msg) $('login-msg').textContent = msg;
-  }
   // Entrar es la única petición que se hace sin sesión, así que no pasa por api(). Igual tiene que aguantar que
   // el servidor conteste cualquier cosa: si revienta aquí, el mensaje se queda en «Entrando…» y no hay forma de
   // saber qué pasó.
@@ -817,6 +757,84 @@ dialog.panel{border-radius:16px 0 0 16px}
       });
   }
 
+  // Entró: la sesión quedó en la galleta. Se vuelve a pedir la página, y esta vez el servidor manda la consola.
+  function adentro(d) {
+    if (d.error || !d.ok) { $('login-msg').textContent = d.error || 'No se pudo entrar.'; return; }
+    location.replace('/consola' + location.hash);
+  }
+  $('entrar').onclick = function () {
+    $('login-msg').textContent = 'Entrando…';
+    pedirEntrar({ usuario: $('u').value.trim(), clave: $('p').value }).then(adentro);
+  };
+  $('ver-clave').onclick = function () {
+    var oculta = $('p').type === 'password';
+    $('p').type = oculta ? 'text' : 'password';
+    this.setAttribute('aria-pressed', String(oculta));
+    this.setAttribute('aria-label', oculta ? 'Ocultar la clave' : 'Mostrar la clave');
+    this.textContent = oculta ? '🙈' : '👁';
+  };
+  $('p').onkeydown = function (e) { if (e.key === 'Enter') $('entrar').click(); };
+  $('u').onkeydown = function (e) { if (e.key === 'Enter') $('p').focus(); };
+  $('ver-maestra').onclick = function () { $('maestra').hidden = !$('maestra').hidden; };
+  // 🪤 La llave maestra NO se guarda en ningún lado: abre todos los clientes. La sesión que abre alcanza para todo.
+  $('entrar-maestra').onclick = function () {
+    $('login-msg').textContent = 'Entrando…';
+    pedirEntrar({ maestra: $('t').value.trim() }).then(function (d) {
+      if (!d.error) $('t').value = '';
+      adentro(d);
+    });
+  };
+})();
+</script>
+<script id="guion-app">
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var yo = null, esSuper = false, puedeEquipo = false;
+  var equipoLeido = false; // si el equipo llegó de verdad: sin él no se puede decir que un cliente no tiene admin
+  // Cómo se le dice a cada rol en pantalla. «agente» es el nombre viejo del admin de un cliente (ver rolDe).
+  var ROL_UI = { super: 'Super-admin', admin: 'Admin del cliente', asesor: 'Asesor', agente: 'Admin del cliente' };
+  var LIB = { llave: '', ips: [], tuIp: '', clientes: [] }; // la libreta; se llena en cargarLibreta()
+  // Si algo se rompe dentro de una promesa y nadie lo atrapa, que al menos quede dicho. Sin esto, la pantalla se
+  // queda a medias y no hay ni un rastro de qué pasó.
+  addEventListener('unhandledrejection', function (e) {
+    if (e.reason && e.reason.sesion) return; // la sesión vencida ya se avisa en su sitio
+    console.error('[aiva] error sin atrapar:', e.reason);
+  });
+
+  // 🪤 Lo único que puede sacar a alguien de la consola es que su sesión ya no valga (401). Nada más: ni un 404
+  // de un servidor a medio actualizar, ni una respuesta que no sea JSON, ni un error al pintar. Antes cualquiera
+  // de esas reventaba la promesa y terminaba en el `catch` de cargar(), que cerraba la sesión —el resultado era
+  // «entro y me saca», sin mensaje y sin pista de qué falló—. Ahora un fallo así vuelve como `{ error }`, que es
+  // lo que el resto del código ya sabe mostrar.
+  function api(path, opts) {
+    opts = opts || {};
+    // La sesión va sola, en su galleta: aquí no hay nada que poner (ni nada que un guion ajeno pueda leer).
+    var headers = {};
+    if (opts.body) headers['content-type'] = 'application/json';
+    return fetch('/api' + path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined })
+      .then(function (r) {
+        if (r.status === 401) {
+          // Sin sesión, la página se vuelve a pedir: el servidor ya no manda la consola, manda la puerta.
+          location.replace('/consola?m=vencio' + location.hash);
+          var fin = new Error('sesión vencida');
+          fin.sesion = true;
+          throw fin;
+        }
+        return r.text().then(function (t) {
+          try {
+            return t ? JSON.parse(t) : {};
+          } catch (e) {
+            console.error('[aiva] ' + path + ' contestó ' + r.status + ' y no es JSON:', t.slice(0, 200));
+            return { error: 'El servidor contestó ' + r.status + ' en ' + path + '. Puede estar a medio actualizar.' };
+          }
+        });
+      });
+  }
+  // 🪤 Entrar y salir tenían que BORRAR lo que había pintado: al salir de super-admin y entrar como alguien de un
+  // solo cliente, esa persona alcanzaba a ver unos segundos la lista de todos los clientes de aiva. Ahora entrar y
+  // salir vuelven a pedir la página entera (la puerta o la consola, ver partirLaConsola), y no queda nada de antes.
+  function entrar() { $('app').hidden = false; }
   // Lo que se arma después de entrar. Si algo de esto falla, se dice y se queda uno adentro: la sesión es válida.
   function armarLaPantalla() {
     return sesionLista().catch(function (e) {
@@ -865,46 +883,6 @@ dialog.panel{border-radius:16px 0 0 16px}
       ver(localStorage.getItem('aiva.consola.vista') || 'atender');
     });
   }
-  $('entrar').onclick = function () {
-    $('login-msg').textContent = 'Entrando…';
-    pedirEntrar({ usuario: $('u').value.trim(), clave: $('p').value })
-      .then(function (d) {
-        if (d.error || !d.sesion) { $('login-msg').textContent = d.error || 'No se pudo entrar.'; return; }
-        olvidarLoAnterior(); // nada de la sesión anterior puede quedar en pantalla
-        sesion = d.sesion; token = '';
-        localStorage.setItem('aiva.consola.sesion', sesion);
-        localStorage.removeItem('aiva.consola.token');
-        $('p').value = '';
-        entrar(true); armarLaPantalla();
-      });
-  };
-  $('ver-clave').onclick = function () {
-    var oculta = $('p').type === 'password';
-    $('p').type = oculta ? 'text' : 'password';
-    this.setAttribute('aria-pressed', String(oculta));
-    this.setAttribute('aria-label', oculta ? 'Ocultar la clave' : 'Mostrar la clave');
-    this.textContent = oculta ? '🙈' : '👁';
-  };
-  $('p').onkeydown = function (e) { if (e.key === 'Enter') $('entrar').click(); };
-  $('u').onkeydown = function (e) { if (e.key === 'Enter') $('p').focus(); };
-  $('ver-maestra').onclick = function () { $('maestra').hidden = !$('maestra').hidden; };
-  // La llave maestra también abre sesión: así queda la galleta y se puede entrar a los tableros desde aquí.
-  $('entrar-maestra').onclick = function () {
-    var llave = $('t').value.trim();
-    $('login-msg').textContent = 'Entrando…';
-    pedirEntrar({ maestra: llave })
-      .then(function (d) {
-        if (d.error || !d.sesion) { $('login-msg').textContent = d.error || 'No se pudo entrar.'; return; }
-        olvidarLoAnterior();
-        // 🪤 La llave maestra NO se guarda: abre todos los clientes y el almacenamiento del navegador lo lee
-        // cualquier script de este origen. La sesión que acaba de abrir alcanza para todo.
-        sesion = d.sesion; token = '';
-        localStorage.setItem('aiva.consola.sesion', sesion);
-        localStorage.removeItem('aiva.consola.token');
-        $('t').value = '';
-        entrar(true); armarLaPantalla();
-      });
-  };
   // Mi cuenta: cada quien se cambia lo suyo sin pedirle nada al super-admin. Con la llave maestra no hay cuenta
   // que cambiar, así que ahí el botón solo lo dice.
   $('panel-cerrar').onclick = function () { $('dlg-atender').close(); };
@@ -970,12 +948,21 @@ dialog.panel{border-radius:16px 0 0 16px}
     });
   };
 
+  // Se espera a que el servidor cierre la sesión y borre la galleta antes de volver a la puerta.
   $('salir').onclick = function () {
-    api('/salir', { method: 'POST' }).catch(function () {});
-    sesion = ''; token = ''; yo = null; ponerAcento('azul');
-    localStorage.removeItem('aiva.consola.sesion'); localStorage.removeItem('aiva.consola.token');
-    entrar(false, 'Hasta luego');
+    fetch('/api/salir', { method: 'POST' }).catch(function () {}).then(function () { location.replace('/consola?m=salio'); });
   };
+
+  // 🪤 El logo que no carga deja las iniciales. Iba con `onerror` escrito dentro del HTML de la lista, y la CSP no
+  // deja correr nada en línea que no traiga su huella: con ella puesta, quedaba la imagen rota. El error de una
+  // imagen no sube por el árbol, así que se escucha en la fase de captura, desde antes de pintar nada.
+  document.addEventListener('error', function logoQueNoCarga(e) {
+    var img = e.target;
+    if (!img || img.tagName !== 'IMG' || !img.hasAttribute('data-sigla')) return;
+    var caja = img.parentNode;
+    caja.classList.remove('con-logo');
+    caja.textContent = img.getAttribute('data-sigla');
+  }, true);
 
   var PRIORIDADES = { alta: 'Alta', media: 'Media', baja: 'Baja' };
   // La franja de arriba: todo junto, de todos los clientes. Es lo primero que uno mira al entrar y responde
@@ -1280,10 +1267,8 @@ dialog.panel{border-radius:16px 0 0 16px}
       '<div class="cabeza">' +
         // Con su logo, la lista se lee por la marca y no por dos letras. Si no carga, quedan las iniciales.
         (e.logo
-          ? '<span class="sigla con-logo"><img src="/api/marca/' + encodeURIComponent(c.slug) + '" alt="" ' +
-            // 🪤 Las comillas de JSON.stringify cerraban el atributo antes de tiempo: el navegador no podía leer el
-            // manejador y, cuando el logo no cargaba, quedaba la imagen rota en vez de la sigla. Escapadas, sí entran.
-            'onerror="this.parentNode.classList.remove(\'con-logo\');this.parentNode.textContent=' + esc(JSON.stringify(sigla(c.nombre))) + '"></span>'
+          // Si el logo no carga, quedan las iniciales: lo hace el escuchador de `data-sigla` (ver logoQueNoCarga).
+          ? '<span class="sigla con-logo"><img src="/api/marca/' + encodeURIComponent(c.slug) + '" alt="" data-sigla="' + esc(sigla(c.nombre)) + '"></span>'
           : '<span class="sigla">' + esc(sigla(c.nombre)) + '</span>') +
         '<div class="quien">' +
           '<div class="fila"><span class="nombre">' + esc(c.nombre) + '</span>' + estado + prio + '</div>' +
@@ -2759,7 +2744,7 @@ dialog.panel{border-radius:16px 0 0 16px}
       .catch(function () { $('crear').disabled = false; $('msg').textContent = 'No se pudo crear.'; });
   };
 
-  if (sesion || token) { entrar(true); armarLaPantalla(); } else entrar(false);
+  entrar(); armarLaPantalla();
   if (window.Notification && Notification.permission === 'default') Notification.requestPermission();
   // La bandeja se mira seguido (es lo que hay que atender); el estado de los clientes, más espaciado.
   setInterval(function () {
