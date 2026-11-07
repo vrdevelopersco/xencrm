@@ -5,10 +5,8 @@ cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 
 ## 2026-11-07, al cerrar
 
-**En producción: `c9016c8`** (el blindaje; subido y medido el 7-nov).
-**Por subir: el ZIP de `paquetes/aiva.zip`**, con la dirección de quien llama ya medida (`eaced5d`). Mientras no
-se suba, en producción manda la primera del `x-forwarded-for` (la que escribe quien llama), salvo que se ponga
-`AIVA_IP=0` en el panel.
+**En producción: `4f84cfc`** (el blindaje entero, con la dirección de quien llama ya medida; subido y comprobado el
+7-nov: mandando una dirección inventada, la bitácora anota la de verdad). **Nada por subir.**
 
 **Qué entró desde el checkpoint anterior.**
 
@@ -23,16 +21,6 @@ se suba, en producción manda la primera del `x-forwarded-for` (la que escribe q
   en `~/aiva-credenciales/consola.txt`. En la bitácora queda un «falló · clave equivocada · programa» de las 9:55,
   que fue esa prueba, y dos «falló · usuario que no existe» (`so…(8)`) de las 10:09, que fueron las sondas de la
   dirección.
-
-**Después de subir.**
-
-1. `pnpm salud` para confirmar la versión.
-2. Pedir `/_salud` con su token mandando `x-forwarded-for: 203.0.113.8`: `tuPeticion.elegida` tiene que ser la
-   dirección de verdad, no la inventada.
-3. Medido ya con `c9016c8` (no hace falta repetirlo salvo que algo cambie): verificador, HSTS, CSP, galleta, puerta,
-   404 de lo de adentro. 🪤 El verificador marca «CSP sin default-src» y «el servidor se identifica»: lo primero es
-   que lee solo la última CSP (la del alojamiento); lo segundo es el `server: hcdn` del alojamiento. En `/consola`
-   marca además «sin security.txt», porque lo busca debajo de esa ruta.
 
 **Para mirar.**
 
