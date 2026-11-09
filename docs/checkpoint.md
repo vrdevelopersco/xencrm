@@ -9,10 +9,9 @@ cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 7-nov: mandando una dirección inventada, la bitácora anota la de verdad). **Nada por subir**: lo que va después de
 ese commit es solo documentación.
 
-**Cómo está medido (9-nov, verificador corregido): portada y consola, 8 OK · 1 MAL.** El MAL es `server: hcdn`, del
-alojamiento. Los 7 «por revisar» no piden arreglo: `style-src 'unsafe-inline'` es un riesgo aceptado; lo de `/docs`, los
-guiones para medir y el sondeo público es como aiva está hecho; y la ruta de salir que busca no es la nuestra
-(`/api/salir`, medida a mano el 7-nov: borra la galleta con todos sus atributos).
+**Cómo está medido (9-nov, verificador corregido): portada y consola, 9 OK · 1 MAL · 6 por revisar.** El MAL es
+`server: hcdn`, del alojamiento. Los «por revisar» no piden arreglo: `style-src 'unsafe-inline'` es un riesgo aceptado,
+y lo de `/docs`, los guiones para medir y el sondeo público es como aiva está hecho.
 
 **Qué entró desde el checkpoint anterior.**
 
