@@ -114,8 +114,9 @@ Nada de esto es explotable hoy por un desconocido, pero conviene tenerlo escrito
 Se midió aiva en producción con el verificador del estándar de HRC (`~/proyectos/AUDITORIA-SEGURIDAD.md`), que
 nació de una auditoría externa de HRC-Check, y se miró además lo que se aprende de aiva sin entrar. El usuario lo
 pidió así: «blindarme ante ingeniería inversa necia». Antes: la portada **7 MAL** y la consola **5 MAL**. En el ZIP,
-antes de subir: la portada **0 MAL**. Pruebas en `pnpm test:blindaje`; el recorrido en Chrome contando cada
-violación de CSP dio cero.
+antes de subir: la portada **0 MAL**. En producción, con el verificador ya corregido: portada y consola **8 OK · 1
+MAL**; el MAL es el `server: hcdn` del alojamiento, que desde aquí no se quita. Pruebas en `pnpm test:blindaje`; el
+recorrido en Chrome contando cada violación de CSP dio cero.
 
 | Qué | Cómo se explotaba | Dónde |
 |---|---|---|

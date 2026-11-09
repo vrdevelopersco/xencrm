@@ -17,8 +17,9 @@ nota 🪤; lo de servicio de cada cliente da 404, también disfrazado.
 - 🪤 **La cadena del `x-forwarded-for`**, medida con `/_salud` › `tuPeticion` mandando direcciones inventadas: sin
   cabecera llega `R, R,R`; con `F`, `F, R, F, R,R`. Lo del navegador queda siempre antes y la última es la de verdad.
   Esa es ahora la de por defecto (`AIVA_IP=0`); la cadena medida quedó como prueba en `test:blindaje`.
-- El verificador del estándar marca «CSP sin default-src» en producción: lee solo la última cabecera, que es la del
-  alojamiento. Se le avisó a AIVA-CRYPTO, que lo mantiene.
+- **El verificador, corregido por AIVA-CRYPTO** con lo que salió de correrlo aquí: creía la última cabecera repetida
+  (la CSP del alojamiento, y no la nuestra), y buscaba `security.txt` debajo de la ruta en vez de en la raíz. Con el
+  guion corregido, **portada y consola: 8 OK · 1 MAL**. El MAL es `server: hcdn`, del alojamiento.
 
 ### Blindaje contra quien desarma aiva desde fuera · `3c96d5d`
 El usuario lo pidió así: «blindarme ante ingeniería inversa necia». Se midió producción con el verificador del
