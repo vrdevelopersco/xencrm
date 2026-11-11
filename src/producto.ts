@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const FUENTE = process.argv[2] ?? 'docs/producto.html';
-const DESTINO = process.argv[3] ?? 'docs/aiva-producto.pdf';
+const DESTINO = process.argv[3] ?? 'docs/xencrm-producto.pdf';
 const CHROME = [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   '/Applications/Chromium.app/Contents/MacOS/Chromium',

@@ -972,7 +972,7 @@ async function levantarALosMios() {
   // que decir cómo están las cosas ahora, no cómo estaban al arrancar.
   setInterval(() => void sondearATodos(), 15000).unref();
   (() => {
-    console.log('[aiva]   https://' + dominio + '/            → qué es aiva');
+    console.log('[aiva]   https://' + dominio + '/            → qué es XENCRM');
     console.log('[aiva]   https://' + dominio + '/consola     → la consola (tu pantalla)');
     for (const c of clientes) console.log('[aiva]   https://' + dominio + '/' + c.slug + '/  → ' + c.nombre);
   })();
@@ -1137,10 +1137,10 @@ const variables = [
 writeFileSync(
   join(dir, 'LEEME.txt'),
   [
-    'aiva · todos los clientes en un solo despliegue',
+    'XENCRM · todos los clientes en un solo despliegue',
     '',
     `Al subirlo queda:`,
-    `  https://${DOMINIO}/            la portada: qué es aiva`,
+    `  https://${DOMINIO}/            la portada: qué es XENCRM`,
     `  https://${DOMINIO}/consola     la consola (tu pantalla)`,
     ...clientes.map((c) => `  https://${DOMINIO}/${c.slug}/${' '.repeat(Math.max(1, 12 - c.slug.length))}${c.nombre}: su chat; su tablero se abre desde la consola`),
     '',
@@ -1187,7 +1187,7 @@ console.log(`
 
   Un solo despliegue, y adentro:
 
-     https://${DOMINIO}/            la portada: qué es aiva
+     https://${DOMINIO}/            la portada: qué es XENCRM
      https://${DOMINIO}/consola     la consola (tu pantalla)
 ${clientes.map((c) => `     https://${DOMINIO}/${c.slug}/${' '.repeat(Math.max(1, 12 - c.slug.length))}${c.nombre}`).join('\n')}
 

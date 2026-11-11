@@ -89,7 +89,7 @@ export function armar(donde: DondeVive, hoy = new Date()): Respaldo {
 
 /** Lo que se comprueba antes de dejar restaurar. Devuelve el problema, o null si está bien. */
 export function revisar(crudo: unknown, slugDestino: string): { error: string } | { respaldo: Respaldo; otroCliente: boolean } {
-  if (!crudo || typeof crudo !== 'object') return { error: 'eso no es un respaldo de aiva' };
+  if (!crudo || typeof crudo !== 'object') return { error: 'eso no es un respaldo de XENCRM' };
   const r = crudo as Partial<Respaldo>;
   if (r.version !== VERSION) return { error: `el respaldo es de otra versión (${String(r.version)}), y no se puede leer` };
   if (!r.config || typeof r.config !== 'object') return { error: 'al respaldo le falta la configuración' };

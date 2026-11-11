@@ -55,8 +55,8 @@ export function frenoDelCandado(ruta: string, metodo: string, rol: string | unde
   if (mandaEnElModo(rol)) return null;
   const m = metodo.toUpperCase();
   // El modo lo cambia solo quien administra aiva, esté como esté: si no, el candado se abre desde adentro.
-  if (/^tablero\/modo$/.test(ruta) && !LEER.has(m)) return 'el modo del tablero lo cambia quien administra aiva';
+  if (/^tablero\/modo$/.test(ruta) && !LEER.has(m)) return 'el modo del tablero lo cambia quien administra XENCRM';
   if (modo !== 'facil') return null;
-  if (LEER.has(m)) return NO_PUEDE_LEER.test(ruta) ? 'en el modo fácil eso lo ve quien administra aiva' : null;
-  return PUEDE_CAMBIAR.some(([mm, re]) => mm === m && re.test(ruta)) ? null : 'en el modo fácil eso lo cambia quien administra aiva';
+  if (LEER.has(m)) return NO_PUEDE_LEER.test(ruta) ? 'en el modo fácil eso lo ve quien administra XENCRM' : null;
+  return PUEDE_CAMBIAR.some(([mm, re]) => mm === m && re.test(ruta)) ? null : 'en el modo fácil eso lo cambia quien administra XENCRM';
 }

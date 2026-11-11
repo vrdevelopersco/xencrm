@@ -98,7 +98,7 @@ check('ni por otro método', (await comoAna('/api/c/confia/retencion', { method:
 check('pero sí verla', (await comoAna('/api/c/confia/retencion')).status === 502, 'se frenó algo que el negocio sí puede ver');
 // Y el mensaje dice de quién es ese asunto, en vez de un «403» pelado que parece un fallo.
 const porQue = (await (await comoAna('/api/c/confia/clave')).json()) as { error?: string };
-check('y se explica de quién es ese asunto', /administra aiva/.test(porQue.error ?? ''), String(porQue.error));
+check('y se explica de quién es ese asunto', /administra XENCRM/.test(porQue.error ?? ''), String(porQue.error));
 // 🪤 Lo suyo sigue siendo suyo: el freno es para dos rutas, no para su tablero entero.
 check('lo demás de su cliente lo sigue manejando', (await comoAna('/api/c/confia/contacts')).status === 502, 'se frenó algo que sí es del negocio');
 // La llave maestra sí puede: alguien tiene que poder ponerla.
@@ -166,10 +166,10 @@ check('cada quien se elige el suyo', leerUsuarios().find((u) => u.usuario === 'p
 check('un color inventado se rechaza', (() => { try { cambiarLoMio('pablo', { color: '#ff00ff' }); return false; } catch { return true; } })());
 check('y vaciarlo devuelve al automático', (() => { cambiarLoMio('pablo', { color: '' }); return colorDe(leerUsuarios().find((u) => u.usuario === 'pablo')!) === colorDe({ usuario: 'pablo' }); })());
 
-// El color de la consola es de cada quien, y el de siempre es el azul.
+// El color de la consola es de cada quien, y el de siempre es el verde agua de XENCRM («xen»).
 const pablo = () => leerUsuarios().find((u) => u.usuario === 'pablo')!;
-check('sin elegir, la consola no guarda color: es el azul', pablo().acento === undefined);
-check('el azul va primero en la lista', ACENTOS[0] === 'azul' && ACENTOS.includes('dorado'));
+check('sin elegir, la consola no guarda color: es el verde agua', pablo().acento === undefined);
+check('el verde agua de XENCRM va primero en la lista, y el azul de aiva sigue como opción', ACENTOS[0] === 'xen' && ACENTOS.includes('azul') && ACENTOS.includes('dorado'));
 cambiarLoMio('pablo', { acento: 'dorado' });
 check('cada quien elige el color de su consola', pablo().acento === 'dorado');
 check('cambiar el color no toca su nombre ni su clave', pablo().nombre === 'Pablo Ruiz' && Boolean(verificar('pablo', 'otra-clave-larga')));
@@ -178,7 +178,9 @@ check('lo que se rechaza no borra lo que tenía', pablo().acento === 'dorado');
 cambiarLoMio('pablo', { nombre: 'Pablo Ruiz' });
 check('guardar otra cosa no le quita el color', pablo().acento === 'dorado');
 cambiarLoMio('pablo', { acento: 'azul' });
-check('🪤 volver al azul no lo guarda: «el de siempre» queda siguiendo al de siempre', pablo().acento === undefined && !('acento' in JSON.parse(JSON.stringify(pablo()))));
+check('el azul, que ya no es el de siempre, sí se guarda', pablo().acento === 'azul');
+cambiarLoMio('pablo', { acento: 'xen' });
+check('🪤 volver al verde agua no lo guarda: «el de siempre» queda siguiendo al de siempre', pablo().acento === undefined && !('acento' in JSON.parse(JSON.stringify(pablo()))));
 
 
 // --- 🪤 el admin de un cliente maneja a su gente, y a nadie más ---

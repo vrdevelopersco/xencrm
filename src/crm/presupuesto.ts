@@ -176,7 +176,7 @@ const usd = (n: number) => `$${n.toFixed(2)}`;
 export function textoDelAviso(p: Presupuesto): string {
   const cuanto = `${business.business.name} lleva ${usd(p.gastado)} de IA este mes, el ${p.porcentaje} % del tope de ${usd(p.tope ?? 0)}.`;
   if (p.nivel === 'agotado')
-    return `${cuanto} Desde ahora aiva no usa la IA de pago hasta el mes siguiente o hasta que se suba el tope: lo que se resuelve sin IA sigue, y lo demás le llega al equipo para contestar a mano.`;
+    return `${cuanto} Desde ahora XENCRM no usa la IA de pago hasta el mes siguiente o hasta que se suba el tope: lo que se resuelve sin IA sigue, y lo demás le llega al equipo para contestar a mano.`;
   if (p.nivel === 'ahorro') return `${cuanto} Para estirar lo que queda, lo específico lo contesta el modelo de responder, que es el barato.`;
   return `${cuanto} Todavía no cambia nada; al 90 % empieza a ahorrar y al 100 % deja de usar la IA de pago.`;
 }

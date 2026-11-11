@@ -23,7 +23,7 @@ const slug = (s: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
-console.log('\n🌱 Aiva · configuración de un cliente\n');
+console.log('\n🌱 XENCRM · configuración de un cliente\n');
 if (existsSync('aiva.config.json') && !(await yes('Ya existe aiva.config.json. ¿Lo reemplazo?', false))) {
   console.log('Sin cambios.');
   process.exit(0);
@@ -75,7 +75,7 @@ if (mode === 'dunor' || mode === 'boutique' || mode === 'casa-verde') {
       humanContact: await ask('Cómo contactar a una persona del equipo', 'escríbenos por WhatsApp al número del negocio.'),
     },
     agent: {
-      name: await ask('Nombre del asistente', 'Aiva'),
+      name: await ask('Nombre del asistente', 'Xen'),
       style: await ask('Estilo de conversación', 'cálido, cercano, tutea, mensajes cortos tipo WhatsApp'),
       language: 'es',
     },

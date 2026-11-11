@@ -32,7 +32,7 @@ export type Dictionary = z.infer<typeof DictionarySchema>;
 export type DictionaryInput = z.input<typeof DictionarySchema>;
 
 const HELP =
-  'Diccionario del negocio para aiva. "topics": temas que se responden con la información del negocio; "keywords" son las palabras que los disparan (sin importar tildes ni mayúsculas) y "query" es con qué se busca en la información. "offerVerbs": verbos con que la gente pregunta por lo que se ofrece ("¿alquilan…?", "¿venden…?"). "expressions": lo que la gente dice a su manera; "says" se lee como "means" antes de aplicar las reglas (fechas, temas y el flujo de la cita), sin importar tildes ni mayúsculas. Se importa desde el tablero (Agente › Diccionario del negocio).';
+  'Diccionario del negocio para XENCRM. "topics": temas que se responden con la información del negocio; "keywords" son las palabras que los disparan (sin importar tildes ni mayúsculas) y "query" es con qué se busca en la información. "offerVerbs": verbos con que la gente pregunta por lo que se ofrece ("¿alquilan…?", "¿venden…?"). "expressions": lo que la gente dice a su manera; "says" se lee como "means" antes de aplicar las reglas (fechas, temas y el flujo de la cita), sin importar tildes ni mayúsculas. Se importa desde el tablero (Agente › Diccionario del negocio).';
 
 let current: Dictionary | null = null;
 let version = 0;

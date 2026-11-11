@@ -1,4 +1,4 @@
-/* Aiva widget — se embebe con: <script src="https://TU-DOMINIO/widget.js" async></script>
+/* Widget de XENCRM (el chat del sitio de cada cliente) — se embebe con: <script src="https://TU-DOMINIO/widget.js" async></script>
    Atributos opcionales en el <script>: data-color="#2f7d4f" data-greeting="¡Hola! ..." data-position="left"
    El color y el logo salen de la marca del cliente (aiva.config.json > brand); data-color la cambia solo en ese sitio. */
 (function () {

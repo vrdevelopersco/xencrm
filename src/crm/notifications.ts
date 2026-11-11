@@ -54,7 +54,7 @@ export function startNotifications() {
     }
     if (ev.type === 'handoff' && p.on && p.by === 'bot') {
       if (p.motivo === 'tope') push('handoff', ev.userId, `${nameOf(ev.userId)} pasó al equipo`, 'Se llegó al tope de gasto de IA del mes y su mensaje necesitaba IA: contéstale desde aquí.');
-      else push('handoff', ev.userId, `${nameOf(ev.userId)} pidió hablar con una persona`, 'Aiva está en pausa en esa conversación.');
+      else push('handoff', ev.userId, `${nameOf(ev.userId)} pidió hablar con una persona`, `${business.agent.name} está en pausa en esa conversación.`);
     }
     if (ev.type === 'presupuesto') {
       const titulo = p.nivel === 'agotado' ? 'Se llegó al tope de gasto de IA' : p.nivel === 'ahorro' ? 'Gasto de IA al 90 %: modo ahorro' : 'Gasto de IA al 80 % del tope';
@@ -96,7 +96,7 @@ export function startNotifications() {
     if (ev.type === 'public_down')
       push('public', 'system', 'La dirección pública no responde', `${String(p.error ?? '')}. Mientras tanto no funcionan el chat del sitio, WhatsApp oficial ni el tablero desde el celular. Revisa el túnel (Canales).`);
     if (ev.type === 'public_up') push('public', 'system', 'La dirección pública volvió a responder', String(p.url ?? ''));
-    if (ev.type === 'bot_failed') push('fail', ev.userId, `Aiva no pudo responder a ${nameOf(ev.userId)}`, `Motivo: ${String(p.reason ?? 'error')}. El cliente recibió una disculpa; conviene responder a mano.`);
+    if (ev.type === 'bot_failed') push('fail', ev.userId, `${business.agent.name} no pudo responder a ${nameOf(ev.userId)}`, `Motivo: ${String(p.reason ?? 'error')}. El cliente recibió una disculpa; conviene responder a mano.`);
     if (ev.type === 'engine_down') push('engine', 'system', `Motor ${String(p.engine)} fuera de servicio`, `${String(p.reason ?? '')}. Las respuestas siguen con el otro motor si está disponible.`);
     if (ev.type === 'message' && p.author === 'customer') {
       const c = getContact(ev.userId);

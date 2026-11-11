@@ -150,7 +150,8 @@ export const BusinessConfigSchema = z.object({
     humanContact: z.string(),
   }),
   agent: z.object({
-    name: z.string().default('Aiva'),
+    // El nombre por defecto del asistente de un cliente NUEVO (XENCRM). Cada cliente que ya existe trae el suyo.
+    name: z.string().default('Xen'),
     style: z.string().default('cálido, cercano, tutea, mensajes cortos tipo WhatsApp'),
     language: z.string().default('es'),
     greeting: z.string().optional(),

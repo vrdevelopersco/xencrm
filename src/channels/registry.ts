@@ -114,8 +114,8 @@ export function channelCards(): ChannelCard[] {
             // y el otro vuelve. Lo que hay que hacer es cerrar uno, y por eso los pasos dicen dónde mirar.
             waState === 'conflicto'
             ? [
-                'En el teléfono del negocio: WhatsApp › Dispositivos vinculados. Si hay más de una sesión de aiva, cierra las que sobren.',
-                'Si tienes aiva corriendo en otra máquina (o un conector), apaga el canal de WhatsApp allá.',
+                'En el teléfono del negocio: WhatsApp › Dispositivos vinculados. Si hay más de una sesión de XENCRM, cierra las que sobren.',
+                'Si tienes XENCRM corriendo en otra máquina (o un conector), apaga el canal de WhatsApp allá.',
                 'Cuando quede en un solo sitio, apaga y vuelve a encender este canal.',
               ]
             : [],
@@ -157,10 +157,10 @@ export function channelCards(): ChannelCard[] {
       : [
           'En developers.facebook.com crea una app de tipo Negocio y agrégale el producto WhatsApp.',
           'En WhatsApp › Configuración de la API copia el token de acceso y el ID del número, y pégalos abajo en «Credenciales». La clave secreta está en Configuración de la app › Básica.',
-          'Al guardar, aiva las verifica con Meta y muestra aquí la URL del webhook para registrarla en Meta (con el token de verificación) y suscribir el campo "messages".',
+          'Al guardar, XENCRM las verifica con Meta y muestra aquí la URL del webhook para registrarla en Meta (con el token de verificación) y suscribir el campo "messages".',
           'Para probar sin tocar el número real, Meta da un número de prueba gratis.',
         ],
-    warnings: meta.configured && !meta.signed ? ['Falta la clave secreta de la app: sin ella aiva no verifica que los mensajes vengan de Meta, y cualquiera podría enviarle mensajes falsos.'] : [],
+    warnings: meta.configured && !meta.signed ? ['Falta la clave secreta de la app: sin ella XENCRM no verifica que los mensajes vengan de Meta, y cualquiera podría enviarle mensajes falsos.'] : [],
     credentials: { phoneId: meta.phoneId, tokenTail: meta.tokenTail, appSecretTail: meta.appSecretTail, verifyToken: meta.verifyToken, version: meta.version, verified: meta.verified },
   });
 
@@ -170,7 +170,7 @@ export function channelCards(): ChannelCard[] {
     name: title,
     about,
     state: 'no_disponible',
-    detail: 'Aún no está en aiva: el adaptador se construye cuando haya credenciales para probarlo.',
+    detail: 'Aún no está en XENCRM: el adaptador se construye cuando haya credenciales para probarlo.',
     on: false,
     canToggle: false,
     messages7d: 0,
