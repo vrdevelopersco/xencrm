@@ -27,7 +27,12 @@ export interface VentasDelPeriodo {
 }
 
 /** Cuándo pasó una ficha a una etapa con ese papel (el primer evento que la llevó ahí), o null. */
-function cuandoPasoA(id: string, rol: 'ganado' | 'perdido'): number | null {
+/**
+ * Cuándo pasó una ficha a ganado o a perdido: el ÚLTIMO evento de etapa que la llevó a ese papel. Una sola regla
+ * para Ventas, Optimización y KPIs (antes cada uno la tenía escrita aparte). null si no hay evento: quien la usa
+ * decide qué hacer (aquí y en KPIs, la última vez que se vio; el Embudo, en cambio, dice «no se sabe»).
+ */
+export function cuandoPasoA(id: string, rol: 'ganado' | 'perdido'): number | null {
   return listEvents(id, 200)
     .filter((e) => e.type === 'stage' && rolDe(String(e.payload.to ?? '') as Stage) === rol)
     .pop()?.ts ?? null;

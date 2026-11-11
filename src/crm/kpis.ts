@@ -16,9 +16,10 @@
 //  4. **Por persona solo lo que se puede atribuir de verdad.** Las respuestas son de quien las escribió (cada
 //     mensaje guarda su autor). Lo ganado y lo vendido es de quien tiene asignado el contacto: es su cuenta, aunque
 //     el cierre lo haya movido el agente de IA. Lo que nadie tiene asignado no se reparte.
+import { cuandoPasoA } from './resultados.js';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
-import { esPersona, listContacts, listEvents, rolDe, type Contact, type Stage } from './contacts.js';
+import { esPersona, listContacts, rolDe, type Contact, type Stage } from './contacts.js';
 import { getSetting, setSetting } from './settings.js';
 import { esperas, type Espera } from './tiempos.js';
 import { valorDe, valorDelEmbudo } from './valor.js';
@@ -65,7 +66,8 @@ interface Cierre {
 }
 
 /**
- * 🪤 La misma regla de /ventas: el cierre es el ÚLTIMO evento que llevó la ficha a ese papel. Si no hay evento (una
+ * 🪤 La misma regla de /ventas, y la misma función (crm/resultados.ts, cuandoPasoA): el cierre es el ÚLTIMO evento
+ * que llevó la ficha a ese papel. Si no hay evento (una
  * ficha vieja o importada), se usa la última vez que se vio, que es lo que /ventas hace también.
  */
 function cierres(): Cierre[] {
@@ -73,10 +75,7 @@ function cierres(): Cierre[] {
   for (const c of listContacts({ limit: 5000 })) {
     const rol = rolDe(c.stage as Stage);
     if (rol !== 'ganado' && rol !== 'perdido') continue;
-    const ev = listEvents(c.id, 200)
-      .filter((e) => e.type === 'stage' && rolDe(String(e.payload.to ?? '') as Stage) === rol)
-      .pop();
-    out.push({ contacto: c, rol, cuando: ev?.ts ?? c.lastSeen ?? c.firstSeen ?? 0 });
+    out.push({ contacto: c, rol, cuando: cuandoPasoA(c.id, rol) ?? c.lastSeen ?? c.firstSeen ?? 0 });
   }
   return out;
 }
