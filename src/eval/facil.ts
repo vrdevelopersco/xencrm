@@ -36,7 +36,12 @@ const funcion = (nombre: string): string => {
 
 console.log('— El menú es el de la muestra');
 const menu = js.slice(js.indexOf('var MENU_FACIL = ['), js.indexOf('var MENU_SERVICIO = ['));
-const grupos = [...menu.matchAll(/grupo: '([^']+)', items: \[([^\]]*)\]/g)].map((g) => ({ grupo: g[1], items: [...g[2]!.matchAll(/view: '([a-z]+)', lbl: '([^']+)'/g)].map((m) => [m[1], m[2]]) }));
+// El vocabulario del negocio (VOC, xencrm.config.json › interfaz) se lee con sus valores de fábrica: «Citas» en el
+// menú es un getter (get lbl() { return VOC.Citas; }) para que diga lo que agenda cada negocio.
+const VOC_FABRICA: Record<string, string> = { cita: 'cita', citas: 'citas', Cita: 'Cita', Citas: 'Citas', la: 'la', La: 'La', las: 'las', una: 'una', Ninguna: 'Ninguna', otra: 'otra' };
+const conVoc = (src: string) => src.replace(/get (\w+)\(\) \{ return VOC\.(\w+); \}/g, (_m, k: string, v: string) => `${k}: '${VOC_FABRICA[v] ?? v}'`)
+  .replace(/VOC\.g\('([^']*)'\)/g, "'$1'").replace(/VOC\.(\w+)/g, (m, k: string) => (k in VOC_FABRICA ? `'${VOC_FABRICA[k]}'` : m)).replace(/'\s*\+\s*'/g, '');
+const grupos = [...conVoc(menu).matchAll(/grupo: '([^']+)', items: \[([^\]]*)\]/g)].map((g) => ({ grupo: g[1], items: [...g[2]!.matchAll(/view: '([a-z]+)', lbl: '([^']+)'/g)].map((m) => [m[1], m[2]]) }));
 check('el mapa de Dynamics 365: Mi trabajo, Clientes, Ventas, Rendimiento', grupos.map((g) => g.grupo).join(',') === 'Mi trabajo,Clientes,Ventas,Rendimiento', grupos.map((g) => g.grupo).join(','));
 check('Mi trabajo: Inicio, Bandeja omnicanal, Lista de trabajo, Citas', grupos[0]?.items.map((x) => x[1]).join(',') === 'Inicio,Bandeja omnicanal,Lista de trabajo,Citas');
 check('Clientes: Contactos y Cuentas clave · Ventas: Embudo, Tratos, Ventas · Rendimiento: KPIs y metas, Optimización de ventas, Analítica', grupos[1]?.items.map((x) => x[1]).join(',') === 'Contactos,Cuentas clave' && grupos[2]?.items.map((x) => x[1]).join(',') === 'Embudo,Tratos,Ventas' && grupos[3]?.items.map((x) => x[1]).join(',') === 'KPIs y metas,Optimización de ventas,Analítica');
@@ -214,7 +219,7 @@ check('la cifra del copiloto es la suma de las de los recuadros, nada estimado',
 check('se pinta con /today entero (pintarInicio se lo pasa)', /pintarResumenDelDia\(sections, t\);/.test(inicio));
 // Los recuadros de Hoy y sus colores, en el mismo orden. 🪤 Iban corridos: «Esperan tu respuesta» llevaba el tono de
 // los grupos (rojo y gris cambiados) y el copiloto buscaba a quién contestar entre los grupos.
-const deHoy = js.slice(js.indexOf('function loadToday()'), js.indexOf('var TONOS'));
+const deHoy = conVoc(js.slice(js.indexOf('function loadToday()'), js.indexOf('var TONOS')));
 const titulos = [...deHoy.matchAll(/\{ t: '([^']+)'/g)].map((m) => m[1]!);
 const tonosHoy = ((js.match(/var TONOS = \[([^\]]*)\]/)?.[1] ?? '').match(/'([a-z]+)'/g) || []).map((x) => x.slice(1, -1));
 const tonoDe: Record<string, string> = { 'Por verificar': 'verificar', 'Te escribieron en un grupo': 'grupos', 'Esperan tu respuesta': 'esperan', 'Pidieron una persona': 'persona', '¿Cómo les fue? (citas que ya pasaron)': 'pasadas', 'Recordar a mano': 'recordar', 'Citas de hoy': 'citas', 'Calientes sin seguimiento (más de 24 h)': 'calientes', 'Próximas citas (3 días)': 'proximas' };

@@ -1,12 +1,13 @@
 {
-  "_ayuda": "Diccionario del negocio para XENCRM: temas que se responden con la información del negocio.",
+  "_ayuda": "Diccionario del negocio para XENCRM. \"topics\": temas que se responden con la información del negocio; \"keywords\" son las palabras que los disparan (sin importar tildes ni mayúsculas) y \"query\" es con qué se busca en la información. \"offerVerbs\": verbos con que la gente pregunta por lo que se ofrece (\"¿venden…?\", \"¿tienen…?\"). Se importa desde el tablero (Configuración › El asistente › Diccionario del negocio).",
   "topics": [
     {
       "keywords": [
         "sla",
         "tiempo de respuesta",
         "cuanto se demoran",
-        "cuánto tardan"
+        "cuanto tardan",
+        "en cuanto me responden"
       ],
       "query": "soporte y SLA por plan"
     },
@@ -15,26 +16,90 @@
         "plan basico",
         "plan pro",
         "enterprise",
-        "planes de soporte"
+        "planes de soporte",
+        "mi plan"
       ],
       "query": "planes de soporte"
     },
     {
       "keywords": [
         "mantenimiento",
-        "ventana",
-        "actualizacion",
-        "version nueva"
+        "ventana de mantenimiento",
+        "van a apagar",
+        "fuera de servicio programado"
       ],
-      "query": "mantenimientos y actualizaciones"
+      "query": "mantenimientos programados"
+    },
+    {
+      "keywords": [
+        "actualizacion",
+        "version nueva",
+        "nueva version",
+        "notas de la version",
+        "update"
+      ],
+      "query": "actualizaciones mensuales"
     },
     {
       "keywords": [
         "demo",
         "demostracion",
-        "prueba gratis"
+        "ver la app",
+        "prueba"
       ],
       "query": "demo de producto"
+    },
+    {
+      "keywords": [
+        "implementacion",
+        "cuanto se demora instalar",
+        "puesta en marcha",
+        "capacitacion"
+      ],
+      "query": "implementación"
+    },
+    {
+      "keywords": [
+        "facturacion electronica",
+        "dian",
+        "factura electronica"
+      ],
+      "query": "XENTRIS POS facturación electrónica"
+    },
+    {
+      "keywords": [
+        "datafono",
+        "datáfono",
+        "pasarela"
+      ],
+      "query": "XENTRIS POS datáfonos"
+    },
+    {
+      "keywords": [
+        "sin señal",
+        "offline",
+        "sin internet"
+      ],
+      "query": "XENTRIS Field funciona sin señal"
+    },
+    {
+      "keywords": [
+        "transferencia",
+        "tarjeta de credito",
+        "debito automatico",
+        "formas de pago"
+      ],
+      "query": "formas de pago"
+    },
+    {
+      "keywords": [
+        "ticket",
+        "reportar una falla",
+        "reportar un problema",
+        "no funciona",
+        "se cayo"
+      ],
+      "query": "cómo reportar un problema"
     }
   ],
   "offerVerbs": [
@@ -42,6 +107,8 @@
     "tienen",
     "hacen",
     "desarrollan",
-    "integran"
+    "integran",
+    "manejan",
+    "ofrecen"
   ]
 }

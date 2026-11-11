@@ -1,5 +1,6 @@
 // Enseñar una frase que no entendimos: se agrega como expresión al diccionario solo si, con ella, las reglas ya
 // entienden la frase del cliente. Si no, el diccionario queda como estaba y se dice por qué.
+import { V } from '../vocabulario.js';
 import { DictionarySchema, expandExpressions, explainErrors, getDictionary, importDictionary, mergeDictionaries, useDictionary } from './dictionary.js';
 import { ruleIntent } from './gate.js';
 import { bookingReading } from '../crm/booking.js';
@@ -12,7 +13,7 @@ export type TeachResult =
 
 const INTENT_READING: Record<string, string> = {
   saludo: 'un saludo',
-  cita: 'quiere una cita',
+  cita: `quiere ${V.una} ${V.cita}`,
   humano: 'quiere hablar con una persona',
   info_tienda: 'pregunta de la tienda',
   compra: 'pregunta por el catálogo',

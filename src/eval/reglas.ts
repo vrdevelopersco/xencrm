@@ -93,10 +93,11 @@ console.log('— Mover una regla de cada grupo cambia lo que calcula su módulo'
 // Puntaje: el peso y los cortes.
 const ficha = { id: 'web:x', name: null, phone: null, messageCount: 1 } as never;
 const senales = { sentimiento: 'neutral', interes: 0, urgencia: 'baja', quiere_cita: true, pidio_precio: false, menciono_presupuesto: false, tiene_objecion: false, objecion: '', presupuesto: '', nombre: '', ciudad: '', telefono: '', resumen: '' } as never;
-const antesCita = computeScore(ficha, senales, { hasAppointment: false }).factors.find((f) => f.label === 'Pidió cita')?.points;
+const { V } = await import('../vocabulario.js');
+const antesCita = computeScore(ficha, senales, { hasAppointment: false }).factors.find((f) => f.label === `Pidió ${V.cita}`)?.points;
 R.ponerRegla('puntaje.peso.pidioCita', 45);
-const despuesCita = computeScore(ficha, senales, { hasAppointment: false }).factors.find((f) => f.label === 'Pidió cita')?.points;
-check('Puntaje: «Pidió cita» suma lo que diga su regla (30 → 45)', antesCita === 30 && despuesCita === 45, `${antesCita} → ${despuesCita}`);
+const despuesCita = computeScore(ficha, senales, { hasAppointment: false }).factors.find((f) => f.label === `Pidió ${V.cita}`)?.points;
+check('Puntaje: «Pidió …» (con la palabra del negocio) suma lo que diga su regla (30 → 45)', antesCita === 30 && despuesCita === 45, `${antesCita} → ${despuesCita}`);
 R.quitarRegla('puntaje.peso.pidioCita');
 check('Puntaje: con los cortes de fábrica, 70 es caliente', temperature(70) === 'caliente' && temperature(45) === 'tibio' && temperature(10) === 'frio');
 R.ponerRegla('puntaje.caliente', 80);

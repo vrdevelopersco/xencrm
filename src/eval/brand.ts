@@ -23,6 +23,6 @@ for (const c of colors) {
 }
 check(`${colors.length} colores: el texto encima siempre se lee y el color como borde se distingue`, bad.length === 0, bad.slice(0, 5).join(' · '));
 check('un color que ya se lee no se toca (#2f7d4f con blanco)', onBrand('#2f7d4f').bg === '#2f7d4f' && onBrand('#2f7d4f').text === '#ffffff');
-check('el dorado de DUNOR lleva texto oscuro', onBrand('#C5A47E').text === '#111827' && onBrand('#C5A47E').bg === '#C5A47E');
+check('el dorado de la boutique de prueba lleva texto oscuro', onBrand('#C5A47E').text === '#111827' && onBrand('#C5A47E').bg === '#C5A47E');
 console.log(`\n${fail ? `${fail} fallos` : 'todo ok'}`);
 process.exit(fail ? 1 : 0);

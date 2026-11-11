@@ -17,6 +17,7 @@
 //     mensaje guarda su autor). Lo ganado y lo vendido es de quien tiene asignado el contacto: es su cuenta, aunque
 //     el cierre lo haya movido el agente de IA. Lo que nadie tiene asignado no se reparte.
 import { regla } from '../reglas.js';
+import { V } from '../vocabulario.js';
 import { cuandoPasoA } from './resultados.js';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
@@ -47,8 +48,8 @@ export const KPIS: DefKpi[] = [
   { id: 'nuevas', nombre: 'Conversaciones nuevas', que: 'Personas que escribieron por primera vez', unidad: 'n', mejor: 'sube', meta: 'acumula' },
   { id: 'respuesta', nombre: 'Tiempo de respuesta', que: 'La mitad se contestó en menos de esto (en horario)', unidad: 'min', mejor: 'baja', meta: 'umbral' },
   { id: 'aTiempo', nombre: 'Contestadas a tiempo', que: 'Dentro del acuerdo de servicio', unidad: 'pct', mejor: 'sube', meta: 'umbral' },
-  { id: 'citas', nombre: 'Citas agendadas', que: 'Agendadas en el periodo (no el día de la cita)', unidad: 'n', mejor: 'sube', meta: 'acumula' },
-  { id: 'asistencia', nombre: 'Asistencia a citas', que: 'De las citas ya pasadas y marcadas, las que se cumplieron', unidad: 'pct', mejor: 'sube', meta: 'umbral' },
+  { id: 'citas', nombre: `${V.Citas} ${V.g('agendadas')}`, que: `${V.g('Agendadas')} en el periodo (no el día de ${V.la} ${V.cita})`, unidad: 'n', mejor: 'sube', meta: 'acumula' },
+  { id: 'asistencia', nombre: `Asistencia a ${V.citas}`, que: `De ${V.las} ${V.citas} ya ${V.g('pasadas')} y ${V.g('marcadas')}, ${V.las} que se cumplieron`, unidad: 'pct', mejor: 'sube', meta: 'umbral' },
   { id: 'ganados', nombre: 'Tratos ganados', que: 'Pasaron a ganado en el periodo', unidad: 'n', mejor: 'sube', meta: 'acumula' },
   { id: 'perdidos', nombre: 'Tratos perdidos', que: 'Pasaron a perdido en el periodo', unidad: 'n', mejor: 'baja', meta: null },
   { id: 'cierre', nombre: 'Tasa de cierre', que: 'De los tratos cerrados, los que se ganaron', unidad: 'pct', mejor: 'sube', meta: 'umbral' },

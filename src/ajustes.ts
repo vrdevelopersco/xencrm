@@ -12,6 +12,7 @@
 // 🪤 La configuración se lee UNA vez, al arrancar. Guardar deja el archivo listo, pero el proceso sigue con lo
 // viejo hasta que reinicie. Por eso `guardar()` dice si hace falta reiniciar y `puedeReiniciarse` dice si hay
 // quien lo levante (el arranque del paquete o pm2); si no lo hay, no se ofrece: dejaría al cliente abajo.
+import { V } from './vocabulario.js';
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { z } from 'zod';
@@ -180,7 +181,7 @@ export function alDia(): boolean {
 export function guardar(entran: unknown): { ajustes: Ajustes; hayQueReiniciar: boolean } {
   const a = AjustesSchema.parse(entran);
   if (a.citas.enabled && (a.citas.days.length === 0 || a.citas.hours.length === 0)) {
-    throw new Error('para agendar citas hace falta al menos un día y una franja horaria');
+    throw new Error(`para agendar ${V.citas} hace falta al menos un día y una franja horaria`);
   }
   for (const [desde, hasta] of a.citas.hours) {
     if (desde >= hasta) throw new Error(`la franja ${desde}–${hasta} termina antes de empezar`);
@@ -203,7 +204,7 @@ export function guardar(entran: unknown): { ajustes: Ajustes; hayQueReiniciar: b
     const quedan = new Set(sedes.map((s) => s.id));
     for (const vieja of business.sedes.filter((s) => !quedan.has(s.id))) {
       const proximas = listAppointments({ from: Date.now(), status: 'confirmada', limit: 1000 }).filter((x) => x.sede === vieja.id).length;
-      if (proximas) throw new Error(`${vieja.nombre} tiene ${proximas} cita${proximas === 1 ? '' : 's'} por delante: muévelas o cancélalas antes de quitarla`);
+      if (proximas) throw new Error(`${vieja.nombre} tiene ${proximas} ${proximas === 1 ? V.cita : V.citas} por delante: muévelas o cancélalas antes de quitarla`);
     }
   }
 

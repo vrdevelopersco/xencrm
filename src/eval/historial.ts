@@ -85,13 +85,13 @@ check('ninguna palabra propuesta se dijo una sola vez', !candidatas.some((e) => 
 // --- leer un chat exportado de WhatsApp ---
 const exportado = [
   '[12/03/24, 9:41:02 a. m.] Marta: buenos días, ¿tienen traje azul?',
-  '[12/03/24, 9:42:10 a. m.] DUNOR Boutique: ¡Hola Marta! Sí, con gusto te muestro',
+  '[12/03/24, 9:42:10 a. m.] Atelier Demo: ¡Hola Marta! Sí, con gusto te muestro',
   '12/03/24, 9:43 a. m. - Marta: ¿y me lo ajustan?',
   'sí, para el sábado',
-  '[12/03/24, 9:44:00 a. m.] DUNOR Boutique: <Multimedia omitido>',
+  '[12/03/24, 9:44:00 a. m.] Atelier Demo: <Multimedia omitido>',
   '[12/03/24, 9:45:00 a. m.] Marta: listo, gracias',
 ].join('\n');
-const leidos = leerChatExportado(exportado, { delNegocio: ['DUNOR Boutique'], chat: 'Marta' });
+const leidos = leerChatExportado(exportado, { delNegocio: ['Atelier Demo'], chat: 'Marta' });
 check('lee el chat exportado', leidos.length === 4, JSON.stringify(leidos.map((m) => m.content)));
 check('sabe quién es el negocio y quién el cliente', leidos[0]!.role === 'user' && leidos[1]!.role === 'assistant');
 check('junta el mensaje partido en dos líneas', /me lo ajustan[\s\S]*s[ií], para el s[aá]bado/i.test(leidos[2]!.content), leidos[2]!.content);
@@ -133,7 +133,7 @@ check('🪤 una respuesta sin pregunta no se aprende', sinPregunta === 0, String
 
 // 🪤 Y las credenciales se tapan también aquí.
 bd.prepare("INSERT INTO messages (user_id, role, content, ts, author) VALUES (?, 'user', '¿cómo entro?', ?, 'customer')").run('wa:573001112233@s.whatsapp.net', T0 + 200_000);
-aprenderDeLaRespuesta('wa:573001112233@s.whatsapp.net', 'Usuario: admin@dunor.co\nClave: secreta-de-verdad', 'Camila', T0 + 260_000);
+aprenderDeLaRespuesta('wa:573001112233@s.whatsapp.net', 'Usuario: admin@atelier-demo.example\nClave: secreta-de-verdad', 'Camila', T0 + 260_000);
 check('🪤 lo aprendido no guarda credenciales', !JSON.stringify(bd.prepare('SELECT content FROM import_messages').all()).includes('secreta-de-verdad'));
 
 // ---------- Que el tablero pueda ENSEÑAR lo que ya estaba conversado ----------

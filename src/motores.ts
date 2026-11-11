@@ -25,7 +25,7 @@ export const ROL_NOMBRE: Record<Role, string> = {
 /** Qué hace cada rol, en una frase, para poder decidir sin adivinar. */
 export const ROL_QUE_HACE: Record<Role, string> = {
   light: 'La mayoría de los mensajes: saludar, orientar, responder lo de siempre. Es el que más se usa.',
-  heavy: 'Lo que pide precisión: tipo de prenda, color, medidas, detalles, recomendar.',
+  heavy: 'Lo que pide precisión: características, comparar, detalles técnicos, recomendar.',
   gate: 'Decide qué clase de mensaje llegó y a dónde va. No se ve, pero de él depende todo lo demás.',
   analysis: 'La ficha del contacto, el puntaje y el resumen. Nadie espera delante de la pantalla.',
 };

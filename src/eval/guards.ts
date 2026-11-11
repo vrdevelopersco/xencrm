@@ -10,7 +10,7 @@ const check = (name: string, got: unknown, want: unknown) => {
 };
 
 // Información de ejemplo, como la que recibe el modelo en un turno
-const info = `Eres Xen, de DUNOR Boutique: alquiler premium de trajes, esmóquines y accesorios, diseño a la medida y asesoría de imagen.
+const info = `Eres Xen, de Atelier Demo: alquiler premium de trajes, esmóquines y accesorios, diseño a la medida y asesoría de imagen.
 ## Información disponible
 Traje azul noche: alquiler con ajustes incluidos. Esmoquin negro clásico. Aceptamos tarjeta de crédito y transferencia.
 Atención solo con cita previa en Barranquilla.`;
@@ -20,7 +20,7 @@ check('"Sí, tenemos wifi" sin que la información lo diga', ungroundedClaim('¿
 check('"Claro, hay parqueadero" sin respaldo', ungroundedClaim('¿tienen parqueadero?', 'Claro, hay parqueadero para clientes.', info), 'parqueadero');
 check('color que no está en el catálogo', ungroundedClaim('¿tienen trajes rosados?', '¡Claro! Tenemos trajes rosados para tu evento.', info), 'rosados');
 check('"Sí," al inicio aunque luego remita al equipo', ungroundedClaim('¿aceptan mascotas en la boutique?', 'Sí, podemos ayudarte con eso. Para confirmártelo bien, escríbenos.', info), 'mascotas');
-check('"contamos con" a mitad de frase', ungroundedClaim('¿hay zona de café?', 'En DUNOR contamos con zona de café mientras esperas.', info), 'zona cafe');
+check('"contamos con" a mitad de frase', ungroundedClaim('¿hay zona de café?', 'En Atelier Demo contamos con zona de café mientras esperas.', info), 'zona cafe');
 check('con respaldo: el traje azul sí está', ungroundedClaim('¿tienen trajes azules?', 'Sí, tenemos trajes azules, como el azul noche.', info), null);
 check('con respaldo: tarjeta sí está', ungroundedClaim('¿aceptan tarjeta?', 'Sí, aceptamos tarjeta de crédito.', info), null);
 check('honesto: "no te lo puedo confirmar"', ungroundedClaim('¿aceptan mascotas?', 'Por ahora no te lo puedo confirmar con seguridad.', info), null);
@@ -44,10 +44,10 @@ check('cuando el equipo lo enseñó, ese "no" ya pasa', ungroundedDenial('¿tien
 const scope = 'Boutique de moda masculina: alquiler premium de trajes y esmóquines para hombres.';
 check('negar por el alcance del negocio: "somos moda masculina" (está en su descripción)', ungroundedDenial('tienen vestidos de novia?', 'Hola. No, eso no lo vendemos: somos una boutique de moda masculina.', info, scope), null);
 check('"moda masculina" se apoya en una descripción que dice "para hombres"', ungroundedDenial('tienen vestidos de novia?', 'No, eso no lo manejamos: nos especializamos en moda masculina.', info, 'Alquiler de trajes y esmóquines para hombres.'), null);
-check('"X es una boutique de moda masculina" y "trabajamos moda masculina" también son alcance', [ungroundedDenial('¿tienen trajes para niño?', 'DUNOR es una boutique de moda masculina, y no tenemos trajes para niño.', info, scope), ungroundedDenial('¿tienen trajes para niño?', 'Trabajamos moda masculina para hombres, y no tenemos trajes para niño.', info, scope)], [null, null]);
+check('"X es una boutique de moda masculina" y "trabajamos moda masculina" también son alcance', [ungroundedDenial('¿tienen trajes para niño?', 'Atelier Demo es una boutique de moda masculina, y no tenemos trajes para niño.', info, scope), ungroundedDenial('¿tienen trajes para niño?', 'Trabajamos moda masculina para hombres, y no tenemos trajes para niño.', info, scope)], [null, null]);
 check('"es una excelente opción" no es alcance', ungroundedDenial('¿venden zapatos?', 'No tenemos zapatos, pero el esmoquin es una excelente opción para bodas.', info, `${scope} Para bodas y grados.`), 'zapatos');
 check('sin la descripción, ese mismo "no" se verifica', ungroundedDenial('tienen vestidos de novia?', 'Hola. No, eso no lo vendemos: somos una boutique de moda masculina.', info), 'vestidos novia');
-check('un "no" a mitad del mensaje también cuenta', ungroundedDenial('¿venden zapatos?', 'Hola, soy Xen de DUNOR. No, eso no lo manejamos.', info, scope), 'zapatos');
+check('un "no" a mitad del mensaje también cuenta', ungroundedDenial('¿venden zapatos?', 'Hola, soy Xen de Atelier Demo. No, eso no lo manejamos.', info, scope), 'zapatos');
 check('un alcance que no está en la descripción no respalda', ungroundedDenial('¿venden zapatos?', 'No, solo vendemos camisas.', info, scope), 'zapatos');
 
 // Negativas suaves: responden que no sin decir "no"

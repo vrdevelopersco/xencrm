@@ -1,7 +1,8 @@
 # Guía del tablero
 
 Para quien atiende a los clientes del negocio: qué hay en cada pantalla y qué hacer con cada cosa. No hace falta
-saber nada técnico. Los ejemplos son de DUNOR Boutique, pero el tablero es igual para cualquier negocio.
+saber nada técnico. Los ejemplos son de XENTRIS LLC (el ejemplo de XENCRM: una firma de software), pero el tablero
+es igual para cualquier negocio.
 
 Lo esencial está dentro del mismo tablero, en **Ayuda**: un tutorial rápido de seis pasos (cada uno lleva a su
 pantalla), preguntas frecuentes y lo que el asistente nunca hace. La primera vez que alguien entra, Hoy le muestra
@@ -88,7 +89,7 @@ Lo que hay que atender, ordenado por lo que cuesta dejarlo esperando. Cada fila 
   esperando el resultado de una que ya pasó (esos están arriba, en *¿Cómo les fue?*). Aquí entran por lo que
   llegaron a ser en la conversación, aunque ya se hayan enfriado: son justo los que hay que retomar. Cada uno
   trae dos botones: **Escribirle** abre su conversación, te la pasa a ti y deja un borrador listo con lo que él
-  mismo dijo ("lo de tu traje para tu boda"), para que lo ajustes y lo envíes; **Dejarlo por ahora** lo saca de la
+  mismo dijo ("lo de XENTRIS POS"), para que lo ajustes y lo envíes; **Dejarlo por ahora** lo saca de la
   lista una semana (si escribe antes, vuelve enseguida). Así la lista se puede vaciar y se puede confiar en ella.
 - **Sin leer, el asistente ya respondió**: para darles una mirada.
 
@@ -110,7 +111,7 @@ una promesa de descuento que no salió), cuánto costó y con qué versión. Es 
 respuesta te parece rara.
 
 **Buscar.** El buscador de arriba mira el nombre, el teléfono, el resumen y **lo que se dijo en la conversación**:
-escribe "esmoquin azul" y salen las conversaciones donde aparece, cada una con el pedacito donde se dijo y quién lo
+escribe "facturación electrónica" y salen las conversaciones donde aparece, cada una con el pedacito donde se dijo y quién lo
 dijo.
 
 **Quién responde.** Arriba del chat está el switch **Responde: Xen | Tú**. En *Tú*, el asistente no contesta y tú
@@ -143,8 +144,8 @@ aparta. Se apaga en **Configuración › El asistente › Cuando la llevas tú**
   fue?*.
 - **Correo, WhatsApp, Instagram, Facebook y Nos contactó por**: lo de contacto que se tenga, para tocarlo y
   escribirle o abrir su perfil. Solo sale lo que está escrito.
-- **Lo que contó**: lo que el asistente entendió de la conversación, sin preguntarlo (servicio, prenda, ocasión,
-  fecha del evento, la talla o las medidas…). Se llena solo mientras conversa, y se corrige en *Corregir datos*.
+- **Lo que contó**: lo que el asistente entendió de la conversación, sin preguntarlo (en XENTRIS: el producto, la
+  empresa, cuántos usuarios, el plan de soporte, para cuándo…). Se llena solo mientras conversa, y se corrige en *Corregir datos*.
 - **Citas** y **Historia**: lo último que pasó, con una caja para dejar una nota sin salir de la conversación.
   **Ver la ficha completa** abre la historia entera.
 - **Corregir datos** (se abre con un clic): nombre, teléfono, correo, WhatsApp si es otro número, Instagram,
@@ -201,8 +202,8 @@ sin dar su nombre sale como *Visitante del sitio*, con cuatro letras para distin
 
 ### Por etapa
 
-Una columna por etapa. Las etapas son **las de tu negocio**: una boutique va *Nuevo → Conversando → Interesado →
-Cita agendada → Vendido*; una financiera, *Nuevo → En revisión → Con un asesor → Resuelto*; una litografía,
+Una columna por etapa. Las etapas son **las de tu negocio**: XENTRIS va *Nuevo → Calificado → Evaluando → Demo
+agendada → Ganado*; una boutique, *Nuevo → Conversando → Interesado → Cita agendada → Vendido*; una financiera, *Nuevo → En revisión → Con un asesor → Resuelto*; una litografía,
 *Nuevo → Tomando datos → Cotizado → En producción → Entregado*. Se eligen al montar el negocio y se ajustan en su
 configuración. Para cambiar a
 alguien de etapa, arrastra la tarjeta o usa **Mover…**, al pie de cada una, que también funciona en el celular.
@@ -276,7 +277,7 @@ la del servidor: un mensaje de las 11 de la noche no puede aparecer al día sigu
 ## Perfil
 
 Lo que el asistente dice de tu negocio: nombre, dirección, horarios, zona que atienden, contacto, formas de pago,
-abono, precios, políticas y datos propios (tallas, tiempos, lo que venden o no).
+abono, precios, políticas y datos propios (planes, tiempos, lo que ofrecen o no).
 
 - Lo que llenes, el asistente lo usa **al instante** y manda sobre cualquier otra información.
 - Lo que quede vacío sale como **Por confirmar**. Si un cliente pregunta por eso, el asistente no se lo inventa:
@@ -321,8 +322,8 @@ La configuración del negocio, en la otra pestaña del mismo modal del Perfil. A
 - **El asistente**: cómo se llama, cómo habla, qué busca en cada conversación, cómo saluda y qué dice cuando no
   sabe algo.
 - **Marca y hora**: el color, el **logo**, el **logo para fondo oscuro**, la **marca chica** (el favicon) y sobre
-  qué fondo va su marca en lo que ve su gente. Muchas marcas tienen dos versiones del logo —DUNOR es negro sobre
-  claro y dorado sobre negro— y usar la que no es se ve como un error de imprenta. Más la zona horaria, con la
+  qué fondo va su marca en lo que ve su gente. Muchas marcas tienen dos versiones del logo —una negra para fondo
+  claro y una dorada para fondo oscuro— y usar la que no es se ve como un error de imprenta. Más la zona horaria, con la
   que entiende «mañana a las 3».
 - **Citas**: si agenda, cómo se llama la cita, dónde, cuánto dura, cuántas a la vez, con cuánta anticipación,
   hasta cuántos días adelante, qué días y qué franjas.

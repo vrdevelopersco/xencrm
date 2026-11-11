@@ -1,4 +1,5 @@
 import { business, env } from '../config.js';
+import { V } from '../vocabulario.js';
 import { modoCanal, propone, soloEscucha, type ChannelId } from '../channels/switches.js';
 import { businessSheet, retrieve, formatContext } from '../rag/retriever.js';
 import { getDocs, productsMentionedIn, type ScoredDoc } from '../rag/store.js';
@@ -303,19 +304,19 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   //   - nada de saludos, traspasos ni «eso no es de aquí»: ahí la propuesta no le ahorra nada a nadie;
   //   - y sin reintentos: si la primera redacción no se sostiene, no se paga otra para dejarla en un cajón.
   if (contact?.humanMode && !acompana) return callarse('modo humano');
-  if (acompana && (hasBookingInProgress(msg.userId) || iaAgotada())) return callarse(iaAgotada() ? 'acompaña · tope de gasto' : 'acompaña · cita en curso');
+  if (acompana && (hasBookingInProgress(msg.userId) || iaAgotada())) return callarse(iaAgotada() ? 'acompaña · tope de gasto' : `acompaña · ${V.cita} en curso`);
 
   // Flujo de cita en curso: fechas y horas las maneja un flujo determinista, no el modelo.
   if (hasBookingInProgress(msg.userId)) {
     const step = await bookingStep(msg.userId, text);
-    if (step !== null) return finish(step, 'cita', 'template', { route: 'flujo de cita' });
+    if (step !== null) return finish(step, 'cita', 'template', { route: `flujo de ${V.cita}` });
   }
 
   // "Quiero cancelar mi cita", "¿la puedo pasar para el jueves?": si tiene una cita próxima, lo maneja el flujo de citas
   // (con confirmación), nunca el modelo, que podría decir "listo, cancelada" sin haberlo hecho.
   if (business.appointments.enabled && manageIntent(text, { strict: true }) && nextAppointmentFor(msg.userId)) {
-    if (acompana) return callarse('acompaña · su cita');
-    return finish(await startBooking(msg.userId, text), 'cita', 'template', { route: 'cambiar o cancelar cita' });
+    if (acompana) return callarse(`acompaña · su ${V.cita}`);
+    return finish(await startBooking(msg.userId, text), 'cita', 'template', { route: `cambiar o cancelar ${V.cita}` });
   }
 
   // ¿Es una de las de siempre? Si el negocio ya dejó escrita y aprobada la respuesta a esta pregunta, se usa.
@@ -364,7 +365,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   if (acompana && gate.intent !== 'compra' && gate.intent !== 'info_tienda') return callarse(`acompaña · ${gate.intent}`, { gateVia: gate.via });
 
   if (gate.intent === 'fuera_de_alcance') return finish(pick(OUT_OF_SCOPE_REPLIES), gate.intent, 'template', { gateVia: gate.via });
-  if (gate.intent === 'cita') return finish(await startBooking(msg.userId, text), gate.intent, 'template', { gateVia: gate.via, route: 'flujo de cita' });
+  if (gate.intent === 'cita') return finish(await startBooking(msg.userId, text), gate.intent, 'template', { gateVia: gate.via, route: `flujo de ${V.cita}` });
   // 🪤 En una demostración NO se traspasa, ni con la frase: se contesta la pregunta y punto.
   //
   // Pasó en vivo y fue peor de lo que parecía. El clasificador manda a una persona en cuanto ve «queja»,
@@ -399,7 +400,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     }
     if (PROCESS_RE.test(text)) {
       // Añade la explicación del proceso (cita, medidas, pruebas, tiempos) aunque la pregunta venga con un producto.
-      const process = await retrieve('cómo funciona el proceso paso a paso, cita, pruebas y tiempos', { kinds: ['knowledge'], k: 2, minSim: 0.4 });
+      const process = await retrieve(`cómo funciona el proceso paso a paso, ${V.cita}, pruebas y tiempos`, { kinds: ['knowledge'], k: 2, minSim: 0.4 });
       knowledge = [...process, ...knowledge.filter((k) => !process.some((p) => p.id === k.id))].slice(0, 4);
     }
   } catch (err) {
@@ -432,7 +433,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   } else if (gate.intent === 'compra' && STOCK_RE.test(text)) {
     note = 'El cliente pregunta por disponibilidad: responde con el dato de "Disponibilidad" del producto; si no está en la lista, di que no lo tenemos.';
   } else if (PROCESS_RE.test(text)) {
-    note = `El cliente pregunta cómo funciona: explica el proceso en 3 o 4 pasos cortos con la "Información de la tienda" (cita, medidas, pruebas, tiempos y pago), menciona la prenda que le interesa si la dijo, y termina ofreciendo agendar${business.appointments.enabled ? ' la cita por aquí mismo' : ''}. Sin listar precios salvo que los pida.`;
+    note = `El cliente pregunta cómo funciona: explica el proceso en 3 o 4 pasos cortos con la "Información de la tienda" (cómo empieza, tiempos, qué incluye y pago), menciona lo que le interesa si lo dijo, y termina ofreciendo agendar${business.appointments.enabled ? ' ${V.la} ${V.cita} por aquí mismo' : ''}. Sin listar precios salvo que los pida.`;
   }
   if (gate.intent === 'saludo') {
     // 🪤 El saludo del negocio (Configuración › Primer saludo) se guardaba, se enseñaba en el tablero con su
@@ -587,13 +588,13 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       // Una cita que no existe ("te esperamos en la cita"): solo el flujo de citas agenda.
       if (business.appointments.enabled && claimsBooked(candidate) && !nextAppointmentFor(msg.userId)) {
         if (acompana) {
-          noSabe = 'daba por hecha una cita';
+          noSabe = `daba por hecha ${V.una} ${V.cita}`;
           break;
         }
-        console.warn(`[agent] ${e} dio por hecha una cita que no existe; se rehace: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
-        const noAppt = 'El cliente todavía NO tiene una cita agendada: no digas que la tiene, que quedó agendada ni "te esperamos". Si quiere agendar, ofrécele buscarle un espacio.';
+        console.warn(`[agent] ${e} dio por hecha ${V.una} ${V.cita} que no existe; se rehace: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
+        const noAppt = `El cliente todavía NO tiene ${V.una} ${V.cita} ${V.g('agendada')}: no digas que la tiene, que quedó ${V.g('agendada')} ni "te esperamos". Si quiere agendar, ofrécele buscarle un espacio.`;
         const retry = await generate(e, { ...input, note: [input.note, noAppt].filter(Boolean).join('\n') });
-        candidate = claimsBooked(retry) ? 'Todavía no tienes una cita agendada 🙂 ¿Quieres que te busque un espacio?' : retry;
+        candidate = claimsBooked(retry) ? `Todavía no tienes ${V.una} ${V.cita} ${V.g('agendada')} 🙂 ¿Quieres que te busque un espacio?` : retry;
         fakeBooking = true;
         anotarGuarda('cita_inventada');
       }
@@ -610,7 +611,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
         (e === chosen.engine ? chosen.reason : `${chosen.reason} → respaldo ${e}`) +
         (claim ? ` · sin afirmar «${claim}»` : '') +
         (promesa ? ` · sin prometer «${promesa}»` : '') +
-        (fakeBooking ? ' · sin dar por hecha una cita' : '') +
+        (fakeBooking ? ` · sin dar por hecha ${V.una} ${V.cita}` : '') +
         (recito ? ' · sin recitar sus instrucciones' : '');
       break;
     } catch (err) {

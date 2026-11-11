@@ -2,6 +2,7 @@
 // "el 2 de octubre a las 4", "la otra semana temprano". Primero reglas (gratis y deterministas); solo si el
 // mensaje habla de tiempo y las reglas no lo entienden, el modelo traduce la frase a un filtro. La disponibilidad
 // real siempre la calcula availableSlots: el modelo nunca elige la fecha.
+import { V } from '../vocabulario.js';
 import { business } from '../config.js';
 import { expandExpressions } from '../agent/dictionary.js';
 import { classify, fallbackOrder, roleEngine } from '../llm/engines.js';
@@ -337,7 +338,7 @@ export function mentionsTime(text: string): boolean {
 
 const MODEL_SCHEMA: SchemaSpec = {
   properties: [
-    { name: 'pide_fecha', type: 'boolean', description: 'true si el cliente pide o propone un día, fecha u hora para la cita' },
+    { name: 'pide_fecha', type: 'boolean', description: `true si el cliente pide o propone un día, fecha u hora para ${V.la} ${V.cita}` },
     { name: 'fecha_desde', type: 'string', description: 'Primer día aceptable, YYYY-MM-DD, o vacío' },
     { name: 'fecha_hasta', type: 'string', description: 'Último día aceptable, YYYY-MM-DD (igual a fecha_desde si es un solo día), o vacío' },
     { name: 'hora_desde', type: 'string', description: 'Hora mínima de inicio, HH:MM en 24 horas, o vacío' },
@@ -350,7 +351,7 @@ export async function askModelWhen(text: string, opts: { userId?: string; now?: 
   const now = opts.now ?? new Date();
   const tp = tzParts(now);
   const today: YMD = { y: tp.y, m: tp.m, d: tp.d };
-  const instructions = `Conviertes lo que un cliente pide para su cita en un rango de fechas y horas. Hoy es ${formatDay(now)} de ${tp.y} (${business.timezone}).
+  const instructions = `Conviertes lo que un cliente pide para su ${V.cita} en un rango de fechas y horas. Hoy es ${formatDay(now)} de ${tp.y} (${business.timezone}).
 No inventes: si el cliente no pide un día ni una hora, pide_fecha = false y lo demás vacío. Responde SOLO con el JSON.`;
   for (const engine of fallbackOrder(roleEngine('gate')).slice(0, 2)) {
     try {

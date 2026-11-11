@@ -9,6 +9,7 @@
 // minutos), no se vuelve a llamar desde aquí.
 //
 // 🪤 Multicliente: los pasos salen de la configuración del negocio. Quien no agenda citas no ve pasos de citas.
+import { V } from '../vocabulario.js';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { business } from '../config.js';
@@ -169,7 +170,7 @@ function pasoCitas(): PasoGuia | null {
   const sinHorario = !business.appointments.days.length || !business.appointments.hours.length;
   return {
     id: 'citas',
-    titulo: 'Pon tu horario de citas',
+    titulo: `Pon tu horario de ${V.citas}`,
     hecho: escrito && !sinHorario,
     opcional: false,
     falta: sinHorario

@@ -37,10 +37,10 @@ async function askBrand(prev: { color?: string; logo?: string }): Promise<{ colo
   return logo ? { color, logo } : { color };
 }
 
-const mode = await ask('¿Empezar desde un ejemplo (dunor | boutique | casa-verde) o desde cero (nuevo)?', 'nuevo');
+const mode = await ask('¿Empezar desde un ejemplo (xentris | boutique | casa-verde) o desde cero (nuevo)?', 'nuevo');
 let config: Record<string, unknown>;
 
-if (mode === 'dunor' || mode === 'boutique' || mode === 'casa-verde') {
+if (mode === 'xentris' || mode === 'boutique' || mode === 'casa-verde') {
   config = JSON.parse(readFileSync(`examples/${mode}/xencrm.config.json`, 'utf8'));
   const biz = config.business as Record<string, string>;
   biz.name = await ask('Nombre del negocio', biz.name);

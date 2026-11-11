@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { getSetting, setSetting } from './settings.js';
+import { V } from '../vocabulario.js';
 
 export type TipoRegla = 'numero' | 'texto' | 'si-no' | 'opciones' | 'lista';
 export interface Opcion { valor: string; etiqueta: string }
@@ -149,7 +150,7 @@ const ROLES: Opcion[] = [
   { valor: 'inicio', etiqueta: 'Nuevo (inicio)' },
   { valor: 'activo', etiqueta: 'Conversando (activo)' },
   { valor: 'interes', etiqueta: 'Interesado (interés)' },
-  { valor: 'cita', etiqueta: 'Con cita' },
+  { valor: 'cita', etiqueta: `Con ${V.cita}` },
   { valor: 'ganado', etiqueta: 'Cliente (ganado)' },
   { valor: 'perdido', etiqueta: 'Perdido' },
 ];

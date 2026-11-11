@@ -25,10 +25,10 @@ const suelto = mkdtempSync(join(tmpdir(), 'xencrm-accesos-suelto-'));
 const t = (min: number) => new Date(Date.UTC(2026, 9, 19, 15, min));
 anotarAcceso(suelto, { tipo: 'fallo', usuario: 'dueno', motivo: 'clave equivocada' }, t(0));
 anotarAcceso(suelto, { tipo: 'entro', usuario: 'dueno', rol: 'admin' }, t(1));
-anotarAcceso(suelto, { tipo: 'tablero', usuario: 'dueno', cliente: 'dunor' }, t(2));
+anotarAcceso(suelto, { tipo: 'tablero', usuario: 'dueno', cliente: 'atelier' }, t(2));
 anotarAcceso(suelto, { tipo: 'fallo', usuario: 'dueno', motivo: 'clave equivocada' }, t(3));
 anotarAcceso(suelto, { tipo: 'fallo', usuario: 'ab…(7)', motivo: 'usuario que no existe' }, t(4));
-anotarAcceso(suelto, { tipo: 'cuenta', usuario: 'laura', por: 'dueno', que: 'creada · asesor · dunor' }, t(5));
+anotarAcceso(suelto, { tipo: 'cuenta', usuario: 'laura', por: 'dueno', que: 'creada · asesor · atelier' }, t(5));
 const leidos = leerAccesos(suelto);
 check('se anota una línea por cosa, en orden', leidos.length === 6 && leidos[0]?.tipo === 'fallo' && leidos[5]?.tipo === 'cuenta');
 check('el archivo no se lee desde afuera', (statSync(rutaAccesos(suelto)).mode & 0o077) === 0);
@@ -78,9 +78,9 @@ const { crearUsuario, actualizarUsuario } = await import('../consola-usuarios.js
 const { crearCliente } = await import('../clientes.js');
 const { mountConsola } = await import('../consola.js');
 const { Hono } = await import('hono');
-crearCliente({ nombre: 'DUNOR Boutique', slug: 'dunor', puerto: 39301, plantilla: 'soporte' });
-crearUsuario({ usuario: 'dueno', nombre: 'Dueño DUNOR', correo: 'dueno@dunor.co', clave: 'clave-del-dueno-1', rol: 'admin', clientes: ['dunor'] });
-crearUsuario({ usuario: 'ida', nombre: 'Se fue', clave: 'clave-de-ida-1', rol: 'asesor', clientes: ['dunor'] });
+crearCliente({ nombre: 'Atelier Demo', slug: 'atelier', puerto: 39301, plantilla: 'soporte' });
+crearUsuario({ usuario: 'dueno', nombre: 'Dueño de Atelier Demo', correo: 'dueno@atelier-demo.example', clave: 'clave-del-dueno-1', rol: 'admin', clientes: ['atelier'] });
+crearUsuario({ usuario: 'ida', nombre: 'Se fue', clave: 'clave-de-ida-1', rol: 'asesor', clientes: ['atelier'] });
 actualizarUsuario('ida', { activo: false });
 const app = new Hono();
 mountConsola(app);
@@ -96,7 +96,7 @@ const sesion = /xencrm_consola=([^;]*)/.exec(bien.headers.get('set-cookie') ?? '
 check('entrar deja su línea: quién, con qué rol, desde dónde y con qué',
   bien.status === 200 && ultima()?.tipo === 'entro' && ultima()?.usuario === 'dueno' && ultima()?.rol === 'admin' && ultima()?.ip === '190.24.1.2' && ultima()?.navegador === 'Chrome · Windows',
   JSON.stringify(ultima()));
-await entrar({ usuario: 'dueno@dunor.co', clave: 'clave-del-dueno-1' });
+await entrar({ usuario: 'dueno@atelier-demo.example', clave: 'clave-del-dueno-1' });
 check('entrando con el correo, se anota su usuario', ultima()?.tipo === 'entro' && ultima()?.usuario === 'dueno');
 
 await entrar({ usuario: 'dueno', clave: 'clave-que-no-es-9' }, '190.24.1.3');
@@ -115,9 +115,9 @@ check('y la buena también, sin confundirse con un usuario «maestra»', ultima(
 
 const comoDueno = (ruta: string, init: RequestInit = {}) =>
   app.request(`http://local${ruta}`, { ...init, headers: { ...desde('190.24.1.2'), 'x-consola-sesion': sesion, ...(init.headers ?? {}) } });
-const creada = await comoDueno('/api/usuarios', { method: 'POST', body: JSON.stringify({ usuario: 'laura', nombre: 'Laura', clave: 'clave-de-laura-1', rol: 'asesor', clientes: ['dunor'] }) });
+const creada = await comoDueno('/api/usuarios', { method: 'POST', body: JSON.stringify({ usuario: 'laura', nombre: 'Laura', clave: 'clave-de-laura-1', rol: 'asesor', clientes: ['atelier'] }) });
 check('crear una cuenta queda dicho: a quién, cómo y quién lo hizo',
-  creada.status === 200 && ultima()?.tipo === 'cuenta' && ultima()?.usuario === 'laura' && ultima()?.por === 'dueno' && ultima()?.que === 'creada · asesor · dunor', JSON.stringify(ultima()));
+  creada.status === 200 && ultima()?.tipo === 'cuenta' && ultima()?.usuario === 'laura' && ultima()?.por === 'dueno' && ultima()?.que === 'creada · asesor · atelier', JSON.stringify(ultima()));
 await comoDueno('/api/usuarios/laura', { method: 'PATCH', body: JSON.stringify({ clave: 'otra-clave-de-laura' }) });
 check('ponerle clave nueva se nombra, sin escribirla', ultima()?.que === 'clave nueva' && !/clave-de-laura-1|otra-clave-de-laura/.test(archivo()));
 await comoDueno('/api/usuarios/laura', { method: 'PATCH', body: JSON.stringify({ rol: 'admin', activo: false }) });
@@ -127,10 +127,10 @@ check('quitarla, también', ultima()?.que === 'quitada' && ultima()?.usuario ===
 const rechazo = await comoDueno('/api/usuarios', { method: 'POST', body: JSON.stringify({ usuario: 'jefe2', clave: 'clave-larga-9', rol: 'super' }) });
 check('lo que el servidor rechaza no se anota como hecho', rechazo.status !== 200 && ultima()?.que === 'quitada');
 
-await comoDueno('/c/dunor/admin');
+await comoDueno('/c/atelier/admin');
 const tablero = leerAccesos(base).filter((e) => e.tipo === 'tablero');
-check('abrir el tablero de su cliente se anota', tablero.length === 1 && tablero[0]?.usuario === 'dueno' && tablero[0]?.cliente === 'dunor', JSON.stringify(tablero));
-await comoDueno('/c/dunor/admin/api/contacts');
+check('abrir el tablero de su cliente se anota', tablero.length === 1 && tablero[0]?.usuario === 'dueno' && tablero[0]?.cliente === 'atelier', JSON.stringify(tablero));
+await comoDueno('/c/atelier/admin/api/contacts');
 check('pero no cada llamada de adentro: sería ruido', leerAccesos(base).filter((e) => e.tipo === 'tablero').length === 1);
 
 await comoDueno('/api/yo', { method: 'PATCH', body: JSON.stringify({ claveActual: 'clave-del-dueno-1', claveNueva: 'clave-nueva-del-dueno' }) });

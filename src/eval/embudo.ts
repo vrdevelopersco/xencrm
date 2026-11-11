@@ -167,11 +167,11 @@ console.log('— Los filtros (xfCumple)');
 }
 
 console.log('— Las vistas y la barra');
-check('Contactos: los grupos son las vistas del sistema, con Sin asignar y Con cita', /\{ g: 'sinasignar', t: 'Sin asignar', es: xfSinAsignar \}/.test(js) && /\{ g: 'concita', t: 'Con cita', es: xfConCita \}/.test(js));
+check('Contactos: los grupos son las vistas del sistema, con Sin asignar y «Con» lo que agenda el negocio (Con cita, Con demo)', /\{ g: 'sinasignar', t: 'Sin asignar', es: xfSinAsignar \}/.test(js) && /\{ g: 'concita', get t\(\) \{ return 'Con ' \+ VOC\.cita; \}, es: xfConCita \}/.test(js));
 check('🪤 un solo estado: en Contactos la vista sigue siendo cli.grupo, y los filtros van encima', /var grupos = xfGruposClientes\(\);/.test(funcion('renderClientes')) && /g\.es\(c\) && pasa\(c\)/.test(funcion('renderClientes')) && /return p === 'clientes' \? cli\.grupo : xfE\(p\)\.vista;/.test(js));
 check('los números de las vistas cuentan con los filtros puestos', /cli\.lista\.filter\(function \(c\) \{ return x\.es\(c\) && pasa\(c\); \}\)\.length/.test(funcion('renderClientes')));
 const vistasTratos = funcion('xfVistasSistema');
-check('Tratos: todos, abiertos, míos, sin asignar, calientes, con cita, ganados y perdidos este mes', ['Todos los tratos', 'Tratos abiertos', 'Mis tratos', 'Sin asignar', '🔥 Calientes', 'Con cita', 'Ganados este mes', 'Perdidos este mes'].every((t) => vistasTratos.includes(`'${t}'`)));
+check('Tratos: todos, abiertos, míos, sin asignar, calientes, con cita, ganados y perdidos este mes', ['Todos los tratos', 'Tratos abiertos', 'Mis tratos', 'Sin asignar', '🔥 Calientes', 'Ganados este mes', 'Perdidos este mes'].every((t) => vistasTratos.includes(`'${t}'`)) && /get t\(\) \{ return 'Con ' \+ VOC\.cita; \}/.test(vistasTratos));
 check('🪤 «este mes» sale de cuándo se cerró (la historia), no de la última vez que escribió', /p\.cerro/.test(funcion('xfEsteMes')) && /historia: true/.test(vistasTratos));
 check('🪤 y mientras no llega la historia, esas vistas van sin número («0» diría que no hubo ninguno)', /v\.historia && !XF_HIST\.pasos \? ''/.test(funcion('xfPintarVistas')));
 check('las vistas guardadas son de cada quien, en su navegador, con su nombre', /LLAVE\('vistas\.' \+ p\)/.test(js) && /l\.slice\(0, 20\)/.test(js));

@@ -1,6 +1,7 @@
 // Análisis comercial por turno: sentimiento, interés, urgencia, objeciones y datos capturados,
 // con un puntaje explicable de probabilidad de cita/venta. Corre en segundo plano tras cada respuesta.
 import { regla } from '../reglas.js';
+import { V } from '../vocabulario.js';
 import { escritosAMano } from './ficha.js';
 import { business } from '../config.js';
 import { classify, roleEngine, fallbackOrder, iaAgotada, modeloDe } from '../llm/engines.js';
@@ -37,7 +38,7 @@ function schema(): SchemaSpec {
       { name: 'sentimiento', type: 'string', enum: ['positivo', 'neutral', 'negativo'], description: 'Ánimo del cliente en sus últimos mensajes' },
       { name: 'interes', type: 'integer', description: '0 = ninguno, 1 = curiosidad, 2 = interés claro, 3 = quiere comprar o agendar ya' },
       { name: 'urgencia', type: 'string', enum: ['baja', 'media', 'alta'] },
-      { name: 'quiere_cita', type: 'boolean', description: 'Pidió o aceptó una cita, visita o toma de medidas' },
+      { name: 'quiere_cita', type: 'boolean', description: `Pidió o aceptó ${V.una} ${V.cita}, visita o toma de medidas` },
       { name: 'pidio_precio', type: 'boolean' },
       { name: 'menciono_presupuesto', type: 'boolean' },
       { name: 'tiene_objecion', type: 'boolean', description: 'Expresó un obstáculo que frena la compra: le parece caro, no le da el tiempo, le queda lejos, desconfía. Preguntar algo (precio, proceso, horario) no es una objeción' },
@@ -119,8 +120,8 @@ export function computeScore(c: Contact, s: Signals, opts: { hasAppointment: boo
   };
   // Los pesos son reglas (Configuración › Reglas y umbrales, grupo Puntaje): de fábrica, los de siempre.
   const p = (id: string) => regla<number>(`puntaje.peso.${id}`);
-  add('Cita agendada', p('citaAgendada'), opts.hasAppointment);
-  add('Pidió cita', p('pidioCita'), !opts.hasAppointment && s.quiere_cita);
+  add(`${V.Cita} ${V.g('agendada')}`, p('citaAgendada'), opts.hasAppointment);
+  add(`Pidió ${V.cita}`, p('pidioCita'), !opts.hasAppointment && s.quiere_cita);
   add('Quiere comprar o agendar ya', p('quiereComprar'), s.interes >= 3);
   add('Interés claro', p('interesClaro'), s.interes === 2);
   add('Curiosidad', p('curiosidad'), s.interes === 1);

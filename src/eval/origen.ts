@@ -22,19 +22,19 @@ const check = (name: string, ok: boolean, detail = '') => {
 };
 
 // --- leer una dirección con campaña ---
-const deCampana = deLaUrl('https://dunor.co/trajes?utm_source=google&utm_medium=cpc&utm_campaign=grados-2026&utm_content=video-a&gclid=ABC123', 'https://www.google.com/');
+const deCampana = deLaUrl('https://atelier-demo.example/trajes?utm_source=google&utm_medium=cpc&utm_campaign=grados-2026&utm_content=video-a&gclid=ABC123', 'https://www.google.com/');
 check('saca la campaña de la dirección', deCampana?.fuente === 'google' && deCampana?.campana === 'grados-2026', JSON.stringify(deCampana));
 check('y la pieza concreta', deCampana?.contenido === 'video-a', JSON.stringify(deCampana));
 // 🪤 El gclid identifica el CLIC, no el anuncio: si agrupara, cada persona sería su propia campaña.
 check('🪤 el identificador del clic se guarda aparte, no como anuncio', deCampana?.clic === 'ABC123' && deCampana?.anuncio === '', JSON.stringify(deCampana));
-check('guarda la página sin los parámetros', deCampana?.url === 'https://dunor.co/trajes', String(deCampana?.url));
+check('guarda la página sin los parámetros', deCampana?.url === 'https://atelier-demo.example/trajes', String(deCampana?.url));
 
 // Sin campaña, lo que queda es quién lo mandó.
-const deReferencia = deLaUrl('https://dunor.co/', 'https://www.instagram.com/algo');
+const deReferencia = deLaUrl('https://atelier-demo.example/', 'https://www.instagram.com/algo');
 check('sin campaña, se anota quién lo mandó', deReferencia?.fuente === 'instagram.com' && deReferencia?.medio === 'referencia', JSON.stringify(deReferencia));
 
 // 🪤 Y cuando no hay NADA, no se inventa nada.
-check('🪤 quien llega directo no se inventa un origen', deLaUrl('https://dunor.co/', '') === null);
+check('🪤 quien llega directo no se inventa un origen', deLaUrl('https://atelier-demo.example/', '') === null);
 check('una dirección que no lo es tampoco', deLaUrl('no soy una url', '') === null);
 
 // --- lo que manda Meta con un anuncio de «enviar mensaje» ---
@@ -47,7 +47,7 @@ check('🪤 sin aviso de origen, nada', deMeta(undefined) === null && deMeta({})
 // --- 🪤 se guarda el primero y no se pisa ---
 touchUser('web:uno', 'web', 'Marcela');
 check('la primera vez se anota', anotarOrigen('web:uno', deCampana) === true);
-check('la segunda, no', anotarOrigen('web:uno', deLaUrl('https://dunor.co/?utm_source=boletin&utm_campaign=junio', '')) === false);
+check('la segunda, no', anotarOrigen('web:uno', deLaUrl('https://atelier-demo.example/?utm_source=boletin&utm_campaign=junio', '')) === false);
 check('🪤 y sigue siendo el que la trajo', origenDe('web:uno')?.campana === 'grados-2026', JSON.stringify(origenDe('web:uno')));
 
 // --- el embudo por campaña ---
@@ -55,7 +55,7 @@ const cita = STAGE_DEFS.find((e) => e.rol === 'cita')?.id;
 const ganado = STAGE_DEFS.find((e) => e.rol === 'ganado')?.id;
 const meter = (id: string, campana: string, etapa?: string) => {
   touchUser(id, 'web', id);
-  anotarOrigen(id, deLaUrl(`https://dunor.co/?utm_source=google&utm_medium=cpc&utm_campaign=${campana}`, ''));
+  anotarOrigen(id, deLaUrl(`https://atelier-demo.example/?utm_source=google&utm_medium=cpc&utm_campaign=${campana}`, ''));
   if (etapa) updateContact(id, { stage: etapa as never }, { silent: true });
 };
 meter('web:dos', 'grados-2026', ganado);

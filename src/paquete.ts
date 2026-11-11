@@ -24,6 +24,8 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afinarLoServido } from './afinar.js';
+import { business } from './config.js';
+import { pintarPortada } from './portada.js';
 import { leerIndice, rutas, type ClienteRef } from './clientes.js';
 
 const DOMINIO = (process.argv[2] ?? 'xencrm.hrctechnologies.com').replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -1052,6 +1054,8 @@ execFileSync('node_modules/.bin/tsc', ['--noEmit', 'false', '--outDir', join(dir
 cpSync(resolve('public'), join(dir, 'public'), { recursive: true });
 // El borde (cabeceras, lo que no pasa hacia adentro) lo cargan el lanzador y lo compilado: va junto a lo compilado.
 cpSync(resolve('src', 'borde.cjs'), join(dir, 'dist', 'borde.cjs'));
+// La portada con las palabras del negocio de la raíz (xencrm.config.json › interfaz.portada): ver src/portada.ts.
+writeFileSync(join(dir, 'public', 'inicio.html'), pintarPortada(readFileSync(join(dir, 'public', 'inicio.html'), 'utf8'), business.interfaz.portada));
 if (process.env.XENCRM_SIN_AFINAR !== '1') afinarLoServido(join(dir, 'public'));
 for (const c of clientes) {
   cpSync(rutas(c.slug).config, join(dir, 'config', `${c.slug}.json`));
@@ -1119,7 +1123,7 @@ const variables = [
   // son el mismo, se queda en liviano y dice «un solo motor»: nunca sube de categoría, por mucho que la pregunta
   // lo pida. El paquete salía así —los dos en mini— y nadie lo notaba, porque no falla: simplemente contesta
   // siempre con el modelo pequeño lo que debería contestar el grande.
-  'OPENAI_MODEL_HEAVY=gpt-5.4    # lo específico: prenda, color, medidas, recomendar',
+  'OPENAI_MODEL_HEAVY=gpt-5.4    # lo específico: características, comparar, recomendar',
   'OPENAI_MODEL_ANALYSIS=gpt-5.4-mini    # la ficha y el puntaje, donde nadie espera',
   'EMBED_ENGINE=openai',
   'CONSOLA_TOKEN=PONER    # la llave maestra de la consola',

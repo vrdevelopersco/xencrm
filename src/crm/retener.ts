@@ -35,6 +35,7 @@
 //   4. Nunca se inventa urgencia. Lo único que se puede usar es lo que de verdad sabemos: la fecha de su
 //      evento, que está en su ficha. Si falta poco, eso es una pérdida REAL y decirlo es un favor, no una
 //      presión. Si no la sabemos, no hay prisa que inventar.
+import { V } from '../vocabulario.js';
 import type { Contact } from './contacts.js';
 
 /** Por qué quiere cancelar. Lo que decide si se insiste o no. */
@@ -205,7 +206,7 @@ export function respuesta(motivo: Motivo, opts: { cita: string; opciones: string
     // le propone «el jueves a las 2»: su problema no es el día, y ponerle una fecha es no haberlo escuchado.
     // Solo se le quita la cita de encima y se le deja la puerta abierta, sin plazo.
     return {
-      texto: 'Uy, qué pena contigo, de verdad. No te preocupes por la cita, yo la cancelo y ya está. Cuando estés listo me escribes por aquí y la volvemos a agendar, sin afán.',
+      texto: `Uy, qué pena contigo, de verdad. No te preocupes por ${V.la} ${V.cita}, yo la cancelo y ya está. Cuando estés listo me escribes por aquí y la volvemos a agendar, sin afán.`,
       cancelar: true,
       gastaIntento: false,
     };
@@ -233,7 +234,7 @@ export function respuesta(motivo: Motivo, opts: { cita: string; opciones: string
         : '';
     return {
       texto:
-        `Te entiendo. Si sirve de algo: en la cita no tienes que decidir nada ni llevarte nada. Es ver qué te` +
+        `Te entiendo. Si sirve de algo: en ${V.la} ${V.cita} no tienes que decidir nada ni llevarte nada. Es ver qué te` +
         ` queda bien y que te digan con franqueza qué te sirve y qué no.${apuro}` +
         ` ¿La dejamos y miras sin compromiso, o te la cancelo?`,
       cancelar: false,

@@ -1,6 +1,7 @@
 // Flujo determinista de agendamiento: ofrece espacios reales, entiende la elección y confirma.
 // Fechas y horas no se le confían al modelo: "el sábado en la tarde" lo interpretan reglas (crm/when.ts) y, solo si
 // no lo entienden, el modelo traduce la frase a un filtro; los espacios siempre salen de la agenda real.
+import { V } from '../vocabulario.js';
 import { business } from '../config.js';
 import { pick } from '../agent/prompts.js';
 import { expandExpressions } from '../agent/dictionary.js';
@@ -309,8 +310,8 @@ async function start(userId: string, text = ''): Promise<string> {
   if (!name) {
     save(c, { step: 'nombre', offered: [], ...(when ? { when } : {}), ...(sede ? { sede: sede.id } : {}) });
     const hello = /^\s*(hola|buenas|buen[oa]s? (d[ií]as?|tardes|noches))\b/i.test(text) ? '¡Hola! ' : '';
-    if (when) return `${hello}Con gusto te busco espacio ${when.label}. ¿A nombre de quién agendo la cita?`;
-    return hello + pick(['¡Con gusto! ¿A nombre de quién agendo la cita?', 'Claro que sí. Dime tu nombre para agendarla, por favor.'] as const);
+    if (when) return `${hello}Con gusto te busco espacio ${when.label}. ¿A nombre de quién agendo ${V.la} ${V.cita}?`;
+    return hello + pick([`¡Con gusto! ¿A nombre de quién agendo ${V.la} ${V.cita}?`, 'Claro que sí. Dime tu nombre para agendarla, por favor.'] as const);
   }
   return offer(c, { ...(when ? { when } : {}), sede: sede?.id ?? null });
 }
@@ -374,7 +375,7 @@ async function manageExisting(c: Contact, id: number, text: string, userId: stri
 }
 
 function offerFallback(): string {
-  return `Para agendar una cita, ${business.business.humanContact}`;
+  return `Para agendar ${V.una} ${V.cita}, ${business.business.humanContact}`;
 }
 
 async function step(userId: string, text: string): Promise<string | null> {
@@ -387,18 +388,18 @@ async function step(userId: string, text: string): Promise<string | null> {
     const ev = eventDeadline(text);
     if (ev) {
       save(c, { ...st, when: ev });
-      return `Anotado: te busco espacio ${ev.label}. ¿A nombre de quién agendo la cita?`;
+      return `Anotado: te busco espacio ${ev.label}. ¿A nombre de quién agendo ${V.la} ${V.cita}?`;
     }
     const w = parseWhen(text);
     if (w && (WHEN_START_RE.test(t) || w.timeLabel)) {
       save(c, { ...st, when: w });
-      return `Anotado: ${w.label}. ¿A nombre de quién agendo la cita?`;
+      return `Anotado: ${w.label}. ¿A nombre de quién agendo ${V.la} ${V.cita}?`;
     }
     // «En la del norte»: contestó en cuál sede, no cómo se llama.
     const dicha = sedeEn(text);
     if (dicha && text.trim().split(/\s+/).length <= 6) {
       save(c, { ...st, sede: dicha.id });
-      return `Anotado: ${dicha.nombre}. ¿A nombre de quién agendo la cita?`;
+      return `Anotado: ${dicha.nombre}. ¿A nombre de quién agendo ${V.la} ${V.cita}?`;
     }
     // "Arnulfo Dominguez 300 123 4567": el número y el correo que vengan con el nombre se guardan aparte.
     const phone = parsePhone(text);
@@ -626,12 +627,12 @@ async function step(userId: string, text: string): Promise<string | null> {
     if (/\d{5,}/.test(text.replace(/\D/g, ''))) return 'Ese número no me cuadra 🤔 ¿Me lo pasas completo? Por ejemplo: 300 123 4567';
     if (REFUSE_RE.test(t)) {
       save(c, null);
-      return `Sin un número no podemos confirmarte la cita 😕 Si prefieres, ${business.business.humanContact}`;
+      return `Sin un número no podemos confirmarte ${V.la} ${V.cita} 😕 Si prefieres, ${business.business.humanContact}`;
     }
     const w = readWhen(text);
     if (w) return offer(c, { when: refineWhen(st.when, w) }); // cambió de idea sobre el horario (o dijo cuándo es el evento)
     // Una respuesta corta que no es un número ("1", "ok"): se vuelve a pedir, sin perder el horario elegido.
-    if (t.split(/\s+/).length <= 3 && !/\?/.test(text)) return `Para confirmarte la cita del ${formatSlot(new Date(chosen))}, ¿a qué número te escribimos? Por ejemplo: 300 123 4567`;
+    if (t.split(/\s+/).length <= 3 && !/\?/.test(text)) return `Para confirmarte ${V.la} ${V.cita} del ${formatSlot(new Date(chosen))}, ¿a qué número te escribimos? Por ejemplo: 300 123 4567`;
     save(c, null);
     return null;
   }
@@ -692,10 +693,10 @@ const EXPECTED: Record<BookingState['step'], string> = {
   elegir: 'esperaba que eligiera uno de los horarios',
   telefono: 'esperaba el número de teléfono',
   confirmar: 'esperaba un sí o un no para confirmar',
-  gestionar: 'esperaba si cambia, cancela o deja la cita',
+  gestionar: `esperaba si cambia, cancela o deja ${V.la} ${V.cita}`,
   cancelar: 'esperaba que confirmara la cancelación',
   porque: 'esperaba saber por qué quiere cancelar, para ofrecerle moverla',
-  recordatorio: 'esperaba que confirmara si viene a la cita',
+  recordatorio: `esperaba que confirmara si viene a ${V.la} ${V.cita}`,
 };
 
 /**
@@ -721,8 +722,8 @@ export function bookingReading(text: string): string | null {
   const w = parseWhen(text);
   if (w) return w.label;
   if (ANY_RE.test(t)) return 'cualquiera: la primera opción';
-  if (CANCEL_RE.test(t)) return 'dejar la cita para después';
-  if (KEEP_RE.test(t)) return 'dejar la cita como está';
+  if (CANCEL_RE.test(t)) return `dejar ${V.la} ${V.cita} para después`;
+  if (KEEP_RE.test(t)) return `dejar ${V.la} ${V.cita} como está`;
   if (YES_RE.test(t) && !CHANGE_RE.test(t)) return 'sí';
   if (NO_RE.test(t)) return 'no, otra opción';
   return null;

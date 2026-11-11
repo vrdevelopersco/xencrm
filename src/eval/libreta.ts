@@ -99,11 +99,11 @@ check('y una llave que no vale es 404, no 403', /if \(!abierta\(c\)\) return c\.
 // dominio (…/dunor/, …/confia/) y comparten almacenamiento. Con una clave fija, la libreta de un negocio
 // enseñaría las preguntas que se hicieron sobre otro, que en un CRM multicliente es de lo peor que puede pasar.
 const claveDe = (ruta: string) => 'xencrm.libreta.' + ruta.replace(/\/libreta\/.*$/, '');
-check('🪤 cada cliente guarda su hilo aparte', claveDe('/dunor/libreta/LLAVE') !== claveDe('/confia/libreta/LLAVE'));
-check('y la clave lleva el cliente dentro', claveDe('/dunor/libreta/LLAVE') === 'xencrm.libreta./dunor');
+check('🪤 cada cliente guarda su hilo aparte', claveDe('/atelier/libreta/LLAVE') !== claveDe('/confia/libreta/LLAVE'));
+check('y la clave lleva el cliente dentro', claveDe('/atelier/libreta/LLAVE') === 'xencrm.libreta./atelier');
 // Cambiar la llave es una acción de seguridad —se hace cuando uno teme que se filtró— y no tiene por qué
 // costarle a nadie lo que llevaba escrito en su propio navegador.
-check('cambiar la llave no borra el hilo de nadie', claveDe('/dunor/libreta/VIEJA') === claveDe('/dunor/libreta/NUEVA'));
+check('cambiar la llave no borra el hilo de nadie', claveDe('/atelier/libreta/VIEJA') === claveDe('/atelier/libreta/NUEVA'));
 
 // Y que la página de verdad use esa misma regla, no una parecida.
 const pagina = readFileSync(new URL('../../public/libreta.html', import.meta.url), 'utf8');

@@ -34,10 +34,15 @@ instancia —su base, su WhatsApp, su token, su dominio— y se operan todos des
 se dan de alta, se vigilan y se atienden. El embudo, los datos que captura y si agenda citas los pone cada negocio
 en su configuración: una boutique agenda, una financiera resuelve solicitudes, una litografía cotiza y produce.
 
-El primer cliente es **DUNOR Boutique** (dunor.co): alquiler premium y diseño a la medida de moda masculina en
-Barranquilla, solo con cita previa. Su configuración está en `examples/dunor` (con `POR-CONFIRMAR.md`:
-lo que el sitio no publica y hay que preguntarle al cliente). Otros ejemplos: `examples/boutique`
-(sastrería con precios) y `examples/casa-verde` (tienda de plantas). DUNOR corre con OpenAI: `gpt-5.4-mini`
+El ejemplo de XENCRM es **XENTRIS LLC**, una firma de software (ficticia) de Medellín: vende aplicaciones
+—XENTRIS POS (punto de venta), XENTRIS Field (equipos en campo) y XENTRIS Stock (inventario)— y desarrollo a la
+medida, y da soporte con SLA por planes (Básico, Pro, Enterprise): actualizaciones mensuales, mantenimientos con
+aviso y tickets con tiempos garantizados. El embudo es Nuevo → Calificado → Evaluando → Demo agendada → Ganado ·
+Perdido, y lo que agenda es una demo de producto por videollamada. Su configuración es la de la raíz y vive en
+`examples/xentris` (catálogo, conocimiento, diccionario, perfil, escenarios y 23 contactos de ejemplo con sus tickets).
+Otros ejemplos: `examples/boutique` (sastrería con precios) y `examples/casa-verde` (tienda de plantas). Las pruebas
+no dependen del ejemplo: corren contra su propio negocio de mentira, `src/eval/fixtures/boutique` («Atelier Demo»).
+Los clientes en producción corren con OpenAI: `gpt-5.4-mini`
 para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
 
 ## Documentación
@@ -67,13 +72,13 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
   su commit.
 - [`docs/checkpoint.md`](docs/checkpoint.md): dónde quedó el trabajo al cerrar la última sesión, qué falta para
   desplegarlo y qué espera una decisión.
-- `examples/dunor/POR-CONFIRMAR.md`: lo que falta confirmar con DUNOR (se llena en el Perfil).
+- `examples/xentris/`: el ejemplo completo (XENTRIS LLC), para enseñar XENCRM con datos que parecen de verdad.
 
 ## Qué hace
 
 | Pieza | Qué resuelve |
 |---|---|
-| **Agente** | Responde con la persona del negocio, solo con su catálogo, su información y su perfil. Guarda el alcance: nada de tareas, poemas ni temas ajenos. Las preguntas típicas (dónde quedan, horario, pagos, envíos, "¿cuánto cuesta el alquiler de un esmoquin?") las clasifican reglas sin modelo; lo ambiguo o fuera de tema, el modelo (`pnpm test:gate` mide la cobertura). |
+| **Agente** | Responde con la persona del negocio, solo con su catálogo, su información y su perfil. Guarda el alcance: nada de tareas, poemas ni temas ajenos. Las preguntas típicas (dónde quedan, horario, pagos, envíos, "¿en cuánto me responden un ticket con el plan Pro?") las clasifican reglas sin modelo; lo ambiguo o fuera de tema, el modelo (`pnpm test:gate` mide la cobertura). |
 | **No inventa** | Guardas contra cifras, enlaces y afirmaciones sin respaldo. Lo que no sabe lo dice ("Deja te verifico eso…") y queda en **Hoy › Por verificar**; la respuesta del equipo le llega al cliente y el bot la aprende. |
 | **No guarda claves** | Una clave, un PIN, un código de verificación o un número de tarjeta que escriba alguien se tapa antes de guardarse y antes de llegar al modelo, y el asistente le pide con tacto no mandarlos por el chat. El correo y el teléfono no se tocan. `pnpm test:claves`. |
 | **Motores por rol** | Uno liviano para saludos, info y compras puntuales; uno pesado para recomendar, comparar y explicar; uno para clasificar y otro para el análisis. Cada uno puede ser OpenAI (con su modelo), Gemma u Apple, y hay respaldo si uno falla. |
@@ -118,7 +123,7 @@ pnpm build:sidecar          # motor Apple (si aplica)
 ## Configurar un cliente
 
 ```bash
-pnpm onboard                # asistente: desde un ejemplo (dunor | boutique | casa-verde) o desde cero
+pnpm onboard                # asistente: desde un ejemplo (xentris | boutique | casa-verde) o desde cero
 pnpm ingest                 # indexa catálogo + información + páginas del sitio
 pnpm test:scenarios         # batería de conversaciones del cliente
 pnpm dev                    # web (:3000), tablero (/admin) y WhatsApp (QR)
@@ -138,7 +143,7 @@ con su información (palabras que los disparan y con qué se busca), los verbos 
 pregunta por lo que ofrece y las **expresiones** propias de sus clientes, que se leen como otra cosa
 antes de aplicar las reglas (fechas, temas y el flujo de la cita), sin importar tildes ni mayúsculas.
 Vive en su propio archivo (`dictionaryFile` en `xencrm.config.json`; el de
-DUNOR es `examples/dunor/dictionary.json`):
+XENTRIS es `examples/xentris/dictionary.json`):
 
 ```json
 {
@@ -171,8 +176,8 @@ sin IA. Lo que sea del español en general va mejor a las reglas del código, co
 
 El **perfil** (Configuración › Perfil) es lo que el dueño confirma de su negocio: nombre, qué hace, sitio, ciudad,
 dirección, horarios, zona que atienden, si es solo con cita, contacto, cómo hablar con una persona, formas de
-pago, abono, precios, políticas y datos propios del negocio (tallas, tiempos, lo que venden o no). Vive en su
-archivo (`profileFile`; el de DUNOR es `examples/dunor/profile.json`), se guarda con copia del anterior y se
+pago, abono, precios, políticas y datos propios del negocio (planes, tiempos, lo que ofrecen o no). Vive en su
+archivo (`profileFile`; el de XENTRIS es `examples/xentris/profile.json`), se guarda con copia del anterior y se
 aplica al instante.
 
 - Lo confirmado va en la información fija del prompt y en la búsqueda; si contradice otra información, vale el perfil.
@@ -346,8 +351,8 @@ Ollama siguen con la búsqueda. El clasificador y el análisis no llegan al mín
 
 ### Análisis comercial
 `crm.fields`: además de sentimiento, interés, urgencia, objeciones, presupuesto, nombre y ciudad,
-el análisis captura los campos que definas (para la boutique: prenda, ocasión, fecha del evento,
-talla o medidas). El puntaje es una suma de factores visibles en la ficha; cuando haya historial
+el análisis captura los campos que definas (para XENTRIS: producto, empresa, usuarios, plan de soporte y
+plazo; para una boutique serían la prenda, la ocasión o la talla). El puntaje es una suma de factores visibles en la ficha; cuando haya historial
 de resultados (vendido/perdido) los pesos se pueden calibrar con datos.
 
 Para no gastar tokens de más (`src/crm/signals.ts`):

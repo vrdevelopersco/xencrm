@@ -1,6 +1,6 @@
 [
   {
-    "name": "empresa interesada en POS y demo",
+    "name": "empresa con 3 sucursales: POS y demo",
     "turns": [
       {
         "text": "hola",
@@ -9,9 +9,69 @@
         }
       },
       {
-        "text": "tienen punto de venta para 3 sucursales?",
+        "text": "tienen punto de venta para 3 sucursales con facturación electrónica?",
         "expect": {
-          "intent": "compra"
+          "intent": "compra",
+          "includesAny": [
+            "XENTRIS POS",
+            "POS"
+          ]
+        }
+      },
+      {
+        "text": "listo, quiero ver una demo",
+        "expect": {
+          "intent": "cita"
+        }
+      }
+    ]
+  },
+  {
+    "name": "pide precio: lo cotiza el equipo",
+    "turns": [
+      {
+        "text": "cuánto cuesta XENTRIS Field para 25 técnicos?",
+        "expect": {
+          "intent": "compra",
+          "excludes": [
+            "US$",
+            "USD",
+            "$"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "cliente con una falla pide pasar a soporte",
+    "turns": [
+      {
+        "text": "la app de campo no sincroniza desde ayer y tengo 40 técnicos parados",
+        "expect": {
+          "excludes": [
+            "no lo manejamos"
+          ]
+        }
+      },
+      {
+        "text": "necesito hablar con alguien de soporte ya",
+        "expect": {
+          "intent": "humano"
+        }
+      }
+    ]
+  },
+  {
+    "name": "pregunta por el SLA de su plan",
+    "turns": [
+      {
+        "text": "tengo plan Pro, en cuánto tiempo me responden un ticket?",
+        "expect": {
+          "intent": "info_tienda",
+          "includesAny": [
+            "4 horas",
+            "4 h"
+          ]
         }
       }
     ]

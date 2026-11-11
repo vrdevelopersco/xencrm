@@ -15,44 +15,44 @@ const check = (name: string, ok: boolean, detail = '') => {
   console.log(`${ok ? '✓' : '✗'} ${name}${ok ? '' : `\n   ${detail}`}`);
 };
 
-const { cliente: dunor, token: tokenDunor } = crearCliente({ nombre: 'DUNOR Boutique', host: 'dunor.xencrm.co', prioridad: 'alta', hoy: '2026-09-23' });
+const { cliente: atelier, token: tokenAtelier } = crearCliente({ nombre: 'Atelier Demo', host: 'atelier.xencrm.co', prioridad: 'alta', hoy: '2026-09-23' });
 const { cliente: fin, token: tokenFin } = crearCliente({ nombre: 'Financiera del Caribe', prioridad: 'media', hoy: '2026-09-23' });
 
-check('el identificador sale del nombre, sin tildes ni espacios', dunor.slug === 'dunor-boutique' && fin.slug === 'financiera-del-caribe', `${dunor.slug} · ${fin.slug}`);
-check('los puertos no se pisan', dunor.puerto === 3001 && fin.puerto === 3002, `${dunor.puerto} · ${fin.puerto}`);
+check('el identificador sale del nombre, sin tildes ni espacios', atelier.slug === 'atelier-demo' && fin.slug === 'financiera-del-caribe', `${atelier.slug} · ${fin.slug}`);
+check('los puertos no se pisan', atelier.puerto === 3001 && fin.puerto === 3002, `${atelier.puerto} · ${fin.puerto}`);
 check('el siguiente que entre toma el que sigue', puertoLibre() === 3003, String(puertoLibre()));
-check('cada uno con su token', tokenDunor !== tokenFin && tokenDunor.length >= 32);
-check('quedan los dos en el índice, ordenados', leerIndice().map((c) => c.slug).join() === 'dunor-boutique,financiera-del-caribe');
+check('cada uno con su token', tokenAtelier !== tokenFin && tokenAtelier.length >= 32);
+check('quedan los dos en el índice, ordenados', leerIndice().map((c) => c.slug).join() === 'atelier-demo,financiera-del-caribe');
 
-const r = rutas('dunor-boutique');
+const r = rutas('atelier-demo');
 check('tiene su configuración, su base, su WhatsApp', existsSync(r.config) && existsSync(r.data) && existsSync(r.auth));
 check('y su propio catálogo y lo que sabe, sin compartir con otro cliente', existsSync(join(r.dir, 'catalogo')) && existsSync(join(r.dir, 'conocimiento')));
 check('el .env del cliente no se lee desde afuera', (statSync(r.env).mode & 0o077) === 0, (statSync(r.env).mode & 0o777).toString(8));
 
 const env = readFileSync(r.env, 'utf8');
-check('su .env trae lo suyo: puerto, base, WhatsApp, token y dominio', /PORT=3001/.test(env) && /DB_PATH=.*dunor-boutique\/data\/xencrm\.db/.test(env) && /ADMIN_TOKEN=/.test(env) && /PUBLIC_URL=https:\/\/dunor\.xencrm\.co/.test(env), env);
+check('su .env trae lo suyo: puerto, base, WhatsApp, token y dominio', /PORT=3001/.test(env) && /DB_PATH=.*atelier-demo\/data\/xencrm\.db/.test(env) && /ADMIN_TOKEN=/.test(env) && /PUBLIC_URL=https:\/\/atelier\.xencrm\.co/.test(env), env);
 check('y NO repite las claves de la máquina', !/OPENAI_API_KEY/.test(env), env);
 
 const config = JSON.parse(readFileSync(r.config, 'utf8')) as { business: { name: string }; dictionaryFile: string; profileFile: string };
-check('la configuración queda a nombre del negocio', config.business.name === 'DUNOR Boutique', config.business.name);
-check('el diccionario y el perfil viven con el cliente', config.dictionaryFile.includes('dunor-boutique') && config.profileFile.includes('dunor-boutique'), config.dictionaryFile);
+check('la configuración queda a nombre del negocio', config.business.name === 'Atelier Demo', config.business.name);
+check('el diccionario y el perfil viven con el cliente', config.dictionaryFile.includes('atelier-demo') && config.profileFile.includes('atelier-demo'), config.dictionaryFile);
 const fuentes = (JSON.parse(readFileSync(r.config, 'utf8')) as { sources: { productsFile: string; knowledgeDir: string } }).sources;
-check('el catálogo y el conocimiento también', fuentes.productsFile.includes('dunor-boutique') && fuentes.knowledgeDir.includes('dunor-boutique'), JSON.stringify(fuentes));
+check('el catálogo y el conocimiento también', fuentes.productsFile.includes('atelier-demo') && fuentes.knowledgeDir.includes('atelier-demo'), JSON.stringify(fuentes));
 check('WhatsApp arranca apagado: el código se escanea cuando el equipo quiera', /WHATSAPP_ENABLED=false/.test(readFileSync(r.env, 'utf8')));
 
 const pm2 = pm2Config();
-check('pm2 lleva una app por cliente', /xencrm-dunor-boutique/.test(pm2) && /xencrm-financiera-del-caribe/.test(pm2));
-check('cada app apunta a la configuración y al .env de su cliente', /XENCRM_CONFIG.*dunor-boutique/.test(pm2) && /XENCRM_ENV_FILE.*financiera-del-caribe/.test(pm2));
+check('pm2 lleva una app por cliente', /xencrm-atelier-demo/.test(pm2) && /xencrm-financiera-del-caribe/.test(pm2));
+check('cada app apunta a la configuración y al .env de su cliente', /XENCRM_CONFIG.*atelier-demo/.test(pm2) && /XENCRM_ENV_FILE.*financiera-del-caribe/.test(pm2));
 check('y se reinicia sola si se cae', /max_restarts/.test(pm2) && /restart_delay/.test(pm2));
 
 const tunel = tunelConfig();
-check('el túnel manda cada dominio a su puerto', /hostname: dunor\.xencrm\.co\n\s+service: http:\/\/localhost:3001/.test(tunel), tunel);
+check('el túnel manda cada dominio a su puerto', /hostname: atelier\.xencrm\.co\n\s+service: http:\/\/localhost:3001/.test(tunel), tunel);
 check('quien no tiene dominio no aparece en el túnel', !/financiera/.test(tunel), tunel);
 check('lo que no coincida no cae en el cliente equivocado', /http_status:404/.test(tunel));
 
 let err = '';
 try {
-  crearCliente({ nombre: 'DUNOR Boutique' });
+  crearCliente({ nombre: 'Atelier Demo' });
 } catch (e) {
   err = (e as Error).message;
 }
@@ -89,7 +89,7 @@ const cfgLito = JSON.parse(readFileSync(rutas(lito.slug).config, 'utf8')) as { c
 check('cotización va hasta entregado', cfgLito.crm.stages.map((s) => s.id).join() === 'nuevo,tomando_datos,cotizado,en_produccion,entregado,perdido');
 check('y marca cuál es la ganada', cfgLito.crm.stages.find((s) => s.rol === 'ganado')?.id === 'entregado');
 
-const cfgCitas = JSON.parse(readFileSync(rutas('dunor-boutique').config, 'utf8')) as { crm?: { stages?: { id: string }[] }; appointments?: { enabled?: boolean } };
+const cfgCitas = JSON.parse(readFileSync(rutas('atelier-demo').config, 'utf8')) as { crm?: { stages?: { id: string }[] }; appointments?: { enabled?: boolean } };
 check('por defecto, el negocio agenda citas', cfgCitas.appointments?.enabled === true && cfgCitas.crm?.stages?.some((s) => s.id === 'cita_agendada') === true, JSON.stringify(cfgCitas.crm?.stages?.map((s) => s.id)));
 
 let errPlantilla = '';

@@ -1,6 +1,7 @@
 // Citas en formato iCalendar (RFC 5545), sin dependencias ni tokens de IA:
 // - un enlace de suscripción con todas las citas, para verlas en Google Calendar, Outlook o Apple Calendar;
 // - "agregar a mi calendario" para el cliente: Google, Outlook.com y archivo .ics (iPhone, Mac, Outlook).
+import { V } from '../vocabulario.js';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { business, env } from '../config.js';
 import { accentOn, logoUrl, onBrand } from '../brand.js';
@@ -14,7 +15,7 @@ const sign = (s: string) => createHmac('sha256', SECRET).update(s).digest('base6
 
 /** Token del enlace de suscripción: CALENDAR_TOKEN o derivado del secreto. */
 export const FEED_TOKEN = env.calendarToken || sign('feed').slice(0, 24);
-export const appointmentSig = (id: number) => sign(`cita:${id}`).slice(0, 16);
+export const appointmentSig = (id: number) => sign(`${V.cita}:${id}`).slice(0, 16);
 
 export function validSig(id: number, sig: string): boolean {
   const a = Buffer.from(appointmentSig(id));
@@ -106,7 +107,7 @@ function vcalendar(name: string, events: string[][], extra: string[] = []): stri
 export function appointmentsFeed(): string {
   const list = listAppointments({ from: Date.now() - 60 * 86400_000, limit: 5000 });
   // Apple respeta REFRESH-INTERVAL; Google refresca cuando quiere (horas), Outlook cada pocas horas.
-  return vcalendar(`Citas · ${business.business.name}`, list.map((a) => vevent(a, 'team')), ['REFRESH-INTERVAL;VALUE=DURATION:PT15M', 'X-PUBLISHED-TTL:PT15M']);
+  return vcalendar(`${V.Citas} · ${business.business.name}`, list.map((a) => vevent(a, 'team')), ['REFRESH-INTERVAL;VALUE=DURATION:PT15M', 'X-PUBLISHED-TTL:PT15M']);
 }
 
 /** Una cita para el calendario del cliente, con recordatorios un día y dos horas antes. */
@@ -163,7 +164,7 @@ export function customerPage(a: Appointment): string {
   const ics = `${appointmentSig(a.id)}.ics`; // relativo: funciona detrás de cualquier túnel
   const cancelled = a.status === 'cancelada';
   const buttons = cancelled
-    ? '<p class="note">Esta cita fue cancelada.</p>'
+    ? `<p class="note">Esta ${V.cita} fue ${V.g('cancelada')}.</p>`
     : `<a class="btn primary" href="${html(links.google)}">Google Calendar</a>
     <a class="btn" href="${html(ics)}">iPhone o Mac (Apple Calendar)</a>
     <a class="btn" href="${html(ics)}">Outlook en el computador</a>

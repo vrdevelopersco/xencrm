@@ -41,7 +41,7 @@ const eventos = (id: string, tipo: string) => listEvents(id, 200).filter((e) => 
 const ultimo = (id: string, tipo: string) => eventos(id, tipo).at(-1)?.payload as Record<string, unknown> | undefined;
 
 console.log('— «undefined COP»: un producto sin precio no dice «undefined»');
-const sinPrecio = productToDoc({ id: 'd001', name: 'Alquiler premium de traje', description: 'Trajes de las mejores marcas', price: undefined as unknown as number, url: 'https://dunor.co', specs: { Precio: 'se define en la cita' } });
+const sinPrecio = productToDoc({ id: 'd001', name: 'Alquiler premium de traje', description: 'Trajes de las mejores marcas', price: undefined as unknown as number, url: 'https://atelier-demo.example', specs: { Precio: 'se define en la cita' } });
 check('🪤 la ficha de un producto sin precio no dice «undefined»', !/undefined/.test(sinPrecio.content), sinPrecio.content);
 check('ni se inventa una línea de precio: lo dice su ficha técnica', !/^Precio:/m.test(sinPrecio.content) && /Ficha técnica: Precio: se define en la cita/.test(sinPrecio.content), sinPrecio.content);
 check('y el buscador lo recibe sin precio (null), no como cero', (sinPrecio.meta as { price: unknown }).price === null);
@@ -275,7 +275,8 @@ check('hay un interruptor para uno y otro para todo el equipo (los dos, solo par
 check('y en el celular también se llega', /data-proxy="modo-btn"/.test(html));
 check('🪤 en el modo fácil Hoy enseña solo lo que tiene algo, y cómo ver todo', /facil \? sections\.filter\(function \(s\) \{ return s\.n > 0; \}\)/.test(js) && /id="hoy-ver-todo"/.test(js));
 const deHoy = js.slice(js.indexOf('function loadToday()'), js.indexOf("var TONOS"));
-const secciones = (deHoy.match(/\{ t: '/g) || []).length;
+// Un título puede venir del vocabulario del negocio (VOC.Citas + ' de hoy'): también cuenta.
+const secciones = (deHoy.match(/\{ t: (?:'|VOC\.)/g) || []).length;
 const tonos = ((js.match(/var TONOS = \[([^\]]*)\]/)?.[1] ?? '').match(/'[a-z]+'/g) || []).length;
 check('🪤 cada recuadro de Hoy tiene su color (antes los grupos corrían a todos los demás un puesto)', secciones > 0 && secciones === tonos, `${secciones} recuadros y ${tonos} colores`);
 check('el tablero manda quién es en cada llamada', /headers\['x-xencrm-quien'\] = encodeURIComponent\(state\.name\)/.test(js));

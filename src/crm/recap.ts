@@ -1,6 +1,7 @@
 // Recap de una línea armado solo con hechos de la ficha: qué busca, para cuándo, cuánto, la cita y qué lo frena.
 // Sin modelo: se actualiza aunque el análisis no llame a la IA y nunca inventa. El resumen del modelo
 // (una frase corta) queda para lo que los datos no dicen.
+import { V } from '../vocabulario.js';
 import { business } from '../config.js';
 import type { Appointment } from './appointments.js';
 import type { Contact } from './contacts.js';
@@ -29,8 +30,8 @@ export function recap(c: Contact, nextAppointment: Appointment | null): string {
   }
   if (text(d.presupuesto)) add(shortBudget(text(d.presupuesto)));
   if (text(d.ciudad)) add(text(d.ciudad));
-  if (nextAppointment) add(`cita ${shortDate(nextAppointment.startsAt)}`);
-  else if (d.booking) add('agendando cita');
+  if (nextAppointment) add(`${V.cita} ${shortDate(nextAppointment.startsAt)}`);
+  else if (d.booking) add(`agendando ${V.cita}`);
   if (text(d.objecion)) add(`lo frena: ${clip(text(d.objecion), 50)}`);
   return parts.join(' · ');
 }

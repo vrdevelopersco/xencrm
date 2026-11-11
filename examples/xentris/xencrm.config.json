@@ -5,23 +5,24 @@
     "siteUrl": "https://xentris.example",
     "currency": "USD",
     "country": "Colombia",
-    "humanContact": "escríbenos a soporte@xentris.example o pide aquí que te pasemos con el equipo.",
     "phoneCountryCode": "57",
-    "phoneLocalDigits": 10
+    "phoneLocalDigits": 10,
+    "humanContact": "escríbenos a soporte@xentris.example o pide aquí que te pasemos con el equipo."
   },
   "agent": {
     "name": "Xen",
     "style": "claro, profesional y cercano; tutea; respuestas cortas tipo WhatsApp; técnico solo cuando hace falta",
     "language": "es",
-    "goal": "Si es una empresa interesada, entiende qué necesita (qué aplicación, cuántos usuarios o sucursales, para cuándo) y llévala a agendar una demo con el equipo comercial. Si es un cliente con un problema, toma el reporte (qué pasa, desde cuándo, a cuántos usuarios afecta, en qué aplicación) y pásalo a soporte. Nunca inventes precios, fechas de entrega ni tiempos de solución: los da el equipo o el SLA del plan del cliente."
+    "greeting": "¡Hola! Soy Xen, de XENTRIS 👋 ¿Buscas una aplicación para tu empresa o necesitas soporte con la que ya tienes?",
+    "goal": "Si es una empresa interesada, entiende qué necesita (qué aplicación, cuántos usuarios o sucursales, para cuándo) y llévala a agendar una demo con el equipo comercial. Si es un cliente con un problema, toma el reporte (qué pasa, desde cuándo, a cuántos usuarios afecta, en qué aplicación) y pásalo a soporte. Nunca inventes precios, fechas de entrega ni tiempos de solución: los da el equipo o el SLA del plan del cliente.",
+    "verifyPhrase": "Deja lo confirmo con el equipo y te respondo por aquí 🙂",
+    "fullInfoMaxTokens": 6000
   },
   "sources": {
     "productsFile": "examples/xentris/catalog/products.json",
     "knowledgeDir": "examples/xentris/knowledge",
     "sitePages": []
   },
-  "dictionaryFile": "examples/xentris/dictionary.json",
-  "profileFile": "examples/xentris/profile.json",
   "timezone": "America/Bogota",
   "appointments": {
     "enabled": true,
@@ -47,9 +48,17 @@
     ],
     "capacity": 2,
     "minLeadHours": 4,
-    "maxDaysAhead": 21
+    "maxDaysAhead": 21,
+    "askPhone": true,
+    "askEmail": true,
+    "reminder": {
+      "enabled": true,
+      "at": "08:00"
+    }
   },
+  "sedes": [],
   "crm": {
+    "firmaHumano": "Equipo XENTRIS",
     "stages": [
       {
         "id": "nuevo",
@@ -82,6 +91,23 @@
         "rol": "perdido"
       }
     ],
+    "motivosPerdida": [
+      "Precio",
+      "Se fue con otro",
+      "No tenía presupuesto este año",
+      "Le faltaba una función",
+      "Dejó de contestar",
+      "Lo hará con su equipo interno"
+    ],
+    "contactoPor": [
+      "WhatsApp",
+      "El chat del sitio",
+      "LinkedIn",
+      "Correo",
+      "Recomendación",
+      "Evento o feria",
+      "Otro"
+    ],
     "fields": [
       {
         "name": "producto",
@@ -103,11 +129,80 @@
         "name": "plazo",
         "description": "Para cuándo lo necesita, tal como lo dijo"
       }
-    ]
+    ],
+    "analysisQuietSeconds": 60,
+    "analysisMaxWaitSeconds": 300
+  },
+  "dictionaryFile": "examples/xentris/dictionary.json",
+  "profileFile": "examples/xentris/profile.json",
+  "brand": {
+    "color": "#0B7466",
+    "fondo": "claro"
   },
   "evalFile": "examples/xentris/scenarios.json",
   "seedFile": "examples/xentris/seed.json",
-  "brand": {
-    "color": "#0B7466"
+  "interfaz": {
+    "agenda": {
+      "singular": "demo",
+      "plural": "demos",
+      "masculino": false
+    },
+    "bienvenida": "Así va XENTRIS hoy: ventas, demos y soporte.",
+    "ejemplos": {
+      "datoPropio": "Tiempos de implementación",
+      "datosPropios": "planes de soporte, tiempos de implementación, integraciones que hacemos o no",
+      "documento": "Planes de soporte y SLA",
+      "respuestaTema": "Tiempo de respuesta del soporte",
+      "respuestaComo": "¿en cuánto me responden?\nno me han contestado el ticket\ncuándo arreglan lo mío",
+      "nota": "Proveedor de facturación electrónica",
+      "vista": "Cadenas de restaurantes"
+    },
+    "portada": {
+      "titulo": "Tus clientes y tu soporte, atendidos *siempre*.",
+      "subtitulo": "Ventas, demos y tickets con SLA en una sola bandeja. Tú entras solo cuando hace falta.",
+      "marca": "XENTRIS",
+      "vista": [
+        {
+          "contacto": "Café Aroma",
+          "etapa": "Demo agendada",
+          "rol": "cita",
+          "caliente": true,
+          "valor": "US$ 4.800",
+          "paso": "Demo mañana, 10:00 a. m.",
+          "tono": "agenda",
+          "asignado": "Laura"
+        },
+        {
+          "contacto": "Distribuidora Duarte",
+          "etapa": "Ganado",
+          "rol": "ganado",
+          "caliente": false,
+          "valor": "US$ 18.000",
+          "paso": "Ticket crítico: responder ya",
+          "tono": "urge",
+          "asignado": "Bryan"
+        },
+        {
+          "contacto": "Logística Norte",
+          "etapa": "Evaluando",
+          "rol": "interes",
+          "caliente": true,
+          "valor": "US$ 9.500",
+          "paso": "Contestar: pidió precio hace 2 h",
+          "tono": "urge",
+          "asignado": "Xen"
+        },
+        {
+          "contacto": "Ferretería El Tornillo",
+          "etapa": "Ganado",
+          "rol": "ganado",
+          "caliente": false,
+          "valor": "US$ 6.200",
+          "paso": "—",
+          "tono": "normal",
+          "asignado": "Laura"
+        }
+      ]
+    }
   }
 }

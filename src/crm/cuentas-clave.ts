@@ -11,6 +11,7 @@
 // 🪤 Las CANDIDATAS salen de reglas igual de claras (ya compró, volvió, vino a su cita, caliente con cita, de las de
 // mayor valor). Se proponen, no se marcan solas: una lista que se llena sola deja de ser la de las que importan.
 import { regla } from '../reglas.js';
+import { V } from '../vocabulario.js';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { addEvent, esPersona, getContact, listContacts, rolDe, STAGE_LABELS, type Contact } from './contacts.js';
@@ -145,7 +146,7 @@ export function saludDe(x: DatosDeSalud): { salud: Salud; motivos: Motivo[] } {
     m.push(espera >= regla<number>('kam.horasSinRespuesta') * 3600_000 ? { nivel: 'riesgo', texto: `Escribió hace ${hace(espera)} y nadie le ha contestado` } : { nivel: 'atencion', texto: `Escribió hace ${hace(espera)}: falta contestarle` });
   } else if (x.paso.tipo === 'persona') m.push({ nivel: 'atencion', texto: 'Pidió hablar con una persona' });
   else if (x.paso.tipo === 'verificar') m.push({ nivel: 'atencion', texto: 'Quedó algo por averiguarle' });
-  else if (x.paso.tipo === 'resultado') m.push({ nivel: 'atencion', texto: 'Falta anotar cómo le fue en la cita' });
+  else if (x.paso.tipo === 'resultado') m.push({ nivel: 'atencion', texto: `Falta anotar cómo le fue en ${V.la} ${V.cita}` });
 
   // El silencio, con la vara de una cuenta clave (no la de un prospecto). Si ya hay algo esperando respuesta, el
   // silencio no se cuenta dos veces.
@@ -156,12 +157,12 @@ export function saludDe(x: DatosDeSalud): { salud: Salud; motivos: Motivo[] } {
   }
 
   if (!x.responsable || !esPersona(x.responsable)) m.push({ nivel: 'atencion', texto: 'Nadie la tiene asignada' });
-  if (x.falto > 0 && !x.proximaCita) m.push({ nivel: 'atencion', texto: x.falto === 1 ? 'Faltó a una cita y no tiene otra' : `Faltó a ${x.falto} citas y no tiene otra` });
+  if (x.falto > 0 && !x.proximaCita) m.push({ nivel: 'atencion', texto: x.falto === 1 ? `Faltó a ${V.una} ${V.cita} y no tiene ${V.otra}` : `Faltó a ${x.falto} ${V.citas} y no tiene ${V.otra}` });
 
   // Lo que va bien: también se dice, para que «Sana» no sea un silencio.
   if (callado != null && callado < diasAtencion() * DIA && x.paso.tipo !== 'responder') m.push({ nivel: 'bien', texto: callado < DIA ? 'Habló hoy' : `Habló hace ${hace(callado)}` });
   if (x.animo === 'positivo') m.push({ nivel: 'bien', texto: 'Contento en su último análisis' });
-  if (x.proximaCita) m.push({ nivel: 'bien', texto: 'Tiene cita por delante' });
+  if (x.proximaCita) m.push({ nivel: 'bien', texto: `Tiene ${V.cita} por delante` });
   if (x.etapaRol === 'ganado') m.push({ nivel: 'bien', texto: 'Ya compró' });
 
   const salud: Salud = m.some((y) => y.nivel === 'riesgo') ? 'riesgo' : m.some((y) => y.nivel === 'atencion') ? 'atencion' : 'sana';
@@ -188,8 +189,8 @@ export function porQueCandidata(x: DatosDeCandidata): string[] {
   if (x.etapaRol === 'ganado') r.push(x.volvio > 0 ? (x.volvio === 1 ? 'Compró y volvió' : `Compró y volvió ${x.volvio} veces`) : 'Ya compró');
   else if (x.volvio >= regla<number>('kam.volvioVeces')) r.push(`Volvió ${x.volvio} veces`);
   if (x.valorAlto != null && x.valor > 0 && x.valor >= x.valorAlto) r.push(`Entre el ${regla<number>('kam.valorAltoPct')} % de mayor valor`);
-  if (x.scoreBase >= regla<number>('puntaje.caliente') && x.proximaCita) r.push('Caliente y con cita');
-  if (x.citasCumplidas > 0) r.push(x.citasCumplidas === 1 ? 'Vino a su cita' : `Vino a ${x.citasCumplidas} citas`);
+  if (x.scoreBase >= regla<number>('puntaje.caliente') && x.proximaCita) r.push(`Caliente y con ${V.cita}`);
+  if (x.citasCumplidas > 0) r.push(x.citasCumplidas === 1 ? `Vino a su ${V.cita}` : `Vino a ${x.citasCumplidas} ${V.citas}`);
   return r;
 }
 

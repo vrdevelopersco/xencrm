@@ -7,7 +7,7 @@ Las dos cosas: alquiler premium de trajes, esmóquines y accesorios, y diseño a
 Los ajustes para que la prenda te quede impecable, asesoría de imagen completa y accesorios complementarios para el look.
 
 ## ¿Atienden mujeres?
-DUNOR es una boutique de moda masculina. Para acompañantes o parejas, el equipo puede orientarte en la cita.
+Atelier Demo es una boutique de moda masculina. Para acompañantes o parejas, el equipo puede orientarte en la cita.
 
 ## ¿Cuánto cuesta?
 Depende de la prenda, del servicio y del evento. Los precios se definen en la cita privada; por chat no se dan cifras.

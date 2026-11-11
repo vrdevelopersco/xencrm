@@ -158,6 +158,9 @@ h1 em{font-style:normal;background:linear-gradient(100deg,var(--acento) 0%,#1a8f
 .vf .et.cita{background:#ebedfd;color:#3730a3}
 .vf .et.interes{background:#fff4e0;color:#a14d06}
 .vf .et.ganado{background:#e6f5ec;color:#15703a}
+.vf .et.inicio{background:#edf3f1;color:#4d666c}
+.vf .et.activo{background:#e5f1fa;color:#0b5f92}
+.vf .et.perdido{background:#ffedf0;color:#be123c}
 .vf .ps{color:#4d666c}
 .vf .ps.cita{color:#3730a3}
 .vf .ps.urge{color:#a14d06;font-weight:600}
@@ -205,8 +208,9 @@ footer{border-top:1px solid var(--linea);background:var(--panel);position:relati
        sección dice una cosa, en una línea; el detalle está adentro. -->
   <section class="portada" id="inicio">
     <span class="sello"><b>✦</b> Un producto de HRC Technologies</span>
-    <h1>Tus clientes, atendidos <em>siempre</em>.</h1>
-    <p class="bajada">WhatsApp y el chat de tu sitio en una sola bandeja. Tú entras solo cuando hace falta.</p>
+    <!-- Lo de entre las marcas «portada:» sale de xencrm.config.json › interfaz.portada (src/portada.ts). -->
+    <!-- portada:titulo --><h1>Tus clientes y tu soporte, atendidos <em>siempre</em>.</h1><!-- /portada:titulo -->
+    <!-- portada:subtitulo --><p class="bajada">Ventas, demos y tickets con SLA en una sola bandeja. Tú entras solo cuando hace falta.</p><!-- /portada:subtitulo -->
     <div class="acciones">
       <a class="pastilla" href="consola">Entrar a la consola</a>
       <a class="pastilla calma" href="#hace">Ver qué hace</a>
@@ -216,13 +220,15 @@ footer{border-top:1px solid var(--linea);background:var(--panel);position:relati
     <div class="vista" role="img" aria-label="Así se ve el tablero de XENCRM: cada contacto con la etapa de su trato, su valor, el próximo paso y a quién está asignado.">
       <div class="vista-barra" aria-hidden="true"><i></i><i></i><i></i><span>Contactos</span></div>
       <div class="vista-cuerpo" aria-hidden="true">
-        <div class="vista-riel"><b>DUNOR</b><span></span><span></span><span class="on"></span><span></span><span></span><span></span></div>
+        <div class="vista-riel"><!-- portada:marca --><b>XENTRIS</b><!-- /portada:marca --><span></span><span></span><span class="on"></span><span></span><span></span><span></span></div>
         <div class="vista-tabla">
           <div class="vf cab"><span>Contacto</span><span>Etapa</span><span class="n">Valor</span><span>Próximo paso</span><span class="ll">Asignado a</span></div>
-          <div class="vf"><span><b>Andrés Peña</b> 🔥</span><span><em class="et cita">Cita agendada</em></span><span class="n">$210 mil</span><span class="ps cita">Cita mañana, 10:00 a. m.</span><span class="ll"><i>X</i>Xen</span></div>
-          <div class="vf"><span><b>Camilo Restrepo</b></span><span><em class="et interes">Interesado</em></span><span class="n">$650 mil</span><span class="ps urge">Contestar: escribió hace 12 min</span><span class="ll"><i class="h">L</i>Laura</span></div>
-          <div class="vf"><span><b>Sebastián Molina</b> 🔥</span><span><em class="et interes">Interesado</em></span><span class="n">$150 mil</span><span class="ps urge">Retomar: 1 día sin escribir</span><span class="ll"><i>X</i>Xen</span></div>
-          <div class="vf"><span><b>Ricardo Vélez</b></span><span><em class="et ganado">Vendido</em></span><span class="n">$320 mil</span><span class="ps">—</span><span class="ll"><i>X</i>Xen</span></div>
+          <!-- portada:filas -->
+          <div class="vf"><span><b>Café Aroma</b> 🔥</span><span><em class="et cita">Demo agendada</em></span><span class="n">US$ 4.800</span><span class="ps cita">Demo mañana, 10:00 a. m.</span><span class="ll"><i class="h">L</i>Laura</span></div>
+          <div class="vf"><span><b>Distribuidora Duarte</b></span><span><em class="et ganado">Ganado</em></span><span class="n">US$ 18.000</span><span class="ps urge">Ticket crítico: responder ya</span><span class="ll"><i class="h">B</i>Bryan</span></div>
+          <div class="vf"><span><b>Logística Norte</b> 🔥</span><span><em class="et interes">Evaluando</em></span><span class="n">US$ 9.500</span><span class="ps urge">Contestar: pidió precio hace 2 h</span><span class="ll"><i class="h">X</i>Xen</span></div>
+          <div class="vf"><span><b>Ferretería El Tornillo</b></span><span><em class="et ganado">Ganado</em></span><span class="n">US$ 6.200</span><span class="ps">—</span><span class="ll"><i class="h">L</i>Laura</span></div>
+          <!-- /portada:filas -->
         </div>
       </div>
     </div>

@@ -206,6 +206,11 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       ok: true,
       business: business.business.name,
       agent: business.agent.name,
+      // Lo que el negocio agenda («demo de producto», «cita de asesoría»): con eso se escriben los borradores. Vacío si
+      // no agenda.
+      agenda: business.appointments.enabled ? business.appointments.service : '',
+      // Las palabras de la interfaz que son del negocio (xencrm.config.json › interfaz): el tablero no las escribe fijas.
+      interfaz: { agenda: business.interfaz.agenda, bienvenida: business.interfaz.bienvenida, ejemplos: business.interfaz.ejemplos },
       // Para que el tablero se sienta del negocio: su logo y su color, no los de XENCRM.
       logo: logoUrl(),
       color: business.brand.color,

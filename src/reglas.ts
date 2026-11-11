@@ -20,6 +20,7 @@
 import { business } from './config.js';
 import { getSetting, quitarSetting, setSetting } from './crm/settings.js';
 import { baseAbierta } from './rag/store.js';
+import { V } from './vocabulario.js';
 
 export type TipoRegla = 'numero' | 'texto' | 'si-no' | 'opciones' | 'lista';
 export type ValorRegla = number | string | boolean | string[];
@@ -297,8 +298,8 @@ registrarReglas(
     // ---------- Puntaje (crm/analyzer.ts, crm/score.ts) ----------
     { id: 'puntaje.caliente', grupo: 'Puntaje', etiqueta: 'Caliente desde', ayuda: 'Desde este puntaje alguien es «caliente» («Prospecto claro» en la ficha): sale en Calientes, en Hoy, en Seguimientos y avisa al cruzarlo.', tipo: 'numero', unidad: 'puntos', min: 1, max: 100, entero: true, defecto: 60 },
     { id: 'puntaje.tibio', grupo: 'Puntaje', etiqueta: 'Tibio desde', ayuda: 'Desde este puntaje (y por debajo del de caliente) alguien es «tibio» («Posible prospecto»). Por debajo, «frío».', tipo: 'numero', unidad: 'puntos', min: 0, max: 99, entero: true, defecto: 30 },
-    { id: 'puntaje.peso.citaAgendada', grupo: 'Puntaje', etiqueta: 'Cita agendada', ayuda: 'Lo que suma tener una cita confirmada.', ...PUNTOS, defecto: 40 },
-    { id: 'puntaje.peso.pidioCita', grupo: 'Puntaje', etiqueta: 'Pidió cita', ayuda: 'Lo que suma pedir una cita que todavía no se agenda.', ...PUNTOS, defecto: 30 },
+    { id: 'puntaje.peso.citaAgendada', grupo: 'Puntaje', etiqueta: `${V.Cita} ${V.g('agendada')}`, ayuda: `Lo que suma tener ${V.una} ${V.cita} ${V.g('confirmada')}.`, ...PUNTOS, defecto: 40 },
+    { id: 'puntaje.peso.pidioCita', grupo: 'Puntaje', etiqueta: `Pidió ${V.cita}`, ayuda: `Lo que suma pedir ${V.una} ${V.cita} que todavía no se agenda.`, ...PUNTOS, defecto: 30 },
     { id: 'puntaje.peso.quiereComprar', grupo: 'Puntaje', etiqueta: 'Quiere comprar o agendar ya', ayuda: 'El interés más alto que ve el análisis.', ...PUNTOS, defecto: 20 },
     { id: 'puntaje.peso.interesClaro', grupo: 'Puntaje', etiqueta: 'Interés claro', ayuda: 'Pregunta en serio por lo que se vende.', ...PUNTOS, defecto: 10 },
     { id: 'puntaje.peso.curiosidad', grupo: 'Puntaje', etiqueta: 'Curiosidad', ayuda: 'Está mirando, sin decidirse.', ...PUNTOS, defecto: 3 },
@@ -314,7 +315,7 @@ registrarReglas(
     { id: 'puntaje.peso.animoPositivo', grupo: 'Puntaje', etiqueta: 'Ánimo positivo', ayuda: 'Lo que suma escribir a gusto.', ...PUNTOS, defecto: 5 },
     { id: 'puntaje.peso.animoNegativo', grupo: 'Puntaje', etiqueta: 'Ánimo negativo', ayuda: 'Lo que resta estar molesto (va en negativo).', ...PUNTOS, defecto: -15 },
     { id: 'puntaje.peso.objecion', grupo: 'Puntaje', etiqueta: 'Tiene una objeción', ayuda: 'Lo que resta una objeción (va en negativo).', ...PUNTOS, defecto: -10 },
-    { id: 'puntaje.silencio.dias1', grupo: 'Puntaje', etiqueta: 'Silencio: primer tramo desde', ayuda: 'Días sin hablar desde los que el puntaje empieza a bajar (no aplica con cita o ya ganado).', ...DIAS, max: 365, defecto: 3 },
+    { id: 'puntaje.silencio.dias1', grupo: 'Puntaje', etiqueta: 'Silencio: primer tramo desde', ayuda: `Días sin hablar desde los que el puntaje empieza a bajar (no aplica con ${V.cita} o ya ganado).`, ...DIAS, max: 365, defecto: 3 },
     { id: 'puntaje.silencio.descuento1', grupo: 'Puntaje', etiqueta: 'Silencio: descuento del primer tramo', ayuda: 'Cuánto baja el puntaje en el primer tramo.', ...PUNTOS, min: 0, defecto: 10 },
     { id: 'puntaje.silencio.dias2', grupo: 'Puntaje', etiqueta: 'Silencio: segundo tramo desde', ayuda: 'Días sin hablar del segundo tramo.', ...DIAS, max: 365, defecto: 7 },
     { id: 'puntaje.silencio.descuento2', grupo: 'Puntaje', etiqueta: 'Silencio: descuento del segundo tramo', ayuda: 'Cuánto baja en el segundo tramo.', ...PUNTOS, min: 0, defecto: 25 },
@@ -323,7 +324,7 @@ registrarReglas(
 
     // ---------- Seguimientos y Lista de trabajo (resultados.ts, followup.ts, la ruta de Hoy) ----------
     { id: 'seg.horasSinSeguimiento', grupo: 'Seguimientos', etiqueta: 'Sin seguimiento desde', ayuda: 'Horas sin mensajes para que un trato abierto salga en la Lista de trabajo (y un caliente en Hoy).', tipo: 'numero', unidad: 'horas', min: 1, max: 24 * 90, entero: true, defecto: 24 },
-    { id: 'seg.diasEsperandoResultado', grupo: 'Seguimientos', etiqueta: 'Esperar el resultado de una cita', ayuda: 'Días después de una cita en que se espera anotar cómo le fue (mientras tanto no sale como seguimiento).', ...DIAS, max: 90, defecto: 14 },
+    { id: 'seg.diasEsperandoResultado', grupo: 'Seguimientos', etiqueta: `Esperar el resultado de ${V.una} ${V.cita}`, ayuda: `Días después de ${V.una} ${V.cita} en que se espera anotar cómo le fue (mientras tanto no sale como seguimiento).`, ...DIAS, max: 90, defecto: 14 },
     { id: 'seg.posponerDias', grupo: 'Seguimientos', etiqueta: 'Posponer, por defecto', ayuda: 'Cuántos días aparta «Dejarlo por ahora» si no se dice otra cosa.', ...DIAS, max: 365, defecto: 7 },
     { id: 'seg.posponerMaxDias', grupo: 'Seguimientos', etiqueta: 'Posponer, como mucho', ayuda: 'El tope de días que se puede apartar un seguimiento.', ...DIAS, max: 3650, defecto: 90 },
 
@@ -340,7 +341,7 @@ registrarReglas(
     { id: 'opt.baseEmbudo', grupo: 'Optimización de ventas', etiqueta: 'Dónde se caen: base mínima', ayuda: 'Cuántos tienen que haber llegado a una etapa para juzgar cuántos pasan a la siguiente.', ...VECES, max: 10_000, defecto: 5 },
     { id: 'opt.pasoBajoPct', grupo: 'Optimización de ventas', etiqueta: 'Dónde se caen: paso bajo', ayuda: 'Por debajo de este porcentaje de paso, la etapa es «donde se caen».', ...PCT, defecto: 60 },
     { id: 'opt.pasoMuyBajoPct', grupo: 'Optimización de ventas', etiqueta: 'Dónde se caen: prioridad alta', ayuda: 'Por debajo de este porcentaje de paso, el hallazgo es de prioridad alta.', ...PCT, defecto: 30 },
-    { id: 'opt.diasEstancado', grupo: 'Optimización de ventas', etiqueta: 'Trato estancado', ayuda: 'Días sin actividad para que un trato abierto (sin cita ni posponer) cuente como estancado.', ...DIAS, max: 365, defecto: 7 },
+    { id: 'opt.diasEstancado', grupo: 'Optimización de ventas', etiqueta: 'Trato estancado', ayuda: `Días sin actividad para que un trato abierto (sin ${V.cita} ni posponer) cuente como estancado.`, ...DIAS, max: 365, defecto: 7 },
     { id: 'opt.cerradosVelocidad', grupo: 'Optimización de ventas', etiqueta: 'Contestar rápido: cerrados', ayuda: 'Tratos cerrados con tiempo de respuesta medido para comparar rápidos contra lentos.', ...VECES, max: 10_000, defecto: 10 },
     { id: 'opt.grupoVelocidad', grupo: 'Optimización de ventas', etiqueta: 'Contestar rápido: mínimo por grupo', ayuda: 'Cuántos rápidos y cuántos lentos hacen falta en cada lado.', ...VECES, max: 10_000, defecto: 4 },
     { id: 'opt.respondidas', grupo: 'Optimización de ventas', etiqueta: 'Acuerdo de respuesta: base', ayuda: 'Respuestas medidas para juzgar el acuerdo de servicio.', ...VECES, max: 100_000, defecto: 10 },
@@ -390,7 +391,7 @@ const EN_OTRO_SITIO: EnOtroSitio[] = [
   { grupo: 'El negocio', etiqueta: 'Dirección, horarios, pagos, precios y políticas que dice el asistente', donde: 'Configuración › Perfil del negocio', vista: 'profile' },
   { grupo: 'El negocio', etiqueta: 'Etapas del embudo, su nombre y su papel', donde: 'xencrm.config.json › crm.stages' },
   { grupo: 'El negocio', etiqueta: 'Datos que capta el análisis (campos de la ficha)', donde: 'xencrm.config.json › crm.fields' },
-  { grupo: 'El negocio', etiqueta: 'Horario, duración, cupo y antelación de las citas', donde: 'xencrm.config.json › appointments' },
+  { grupo: 'El negocio', etiqueta: `Horario, duración, cupo y antelación de ${V.las} ${V.citas}`, donde: 'xencrm.config.json › appointments' },
   { grupo: 'El asistente y la IA', etiqueta: 'Nombre, estilo y objetivo del asistente', donde: 'Configuración › El asistente', vista: 'agent' },
   { grupo: 'El asistente y la IA', etiqueta: 'Qué modelo hace cada cosa, proveedores y tope de gasto', donde: 'Configuración › Modelos de IA', vista: 'modelos' },
   { grupo: 'El asistente y la IA', etiqueta: 'Lo que sabe: catálogo, información y diccionario del negocio', donde: 'Configuración › Lo que sabe', vista: 'knowledge' },

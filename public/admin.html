@@ -3603,7 +3603,7 @@ dialog.perdida input{width:100%}
         <button class="fx-btn" id="fx-crear" aria-haspopup="menu" aria-expanded="false" aria-controls="fx-crear-pop"><i class="ic" data-ic="mas"></i>Crear</button>
         <div class="fx-pop" id="fx-crear-pop" role="menu" hidden>
           <button role="menuitem" data-crear="contacto"><i class="ic" data-ic="contacto"></i>Contacto</button>
-          <button role="menuitem" data-crear="cita"><i class="ic" data-ic="calendar"></i>Cita</button>
+          <button role="menuitem" data-crear="cita"><i class="ic" data-ic="calendar"></i><span data-voc="{Cita}">Cita</span></button>
         </div>
       </div>
       <button class="fx-ico" id="fx-ayuda" aria-label="Ayuda"><i class="ic" data-ic="help"></i></button>
@@ -3634,10 +3634,10 @@ dialog.perdida input{width:100%}
       <div class="fx-kpis solo-facil" id="fx-kpis" aria-busy="true"><div class="fx-esq fx-esq-kpi"></div><div class="fx-esq fx-esq-kpi"></div><div class="fx-esq fx-esq-kpi"></div><div class="fx-esq fx-esq-kpi"></div></div>
       <div class="fx-fila fx-fila-graficas solo-facil">
         <section class="fx-card">
-          <div class="fx-card-cab"><div><h2>Cómo va la semana</h2><p id="fx-serie-sub">Conversaciones nuevas y citas agendadas</p></div>
+          <div class="fx-card-cab"><div><h2>Cómo va la semana</h2><p id="fx-serie-sub">Conversaciones nuevas por día</p></div>
             <select id="fx-serie-dias" aria-label="Cuántos días"><option value="7">Últimos 7 días</option><option value="14">Últimos 14 días</option><option value="30">Últimos 30 días</option></select></div>
           <div class="fx-grafica" id="fx-serie"><div class="fx-esq fx-esq-grafica"></div></div>
-          <div class="fx-leyenda"><span><i class="fx-l-nuevas"></i>Conversaciones nuevas</span><span><i class="fx-l-citas"></i>Citas agendadas</span></div>
+          <div class="fx-leyenda"><span><i class="fx-l-nuevas"></i>Conversaciones nuevas</span><span><i class="fx-l-citas"></i><span data-voc="{Citas} {g:agendadas}">Citas agendadas</span></span></div>
         </section>
         <section class="fx-card">
           <div class="fx-card-cab"><div><h2>Contactos por etapa</h2><p>Dónde está cada persona hoy</p></div>
@@ -3681,7 +3681,7 @@ dialog.perdida input{width:100%}
               <button data-f="human" class="fx-estado solo-completo">Con una persona</button>
               <button data-f="hot" class="fx-estado">Prospectos</button>
               <button data-rol="interes" data-f="stage:interesado" class="fx-estado solo-completo" hidden>Interesados</button>
-              <button data-rol="cita" data-f="stage:cita_agendada" class="fx-estado solo-completo" hidden>Con cita</button>
+              <button data-rol="cita" data-f="stage:cita_agendada" class="fx-estado solo-completo" hidden data-voc="Con {cita}">Con cita</button>
               <button data-f="archived" class="fx-estado solo-completo">Archivados</button>
             </div>
             <div class="fx-lista-estados">
@@ -3790,10 +3790,10 @@ dialog.perdida input{width:100%}
         <div id="cal-main" style="min-height:0;display:flex;flex-direction:column">
           <div id="cal-grid" class="grid-wrap"></div>
           <div id="cal-month" hidden></div>
-          <div id="cal-list" hidden><div class="empty">Sin citas próximas.</div></div>
+          <div id="cal-list" hidden><div class="empty" data-voc="Sin {citas} {g:próximas}.">Sin citas próximas.</div></div>
         </div>
         <div class="panel">
-          <b>Agendar cita</b>
+          <b data-voc="Agendar {una} {cita}">Agendar cita</b>
           <span class="small muted">Haz clic en un hueco libre de la semana o elige la fecha y hora.</span>
           <label class="small muted">Contacto<select id="book-contact"></select></label>
           <label class="small muted" id="book-sede-l" hidden>Sede<select id="book-sede"></select></label>
@@ -3880,7 +3880,7 @@ dialog.perdida input{width:100%}
           <div class="small muted">Una hoja de cálculo con lo que hay hoy, para abrir en Excel o Google Sheets.</div>
           <div class="feed-row" style="margin-top:8px">
             <button class="btn" id="exp-contactos">Contactos (CSV)</button>
-            <button class="btn" id="exp-citas">Citas (CSV)</button>
+            <button class="btn" id="exp-citas" data-voc="{Citas} (CSV)">Citas (CSV)</button>
           </div>
           <div class="small" id="exp-msg" role="status"></div>
         </div>
