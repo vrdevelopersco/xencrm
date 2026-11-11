@@ -11,6 +11,7 @@
 //
 // Se parte en dos: `hallazgosDe` son las reglas, puras (las prueba eval/optimizacion.ts sin base de datos), y
 // `optimizacion` junta los datos de la base para dárselos.
+import { V } from '../vocabulario.js';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { estaCerrada, listContacts, rolDe, STAGE_DEFS, STAGE_LABELS, type Stage } from './contacts.js';
@@ -118,8 +119,8 @@ const hora = (h: number) => `${h}:00`;
 const QUE_HACER_EN: Record<string, string> = {
   inicio: 'Revisa el primer mensaje del asistente y que conteste en minutos: quien escribe y no recibe nada útil enseguida no sigue la conversación.',
   activo: 'Conversan pero no muestran interés: revisa que el catálogo y los precios estén cargados en Lo que sabe, para que el asistente pueda concretar en vez de dar vueltas.',
-  interes: 'Muestran interés pero no dan el siguiente paso: ofrece la cita (o la propuesta) antes, y retoma a los interesados desde la Lista de trabajo.',
-  cita: 'Agendan pero no compran: después de cada cita registra cómo les fue y, si se pierden, el motivo. Así se ve qué pasa en la cita.',
+  interes: `Muestran interés pero no dan el siguiente paso: ofrece ${V.la} ${V.cita} (o la propuesta) antes, y retoma a los interesados desde la Lista de trabajo.`,
+  cita: `Agendan pero no compran: después de cada ${V.cita} registra cómo les fue y, si se pierden, el motivo. Así se ve qué pasa en ${V.la} ${V.cita}.`,
 };
 
 /** Las reglas. Puras: mismas entradas, mismos hallazgos, en el mismo orden. */
@@ -171,7 +172,7 @@ export function hallazgosDe(e: Entradas): Hallazgo[] {
       prioridad: conValor.length || calientes ? 'alta' : 'media',
       titulo: `${plural(e.estancados.length, 'trato lleva', 'tratos llevan')} ${UMBRAL.diasEstancado} días o más sin moverse`,
       cifra: de(e.estancados.length, e.abiertos),
-      base: `tratos abiertos sin actividad en ${UMBRAL.diasEstancado} días o más, sin cita por delante y sin posponer` + (calientes ? ` (${plural(calientes, 'caliente', 'calientes')})` : ''),
+      base: `tratos abiertos sin actividad en ${UMBRAL.diasEstancado} días o más, sin ${V.cita} por delante y sin posponer` + (calientes ? ` (${plural(calientes, 'caliente', 'calientes')})` : ''),
       porQue: 'Un trato quieto se enfría solo: quien ya preguntó por algo es más fácil de recuperar que alguien nuevo.',
       queHacer: 'Escríbeles hoy, empezando por los que valen más o tienen mejor puntaje; si de verdad no es el momento, déjalos «por ahora» para que no ensucien la lista.',
       ir: { vista: 'optimizacion', etiqueta: 'Ver los estancados', filtro: 'estancados' },
@@ -187,7 +188,7 @@ export function hallazgosDe(e: Entradas): Hallazgo[] {
       prioridad: e.seguimientos.calientes ? 'alta' : 'media',
       titulo: `${plural(e.seguimientos.cuantos, 'persona espera', 'personas esperan')} que alguien le escriba`,
       cifra: String(e.seguimientos.cuantos),
-      base: 'tratos abiertos sin mensajes en más de 24 horas, sin cita y sin posponer' + (e.seguimientos.calientes ? ` (${plural(e.seguimientos.calientes, 'caliente', 'calientes')})` : ''),
+      base: `tratos abiertos sin mensajes en más de 24 horas, sin ${V.cita} y sin posponer` + (e.seguimientos.calientes ? ` (${plural(e.seguimientos.calientes, 'caliente', 'calientes')})` : ''),
       porQue: 'Cada día sin respuesta baja la probabilidad de cerrar, y los calientes se enfrían primero.',
       queHacer: 'Abre la Lista de trabajo y escríbeles en ese orden: arriba van los que más valen la pena.',
       ir: { vista: 'seguimientos', etiqueta: 'Abrir la Lista de trabajo' },
@@ -203,7 +204,7 @@ export function hallazgosDe(e: Entradas): Hallazgo[] {
       prioridad: e.verificaciones.enTratosVivos ? 'alta' : 'media',
       titulo: `El asistente prometió verificar ${plural(e.verificaciones.pendientes, 'cosa', 'cosas')} y siguen sin respuesta`,
       cifra: String(e.verificaciones.pendientes),
-      base: e.verificaciones.enTratosVivos ? `${de(e.verificaciones.enTratosVivos, e.verificaciones.pendientes)} son de tratos con interés o con cita` : 'preguntas que el asistente no supo contestar y dejó para el equipo',
+      base: e.verificaciones.enTratosVivos ? `${de(e.verificaciones.enTratosVivos, e.verificaciones.pendientes)} son de tratos con interés o con ${V.cita}` : 'preguntas que el asistente no supo contestar y dejó para el equipo',
       porQue: 'Quien preguntó está esperando esa respuesta para decidir; mientras no llegue, el trato no avanza.',
       queHacer: 'Contéstalas en Inicio › Por verificar y marca «Agregar a la información»: la próxima vez el asistente lo sabrá solo.',
       ir: { vista: 'today', etiqueta: 'Ir a Por verificar' },

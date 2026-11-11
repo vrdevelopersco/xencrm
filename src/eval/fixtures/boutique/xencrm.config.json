@@ -1,11 +1,11 @@
 {
   "business": {
-    "name": "DUNOR Boutique",
+    "name": "Atelier Demo",
     "description": "Tu armario personal de lujo en Barranquilla: alquiler premium de trajes, esmóquines y accesorios, diseño a la medida y asesoría de imagen para hombres que quieren brillar en bodas, grados y eventos especiales. Atención solo con cita previa.",
-    "siteUrl": "https://dunor.co",
+    "siteUrl": "https://atelier-demo.example",
     "currency": "COP",
     "country": "Colombia",
-    "humanContact": "escríbenos al WhatsApp +57 321 610 5383 o por Instagram @dunorboutique.",
+    "humanContact": "escríbenos al WhatsApp +57 300 000 0001 o por Instagram @atelierdemo.",
     "phoneCountryCode": "57",
     "phoneLocalDigits": 10
   },
@@ -16,19 +16,19 @@
     "goal": "Tu objetivo es entender el evento del cliente (qué ocasión, cuándo es, qué papel juega, qué busca) y llevarlo con naturalidad a agendar su cita privada en la boutique. Los precios y los detalles finales se definen en la cita: nunca inventes cifras."
   },
   "sources": {
-    "productsFile": "examples/dunor/catalog/products.json",
-    "knowledgeDir": "examples/dunor/knowledge",
+    "productsFile": "src/eval/fixtures/boutique/catalog/products.json",
+    "knowledgeDir": "src/eval/fixtures/boutique/knowledge",
     "sitePages": [
-      "https://dunor.co/"
+      "https://atelier-demo.example/"
     ]
   },
-  "dictionaryFile": "examples/dunor/dictionary.json",
-  "profileFile": "examples/dunor/profile.json",
+  "dictionaryFile": "src/eval/fixtures/boutique/dictionary.json",
+  "profileFile": "src/eval/fixtures/boutique/profile.json",
   "timezone": "America/Bogota",
   "appointments": {
     "enabled": true,
     "service": "cita privada de asesoría",
-    "location": "DUNOR Boutique, Barranquilla",
+    "location": "Atelier Demo, Barranquilla",
     "durationMin": 60,
     "days": [
       1,
@@ -76,10 +76,10 @@
       }
     ]
   },
-  "evalFile": "examples/dunor/scenarios.json",
-  "seedFile": "examples/dunor/seed.json",
+  "evalFile": "src/eval/fixtures/boutique/scenarios.json",
+  "seedFile": "src/eval/fixtures/boutique/seed.json",
   "brand": {
     "color": "#C5A47E",
-    "logo": "https://dunor.co/Logo_dunor.jpg"
+    "logo": "https://atelier-demo.example/logo.jpg"
   }
 }

@@ -2,6 +2,7 @@
 // desde el tablero (Configuración › Perfil). Vive en un archivo por cliente (xencrm.config.json > profileFile), como el
 // diccionario. Lo vacío queda "por confirmar": el bot no lo supone y, si le preguntan, dice que lo verifica.
 // Lo confirmado va en la información fija del prompt y en la búsqueda; si contradice otra información, vale el perfil.
+import { V } from './vocabulario.js';
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { z } from 'zod';
 import { business } from './config.js';
@@ -27,10 +28,10 @@ export const PROFILE_FIELDS: { key: string; section: string; label: string; hint
   { key: 'identity.description', section: 'Negocio', label: 'Qué hace y para quién', long: true },
   { key: 'identity.siteUrl', section: 'Negocio', label: 'Sitio web' },
   { key: 'identity.city', section: 'Negocio', label: 'Ciudad' },
-  { key: 'service.address', section: 'Dónde y cuándo', label: 'Dirección', hint: 'Si solo se da al confirmar la cita, escríbelo así.' },
+  { key: 'service.address', section: 'Dónde y cuándo', label: 'Dirección', hint: `Si solo se da al confirmar ${V.la} ${V.cita}, escríbelo así.` },
   { key: 'service.hours', section: 'Dónde y cuándo', label: 'Horarios de atención', long: true },
   { key: 'service.area', section: 'Dónde y cuándo', label: 'Zona que atienden', hint: '¿Solo en la ciudad? ¿Envíos o atención fuera de ella?', long: true },
-  { key: 'service.appointmentOnly', section: 'Dónde y cuándo', label: 'Atienden solo con cita previa', bool: true },
+  { key: 'service.appointmentOnly', section: 'Dónde y cuándo', label: `Atienden solo con ${V.cita} previa`, bool: true },
   { key: 'contact.whatsapp', section: 'Contacto', label: 'WhatsApp oficial' },
   { key: 'contact.phone', section: 'Contacto', label: 'Teléfono' },
   { key: 'contact.email', section: 'Contacto', label: 'Correo' },

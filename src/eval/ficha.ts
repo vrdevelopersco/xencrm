@@ -139,10 +139,10 @@ check('sin teléfono, la lista de Clientes dice su @ o su correo', /c\.phone \|\
 console.log('— Entrar directo al tablero');
 const consolaHtml = readFileSync(new URL('../../public/consola.html', import.meta.url), 'utf8');
 const directo = (d: object, hash = '') => new Function('location', funcion(consolaHtml, 'vaDirectoAlTablero') + '\nreturn vaDirectoAlTablero;')({ hash })(d) as boolean;
-check('quien lleva un solo cliente entra directo a su tablero', directo({ super: false, usuario: { clientes: ['dunor'] } }));
-check('quien lleva varios, a la consola', !directo({ super: false, usuario: { clientes: ['dunor', 'confia'] } }));
-check('el super-admin, a la consola', !directo({ super: true, usuario: null }) && !directo({ super: true, usuario: { clientes: ['dunor'] } }));
-check('🪤 y «Volver a la consola» (#consola) no lo devuelve al tablero', !directo({ super: false, usuario: { clientes: ['dunor'] } }, '#consola') && /location\.href = '\/consola#consola'/.test(js));
+check('quien lleva un solo cliente entra directo a su tablero', directo({ super: false, usuario: { clientes: ['atelier'] } }));
+check('quien lleva varios, a la consola', !directo({ super: false, usuario: { clientes: ['atelier', 'confia'] } }));
+check('el super-admin, a la consola', !directo({ super: true, usuario: null }) && !directo({ super: true, usuario: { clientes: ['atelier'] } }));
+check('🪤 y «Volver a la consola» (#consola) no lo devuelve al tablero', !directo({ super: false, usuario: { clientes: ['atelier'] } }, '#consola') && /location\.href = '\/consola#consola'/.test(js));
 check('se va antes de pintar la consola, a la dirección del tablero', /if \(vaDirectoAlTablero\(d\)\) \{ location\.replace\('\/c\/' \+ encodeURIComponent\(d\.usuario\.clientes\[0\]\) \+ '\/admin'\); return; \}\s*pintarYo\(\);/.test(consolaHtml));
 check('con un cliente, «Abrir tablero» se abre en la misma pestaña', /\(esSuper \|\| \(yo && \(yo\.clientes \|\| \[\]\)\.length > 1\) \? ' target="_blank"/.test(consolaHtml));
 check('🪤 «Salir» desde el tablero cierra la sesión de la consola (antes solo llevaba a la portada)', /fetch\('\/api\/salir', \{ method: 'POST' \}\)/.test(js) && /location\.href = '\/consola';/.test(js));

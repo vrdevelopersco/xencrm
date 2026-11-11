@@ -12,6 +12,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { computeScore, type Signals } from './analyzer.js';
+import { availableSlots } from './appointments.js';
 import { getContact, purgeContact } from './contacts.js';
 import { sembrarTicketsDe, type TicketDemo } from './tickets-demo.js';
 import { quitarServicioDemo, sembrarServicio } from './servicio-demo.js';
@@ -96,7 +97,10 @@ export function cargar(opts: { archivo?: string | null; now?: number } = {}): nu
     });
 
     if (sd.appointmentInHours !== undefined) {
-      const startsAt = now + sd.appointmentInHours * 3600_000;
+      // 🪤 Se encaja en el primer hueco de la agenda del negocio desde esa hora: sumarle horas a «ahora» dejaba demos
+      // a las 6:47 a. m. o un sábado en un negocio que atiende de lunes a viernes, y eso se ve inventado.
+      const deseado = now + sd.appointmentInHours * 3600_000;
+      const startsAt = availableSlots({ count: 1, after: new Date(deseado) })[0]?.startsAt.getTime() ?? deseado;
       db.prepare('INSERT INTO appointments (user_id, starts_at, ends_at, service, location, status, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
         userId,
         startsAt,

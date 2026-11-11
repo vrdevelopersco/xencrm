@@ -10,6 +10,7 @@
 // llamadas, y la frase cambiaría de una vez a otra sin que hubiera cambiado nada.
 
 import { business } from '../config.js';
+import { V } from '../vocabulario.js';
 import { getDb } from '../rag/store.js';
 import { listAppointments } from './appointments.js';
 import { esPersona, estaCerrada, type Contact } from './contacts.js';
@@ -102,10 +103,10 @@ export function proximoPaso(c: Contact, ctx: ContextoPaso): ProximoPaso {
   if (c.humanMode && (!c.humanBy || c.humanBy === 'bot')) return paso('persona', 'Atender: la pasaron al equipo', true);
 
   const sinResultado = ctx.sinResultado.get(c.id);
-  if (sinResultado) return paso('resultado', `Anotar cómo le fue en la cita de ${cuandoCorto(sinResultado, now).replace(/^el /, '')}`, true, sinResultado);
+  if (sinResultado) return paso('resultado', `Anotar cómo le fue en ${V.la} ${V.cita} de ${cuandoCorto(sinResultado, now).replace(/^el /, '')}`, true, sinResultado);
 
   const cita = ctx.proximaCita.get(c.id);
-  if (cita) return paso('cita', `Cita ${cuandoCorto(cita, now)}`, false, cita);
+  if (cita) return paso('cita', `${V.Cita} ${cuandoCorto(cita, now)}`, false, cita);
 
   if (isSnoozed(c, now)) {
     const hasta = Number(c.data.pospuesto_hasta);

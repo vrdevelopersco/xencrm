@@ -1,5 +1,6 @@
 // Análisis comercial por turno: sentimiento, interés, urgencia, objeciones y datos capturados,
 // con un puntaje explicable de probabilidad de cita/venta. Corre en segundo plano tras cada respuesta.
+import { V } from '../vocabulario.js';
 import { escritosAMano } from './ficha.js';
 import { business } from '../config.js';
 import { classify, roleEngine, fallbackOrder, iaAgotada, modeloDe } from '../llm/engines.js';
@@ -36,7 +37,7 @@ function schema(): SchemaSpec {
       { name: 'sentimiento', type: 'string', enum: ['positivo', 'neutral', 'negativo'], description: 'Ánimo del cliente en sus últimos mensajes' },
       { name: 'interes', type: 'integer', description: '0 = ninguno, 1 = curiosidad, 2 = interés claro, 3 = quiere comprar o agendar ya' },
       { name: 'urgencia', type: 'string', enum: ['baja', 'media', 'alta'] },
-      { name: 'quiere_cita', type: 'boolean', description: 'Pidió o aceptó una cita, visita o toma de medidas' },
+      { name: 'quiere_cita', type: 'boolean', description: `Pidió o aceptó ${V.una} ${V.cita}, visita o toma de medidas` },
       { name: 'pidio_precio', type: 'boolean' },
       { name: 'menciono_presupuesto', type: 'boolean' },
       { name: 'tiene_objecion', type: 'boolean', description: 'Expresó un obstáculo que frena la compra: le parece caro, no le da el tiempo, le queda lejos, desconfía. Preguntar algo (precio, proceso, horario) no es una objeción' },
@@ -116,8 +117,8 @@ export function computeScore(c: Contact, s: Signals, opts: { hasAppointment: boo
   const add = (label: string, points: number, when = true) => {
     if (when && points !== 0) f.push({ label, points });
   };
-  add('Cita agendada', 40, opts.hasAppointment);
-  add('Pidió cita', 30, !opts.hasAppointment && s.quiere_cita);
+  add(`${V.Cita} ${V.g('agendada')}`, 40, opts.hasAppointment);
+  add(`Pidió ${V.cita}`, 30, !opts.hasAppointment && s.quiere_cita);
   add('Quiere comprar o agendar ya', 20, s.interes >= 3);
   add('Interés claro', 10, s.interes === 2);
   add('Curiosidad', 3, s.interes === 1);

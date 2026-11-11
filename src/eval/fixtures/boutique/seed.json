@@ -11,7 +11,7 @@
       { "role": "user", "text": "Sí, ¿cuánto vale más o menos?" },
       { "role": "assistant", "text": "El precio se define en la cita según la tela y el diseño que elijas, ahí te damos la cifra exacta antes de confirmar. ¿Agendamos? Tengo estos espacios:\n1) sábado, 10:00 a. m.\n2) lunes, 11:00 a. m.\n3) martes, 3:00 p. m." },
       { "role": "user", "text": "La 2" },
-      { "role": "assistant", "text": "¡Agendada, Andrés! 🗓️ Te esperamos el lunes a las 11:00 a. m. en DUNOR Boutique, Barranquilla. Si necesitas cambiarla, me escribes por aquí." }
+      { "role": "assistant", "text": "¡Agendada, Andrés! 🗓️ Te esperamos el lunes a las 11:00 a. m. en Atelier Demo, Barranquilla. Si necesitas cambiarla, me escribes por aquí." }
     ]
   },
   {
@@ -24,7 +24,7 @@
       { "role": "assistant", "text": "¡Claro, Camilo! Tenemos esmóquines de las mejores marcas, con los ajustes incluidos y asesoría de imagen para que el look quede perfecto para la boda. ¿Es de noche o de día?" },
       { "role": "user", "text": "De noche. Es que estoy corto de tiempo, quiero hablar con alguien" },
       { "role": "assistant", "text": "Claro que sí, te paso con alguien del equipo. En un momento te escriben por aquí mismo." },
-      { "role": "assistant", "author": "human", "by": "Laura", "text": "Hola Camilo, soy Laura de DUNOR. Para el 18 de octubre alcanzamos sin problema; si vienes esta semana dejamos el esmoquin listo con tiempo. ¿Qué día te queda bien?" },
+      { "role": "assistant", "author": "human", "by": "Laura", "text": "Hola Camilo, soy Laura de Atelier Demo. Para el 18 de octubre alcanzamos sin problema; si vienes esta semana dejamos el esmoquin listo con tiempo. ¿Qué día te queda bien?" },
       { "role": "user", "text": "Podría el jueves en la tarde, ¿qué hora tienen?" }
     ]
   },
@@ -61,7 +61,7 @@
     "signals": { "interes": 3, "quiere_cita": true, "pidio_precio": true, "urgencia": "baja", "sentimiento": "positivo" },
     "messages": [
       { "role": "user", "text": "Gracias por todo, el esmoquin quedó perfecto. Todo el mundo preguntó dónde lo conseguí" },
-      { "role": "assistant", "text": "¡Qué alegría leer eso, Ricardo! Gracias por confiar en DUNOR. Cuando quieras volver a brillar, aquí estamos 🤍" }
+      { "role": "assistant", "text": "¡Qué alegría leer eso, Ricardo! Gracias por confiar en Atelier Demo. Cuando quieras volver a brillar, aquí estamos 🤍" }
     ]
   },
   {
@@ -85,7 +85,7 @@
       { "role": "user", "text": "Hola, voy a una boda en noviembre y quiero algo elegante sin ser el novio jaja" },
       { "role": "assistant", "text": "Jaja, perfecto, Daniel: elegante y con estilo propio. En la cita privada vemos opciones de alquiler y tu asesor te ayuda a elegir según la boda. ¿Te agendo?" },
       { "role": "user", "text": "Sí, mañana si se puede" },
-      { "role": "assistant", "text": "¡Listo, quedó! Tu cita privada de asesoría es mañana a las 4:00 p. m. en DUNOR Boutique, Barranquilla. Cualquier cambio, me avisas por aquí 🙂" }
+      { "role": "assistant", "text": "¡Listo, quedó! Tu cita privada de asesoría es mañana a las 4:00 p. m. en Atelier Demo, Barranquilla. Cualquier cambio, me avisas por aquí 🙂" }
     ]
   },
   {

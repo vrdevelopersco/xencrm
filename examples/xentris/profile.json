@@ -6,28 +6,40 @@
     "city": "Medellín"
   },
   "contact": {
-    "whatsapp": "",
-    "phone": "",
+    "whatsapp": "+57 300 555 0100",
+    "phone": "+57 604 555 0100",
     "email": "soporte@xentris.example",
-    "instagram": "",
+    "instagram": "@xentris.app",
     "human": "escríbenos a soporte@xentris.example o pide aquí que te pasemos con el equipo."
   },
   "service": {
-    "address": "",
-    "hours": "lunes a viernes, 8:00 a. m. a 6:00 p. m. (Enterprise: críticos 24/7)",
-    "area": "Colombia y Latinoamérica, remoto",
+    "address": "Calle 10 # 43-20, oficina 802, El Poblado, Medellín (con cita)",
+    "hours": "lunes a viernes, 8:00 a. m. a 6:00 p. m. (Enterprise: incidentes críticos 24/7)",
+    "area": "Colombia y Latinoamérica, todo remoto",
     "appointmentOnly": false
   },
   "payments": {
-    "methods": "transferencia, tarjeta de crédito o débito automático",
-    "deposit": ""
+    "methods": "transferencia, tarjeta de crédito o débito automático; mensual o anual",
+    "deposit": "La implementación se paga 50 % al empezar y 50 % al salir en vivo."
   },
-  "prices": "Las licencias dependen de sucursales, usuarios y plan: las cotiza el equipo comercial.",
-  "policies": "Los tiempos de soporte son los del plan de cada cliente (ver Soporte y SLA).",
+  "prices": "Las licencias dependen de sucursales, usuarios o bodegas y del plan de soporte: las cotiza el equipo comercial.",
+  "policies": "Los tiempos de soporte son los del plan de cada cliente (Básico, Pro o Enterprise). Las actualizaciones salen una vez al mes y los mantenimientos se avisan con la anticipación del plan.",
   "extras": [
     {
       "title": "Implementación",
-      "text": "De 1 a 3 semanas según el número de sucursales."
+      "text": "De 1 a 3 semanas según sucursales y bodegas, con carga inicial y capacitación."
+    },
+    {
+      "title": "Planes de soporte",
+      "text": "Básico: respuesta en 8 h hábiles. Pro: 4 h hábiles. Enterprise: 1 h, 24/7 para críticos."
+    },
+    {
+      "title": "Actualizaciones",
+      "text": "Una vez al mes, con notas de la versión el día que sale."
+    },
+    {
+      "title": "Garantía",
+      "text": "Si un incidente rompe el SLA del plan, ese mes se descuenta según el contrato."
     }
   ],
   "notes": {}

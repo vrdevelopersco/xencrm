@@ -37,6 +37,38 @@
       ['token', 'name'].forEach(function (que) { localStorage.removeItem('xencrm.admin.' + que); });
     } catch (e) { /* sin almacenamiento, se entra como la primera vez */ }
   })();
+  // ---------- las palabras del negocio (xencrm.config.json › interfaz) ----------
+  // 🪤 Lo que depende del negocio no se escribe fijo: «Citas» es de una boutique, XENTRIS agenda «demos» y un taller,
+  // «turnos». Llega con /me (`interfaz`); mientras tanto rigen los valores de fábrica, los mismos del esquema
+  // (src/config.ts). VOC.g() hace concordar un adjetivo escrito en femenino con un nombre masculino («agendada» →
+  // «agendado»), y los artículos vienen hechos (VOC.la, VOC.una…).
+  var VOC = {};
+  function ponerVocabulario(i) {
+    var a = (i && i.agenda) || {}, s = a.singular || 'cita', p = a.plural || 'citas', m = Boolean(a.masculino);
+    var may = function (x) { return x.charAt(0).toUpperCase() + x.slice(1); };
+    VOC = {
+      cita: s, citas: p, Cita: may(s), Citas: may(p), masculino: m,
+      la: m ? 'el' : 'la', La: m ? 'El' : 'La', las: m ? 'los' : 'las', una: m ? 'un' : 'una', Ninguna: m ? 'Ningún' : 'Ninguna', otra: m ? 'otro' : 'otra',
+      g: function (f) { return m ? f.replace(/as$/, 'os').replace(/a$/, 'o') : f; },
+      bienvenida: (i && i.bienvenida) || 'Este es el pulso de {negocio} hoy.',
+      ej: (i && i.ejemplos) || {}
+    };
+  }
+  ponerVocabulario(null);
+  /** Lo que se pintó antes de saber el vocabulario (el menú, los ejemplos de los campos fijos del HTML) se pone al día. */
+  function pintarVocabulario() {
+    document.querySelectorAll('#nav-fx [data-view="calendar"]').forEach(function (b) {
+      var l = b.querySelector('.fx-lbl'); if (l) l.textContent = VOC.Citas; b.title = VOC.Citas;
+    });
+    var ej = VOC.ej || {};
+    [['k-doc-titulo', ej.documento], ['k-ra-tema', ej.respuestaTema], ['k-ra-como', ej.respuestaComo], ['k-nota-titulo', ej.nota ? 'De qué se trata (ej.: ' + ej.nota + ')' : '']].forEach(function (x) {
+      if (x[1] && $(x[0])) $(x[0]).placeholder = x[1];
+    });
+    document.querySelectorAll('[data-voc]').forEach(function (el) {
+      el.textContent = el.getAttribute('data-voc').replace(/\{g:([^}]+)\}/g, function (m, f) { return VOC.g(f); }).replace(/\{(\w+)\}/g, function (m, k) { return typeof VOC[k] === 'string' ? VOC[k] : m; });
+    });
+    if (state.view) cabeceraFacil(state.view);
+  }
   var state = { token: '', name: '', view: 'today', filter: 'all', q: '', contacts: [], current: null, detail: null, kind: 'knowledge', theme: 'light', sound: true, stageLabels: {}, stages: [], es: null, notifs: [], notifSeen: 0, detailOpen: false };
   // 🪤 Si se entró por la consola, el nombre de quien atiende sale de SU CUENTA y no del navegador: así se
   // mantiene al cambiar de equipo y no hay forma de que se cruce con el de otro cliente.
@@ -751,7 +783,7 @@
   ICONS.llave = '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>';
   ICONS.areas = '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/>';
   var MENU_FACIL = [
-    { grupo: 'Mi trabajo', items: [{ view: 'today', lbl: 'Inicio', ic: 'inicio' }, { view: 'inbox', lbl: 'Bandeja omnicanal', ic: 'inbox', n: 'fx-n-inbox' }, { view: 'seguimientos', lbl: 'Lista de trabajo', ic: 'volver' }, { view: 'calendar', lbl: 'Citas', ic: 'citas', n: 'fx-n-citas' }] },
+    { grupo: 'Mi trabajo', items: [{ view: 'today', lbl: 'Inicio', ic: 'inicio' }, { view: 'inbox', lbl: 'Bandeja omnicanal', ic: 'inbox', n: 'fx-n-inbox' }, { view: 'seguimientos', lbl: 'Lista de trabajo', ic: 'volver' }, { view: 'calendar', get lbl() { return VOC.Citas; }, ic: 'citas', n: 'fx-n-citas' }] },
     { grupo: 'Clientes', items: [{ view: 'clientes', lbl: 'Contactos', ic: 'contacto' }, { view: 'kam', lbl: 'Cuentas clave', ic: 'estrella' }] },
     { grupo: 'Ventas', items: [{ view: 'embudo', lbl: 'Embudo', ic: 'embudo' }, { view: 'pipeline', lbl: 'Tratos', ic: 'kanban' }, { view: 'ventas', lbl: 'Ventas', ic: 'dolar' }] },
     { grupo: 'Rendimiento', items: [{ view: 'kpis', lbl: 'KPIs y metas', ic: 'objetivo' }, { view: 'optimizacion', lbl: 'Optimización de ventas', ic: 'rayo' }, { view: 'analysis', lbl: 'Analítica', ic: 'analitica' }] }
@@ -1008,10 +1040,10 @@
   function cabeceraFacil(view) {
     var biz = state.bizName || 'tu negocio', nombre = (state.name || '').trim().split(/\s+/)[0];
     var c = {
-      today: [saludo() + (nombre ? ', ' + nombre : ''), 'Este es el pulso de ' + biz + ' hoy.'],
+      today: [saludo() + (nombre ? ', ' + nombre : ''), VOC.bienvenida.replace(/\{negocio\}/g, biz)],
       analysis: ['Analítica', 'Cómo llega la gente, a qué horas escribe y cuánto se tarda en contestar.'],
       clientes: ['Contactos', 'Todas las personas que han hablado con ' + biz + '.'],
-      calendar: ['Citas', 'La agenda de ' + biz + ': haz clic en un hueco libre para agendar.'],
+      calendar: [VOC.Citas, 'La agenda de ' + biz + ': haz clic en un hueco libre para agendar ' + VOC.una + ' ' + VOC.cita + '.'],
       pipeline: ['Tratos', 'Cada contacto en su etapa del embudo: arrastra la tarjeta o usa «Mover…».'],
       ventas: ['Ventas', 'Lo que se vendió y lo que se perdió, con el porqué.'],
       seguimientos: ['Lista de trabajo', 'A quién escribirle hoy y por qué: el siguiente paso de cada trato, en orden.'],
@@ -1199,7 +1231,7 @@
   function verdict(c) {
     if (rol(c.stage) === 'ganado') return { label: 'Cliente', cls: 'v-cliente', why: 'Compró.' };
     if (rol(c.stage) === 'perdido') return { label: 'Perdido', cls: 'v-perdido', why: 'Se descartó.' };
-    if (rol(c.stage) === 'cita') return { label: 'Prospecto con cita', cls: 'v-cita', why: 'Ya tiene cita agendada.' };
+    if (rol(c.stage) === 'cita') return { label: 'Prospecto con ' + VOC.cita, cls: 'v-cita', why: 'Ya tiene ' + VOC.una + ' ' + VOC.cita + ' ' + VOC.g('agendada') + '.' };
     if (c.score >= 60) return { label: 'Prospecto claro', cls: 'v-si', why: topFactor(c) };
     if (c.score >= 30) return { label: 'Posible prospecto', cls: 'v-posible', why: topFactor(c) };
     return { label: 'Sin señales aún', cls: 'v-no', why: c.messageCount ? 'Todavía no muestra intención de compra.' : 'Acaba de escribir.' };
@@ -1334,7 +1366,7 @@
       'sin_respaldo': 'afirmaba algo sin respaldo («' + v + '»): se pasó a verificar',
       'promesa': 'prometía plata que el negocio no ofrece («' + v + '»): no salió',
       'recito': 'recitaba sus instrucciones: salió una respuesta fija',
-      'cita_inventada': 'daba por hecha una cita que no existe',
+      get cita_inventada() { return 'daba por hecha ' + VOC.una + ' ' + VOC.cita + ' que no existe'; },
       'tope': 'tope de gasto alcanzado: pasó al equipo',
       'falló': 'falló el motor ' + v
     })[k] || g;
@@ -1579,7 +1611,7 @@
       (c.lastMessageAt ? ' · escribió hace ' + rel(c.lastMessageAt) : '') + ' · ' + esc(d.reason) + '</div>' +
       '<div class="feed-row"><button class="btn" id="dup-merge">Unir fichas</button></div><div class="small" id="dup-msg" role="status"></div></div>';
     $('dup-merge').onclick = function () {
-      $('dup-msg').innerHTML = 'Se conserva <b>' + esc(keepName) + '</b> (donde escribió más recientemente) y se le suman la conversación, las citas y el análisis de la otra. No se puede deshacer.' +
+      $('dup-msg').innerHTML = 'Se conserva <b>' + esc(keepName) + '</b> (donde escribió más recientemente) y se le suman la conversación, ' + VOC.las + ' ' + VOC.citas + ' y el análisis de la otra. No se puede deshacer.' +
         '<div class="feed-row"><button class="btn primary" id="dup-yes">Unir</button><button class="btn" id="dup-no">Cancelar</button></div>';
       $('dup-no').onclick = function () { $('dup-msg').textContent = ''; };
       $('dup-yes').onclick = function () {
@@ -1604,7 +1636,7 @@
       });
     };
     $('del-btn').onclick = function () {
-      $('del-msg').innerHTML = 'Se borra la ficha de <b>' + esc(nameOf(c)) + '</b> con su conversación, sus citas y su análisis. No se puede deshacer.' +
+      $('del-msg').innerHTML = 'Se borra la ficha de <b>' + esc(nameOf(c)) + '</b> con su conversación, sus ' + VOC.citas + ' y su análisis. No se puede deshacer.' +
         '<div class="feed-row"><button class="btn primary" id="del-yes">Borrar definitivamente</button><button class="btn" id="del-no">Cancelar</button></div>';
       $('del-no').onclick = function () { $('del-msg').textContent = ''; };
       $('del-yes').onclick = function () {
@@ -1654,7 +1686,7 @@
     var fila = function (k, html, clase) { return '<dt' + (clase ? ' class="' + clase + '"' : '') + '>' + esc(k) + '</dt><dd' + (clase ? ' class="' + clase + '"' : '') + '>' + html + '</dd>'; };
     var factors = (c.scoreFactors || []).map(function (f) { return '<li><span>' + esc(f.label) + '</span><span class="' + (f.points >= 0 ? 'pos' : 'neg') + '">' + (f.points >= 0 ? '+' : '') + f.points + '</span></li>'; }).join('') || '<li class="muted">Aún sin análisis.</li>';
     var etapas = (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '"' + (e.id === c.stage ? ' selected' : '') + '>' + esc(e.label) + '</option>'; }).join('');
-    var appts = d.appointments.map(function (a) { return '<div class="appt ' + a.status + '"><span class="t">' + esc(a.label || '') + '</span><span class="grow small muted">' + esc(a.service) + ' · ' + esc(estadoCita(a.status)) + '</span></div>'; }).join('') || '<span class="muted small">Sin citas.</span>';
+    var appts = d.appointments.map(function (a) { return '<div class="appt ' + a.status + '"><span class="t">' + esc(a.label || '') + '</span><span class="grow small muted">' + esc(a.service) + ' · ' + esc(estadoCita(a.status)) + '</span></div>'; }).join('') || '<span class="muted small">Sin ' + esc(VOC.citas) + '.</span>';
     var v = verdict(c), viejo = isStale(c);
     var sub = [channelIcon(c.channel), c.phone || '', h.frase || ''].filter(Boolean).join(' · ');
     var canal = canalDeXen(c.channel), tel = d.number ? '+' + d.number : (c.phone || '');
@@ -1678,7 +1710,7 @@
             '<a class="btn sm fx-cto-ic" href="tel:+' + esc(d.number) + '" title="Llamar" aria-label="Llamar a ' + esc(nameOf(c)) + '">' + svgXen('telefono') + '</a>'
           : '') + '</div>' +
       mediosXen(c) +
-      (h.amago ? '<div class="pf-amago">⚠ Se le fue una venta: tuvo cita y no acabó en compra, y no tiene otra agendada.</div>' : '') +
+      (h.amago ? '<div class="pf-amago">⚠ Se le fue una venta: tuvo ' + VOC.cita + ' y no acabó en compra, y no tiene ' + VOC.otra + ' ' + VOC.g('agendada') + '.</div>' : '') +
       (c.notes ? '<div class="perfil-nota"><b>Nota fija</b> ' + esc(c.notes) + '</div>' : '') +
       '<dl class="det fx-kv">' +
         fila('Asignado a', responsableHtml(c, 'f-resp')) +
@@ -1705,7 +1737,7 @@
       '<div><h3>Datos del contacto</h3>' + (capturados.length
         ? '<dl class="det">' + capturados.map(function (k) { return fila(etiquetaDato(k), esc(data[k])); }).join('') + '</dl>'
         : '<span class="muted small">Todavía nada. Se llena solo mientras conversa.</span>') + '</div>' +
-      '<div><h3>Citas</h3>' + appts + '</div>' +
+      '<div><h3>' + VOC.Citas + '</h3>' + appts + '</div>' +
       // La historia, corta: lo último que pasó y una nota a mano mientras se conversa. Entera, en la ficha.
       '<div><h3>Historia</h3><div class="nota-nueva"><label class="sr-only" for="chat-nota">Nota nueva</label>' +
         '<textarea id="chat-nota" data-borrador rows="2" maxlength="2000" placeholder="Nota para el equipo…"></textarea><button class="btn sm" id="chat-nota-ok">Guardar nota</button></div>' +
@@ -1768,17 +1800,21 @@
 
 
   // ---------- hoy ----------
-  // Borrador para retomar a un prospecto caliente: solo con lo que él mismo dijo (prenda, ocasión). Sin precios ni
-  // fechas inventadas, y queda en el cajón de escribir para que la persona lo ajuste antes de enviarlo.
+  // Borrador para retomar a un prospecto caliente: solo con lo que él mismo dijo (el producto o servicio que le
+  // interesa y, si lo hay, para qué). Sin precios ni fechas inventadas, y queda en el cajón de escribir para que la
+  // persona lo ajuste antes de enviarlo. Sirve para cualquier negocio: toma el primer dato que exista de los que
+  // suelen nombrar lo que se busca (producto en una firma de software, servicio o prenda en una tienda).
+  // XENCRM: lo que se ofrece al final es lo que el negocio agenda (su `appointments.service`), no «una cita» a secas.
   function followupDraft(c) {
     // 🪤 Del nombre de verdad, no de nameOf: sin nombre, nameOf dice «Visitante del sitio» y el borrador saldría
     // «Hola Visitante 🙂».
     var d = c.data || {}, first = (c.name || '').trim().split(' ')[0], biz = state.bizName ? ' de ' + state.bizName : '';
-    var prenda = (d.prenda || d.servicio || '').toString().replace(/\s*\(.*?\)/g, '').trim();
-    var ocasion = (d.ocasion || '').toString().replace(/\s*\(.*?\)/g, '').trim();
-    var asunto = prenda ? 'lo de tu ' + prenda + (ocasion ? ' para tu ' + ocasion : '') : 'lo que hablamos' + (ocasion ? ' para tu ' + ocasion : '');
+    var tema = (d.producto || d.servicio || d.prenda || '').toString().replace(/\s*\(.*?\)/g, '').trim();
+    var paraQue = (d.ocasion || '').toString().replace(/\s*\(.*?\)/g, '').trim();
+    var asunto = tema ? 'lo de ' + tema + (paraQue ? ' para tu ' + paraQue : '') : 'lo que hablamos' + (paraQue ? ' para tu ' + paraQue : '');
+    var agendar = state.agendaQue ? 'agendamos ' + (/^(un|una|el|la)\s/i.test(state.agendaQue) ? '' : 'la ') + state.agendaQue : 'lo vemos juntos';
     return 'Hola' + (first && !/^(web|wa|meta|cli|mcp)$/.test(first) ? ' ' + first : '') + ' 🙂 Te escribo' + biz + ' para saber si seguimos con ' + asunto +
-      '. Si quieres, te aparto una cita y lo vemos con calma; dime qué día te sirve.';
+      '. Si quieres, ' + agendar + ' con calma; dime qué día te sirve.';
   }
   function contactRow(c, extra, actions) {
     return '<div class="row" data-id="' + esc(c.id) + '"><div class="name"><span class="n">' + esc(nameOf(c)) + '</span>' + (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div><div class="time">' + rel(c.lastMessageAt) + '</div><div class="snip">' + esc(extra || c.recap || c.summary || '') + '</div><div class="meta"><span class="chip canal">' + esc(channelIcon(c.channel)) + '</span><span class="chip stage-' + (rol(c.stage) || c.stage) + '">' + esc(state.stageLabels[c.stage] || c.stage) + '</span>' + scoreChip(c) + (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '') + '</div>' + (actions ? '<div class="acts">' + actions + '</div>' : '') + '</div>';
@@ -1795,7 +1831,7 @@
       { k: 'activas', ic: 'message', t: 'Conversaciones activas', p: 'Ni ganadas ni perdidas', ir: function () { go('inbox'); setFilter('all'); } },
       { k: 'nuevos', ic: 'user', t: 'Prospectos nuevos', p: 'Escribieron hoy por primera vez', ir: function () { go('inbox'); setFilter('all'); } },
       { k: 'calientes', ic: 'chart', t: 'Prospectos calientes', p: 'Puntaje de 60 para arriba', ir: function () { go('inbox'); setFilter('hot'); } },
-      { k: 'citasHoy', ic: 'calendar', t: 'Citas hoy', p: d2(), ir: function () { go('calendar'); } },
+      { k: 'citasHoy', ic: 'calendar', t: VOC.Citas + ' hoy', p: d2(), ir: function () { go('calendar'); } },
     ];
     // La quinta: lo que hay en el embudo, en dinero.
     //
@@ -1869,14 +1905,14 @@
           }).join(''), empty: 'Nadie te ha escrito en un grupo.' },
         { t: 'Esperan tu respuesta', n: t.unanswered.length, html: t.unanswered.map(function (c) { return contactRow(c, c.humanMode ? 'La última palabra la tiene el cliente y ' + (state.agentName || 'Xen') + ' está en pausa.' : 'La última palabra la tiene el cliente y ' + (state.agentName || 'Xen') + ' no respondió.'); }).join(''), empty: 'Nadie espera respuesta de una persona.' },
         { t: 'Pidieron una persona', n: t.handoffs.length, html: t.handoffs.map(function (c) { return contactRow(c); }).join(''), empty: (state.agentName || 'Xen') + ' lleva todas las conversaciones.' },
-        { t: '¿Cómo les fue? (citas que ya pasaron)', n: (t.past || []).length, html: (t.past || []).map(pastItem).join(''), empty: 'Ninguna cita pasada sin resultado.' },
+        { t: '¿Cómo les fue? (' + VOC.citas + ' que ya pasaron)', n: (t.past || []).length, html: (t.past || []).map(pastItem).join(''), empty: VOC.Ninguna + ' ' + VOC.cita + ' ' + VOC.g('pasada') + ' sin resultado.' },
         { t: 'Recordar a mano', n: (t.remind || []).length, html: (t.remind || []).map(remindItem).join(''), empty: 'Los recordatorios de mañana salen solos.' },
-        { t: 'Citas de hoy', n: t.appointments.length, html: t.appointments.map(function (a) { return '<div class="appt"><span class="t">' + esc(a.label) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b> <span class="muted small">' + esc(a.service + conSede(a)) + '</span>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Sin citas hoy.' },
+        { t: VOC.Citas + ' de hoy', n: t.appointments.length, html: t.appointments.map(function (a) { return '<div class="appt"><span class="t">' + esc(a.label) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b> <span class="muted small">' + esc(a.service + conSede(a)) + '</span>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Sin ' + VOC.citas + ' hoy.' },
         { t: 'Calientes sin seguimiento (más de 24 h)', n: t.hot.length, html: t.hot.map(function (c) {
           return contactRow(c, null, '<button class="btn sm primary" data-follow="' + esc(c.id) + '">Escribirle</button><button class="btn sm" data-snooze="' + esc(c.id) + '">Dejarlo por ahora</button>');
         }).join(''), empty: 'Ningún prospecto caliente abandonado.' },
         { t: 'Sin leer, ' + (state.agentName || 'Xen') + ' ya respondió', n: t.unread.length, html: t.unread.map(function (c) { return contactRow(c); }).join(''), empty: 'Todo leído.' },
-        { t: 'Próximas citas (3 días)', n: t.upcoming.length, html: t.upcoming.map(function (a) { return '<div class="appt"><span class="grow stack"><span class="small muted">' + esc(a.label + conSede(a)) + '</span><b>' + esc(a.contactName || short(a.userId)) + '</b>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Nada agendado en los próximos días.' },
+        { t: VOC.g('Próximas') + ' ' + VOC.citas + ' (3 días)', n: t.upcoming.length, html: t.upcoming.map(function (a) { return '<div class="appt"><span class="grow stack"><span class="small muted">' + esc(a.label + conSede(a)) + '</span><b>' + esc(a.contactName || short(a.userId)) + '</b>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Nada agendado en los próximos días.' },
       ];
       var down = t.public && (t.public.state === 'caida' || t.public.state === 'otro_servidor')
         ? '<div class="panel help-first" role="alert"><span class="grow"><b>La dirección pública no responde.</b> <span class="small">' + esc(publicDetail(t.public)) + '</span></span><button class="btn primary" data-go="channels">Ver en Canales</button></div>'
@@ -1975,7 +2011,7 @@
       { k: 'activas', t: 'Conversaciones activas', ic: 'burbuja', tono: '', p: 'Ni ganadas ni perdidas', ir: function () { go('inbox', { filter: 'all' }); } },
       { k: 'nuevos', t: 'Prospectos nuevos', ic: 'users', tono: 'cielo', p: 'Escribieron hoy por primera vez', ir: function () { go('inbox', { filter: 'all' }); } },
       { k: 'calientes', t: 'Prospectos calientes', ic: 'objetivo', tono: 'verde', p: 'Con ganas de comprar', ir: function () { go('inbox', { filter: 'hot' }); } },
-      { k: 'citasHoy', t: 'Citas hoy', ic: 'reloj', tono: 'indigo', p: d2(), ir: function () { go('calendar'); } }
+      { k: 'citasHoy', t: VOC.Citas + ' hoy', ic: 'reloj', tono: 'indigo', p: d2(), ir: function () { go('calendar'); } }
     ];
     $('fx-kpis').removeAttribute('aria-busy');
     $('fx-kpis').innerHTML = tarjetas.map(function (x) {
@@ -2022,7 +2058,7 @@
       '<span class="fx-cop-nombre" id="fx-cop-titulo">Copiloto XEN</span><span class="fx-cop-hora">Con lo que pasó hasta las ' + esc(hora) + '</span></div>' +
       '<div class="fx-cop-cuerpo"><div class="fx-cop-main">' +
       '<h2>' + (total ? (total === 1 ? 'Una cosa espera a alguien' : total + ' cosas esperan a alguien') : 'Todo al día') + '</h2>' +
-      '<p>' + esc(total ? 'Esto es lo que no puede esperar, en orden. Lo demás lo va llevando ' + agente + '.' : 'Nadie espera respuesta, no hay citas sin resultado y ' + agente + ' supo contestar todo.') + '</p>' +
+      '<p>' + esc(total ? 'Esto es lo que no puede esperar, en orden. Lo demás lo va llevando ' + agente + '.' : 'Nadie espera respuesta, no hay ' + VOC.citas + ' sin resultado y ' + agente + ' supo contestar todo.') + '</p>' +
       (visibles.length ? '<ol class="fx-cop-acciones" aria-label="Siguientes acciones">' + visibles.map(function (x, i) {
         return '<li class="fx-cop-accion"><span class="fx-cop-ic ' + x.color + '" aria-hidden="true"><i class="ic" data-ic="' + x.ic + '"></i></span>' +
           '<span class="fx-cop-txt"><b>' + esc(x.que) + '</b>' + (x.detalle ? '<span title="' + esc(x.detalle) + '">' + esc(x.detalle) + '</span>' : '') + '</span>' +
@@ -2037,7 +2073,7 @@
         ? '<div class="fx-cop-agenda">' + hoy.map(function (a) {
             return '<button type="button" data-cita="' + esc(a.userId) + '"><time>' + esc(a.label || '') + '</time><span>' + esc(a.contactName || short(a.userId)) + '</span></button>';
           }).join('') + '</div>'
-        : '<div class="fx-cop-nada">Sin citas hoy.</div>') +
+        : '<div class="fx-cop-nada">Sin ' + VOC.citas + ' hoy.</div>') +
       '</div></div>' +
       (esFacil() && mandaEnElModo() ? '<button class="fx-todo" type="button" id="hoy-ver-todo">Estás en el modo fácil · Ver todo XENCRM</button>' : '');
     iconos(caja);
@@ -2058,7 +2094,7 @@
       var s = d.semana && d.semana.conversaciones;
       $('fx-serie-sub').textContent = s
         ? 'Esta semana: ' + s.ahora + (s.ahora === 1 ? ' conversación nueva' : ' conversaciones nuevas') + (s.delta == null ? '' : ' (' + (s.delta >= 0 ? '+' : '') + s.delta + ' % contra la anterior)')
-        : 'Conversaciones nuevas y citas agendadas';
+        : 'Conversaciones nuevas y ' + VOC.citas + ' ' + VOC.g('agendadas');
       dibujarSerieFacil();
     }).catch(function (e) { if (!e || e.message !== '401') $('fx-serie').innerHTML = vacioFacil('No se pudo cargar', 'Vuelve a intentarlo con «Actualizar».'); });
   }
@@ -2099,7 +2135,7 @@
     var X = function (i) { return izq + i * paso; }, Y = function (v) { return arr + (H - arr - aba) * (1 - v / tope); };
     var pa = datos.map(function (x, i) { return [X(i), Y(x.a)]; }), pb = datos.map(function (x, i) { return [X(i), Y(x.b)]; });
     var cada = Math.ceil(datos.length / 8);
-    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(datos.map(function (x) { return diaLargo(x.dia) + ': ' + x.a + ' nuevas, ' + x.b + ' citas'; }).join('; ')) + '">' +
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(datos.map(function (x) { return diaLargo(x.dia) + ': ' + x.a + ' nuevas, ' + x.b + ' ' + VOC.citas; }).join('; ')) + '">' +
       // Los colores los pone la hoja (stop-color y stroke son propiedades de CSS): así siguen al tema y a los tokens.
       '<defs><linearGradient id="fx-grad" x1="0" y1="0" x2="0" y2="1"><stop class="fx-stop" offset="5%" stop-opacity=".22"/><stop class="fx-stop" offset="95%" stop-opacity="0"/></linearGradient></defs>';
     for (var g = 0; g <= 4; g++) {
@@ -2118,7 +2154,7 @@
     caja.querySelectorAll('.col').forEach(function (c) {
       c.onmouseenter = function () {
         var i = Number(c.getAttribute('data-i')), x = datos[i], gl = $('fx-globo');
-        gl.innerHTML = '<b>' + esc(diaLargo(x.dia)) + '</b><span class="nuevas">Conversaciones nuevas: ' + x.a + '</span><br><span class="citas">Citas agendadas: ' + x.b + '</span>';
+        gl.innerHTML = '<b>' + esc(diaLargo(x.dia)) + '</b><span class="nuevas">Conversaciones nuevas: ' + x.a + '</span><br><span class="citas">' + VOC.Citas + ' ' + VOC.g('agendadas') + ': ' + x.b + '</span>';
         gl.hidden = false;
         var izqG = Math.min(Math.max(0, X(i) + 12), caja.clientWidth - gl.offsetWidth);
         gl.style.left = (X(i) + 12 + gl.offsetWidth > caja.clientWidth ? X(i) - 12 - gl.offsetWidth : izqG) + 'px';
@@ -2160,7 +2196,7 @@
         '<span class="cuerpo"><span class="t">' + esc(x.t) + '</span><span class="d">' + esc(x.d) + '</span></span><time>' + esc(x.cuando ? 'hace ' + rel(x.cuando) : '') + '</time></button>';
     };
     var pintar = function (lista) {
-      caja.innerHTML = lista.length ? lista.map(fila).join('') : vacioFacil('Sin actividad reciente', 'Aquí aparece lo que va pasando: quién escribe, quién pide una persona, qué cita se agenda.');
+      caja.innerHTML = lista.length ? lista.map(fila).join('') : vacioFacil('Sin actividad reciente', 'Aquí aparece lo que va pasando: quién escribe, quién pide una persona, qué ' + VOC.cita + ' se agenda.');
       iconos(caja);
       caja.querySelectorAll('.fx-act').forEach(function (b) {
         b.onclick = function () { var id = b.getAttribute('data-id'); if (id && id !== 'system') { go('inbox'); openContact(id); } };
@@ -2294,7 +2330,7 @@
       ? cifra('abierto', 'Embudo abierto', plataCorta(total), conPrecio + ' de ' + abiertas.length + ' con precio') +
         cifra('ponderado', 'Probable, según el puntaje', plataCorta(ponderado), 'Cada valor por su probabilidad')
       : cifra('abierto', 'Valor en juego', '', '<button class="linkbtn" id="pip-precios" title="Ni el catálogo ni las fichas tienen precios">Cargar precios</button>')) +
-      cifra('cita', 'Con cita por delante', suma(conCita) ? plataCorta(suma(conCita)) : (conCita.length ? '' : '—'), conCita.length + (conCita.length === 1 ? ' persona con cita' : ' personas con cita')) +
+      cifra('cita', 'Con ' + VOC.cita + ' por delante', suma(conCita) ? plataCorta(suma(conCita)) : (conCita.length ? '' : '—'), conCita.length + (conCita.length === 1 ? ' persona con ' + VOC.cita : ' personas con ' + VOC.cita)) +
       cifra('vendido', 'Vendido en 30 días', '…', variasSedes() && pipSede ? 'todas las sedes' : '&nbsp;') +
       // La barra reparte el embudo abierto por etapa, con el color de cada una. Es lo mismo que dicen las sumas de
       // las columnas, de un vistazo: por eso va oculta para un lector de pantalla, que ya tiene las columnas.
@@ -2710,7 +2746,7 @@
     // Todo lo que viene, en orden, sin importar qué semana esté puesta arriba.
     var list = cal.appts.filter(function (a) { return a.startsAt >= Date.now() - 2 * 3600000; })
       .sort(function (a, b) { return a.startsAt - b.startsAt; });
-    if (!list.length) { $('cal-list').innerHTML = '<div class="empty">No hay citas próximas.</div>'; return; }
+    if (!list.length) { $('cal-list').innerHTML = '<div class="empty">No hay ' + VOC.citas + ' ' + VOC.g('próximas') + '.</div>'; return; }
     var byDay = {};
     list.forEach(function (a) { var day = new Date(a.startsAt).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }); (byDay[day] = byDay[day] || []).push(a); });
     $('cal-list').innerHTML = Object.keys(byDay).map(function (day) {
@@ -2755,7 +2791,7 @@
   $('book-btn').onclick = function () {
     var userId = $('book-contact').value, when = $('book-when').value; if (!userId || !when) { $('book-msg').textContent = 'Elige contacto y fecha.'; return; }
     if (variasSedes() && !$('book-sede').value) { $('book-msg').textContent = 'Elige en qué sede.'; return; }
-    api('/appointments', { method: 'POST', body: { userId: userId, startsAt: new Date(when).toISOString(), notes: $('book-notes').value, sede: variasSedes() ? $('book-sede').value : undefined } }).then(function (r) { $('book-msg').textContent = r.error ? 'Error: ' + r.error : 'Cita agendada.'; if (!r.error) $('book-notes').value = ''; loadCalendar(); });
+    api('/appointments', { method: 'POST', body: { userId: userId, startsAt: new Date(when).toISOString(), notes: $('book-notes').value, sede: variasSedes() ? $('book-sede').value : undefined } }).then(function (r) { $('book-msg').textContent = r.error ? 'Error: ' + r.error : VOC.Cita + ' ' + VOC.g('agendada') + '.'; if (!r.error) $('book-notes').value = ''; loadCalendar(); });
   };
 
   // ---------- análisis ----------
@@ -2786,8 +2822,8 @@
         { n: s.human, l: 'Atendidos por una persona', f: 'human' },
         // Por papel, no por nombre: en un negocio de soporte no existe "interesado" ni "cita_agendada".
         { n: s.byStage[etapaCon('interes')] || 0, l: state.stageLabels[etapaCon('interes')] || 'Interesados', f: 'stage:' + etapaCon('interes') },
-        { n: s.byStage[etapaCon('cita')] || 0, l: state.stageLabels[etapaCon('cita')] || 'Con cita', f: 'stage:' + etapaCon('cita') },
-        { n: s.upcomingAppointments, l: 'Citas en los próximos 7 días', v: 'calendar' },
+        { n: s.byStage[etapaCon('cita')] || 0, l: state.stageLabels[etapaCon('cita')] || 'Con ' + VOC.cita, f: 'stage:' + etapaCon('cita') },
+        { n: s.upcomingAppointments, l: VOC.Citas + ' en los próximos 7 días', v: 'calendar' },
         { n: s.messagesToday, l: 'Mensajes de clientes (24 h)', f: 'all' },
       ];
       // 🪤 Las que abren un filtro que el modo fácil esconde (con una persona, por etapa) se esconden con él: si no,
@@ -2812,7 +2848,7 @@
   var TOPE_DICE = {
     aviso: 'Al 90 % empieza a ahorrar.',
     ahorro: 'Ahorrando: lo específico lo contesta el modelo de responder, que es el barato.',
-    agotado: 'Llegó al tope: hasta el mes siguiente, lo que necesita IA te llega a ti para contestarlo a mano. Lo que se resuelve sin IA, como las citas, sigue igual.'
+    agotado: 'Llegó al tope: hasta el mes siguiente, lo que necesita IA te llega a ti para contestarlo a mano. Lo que se resuelve sin IA, como ' + VOC.las + ' ' + VOC.citas + ', sigue igual.'
   };
   function topeLinea(p) {
     if (!p || p.error) return '';
@@ -2848,7 +2884,7 @@
       ? '<ul>' + cfg.busy.map(function (s) { return '<li>' + (s.ok ? '✓ ' : '✗ ') + esc(s.label) + (s.sede ? ' · solo ' + esc(nombreSede(s.sede) || s.sede) : '') + ' · ' + (s.ok ? s.intervals + ' eventos próximos' + (s.syncedAt ? ', leído ' + new Date(s.syncedAt).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }) : '') : esc(s.error || 'sin leer todavía')) + '</li>'; }).join('') + '</ul><div class="small muted">Sus eventos ocupan la agenda: el bot no ofrece esas horas. Se leen cada 5 minutos.</div>'
       : '<div class="small muted">' + esc(state.agentName || 'El asistente') + ' todavía no ve tu calendario, así que puede ofrecer horas en las que ya estás ocupado. Se conecta una vez y queda: pídelo y lo dejamos listo.</div>';
     return '<div class="panel"><b>Calendario</b>' +
-      '<div class="small">Suscríbete desde Google Calendar, Outlook o Apple Calendar para ver las citas. El enlace es secreto: quien lo tenga ve nombres y teléfonos.</div>' +
+      '<div class="small">Suscríbete desde Google Calendar, Outlook o Apple Calendar para ver ' + VOC.las + ' ' + VOC.citas + '. El enlace es secreto: quien lo tenga ve nombres y teléfonos.</div>' +
       // Secreto de larga vida: enmascarado por defecto; "Copiar" es la acción principal y rara vez hay que verlo.
       '<div class="feed-row"><input id="feed-url" type="password" readonly value="' + esc(f.https) + '" aria-label="Enlace secreto de suscripción"><button class="btn primary" id="feed-copy">Copiar enlace</button><button class="btn sm" id="feed-show" aria-pressed="false">Mostrar</button><a class="btn sm" href="' + esc(f.webcal) + '">Apple Calendar</a>' +
         // Google suscribe por URL, no por archivo: este enlace abre su pantalla de «añadir por dirección» con
@@ -2875,9 +2911,9 @@
       ],
       faq: [
         ['¿Cómo le devuelvo la conversación a ' + ag + '?', 'En la conversación, pon el switch en «' + ag + '». Desde ese momento vuelve a responder solo.'],
-        ['¿Qué hago con «Recordar a mano»?', 'Son citas de mañana cuyo recordatorio no pudo salir solo (por ejemplo, el cliente llegó por el chat del sitio). «Abrir WhatsApp» abre el chat con el mensaje ya escrito; después dale «Ya se lo recordé».'],
-        ['¿Para qué sirve «¿Cómo les fue?» en Hoy?', 'Cuando una cita ya pasó, marca si el cliente vino, no vino o compró. Así el tablero sabe cómo terminó cada prospecto y, con el tiempo, el puntaje se ajusta a lo que de verdad pasa en el negocio.'],
-        ['¿Qué significan «Confirmó» y «No puede» en una cita?', 'Es lo que respondió el cliente al recordatorio. Si no puede, ' + ag + ' ya le ofreció moverla o cancelarla, y te avisa.'],
+        ['¿Qué hago con «Recordar a mano»?', 'Son ' + VOC.citas + ' de mañana cuyo recordatorio no pudo salir solo (por ejemplo, el cliente llegó por el chat del sitio). «Abrir WhatsApp» abre el chat con el mensaje ya escrito; después dale «Ya se lo recordé».'],
+        ['¿Para qué sirve «¿Cómo les fue?» en Hoy?', 'Cuando ' + VOC.una + ' ' + VOC.cita + ' ya pasó, marca si el cliente vino, no vino o compró. Así el tablero sabe cómo terminó cada prospecto y, con el tiempo, el puntaje se ajusta a lo que de verdad pasa en el negocio.'],
+        ['¿Qué significan «Confirmó» y «No puede» en ' + VOC.una + ' ' + VOC.cita + '?', 'Es lo que respondió el cliente al recordatorio. Si no puede, ' + ag + ' ya le ofreció moverla o cancelarla, y te avisa.'],
         ['¿Por qué no puedo escribirle a un cliente de WhatsApp oficial?', 'WhatsApp solo deja escribir hasta 24 horas después del último mensaje del cliente. Pasado ese tiempo, toca esperar a que vuelva a escribir o usar una plantilla aprobada por Meta. El tablero lo avisa antes de que escribas.'],
         // El tercer dato dice cuándo NO va: 'candado' si habla de algo que con el candado no se ve, 'facil' si es del
         // puntaje, que el modo fácil esconde. Una respuesta que manda a una pantalla que no está confunde más que no tenerla.
@@ -2887,7 +2923,7 @@
         ['En el celular, ¿dónde están Perfil, Canales o Salir?', 'En «Más», el último botón de la barra de abajo: ahí están Análisis, Perfil, Agente, Canales, Lo que sabe, Ayuda, el tema, el sonido y Salir.', 'candado'],
         ['¿Qué es «Lo que sabe»?', 'La información que ' + ag + ' tiene de ' + biz + ': el catálogo y los textos del negocio. Sirve para buscar qué sabe de un tema.', 'candado'],
       ],
-      never: ['Inventar precios, fechas, políticas o productos: lo que no sabe, lo verifica con el equipo.', 'Elegir una fecha por su cuenta: las citas salen siempre de la agenda real.', 'Cancelar o mover una cita sin que el cliente lo confirme.', 'Escribir por WhatsApp oficial fuera de las 24 horas sin plantilla.', 'Seguir respondiendo cuando una persona del equipo tomó la conversación.'],
+      never: ['Inventar precios, fechas, políticas o productos: lo que no sabe, lo verifica con el equipo.', 'Elegir una fecha por su cuenta: ' + VOC.las + ' ' + VOC.citas + ' salen siempre de la agenda real.', 'Cancelar o mover ' + VOC.una + ' ' + VOC.cita + ' sin que el cliente lo confirme.', 'Escribir por WhatsApp oficial fuera de las 24 horas sin plantilla.', 'Seguir respondiendo cuando una persona del equipo tomó la conversación.'],
     };
   }
   function loadHelp() {
@@ -3049,7 +3085,7 @@
   }
   function profExtra(x, i, notes) {
     var note = notes && notes[x.title];
-    return '<div class="prof-extra" data-extra="' + i + '"><input type="text" aria-label="Dato" value="' + esc(x.title) + '" placeholder="Qué dato (por ejemplo: Tallas)"><button class="btn sm" type="button" data-rm="' + i + '">Quitar</button>' +
+    return '<div class="prof-extra" data-extra="' + i + '"><input type="text" aria-label="Dato" value="' + esc(x.title) + '" placeholder="Qué dato (por ejemplo: ' + esc(VOC.ej.datoPropio || 'Tiempos de entrega') + ')"><button class="btn sm" type="button" data-rm="' + i + '">Quitar</button>' +
       '<textarea rows="2" aria-label="' + esc(x.title || 'Detalle') + '" placeholder="Vacío: queda por confirmar">' + esc(x.text) + '</textarea>' + (note ? '<div class="prof-note" style="grid-column:1/-1">Nota: ' + esc(note) + '</div>' : '') + '</div>';
   }
   // Lo que aprendimos de sus chats: las preguntas que más le hacen al negocio, para llenar el Perfil con lo que
@@ -3205,7 +3241,7 @@
       : '<b>Todo confirmado</b><div class="small">' + esc(d.agentName) + ' responde con estos datos.</div>';
     $('profile').innerHTML = '<div class="panel">' + pending + '</div>' + '<div id="hist"></div>' +
       sections.map(function (s) { return '<div class="panel prof"><b>' + esc(s.name) + '</b>' + s.html + '</div>'; }).join('') +
-      '<div class="panel prof"><b>Otros datos</b><div class="small muted">Lo propio de este negocio: tallas, tiempos de entrega, lo que venden o no.</div><div id="pf-extras">' +
+      '<div class="panel prof"><b>Otros datos</b><div class="small muted">Lo propio de este negocio: ' + esc(VOC.ej.datosPropios || 'tiempos de entrega, garantías, lo que ofrecen o no') + '.</div><div id="pf-extras">' +
       d.profile.extras.map(function (x, i) { return profExtra(x, i, d.profile.notes); }).join('') + '</div><div class="feed-row"><button class="btn" type="button" id="pf-add">Agregar dato</button></div></div>' +
       '<div class="panel"><div class="feed-row"><button class="btn primary" id="pf-save">Guardar perfil</button></div><div id="pf-msg" class="small" role="status">' + (msg || '') + '</div><div class="small muted">Se guarda al instante, con copia de lo anterior.</div></div>';
     $('pf-add').onclick = function () {
@@ -3244,11 +3280,11 @@
     if (!p) return '<div class="small muted">Las conversaciones se guardan sin límite de tiempo. Si prefieres que las viejas se anonimicen solas, pídelo.</div>';
     var que = p.accion === 'borrar' ? 'se borran del todo' : 'se anonimizan: se quitan el nombre, el teléfono y los mensajes, y quedan las cuentas del embudo';
     var cuando = u && !u.error && u.cuantos ? ' La última vez, el ' + new Date(u.ts).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) + ', fueron ' + u.cuantos + '.' : '';
-    return '<div class="small">Las conversaciones sin movimiento en ' + p.dias + ' días ' + que + '. Nunca las de alguien con una cita por delante.' + cuando + '</div>';
+    return '<div class="small">Las conversaciones sin movimiento en ' + p.dias + ' días ' + que + '. Nunca las de alguien con ' + VOC.una + ' ' + VOC.cita + ' por delante.' + cuando + '</div>';
   }
   function backupPanel(bk, ret) {
     return '<div class="panel" id="backup-panel"><b>Respaldo de la base</b><div class="small" id="backup-line">' + esc(backupLine(bk)) + '</div>' +
-      '<div class="small muted">Una copia al día de contactos, conversaciones y citas; se guardan las últimas 14. Tienen datos de clientes: guárdalas también fuera de este computador (por ejemplo, con Time Machine).</div>' + retencionLinea(ret) +
+      '<div class="small muted">Una copia al día de contactos, conversaciones y ' + VOC.citas + '; se guardan las últimas 14. Tienen datos de clientes: guárdalas también fuera de este computador (por ejemplo, con Time Machine).</div>' + retencionLinea(ret) +
       '<div class="feed-row"><button class="btn" id="backup-now">Respaldar ahora</button></div></div>';
   }
   function bindBackup() {
@@ -3263,7 +3299,7 @@
 
   // ---------- frases que no entendimos ----------
   // Lo que las reglas no entendieron: se enseña como expresión del diccionario y la próxima vez se entiende sin IA.
-  var MISS_KIND = { fecha: 'Fecha u hora', frase: 'Frase', cita: 'En la cita' };
+  var MISS_KIND = { fecha: 'Fecha u hora', frase: 'Frase', get cita() { return 'En ' + VOC.la + ' ' + VOC.cita; } };
   function missItem(g, i) {
     var dot = function (s) { return /\.$/.test(s) ? s : s + '.'; }; // "p. m." ya trae su punto
     var said = !g.reading ? '' : g.kind === 'cita' ? 'El flujo ' + dot(g.reading) : 'La IA entendió: ' + dot(g.reading);
@@ -3282,7 +3318,7 @@
     api('/misses').then(function (r) {
       var groups = r.groups || [];
       $('miss-panel').innerHTML = '<b>Frases que no entendimos' + (groups.length ? ' <span class="chip">' + groups.length + '</span>' : '') + '</b>' +
-        '<div class="small muted">Lo que las reglas no entendieron: fechas y frases que tuvo que interpretar la IA, y respuestas que sacaron al cliente del flujo de la cita. Enséñalas y la próxima vez ' + esc(a.agent.name) + ' las entiende sola, sin gastar IA.</div>' +
+        '<div class="small muted">Lo que las reglas no entendieron: fechas y frases que tuvo que interpretar la IA, y respuestas que sacaron al cliente del flujo de ' + VOC.la + ' ' + VOC.cita + '. Enséñalas y la próxima vez ' + esc(a.agent.name) + ' las entiende sola, sin gastar IA.</div>' +
         (groups.length ? groups.map(missItem).join('') : '<div class="small muted">Nada por ahora: todo lo que llegó lo entendieron las reglas.</div>');
       $('miss-panel').querySelectorAll('[data-mi]').forEach(function (el) {
         var g = groups[Number(el.getAttribute('data-mi'))], form = el.querySelector('.miss-teach'), msg = el.querySelector('[data-mmsg]');
@@ -3390,7 +3426,7 @@
         '<div class="panel"><b>' + esc(a.agent.name) + '</b> · asistente de <b>' + esc(a.business.name) + '</b><div class="muted">' + esc(a.business.description) + '</div><div class="small">Estilo: ' + esc(a.agent.style) + '</div><div class="small">Contacto humano que ofrece: ' + esc(a.business.humanContact) + '</div></div>' +
         sugierePanel(a) +
         '<div class="panel"><b>Motores</b><ul>' + eng + '</ul><div class="small muted">Modo: ' + esc(a.roles.mode) + ' · liviano: ' + esc(a.roles.light) + ' · pesado: ' + esc(a.roles.heavy) + ' · gate: ' + esc(a.roles.gate) + ' · análisis: ' + esc(a.roles.analysis) + '</div><div class="small muted">Modelos: ' + esc(a.models.chat) + ' · embeddings ' + esc(a.models.embed) + ' · nube ' + esc(a.models.openai) + '</div></div>' +
-        '<div class="panel"><b>Citas</b>' + (ap.enabled ? '<div class="small">' + esc(ap.service) + (ap.location ? ' en ' + esc(ap.location) : '') + ' · ' + ap.durationMin + ' min · días ' + ap.days.join(',') + ' · ' + ap.hours.map(function (h) { return h[0] + '–' + h[1]; }).join(', ') + ' · zona ' + esc(a.timezone) + '</div>' : '<div class="muted small">Desactivadas (appointments.enabled en xencrm.config.json)</div>') + '</div>' +
+        '<div class="panel"><b>' + VOC.Citas + '</b>' + (ap.enabled ? '<div class="small">' + esc(ap.service) + (ap.location ? ' en ' + esc(ap.location) : '') + ' · ' + ap.durationMin + ' min · días ' + ap.days.join(',') + ' · ' + ap.hours.map(function (h) { return h[0] + '–' + h[1]; }).join(', ') + ' · zona ' + esc(a.timezone) + '</div>' : '<div class="muted small">Desactivadas (appointments.enabled en xencrm.config.json)</div>') + '</div>' +
         '<div class="panel"><b>Análisis comercial</b><div class="small">Campos capturados además de los básicos: ' + a.crmFields.map(function (f) { return '<code>' + esc(f.name) + '</code>'; }).join(' ') + '</div></div>' +
         '<div class="panel"><b>Conocimiento indexado</b><div class="small">' + (a.docs.product || 0) + ' productos · ' + (a.docs.knowledge || 0) + ' fragmentos de información.</div></div>' +
         backupPanel(bk, ret) + usagePanel(usage, tope) + calendarPanel(calCfg) + '<div class="panel" id="miss-panel"></div><div class="panel" id="dict-panel"></div>';
@@ -4219,7 +4255,7 @@
     { g: 'sinasignar', t: 'Sin asignar', es: xfSinAsignar },
     { g: 'calientes', t: '🔥 Calientes', es: esCaliente },
     { g: 'prospecto', t: 'Prospectos', es: function (c) { return grupoDe(c) === 'prospecto'; } },
-    { g: 'concita', t: 'Con cita', es: xfConCita },
+    { g: 'concita', get t() { return 'Con ' + VOC.cita; }, es: xfConCita },
     { g: 'cliente', t: 'Clientes', es: function (c) { return grupoDe(c) === 'cliente'; } },
     { g: 'perdido', t: 'Perdidos', es: function (c) { return grupoDe(c) === 'perdido'; } },
   ];
@@ -4497,11 +4533,11 @@
     $('pf-cuerpo').innerHTML =
       '<div class="ficha-cols"><div class="ficha-main">' +
         // 🪤 Lo primero, lo accionable: si se le fue una venta, eso manda sobre cualquier otro dato de la ficha.
-        (h.amago ? '<div class="pf-amago">⚠ Se le fue una venta: tuvo cita y no acabó en compra, y no tiene otra agendada.</div>' : '') +
+        (h.amago ? '<div class="pf-amago">⚠ Se le fue una venta: tuvo ' + VOC.cita + ' y no acabó en compra, y no tiene ' + VOC.otra + ' ' + VOC.g('agendada') + '.</div>' : '') +
         // Lo que busca lo resume el análisis: va con el violeta de la IA, y así se sabe que no lo escribió nadie.
         (c.summary ? '<div class="fx-ct-busca"><span class="fx-ct-busca-t"><i class="ic" data-ic="chispa"></i>Lo que busca</span><p class="ficha-quiere">' + esc(c.summary) + '</p></div>' : '') +
         '<div class="ficha-tabs" role="tablist" aria-label="Qué ver de este contacto">' +
-          [['historia', 'Historia', null], ['citas', 'Citas', citas.length], ['notas', 'Notas', notas.length + (c.notes ? 1 : 0)]].map(function (t) {
+          [['historia', 'Historia', null], ['citas', VOC.Citas, citas.length], ['notas', 'Notas', notas.length + (c.notes ? 1 : 0)]].map(function (t) {
             return '<button role="tab" data-tab="' + t[0] + '" aria-selected="' + (PF_TAB === t[0]) + '" class="' + (PF_TAB === t[0] ? 'on' : '') + '">' + t[1] + (t[2] ? '<span class="cuenta">' + t[2] + '</span>' : '') + '</button>';
           }).join('') +
         '</div><div id="pf-tab" role="tabpanel"></div>' +
@@ -4510,7 +4546,7 @@
         fila('Valor', v.valor ? esc(plata(v.valor)) + ' <span class="muted small">' + esc(v.origen === 'a mano' ? 'a mano' : 'del catálogo') + '</span>' : '<span class="muted">sin precio</span>') +
         fila('Puntaje', esc((c.score == null ? '—' : c.score) + (ver && ver.label ? ' · ' + ver.label : '')), 'solo-completo') +
         fila('La lleva', llevaHtml(c), 'solo-completo') +
-        (proxima ? fila('Próxima cita', '<span class="paso t-cita">' + esc(proxima.label || new Date(proxima.startsAt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })) + '</span>') : '') +
+        (proxima ? fila(VOC.g('Próxima') + ' ' + VOC.cita, '<span class="paso t-cita">' + esc(proxima.label || new Date(proxima.startsAt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })) + '</span>') : '') +
         (d.origen && d.origen.fuente ? fila('Origen', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : '')), 'solo-completo') : '') +
         (variasSedes() && data.sede ? fila('Sede', esc(nombreSede(data.sede))) : '') +
         fila('Agregado el', esc(fecha(h.desde)), 'solo-completo') +
@@ -4600,7 +4636,7 @@
       el.innerHTML = (d.appointments || []).length ? d.appointments.map(function (a) {
         return '<div class="appt ' + a.status + '"><span class="t">' + esc(a.label || '') + '</span>' +
           '<span class="grow small muted">' + esc((a.service || '') + conSede(a)) + '</span><span class="chip">' + esc(estadoCita(a.status)) + '</span></div>';
-      }).join('') : '<div class="empty">Sin citas todavía.</div>';
+      }).join('') : '<div class="empty">Sin ' + VOC.citas + ' todavía.</div>';
       return;
     }
     var soloNotas = PF_TAB === 'notas';
@@ -4669,9 +4705,9 @@
         case 'nota_borrada': t = quien(p.by) + ' borró una nota'; break;
         case 'human_on': t = p.by === 'bot' ? agente + ' la pasó al equipo' + (p.motivo === 'tope' ? ' (se llegó al tope de gasto)' : '') : quien(p.by) + ' tomó la conversación'; tipo = 'traspaso'; break;
         case 'human_off': t = agente + ' volvió a atenderla'; tipo = 'traspaso'; break;
-        case 'appointment_booked': t = 'Cita agendada' + (p.startsAt ? ' para el ' + new Date(p.startsAt).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }) : '') + (p.by && p.by !== 'bot' ? ' por ' + quien(p.by) : ''); tipo = 'cita'; break;
-        case 'appointment_updated': if (!p.status) return; t = 'La cita quedó ' + estadoCita(p.status) + (p.by && p.by !== 'bot' ? ' · ' + quien(p.by) : ''); tipo = 'cita'; break;
-        case 'reminder_reply': t = 'Contestó el recordatorio de la cita'; tipo = 'cita'; break;
+        case 'appointment_booked': t = VOC.Cita + ' ' + VOC.g('agendada') + (p.startsAt ? ' para el ' + new Date(p.startsAt).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }) : '') + (p.by && p.by !== 'bot' ? ' por ' + quien(p.by) : ''); tipo = 'cita'; break;
+        case 'appointment_updated': if (!p.status) return; t = VOC.La + ' ' + VOC.cita + ' quedó ' + estadoCita(p.status) + (p.by && p.by !== 'bot' ? ' · ' + quien(p.by) : ''); tipo = 'cita'; break;
+        case 'reminder_reply': t = 'Contestó el recordatorio de ' + VOC.la + ' ' + VOC.cita; tipo = 'cita'; break;
         case 'followup_snooze': t = 'Seguimiento pospuesto ' + (p.days || 7) + ' días'; break;
         case 'archivada': t = p.by ? quien(p.by) + ' la archivó' : 'Se archivó'; break;
         case 'desarchivada': t = p.by ? quien(p.by) + ' la devolvió a las listas' : 'Volvió a las listas'; break;
@@ -5002,7 +5038,7 @@
               '<td class="num">' + (f.puntaje || 0) + '</td>' +
               '<td><button class="btn sm" data-escribir="' + esc(f.id) + '">Escribirle</button></td></tr>';
           }).join('') + '</tbody></table></div>'
-        : '<div class="empty">Nadie esperando. Todo el mundo tiene cita, acaba de escribir, o ya está pospuesto.</div>';
+        : '<div class="empty">Nadie esperando. Todo el mundo tiene ' + VOC.cita + ', acaba de escribir, o ya está pospuesto.</div>';
       engancharFichas($('seg-lista'));
       Array.prototype.forEach.call($('seg-lista').querySelectorAll('[data-escribir]'), function (b) {
         b.onclick = function () { go('inbox'); openContact(b.dataset.escribir); };
@@ -5141,7 +5177,7 @@
       var quien = a.contactName || (c ? nameOf(c) : short(ev.userId));
       var cuando = new Date(a.startsAt).toLocaleString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' });
       beep();
-      toast(quien + ' · ' + cuando, function () { go('calendar'); }, { titulo: 'Cita agendada', icono: 'calendar' });
+      toast(quien + ' · ' + cuando, function () { go('calendar'); }, { titulo: VOC.Cita + ' ' + VOC.g('agendada'), icono: 'calendar' });
     });
     setInterval(function () { if (state.view === 'calendar' && cal.mode === 'week') renderCalendar(); }, 60000); // mueve la línea de "ahora"
     es.addEventListener('notification', function (e) {
@@ -5174,7 +5210,8 @@
       if ($('fx-yo-biz')) $('fx-yo-biz').textContent = me.business || '';
       if ($('fx-logo')) $('fx-logo').textContent = (me.business || 'A').trim().charAt(0).toUpperCase();
       pintarQuienSoy();
-      state.bizName = me.business; state.agentName = me.agent;
+      state.bizName = me.business; state.agentName = me.agent; state.agendaQue = me.agenda || '';
+      ponerVocabulario(me.interfaz); pintarVocabulario();
       // 🪤 El asistente no siempre se llama Xen (el de DUNOR en el paquete se llama Arthur): lo que el HTML trae escrito
       // con «Xen» se cambia aquí, al saberse el nombre. Lo que pinta el JavaScript usa state.agentName.
       if (me.agent && $('seg-bot')) $('seg-bot').textContent = me.agent;
@@ -5284,7 +5321,7 @@
           '<div class="prof-field"><div class="lbl"><label class="small" for="n-fondo"><b>Su marca va sobre</b></label></div>' +
             '<select id="n-fondo"><option value="claro"' + (a.marca.fondo === 'claro' ? ' selected' : '') + '>Fondo claro</option>' +
             '<option value="oscuro"' + (a.marca.fondo === 'oscuro' ? ' selected' : '') + '>Fondo oscuro</option></select>' +
-            '<div class="small muted">El chat del sitio y la página de la cita.</div></div>' +
+            '<div class="small muted">El chat del sitio y la página de ' + VOC.la + ' ' + VOC.cita + '.</div></div>' +
           campo('n-logo', 'Logo (URL o archivo)', a.marca.logo) +
           campo('n-logo-oscuro', 'Logo para fondo oscuro', a.marca.logoOscuro, { pista: 'Si la marca tiene dos versiones.' }) +
           campo('n-favicon', 'Marca chica (favicon)', a.marca.favicon, { pista: 'El escudo o la inicial.' }) +
@@ -5294,10 +5331,10 @@
         '</div>' +
       '</div>' +
 
-      '<div class="card"><h2 class="h">Citas</h2>' +
-        '<label class="prof-check" for="n-citas"><input type="checkbox" id="n-citas"' + (ci.enabled ? ' checked' : '') + '> Este negocio agenda citas</label>' +
+      '<div class="card"><h2 class="h">' + VOC.Citas + '</h2>' +
+        '<label class="prof-check" for="n-citas"><input type="checkbox" id="n-citas"' + (ci.enabled ? ' checked' : '') + '> Este negocio agenda ' + VOC.citas + '</label>' +
         '<div id="n-citas-detalle"' + (ci.enabled ? '' : ' hidden') + '>' +
-          '<div class="fila-3">' + campo('n-servicio', 'Cómo se llama la cita', ci.service) + campo('n-lugar', 'Dónde', ci.location) +
+          '<div class="fila-3">' + campo('n-servicio', 'Cómo se llama ' + VOC.la + ' ' + VOC.cita, ci.service) + campo('n-lugar', 'Dónde', ci.location) +
             campo('n-dura', 'Dura (minutos)', ci.durationMin, { tipo: 'number', min: 5, max: 480 }) + '</div>' +
           '<div class="fila-3">' + campo('n-cupo', 'Cuántas a la vez', ci.capacity, { tipo: 'number', min: 1, max: 50 }) +
             campo('n-aviso', 'Con cuánta anticipación (horas)', ci.minLeadHours, { tipo: 'number', min: 0, max: 720 }) +
@@ -5312,7 +5349,7 @@
 
       // Las sedes van aparte de las citas: dónde queda cada una sirve aunque el negocio no agende.
       '<div class="card"><h2 class="h">Sedes</h2>' +
-        '<div class="small muted" style="margin-bottom:10px">Si atiende en varios sitios con este mismo número. Con dos o más, el asistente pregunta en cuál antes de ofrecer horarios y dice la dirección al confirmar. Sin sedes, es un solo sitio: el «Dónde» de las citas.</div>' +
+        '<div class="small muted" style="margin-bottom:10px">Si atiende en varios sitios con este mismo número. Con dos o más, el asistente pregunta en cuál antes de ofrecer horarios y dice la dirección al confirmar. Sin sedes, es un solo sitio: el «Dónde» de ' + VOC.las + ' ' + VOC.citas + '.</div>' +
         '<div id="n-sedes">' + (a.sedes || []).map(sedeFila).join('') + '</div>' +
         '<button class="btn sm" type="button" id="n-mas-sede">Agregar sede</button>' +
       '</div>' +
@@ -5627,7 +5664,7 @@
         return;
       }
       $('origenes').innerHTML = '<table class="tabla-origen"><thead><tr>' +
-          '<th>De dónde</th><th>Campaña</th><th class="num">Conversaciones</th><th class="num">Citas</th><th class="num">Ganadas</th><th class="num">Conversión</th>' +
+          '<th>De dónde</th><th>Campaña</th><th class="num">Conversaciones</th><th class="num">' + VOC.Citas + '</th><th class="num">Ganadas</th><th class="num">Conversión</th>' +
         '</tr></thead><tbody>' +
         d.campanas.map(function (c) {
           return '<tr><td>' + esc(c.fuente) + (c.medio ? ' <span class="muted">· ' + esc(c.medio) + '</span>' : '') + '</td>' +
@@ -5717,7 +5754,7 @@
     var datos = [
       { q: 'Conversaciones nuevas', c: s.conversaciones },
       { q: 'Mensajes de clientes', c: s.mensajes },
-      { q: 'Citas agendadas', c: s.citas },
+      { q: VOC.Citas + ' ' + VOC.g('agendadas'), c: s.citas },
     ];
     $('deltas').innerHTML = datos.map(function (d) {
       return '<div class="delta"><b>' + d.c.ahora + '</b><span class="que">' + d.q + ' · 7 días</span><br>' + chipCambio(d.c) + '</div>';
@@ -5815,8 +5852,8 @@
       grupos: function (p) { return { que: 'Contestar en el grupo ' + p.grupo, detalle: p.sobre || p.texto || '', boton: 'Revisar', ic: 'users', color: 'ambar', ir: alRecuadro('grupos') }; },
       esperan: function (c) { return { que: 'Contestar a ' + nameOf(c), detalle: [c.lastMessageAt ? 'Escribió ' + hace(c.lastMessageAt) : '', c.recap || c.summary || ''].filter(Boolean).join(' · '), boton: 'Contestar', ic: 'burbuja', color: 'rojo', ir: alChat(c) }; },
       persona: function (c) { return { que: 'Atender a ' + nameOf(c), detalle: 'Pidió hablar con una persona' + (c.lastMessageAt ? ' · ' + hace(c.lastMessageAt) : ''), boton: 'Atender', ic: 'user', color: 'ambar', ir: alChat(c) }; },
-      pasadas: function (a) { return { que: 'Anotar cómo le fue a ' + quienCita(a), detalle: a.label ? 'Cita: ' + a.label : '', boton: 'Anotar', ic: 'citas', color: 'indigo', ir: alRecuadro('pasadas') }; },
-      recordar: function (a) { return { que: 'Recordarle la cita a ' + quienCita(a), detalle: a.label || '', boton: 'Recordar', ic: 'bell', color: 'indigo', ir: alRecuadro('recordar') }; },
+      pasadas: function (a) { return { que: 'Anotar cómo le fue a ' + quienCita(a), detalle: a.label ? VOC.Cita + ': ' + a.label : '', boton: 'Anotar', ic: 'citas', color: 'indigo', ir: alRecuadro('pasadas') }; },
+      recordar: function (a) { return { que: 'Recordarle ' + VOC.la + ' ' + VOC.cita + ' a ' + quienCita(a), detalle: a.label || '', boton: 'Recordar', ic: 'bell', color: 'indigo', ir: alRecuadro('recordar') }; },
       calientes: function (c) { return { que: 'Retomar a ' + nameOf(c), detalle: 'Caliente y sin seguimiento' + (c.lastMessageAt ? ' · su último mensaje fue ' + hace(c.lastMessageAt) : ''), boton: 'Escribirle', ic: 'objetivo', color: 'verde', ir: alChat(c, true) }; }
     };
     var out = [];
@@ -6503,7 +6540,7 @@
       { id: 'mios', t: 'Mis tratos', es: esMia, hay: function () { return Boolean(state.name); } },
       { id: 'sinasignar', t: 'Sin asignar', es: xfSinAsignar },
       { id: 'calientes', t: '🔥 Calientes', es: esCaliente },
-      { id: 'concita', t: 'Con cita', es: xfConCita },
+      { id: 'concita', get t() { return 'Con ' + VOC.cita; }, es: xfConCita },
       { id: 'ganados_mes', t: 'Ganados este mes', historia: true, es: function (c) { return rol(c.stage) === 'ganado' && xfEsteMes(c.id); } },
       { id: 'perdidos_mes', t: 'Perdidos este mes', historia: true, es: function (c) { return rol(c.stage) === 'perdido' && xfEsteMes(c.id); } }
     ].filter(function (v) { return !v.hay || v.hay(); });
@@ -6650,7 +6687,7 @@
           (p === 'pipeline' ? '<div class="xf-seg" role="group" aria-label="Cómo ver los tratos"><button type="button" data-modo="tablero"><i class="ic" data-ic="kanban"></i>Tablero</button><button type="button" data-modo="lista"><i class="ic" data-ic="lista"></i>Lista</button></div>' : '') +
           (p === 'embudo' ? '<label class="xf-periodo"><span>Entraron</span><select id="xe-dias">' + XF_DIAS.map(function (d) { return '<option value="' + d[0] + '">' + esc(d[1]) + '</option>'; }).join('') + '</select></label>' : '') +
           '<div class="xf-caja-guardar"><button type="button" class="btn sm" id="xf-' + p + '-guardar" aria-expanded="false" aria-controls="xf-' + p + '-form"><i class="ic" data-ic="guardar"></i>Guardar vista</button>' +
-            '<form class="xf-guardar" id="xf-' + p + '-form" hidden><label for="xf-' + p + '-nombre">Nombre de la vista</label><input type="text" id="xf-' + p + '-nombre" maxlength="40" autocomplete="off" placeholder="Ej.: Bodas de diciembre">' +
+            '<form class="xf-guardar" id="xf-' + p + '-form" hidden><label for="xf-' + p + '-nombre">Nombre de la vista</label><input type="text" id="xf-' + p + '-nombre" maxlength="40" autocomplete="off" placeholder="Ej.: ' + esc(VOC.ej.vista || 'Clientes de este mes') + '">' +
             '<span class="xf-guardar-err" id="xf-' + p + '-err" role="alert"></span><div class="xf-guardar-acc"><button type="button" class="btn sm" data-cancelar>Cancelar</button><button type="submit" class="btn sm primary">Guardar</button></div></form></div>' +
           '<button type="button" class="btn sm danger xf-borrar" id="xf-' + p + '-borrar" hidden>Eliminar vista</button>' +
         '</div>';
@@ -7040,7 +7077,7 @@
   /** A qué pantalla lleva cada tarjeta, para mirar el detalle (como el «drill-down» de Dynamics). */
   var XP_VER = {
     nuevas: ['inbox', 'Ver la bandeja'], respuesta: ['analysis', 'Ver Analítica'], aTiempo: ['analysis', 'Ver Analítica'],
-    citas: ['calendar', 'Ver las citas'], asistencia: ['calendar', 'Ver las citas'], ganados: ['ventas', 'Ver las ventas'],
+    get citas() { return ['calendar', 'Ver ' + VOC.las + ' ' + VOC.citas]; }, get asistencia() { return ['calendar', 'Ver ' + VOC.las + ' ' + VOC.citas]; }, ganados: ['ventas', 'Ver las ventas'],
     perdidos: ['ventas', 'Ver por qué se perdieron'], cierre: ['ventas', 'Ver las ventas'], ventas: ['ventas', 'Ver las ventas'], embudo: ['embudo', 'Ver el embudo']
   };
   function xpNum(n, dec) { return Number(n).toLocaleString('es-CO', { maximumFractionDigits: dec == null ? 0 : dec }); }
@@ -7077,8 +7114,8 @@
       case 'respuesta': return m.respondidas ? 'De ' + xpNum(m.respondidas) + (m.respondidas === 1 ? ' respuesta' : ' respuestas') + (d.esperandoAhora ? ' · ' + d.esperandoAhora + ' esperando ahora' : '') : 'Nadie esperó respuesta en este periodo.';
       case 'aTiempo': return m.respondidas ? 'Dentro de ' + acuerdo + ', el acuerdo de servicio' : 'Nadie esperó respuesta en este periodo.';
       case 'asistencia':
-        if (m.citasMarcadas) return 'De ' + m.citasMarcadas + (m.citasMarcadas === 1 ? ' cita marcada' : ' citas marcadas') + (m.citasSinMarcar ? ' · ' + m.citasSinMarcar + ' sin marcar' : '');
-        return m.citasSinMarcar ? m.citasSinMarcar + (m.citasSinMarcar === 1 ? ' cita pasó y nadie la marcó' : ' citas pasaron y nadie las marcó') + ': márcalas en Citas.' : 'Ninguna cita de este periodo ha pasado todavía.';
+        if (m.citasMarcadas) return 'De ' + m.citasMarcadas + (m.citasMarcadas === 1 ? ' ' + VOC.cita + ' ' + VOC.g('marcada') : ' ' + VOC.citas + ' ' + VOC.g('marcadas')) + (m.citasSinMarcar ? ' · ' + m.citasSinMarcar + ' sin marcar' : '');
+        return m.citasSinMarcar ? m.citasSinMarcar + (m.citasSinMarcar === 1 ? ' ' + VOC.cita + ' pasó y nadie ' + VOC.la + ' marcó' : ' ' + VOC.citas + ' pasaron y nadie ' + VOC.las + ' marcó') + ': márca' + VOC.las + ' en ' + VOC.Citas + '.' : VOC.Ninguna + ' ' + VOC.cita + ' de este periodo ha pasado todavía.';
       case 'cierre': return m.ganados + m.perdidos ? m.ganados + ' ganados de ' + (m.ganados + m.perdidos) + ' cerrados' : 'No se cerró ningún trato en este periodo.';
       case 'ventas':
         if (!m.ganados) return 'No se ganó ningún trato en este periodo.';
@@ -7137,18 +7174,18 @@
     var cuerpo = filas.map(function (f) {
       return '<tr><th scope="row"><span class="xp-quien">' + avatarHtml(f.nombre, f.nombre, 'sm') + '<span>' + esc(f.nombre) + '</span></span></th>' +
         celda('Asignados', xpNum(f.asignados), 'num') + celda('Ganados', xpNum(f.ganados), 'num') + celda('Ventas', ventas(f), 'num') +
-        celda('Citas', xpNum(f.citas), 'num') + celda('Respuestas', xpNum(f.respuestas), 'num') +
+        celda(VOC.Citas, xpNum(f.citas), 'num') + celda('Respuestas', xpNum(f.respuestas), 'num') +
         celda('Mediana de respuesta', f.respuestaMs === null ? '—' : esc(duracion(f.respuestaMs)), 'num') + '</tr>';
     }).join('');
     if (ag.respuestas) {
       var na = '<span class="xp-na" title="Al agente de IA no se le asignan contactos">—</span>';
       cuerpo += '<tr class="xp-agente"><th scope="row"><span class="xp-quien"><span class="xp-ia" aria-hidden="true"><i class="ic" data-ic="chispa"></i></span><span>' + esc(ag.nombre || state.agentName || 'Xen') + '<small>agente de IA</small></span></span></th>' +
-        celda('Asignados', na, 'num') + celda('Ganados', na, 'num') + celda('Ventas', na, 'num') + celda('Citas', na, 'num') +
+        celda('Asignados', na, 'num') + celda('Ganados', na, 'num') + celda('Ventas', na, 'num') + celda(VOC.Citas, na, 'num') +
         celda('Respuestas', xpNum(ag.respuestas), 'num') + celda('Mediana de respuesta', ag.respuestaMs === null ? '—' : esc(duracion(ag.respuestaMs)), 'num') + '</tr>';
     }
     return '<div class="xp-tabla-caja"><table class="xp-tabla"><caption class="sr-only">Por persona, en los últimos ' + d.dias + ' días</caption><thead><tr><th scope="col">Persona</th><th scope="col" class="num">Asignados</th><th scope="col" class="num">Ganados</th>' +
-      '<th scope="col" class="num">Ventas</th><th scope="col" class="num">Citas</th><th scope="col" class="num">Respuestas</th><th scope="col" class="num">Mediana de respuesta</th></tr></thead><tbody>' + cuerpo + '</tbody></table></div>' +
-      '<p class="xp-nota">Asignados: tratos abiertos que tiene hoy. Ganados, ventas y citas: del periodo, de lo que tiene asignado. Respuestas: las que escribió en el periodo, con el reloj parado fuera del horario.</p>';
+      '<th scope="col" class="num">Ventas</th><th scope="col" class="num">' + VOC.Citas + '</th><th scope="col" class="num">Respuestas</th><th scope="col" class="num">Mediana de respuesta</th></tr></thead><tbody>' + cuerpo + '</tbody></table></div>' +
+      '<p class="xp-nota">Asignados: tratos abiertos que tiene hoy. Ganados, ventas y ' + VOC.citas + ': del periodo, de lo que tiene asignado. Respuestas: las que escribió en el periodo, con el reloj parado fuera del horario.</p>';
   }
   function xpPeriodo() {
     document.querySelectorAll('#xp-kpis .xp-periodo [data-dias]').forEach(function (b) { b.setAttribute('aria-pressed', String(Number(b.getAttribute('data-dias')) === XP.dias)); });
@@ -7199,7 +7236,7 @@
     if (!d || !form) return;
     var defs = d.definiciones.filter(function (k) { return k.meta; });
     var metas = d.metas || {};
-    form.innerHTML = '<div class="xp-editor-cab"><h2 id="xp-editor-t">Metas</h2><p>Las que se suman (conversaciones, citas, ganados, ventas) se llevan por semana o por mes del calendario; las de nivel —tiempo, porcentajes, el embudo— se miden en el mes. Deja vacía la que no quieras.</p></div>' +
+    form.innerHTML = '<div class="xp-editor-cab"><h2 id="xp-editor-t">Metas</h2><p>Las que se suman (conversaciones, ' + VOC.citas + ', ganados, ventas) se llevan por semana o por mes del calendario; las de nivel —tiempo, porcentajes, el embudo— se miden en el mes. Deja vacía la que no quieras.</p></div>' +
       '<div class="xp-campos">' + defs.map(function (k) {
         var m = metas[k.id], val = m ? (k.unidad === 'plata' || k.unidad === 'n' ? xpNum(m.valor) : xpNum(m.valor, 1)) : '';
         var unidad = k.unidad === 'plata' ? (state.moneda || 'COP') : XP_UNIDAD[k.unidad] || '';
@@ -7383,7 +7420,7 @@
     }
 
     html += '<section class="xk-cand" aria-labelledby="xk-cand-t"><div class="xk-cand-cab"><h2 id="xk-cand-t">Candidatas a cuenta clave</h2>' +
-      '<p>Contactos que cumplen alguna regla: ya compraron, volvieron, vinieron a su cita, están calientes y con cita, o están entre las de mayor valor. Se proponen; las marcas tú.</p></div>' +
+      '<p>Contactos que cumplen alguna regla: ya compraron, volvieron, vinieron a su ' + VOC.cita + ', están calientes y con ' + VOC.cita + ', o están entre las de mayor valor. Se proponen; las marcas tú.</p></div>' +
       (d.candidatas.length
         ? '<ul class="xk-cand-l">' + d.candidatas.map(function (k) {
             return '<li class="xk-cand-f">' + avatarHtml(k.nombre || k.telefono || k.id, k.id) +
@@ -7392,7 +7429,7 @@
               '<div class="xk-porque">' + k.motivos.map(function (m) { return '<span class="xk-tag">' + esc(m) + '</span>'; }).join('') + '</div>' +
               '<button type="button" class="btn sm" data-xk-marcar="' + esc(k.id) + '"' + (XK.marcando[k.id] ? ' disabled' : '') + '><i class="ic" data-ic="estrella"></i>' + (XK.marcando[k.id] ? 'Marcando…' : 'Marcar como cuenta clave') + '</button></li>';
           }).join('') + '</ul>'
-        : '<div class="xk-sin"><b>Por ahora no hay candidatas</b><span>Aparecen cuando alguien compra, vuelve después de un tiempo o viene a su cita. También puedes marcar a cualquiera desde su ficha.</span></div>') +
+        : '<div class="xk-sin"><b>Por ahora no hay candidatas</b><span>Aparecen cuando alguien compra, vuelve después de un tiempo o viene a su ' + VOC.cita + '. También puedes marcar a cualquiera desde su ficha.</span></div>') +
       '</section>';
 
     caja.innerHTML = html;
@@ -7647,11 +7684,11 @@
   function xoEstancados(d) {
     var l = d.estancados || [];
     var cab = '<div class="xo-sec-cab"><div><h2 id="xo-est-t" tabindex="-1">Tratos estancados</h2><p>Abiertos y sin actividad hace ' + d.umbral.diasEstancado +
-      ' días o más, sin cita por delante y sin posponer. Primero los que valen más; después, por puntaje.</p></div>' +
+      ' días o más, sin ' + VOC.cita + ' por delante y sin posponer. Primero los que valen más; después, por puntaje.</p></div>' +
       (d.estancadosTotal ? '<span class="xo-cuenta" aria-label="' + d.estancadosTotal + ' estancados">' + d.estancadosTotal + '</span>' : '') + '</div>';
     if (!l.length) {
       return '<section class="xo-sec" id="xo-estancados" aria-labelledby="xo-est-t">' + cab +
-        '<div class="xo-vacio xo-bien"><b>Ningún trato está estancado</b><span>Todos los abiertos se movieron en los últimos ' + d.umbral.diasEstancado + ' días, tienen cita o los dejaron «por ahora».</span></div></section>';
+        '<div class="xo-vacio xo-bien"><b>Ningún trato está estancado</b><span>Todos los abiertos se movieron en los últimos ' + d.umbral.diasEstancado + ' días, tienen ' + VOC.cita + ' o los dejaron «por ahora».</span></div></section>';
     }
     return '<section class="xo-sec" id="xo-estancados" aria-labelledby="xo-est-t">' + cab +
       '<div class="envoltura xo-tabla-caja"><table class="tz-tabla xo-tabla"><thead><tr><th>Contacto</th><th>Etapa</th><th class="num">Sin actividad</th><th>En la etapa desde</th><th>Lo lleva</th><th class="num">Valor</th><th><span class="sr-only">Acción</span></th></tr></thead><tbody>' +
@@ -7709,7 +7746,7 @@
       xoEstancados(d) +
       '<details class="xo-como"><summary>Cómo se decide cada cosa</summary><ul>' +
         '<li>Dónde se caen: la etapa que menos gente deja pasar a la siguiente, con al menos ' + d.umbral.baseEmbudo + ' que llegaron a ella; sale si pasa menos del ' + Math.round(d.umbral.pasoBajo * 100) + ' %.</li>' +
-        '<li>Estancados: tratos abiertos sin actividad en ' + d.umbral.diasEstancado + ' días o más, sin cita por delante y sin posponer.</li>' +
+        '<li>Estancados: tratos abiertos sin actividad en ' + d.umbral.diasEstancado + ' días o más, sin ' + VOC.cita + ' por delante y sin posponer.</li>' +
         '<li>Velocidad: hacen falta ' + d.umbral.cerradosVelocidad + ' tratos cerrados con tiempo de respuesta medido (' + d.umbral.grupoVelocidad + ' rápidos y ' + d.umbral.grupoVelocidad + ' lentos) para comparar.</li>' +
         '<li>Acuerdo de servicio: con ' + d.umbral.respondidas + ' respuestas o más, sale si el ' + Math.round(d.umbral.fueraDeAcuerdo * 100) + ' % o más tardó de más.</li>' +
         '<li>Motivos de pérdida: con ' + d.umbral.perdidas + ' perdidos o más. Objeciones: las que se repiten ' + d.umbral.objecion + ' veces o más.</li>' +

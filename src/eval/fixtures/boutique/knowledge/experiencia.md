@@ -1,4 +1,4 @@
-# Cómo funciona DUNOR (tu experiencia en cuatro pasos)
+# Cómo funciona Atelier Demo (tu experiencia en cuatro pasos)
 
 1. **Agenda.** Reservas tu cita privada por WhatsApp o por este mismo chat. Te esperamos en un ambiente exclusivo solo para ti.
 2. **Descubre.** Los asesores te conocen, entienden tu evento y te guían entre las mejores opciones: alquiler, diseño a la medida o ambos.

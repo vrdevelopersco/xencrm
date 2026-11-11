@@ -7,6 +7,7 @@
 // 🪤 Todo lo de aquí se DEDUCE de lo que ya está guardado —citas y mensajes— y no se escribe en ninguna parte.
 // Un campo «amagó» que alguien tiene que marcar a mano se queda sin marcar, y entonces miente: dice que no pasó
 // cuando lo que pasa es que nadie lo apuntó. Calculado, siempre está al día y nadie tiene que acordarse.
+import { V } from '../vocabulario.js';
 import { listAppointments } from './appointments.js';
 import { getMessages } from '../agent/memory.js';
 import { rolDe, type Stage } from './contacts.js';
@@ -83,10 +84,10 @@ export function historiaDe(userId: string, opts: ComoVa = {}): Historia {
 export function enUnaFrase(h: Historia): string {
   const partes: string[] = [];
   if (h.volvio > 0) partes.push(h.volvio === 1 ? 'volvió una vez' : `volvió ${h.volvio} veces`);
-  if (h.citas.cumplidas) partes.push(h.citas.cumplidas === 1 ? 'vino a una cita' : `vino a ${h.citas.cumplidas} citas`);
-  if (h.citas.falto) partes.push(h.citas.falto === 1 ? 'faltó a una cita' : `faltó a ${h.citas.falto} citas`);
-  if (h.citas.canceladas) partes.push(h.citas.canceladas === 1 ? 'canceló una' : `canceló ${h.citas.canceladas}`);
-  if (h.citas.proxima) partes.push('tiene cita');
+  if (h.citas.cumplidas) partes.push(h.citas.cumplidas === 1 ? `vino a ${V.una} ${V.cita}` : `vino a ${h.citas.cumplidas} ${V.citas}`);
+  if (h.citas.falto) partes.push(h.citas.falto === 1 ? `faltó a ${V.una} ${V.cita}` : `faltó a ${h.citas.falto} ${V.citas}`);
+  if (h.citas.canceladas) partes.push(h.citas.canceladas === 1 ? `canceló ${V.una}` : `canceló ${h.citas.canceladas}`);
+  if (h.citas.proxima) partes.push(`tiene ${V.cita}`);
   if (!partes.length) return h.mensajes ? 'solo ha escrito' : 'sin historia todavía';
   return partes.join(' · ');
 }

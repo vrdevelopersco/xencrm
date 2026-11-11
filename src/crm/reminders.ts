@@ -1,6 +1,7 @@
 // Recordatorio de la cita el día antes, por el canal del cliente. Lo que no se puede enviar solo (chat del sitio,
 // conversación que lleva una persona, WhatsApp oficial fuera de las 24 h sin plantilla) queda en Hoy para hacerlo a
 // mano, con el texto listo. La respuesta del cliente ("ahí estaré", "no puedo") la atiende el flujo de citas.
+import { V } from '../vocabulario.js';
 import { business } from '../config.js';
 import { formatSlot, getAppointment, listAppointments, setReminder, tzParts, zoned, type Appointment } from './appointments.js';
 import { awaitReminderReply } from './booking.js';
@@ -116,7 +117,7 @@ export async function runReminders(now = Date.now()): Promise<{ sent: number; ma
       if (reason) {
         setReminder(a.id, 'a_mano', reason);
         // Que no se quede esperando a que alguien entre a mirar: se avisa por la campana, con la cita y el porqué.
-        avisarRecordatorio(a.userId, `Recuérdale su cita a ${c?.name || 'este cliente'}`, `${formatSlot(new Date(a.startsAt))} · ${reason}`);
+        avisarRecordatorio(a.userId, `Recuérdale su ${V.cita} a ${c?.name || 'este cliente'}`, `${formatSlot(new Date(a.startsAt))} · ${reason}`);
         out.manual++;
         continue;
       }

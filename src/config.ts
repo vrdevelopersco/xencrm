@@ -347,6 +347,71 @@ export const BusinessConfigSchema = z.object({
   evalFile: z.string().default('data/scenarios.json'),
   /** Datos de demostración (pnpm seed). */
   seedFile: z.string().optional(),
+  /**
+   * Las palabras y los textos de la interfaz que dependen del negocio. XENCRM no los escribe fijos: cómo se llama lo
+   * que se agenda («cita», «demo», «visita», «turno»), la bienvenida de Inicio, los ejemplos que se ven dentro de los
+   * campos y la portada. Todo tiene un valor de fábrica neutro; el ejemplo (examples/xentris) los pone todos a la
+   * vista para que se vea qué se puede cambiar.
+   */
+  interfaz: z
+    .object({
+      /** Lo que se agenda, como lo dice el negocio. Sale en el menú, en Inicio, en la ficha, en los KPIs… */
+      agenda: z
+        .object({
+          singular: z.string().trim().min(1).max(30).default('cita'),
+          plural: z.string().trim().min(1).max(30).default('citas'),
+          /** «el turno», «un turno agendado»: con esto concuerdan los artículos y los adjetivos. */
+          masculino: z.boolean().default(false),
+        })
+        .prefault({}),
+      /** El subtítulo de Inicio, debajo del saludo. {negocio} se cambia por el nombre del negocio. */
+      bienvenida: z.string().trim().min(1).max(160).default('Este es el pulso de {negocio} hoy.'),
+      /** Los ejemplos que se ven dentro de los campos de texto, para que hablen como el negocio. */
+      ejemplos: z
+        .object({
+          /** Configuración › Perfil › Otros datos: el nombre de un dato propio. */
+          datoPropio: z.string().trim().max(60).default('Tiempos de entrega'),
+          /** Configuración › Perfil › Otros datos: qué va ahí, en una línea. */
+          datosPropios: z.string().trim().max(160).default('tiempos de entrega, garantías, lo que ofrecen o no'),
+          /** Lo que sabe › un documento: de qué se trata. */
+          documento: z.string().trim().max(60).default('Políticas de pago'),
+          /** Lo que sabe › una respuesta del equipo: de qué trata y cómo lo pregunta la gente (una por línea). */
+          respuestaTema: z.string().trim().max(60).default('Tiempos de entrega'),
+          respuestaComo: z.string().trim().max(240).default('¿cuándo me llega?\nno me ha llegado el pedido\nhace cuánto pedí lo mío'),
+          /** Lo que sabe › una nota: de qué se trata. */
+          nota: z.string().trim().max(60).default('Proveedor principal'),
+          /** El nombre de una vista guardada (Contactos, Tratos). */
+          vista: z.string().trim().max(60).default('Clientes de este mes'),
+        })
+        .prefault({}),
+      /** La portada (la página de entrada de XENCRM): el titular, la línea de abajo y la vista de ejemplo del tablero. */
+      portada: z
+        .object({
+          /** El titular; lo que va entre asteriscos sale resaltado («Tus clientes, atendidos *siempre*.»). */
+          titulo: z.string().trim().min(1).max(80).default('Tus clientes, atendidos *siempre*.'),
+          subtitulo: z.string().trim().min(1).max(200).default('WhatsApp y el chat de tu sitio en una sola bandeja. Tú entras solo cuando hace falta.'),
+          /** El nombre que va en el menú de la vista de ejemplo (corto). */
+          marca: z.string().trim().min(1).max(20).default('Tu negocio'),
+          /** Hasta seis filas de la vista de ejemplo: datos de mentira, que se dicen como tales. */
+          vista: z
+            .array(z.object({
+            contacto: z.string().trim().min(1).max(40),
+            etapa: z.string().trim().min(1).max(30),
+            /** El papel de la etapa: pinta la pastilla con el color de dato de siempre. */
+            rol: z.enum(['inicio', 'activo', 'interes', 'cita', 'ganado', 'perdido']).default('activo'),
+            caliente: z.boolean().default(false),
+            valor: z.string().trim().max(20).default('—'),
+            paso: z.string().trim().max(60).default('—'),
+            /** El próximo paso urge (ámbar y con verbo) o es de la agenda (índigo). */
+            tono: z.enum(['normal', 'urge', 'agenda']).default('normal'),
+            asignado: z.string().trim().max(30).default(''),
+          }))
+            .max(6)
+            .default([]),
+        })
+        .prefault({}),
+    })
+    .prefault({}),
 });
 export type BusinessConfig = z.infer<typeof BusinessConfigSchema>;
 

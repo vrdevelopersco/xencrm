@@ -11,7 +11,9 @@
    "producto": "XENTRIS POS",
    "empresa": "Café Aroma",
    "usuarios": "4 sucursales",
-   "plazo": "enero"
+   "plazo": "enero",
+   "valor": 4800,
+   "ciudad": "Medellín"
   },
   "signals": {
    "interes": 3,
@@ -51,7 +53,8 @@
    "producto": "XENTRIS Field",
    "empresa": "Logística Norte",
    "usuarios": "25 técnicos",
-   "plazo": "este trimestre"
+   "plazo": "este trimestre",
+   "valor": 9500
   },
   "signals": {
    "interes": 2,
@@ -87,7 +90,8 @@
    "producto": "XENTRIS POS + Stock",
    "empresa": "Ferretería El Tornillo",
    "usuarios": "2 sucursales",
-   "plan_soporte": "Pro"
+   "plan_soporte": "Pro",
+   "valor": 6200
   },
   "signals": {
    "interes": 3,
@@ -140,7 +144,9 @@
    "producto": "XENTRIS Field",
    "empresa": "Distribuidora Duarte",
    "usuarios": "40 técnicos",
-   "plan_soporte": "Enterprise"
+   "plan_soporte": "Enterprise",
+   "valor": 18000,
+   "ciudad": "Barrancabermeja"
   },
   "signals": {
    "interes": 2,
@@ -190,7 +196,8 @@
   "data": {
    "producto": "Desarrollo a la medida",
    "empresa": "Clínica Vida",
-   "plan_soporte": "Enterprise"
+   "plan_soporte": "Enterprise",
+   "valor": 24000
   },
   "signals": {
    "interes": 2,
@@ -290,7 +297,8 @@
    "producto": "XENTRIS POS",
    "empresa": "Supermercados Ochoa",
    "usuarios": "6 cajas",
-   "plan_soporte": "Básico"
+   "plan_soporte": "Básico",
+   "valor": 7400
   },
   "signals": {
    "interes": 1,
@@ -348,7 +356,8 @@
    "producto": "XENTRIS Field",
    "empresa": "Constructora Lozano",
    "usuarios": "60",
-   "plazo": "febrero"
+   "plazo": "febrero",
+   "valor": 14000
   },
   "signals": {
    "interes": 3,
@@ -369,5 +378,503 @@
     "text": "Sí, por favor"
    }
   ]
+ },
+ {
+  "id": "573104440011",
+  "name": "Natalia Vélez",
+  "stage": "demo_agendada",
+  "sentiment": "positivo",
+  "lastMinutesAgo": 75,
+  "unread": 0,
+  "summary": "Panaderías Delicias (6 sucursales); quiere XENTRIS POS + Stock por los vencimientos; demo agendada.",
+  "data": {
+   "producto": "XENTRIS POS + Stock",
+   "empresa": "Panaderías Delicias",
+   "usuarios": "6 sucursales",
+   "plazo": "antes de diciembre",
+   "valor": 11200,
+   "ciudad": "Cali"
+  },
+  "signals": {
+   "interes": 3,
+   "quiere_cita": true,
+   "urgencia": "alta"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Buenas, tenemos 6 panaderías y se nos vence mucho producto, ¿su inventario maneja vencimientos?"
+   },
+   {
+    "role": "assistant",
+    "text": "¡Hola, Natalia! Sí: XENTRIS Stock maneja lotes y vencimientos y te avisa antes de que se pierda el producto; con XENTRIS POS ves las ventas de las 6 sucursales en el celular. ¿Te lo muestro en una demo de 45 minutos?"
+   },
+   {
+    "role": "user",
+    "text": "Sí, ojalá esta semana, lo necesitamos antes de diciembre"
+   },
+   {
+    "role": "assistant",
+    "text": "¡Listo! Quedó tu demo el viernes a las 3:00 p. m. por videollamada. Te mando el enlace por aquí."
+   }
+  ],
+  "appointmentInHours": 70
+ },
+ {
+  "id": "573104440012",
+  "name": "Hernán Zapata",
+  "stage": "calificado",
+  "sentiment": "neutral",
+  "lastMinutesAgo": 300,
+  "unread": 0,
+  "summary": "Transportes Zapata; 15 conductores; quiere rutas y entregas firmadas en XENTRIS Field.",
+  "data": {
+   "producto": "XENTRIS Field",
+   "empresa": "Transportes Zapata",
+   "usuarios": "15 conductores",
+   "plazo": "el otro mes"
+  },
+  "signals": {
+   "interes": 2,
+   "urgencia": "baja"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Hola, ¿la app de campo sirve para que los conductores registren las entregas con firma?"
+   },
+   {
+    "role": "assistant",
+    "text": "Sí, Hernán: con XENTRIS Field cada conductor ve su ruta, toma la firma y la foto de la entrega, y funciona sin señal. ¿Cuántos conductores serían?"
+   },
+   {
+    "role": "user",
+    "text": "Unos 15, pero sería para el otro mes"
+   }
+  ]
+ },
+ {
+  "id": "573104440013",
+  "name": "Carolina Mejía",
+  "stage": "evaluando",
+  "sentiment": "positivo",
+  "lastMinutesAgo": 140,
+  "unread": 0,
+  "summary": "Droguerías Salud Total (9 sucursales); evalúa POS + Stock con integración a su ERP; la lleva Laura.",
+  "data": {
+   "producto": "XENTRIS POS + Stock",
+   "empresa": "Droguerías Salud Total",
+   "usuarios": "9 sucursales",
+   "plazo": "primer trimestre",
+   "valor": 16800
+  },
+  "signals": {
+   "interes": 3,
+   "pidio_precio": true,
+   "urgencia": "media"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Necesitamos que el POS se integre con nuestro ERP, ¿eso lo hacen?"
+   },
+   {
+    "role": "assistant",
+    "text": "Sí, hacemos integraciones con los ERP más usados. Te paso con Laura, del equipo comercial, para revisar el tuyo."
+   },
+   {
+    "role": "assistant",
+    "text": "Hola Carolina, soy Laura. ¿Me cuentas qué ERP usan? Con eso te armo la propuesta con la integración incluida.",
+    "author": "human",
+    "by": "Laura"
+   },
+   {
+    "role": "user",
+    "text": "Usamos SIIGO, te mando el contacto de sistemas"
+   }
+  ],
+  "humanMode": true,
+  "humanBy": "Laura",
+  "humanSinceMinutesAgo": 150
+ },
+ {
+  "id": "573104440014",
+  "name": "Jorge Ramírez",
+  "stage": "perdido",
+  "sentiment": "neutral",
+  "lastMinutesAgo": 12960,
+  "unread": 0,
+  "summary": "Taller Ramírez; se fue con otro proveedor que ya conocía.",
+  "data": {
+   "producto": "XENTRIS Field",
+   "empresa": "Taller Ramírez",
+   "motivo_perdida": "Se fue con otro"
+  },
+  "signals": {
+   "interes": 1,
+   "urgencia": "baja"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Gracias por la info, pero al final seguimos con el proveedor que ya teníamos"
+   },
+   {
+    "role": "assistant",
+    "text": "Entendido, Jorge. Si más adelante quieres comparar, aquí estamos."
+   }
+  ]
+ },
+ {
+  "id": "573104440015",
+  "name": "Mónica Patiño",
+  "stage": "ganado",
+  "sentiment": "positivo",
+  "lastMinutesAgo": 2880,
+  "unread": 0,
+  "summary": "Hotel Mirador (Pro) con XENTRIS POS en restaurante y bar; pidió un usuario nuevo.",
+  "data": {
+   "producto": "XENTRIS POS",
+   "empresa": "Hotel Mirador",
+   "usuarios": "2 puntos de venta",
+   "plan_soporte": "Pro",
+   "valor": 5400
+  },
+  "signals": {
+   "interes": 2,
+   "urgencia": "baja"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Hola, necesito crear un usuario para el nuevo mesero del bar"
+   },
+   {
+    "role": "assistant",
+    "text": "Claro, Mónica. Lo pasé a soporte y te confirman por aquí."
+   },
+   {
+    "role": "assistant",
+    "text": "Listo Mónica, ya quedó el usuario. Te mandé la clave temporal al correo.",
+    "author": "human",
+    "by": "Bryan"
+   }
+  ],
+  "tickets": [
+   {
+    "asunto": "Crear usuario para el mesero del bar",
+    "tipo": "solicitud",
+    "prioridad": "baja",
+    "estado": "cerrado",
+    "producto": "XENTRIS POS",
+    "haceHoras": 50,
+    "primeraRespuestaEnMin": 35,
+    "resueltoEnHoras": 2,
+    "asignado": "Bryan"
+   }
+  ]
+ },
+ {
+  "id": "573104440016",
+  "name": "Esteban Toro",
+  "stage": "ganado",
+  "sentiment": "negativo",
+  "lastMinutesAgo": 5760,
+  "unread": 0,
+  "summary": "AgroCampo (Básico) con XENTRIS Stock; se quejó de que la respuesta a su ticket tardó más de lo prometido.",
+  "data": {
+   "producto": "XENTRIS Stock",
+   "empresa": "AgroCampo",
+   "usuarios": "2 bodegas",
+   "plan_soporte": "Básico",
+   "valor": 3100
+  },
+  "signals": {
+   "interes": 1,
+   "urgencia": "media",
+   "tiene_objecion": true,
+   "objecion": "Tardaron en responder"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Reporté ayer que no cuadra el inventario de la bodega 2 y nadie me ha respondido"
+   },
+   {
+    "role": "assistant",
+    "text": "Tienes razón, Esteban, lo siento. Ya lo escalé al equipo de soporte."
+   },
+   {
+    "role": "assistant",
+    "text": "Esteban, soy Laura de soporte. Ya encontramos el traslado que quedó duplicado y quedó corregido. Perdona la demora.",
+    "author": "human",
+    "by": "Laura"
+   }
+  ],
+  "tickets": [
+   {
+    "asunto": "El inventario de la bodega 2 no cuadra",
+    "tipo": "incidente",
+    "prioridad": "media",
+    "estado": "resuelto",
+    "producto": "XENTRIS Stock",
+    "haceHoras": 100,
+    "primeraRespuestaEnMin": 1320,
+    "resueltoEnHoras": 30,
+    "asignado": "Laura"
+   }
+  ]
+ },
+ {
+  "id": "573104440017",
+  "name": "Diana Cárdenas",
+  "stage": "nuevo",
+  "sentiment": null,
+  "lastMinutesAgo": 20,
+  "unread": 1,
+  "summary": null,
+  "data": {},
+  "signals": null,
+  "messages": [
+   {
+    "role": "user",
+    "text": "Hola, somos un colegio, ¿tienen algo para el control de la cafetería?"
+   }
+  ]
+ },
+ {
+  "id": "573104440018",
+  "name": "Santiago Ruiz",
+  "stage": "evaluando",
+  "sentiment": "positivo",
+  "lastMinutesAgo": 1800,
+  "unread": 0,
+  "summary": "FinTech Ruiz; app a la medida para originación de créditos; reunión de descubrimiento hecha; espera propuesta.",
+  "data": {
+   "producto": "Desarrollo a la medida",
+   "empresa": "FinTech Ruiz",
+   "plazo": "marzo",
+   "valor": 35000
+  },
+  "signals": {
+   "interes": 3,
+   "pidio_precio": true,
+   "urgencia": "media"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Gracias por la reunión de ayer, quedamos atentos a la propuesta"
+   },
+   {
+    "role": "assistant",
+    "text": "¡Gracias a ti, Santiago! El equipo te la envía esta semana con el plan y los tiempos."
+   }
+  ]
+ },
+ {
+  "id": "573104440019",
+  "name": "Isabel Moreno",
+  "stage": "ganado",
+  "sentiment": "positivo",
+  "lastMinutesAgo": 7200,
+  "unread": 0,
+  "summary": "Óptica Visión (Pro); pidió actualizar sus 3 cajas a POS 7.3, hecho a tiempo.",
+  "data": {
+   "producto": "XENTRIS POS",
+   "empresa": "Óptica Visión",
+   "usuarios": "3 cajas",
+   "plan_soporte": "Pro",
+   "valor": 4300
+  },
+  "signals": {
+   "interes": 2,
+   "urgencia": "baja"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "¿Me ayudan a pasar las cajas a la versión nueva? Quiero lo del cierre por turno"
+   },
+   {
+    "role": "assistant",
+    "text": "Claro, Isabel: lo dejé como solicitud a soporte para esta semana."
+   },
+   {
+    "role": "user",
+    "text": "Ya funciona, ¡gracias!"
+   }
+  ],
+  "tickets": [
+   {
+    "asunto": "Actualizar 3 cajas a XENTRIS POS 7.3",
+    "tipo": "actualizacion",
+    "prioridad": "media",
+    "estado": "cerrado",
+    "producto": "XENTRIS POS",
+    "haceHoras": 120,
+    "primeraRespuestaEnMin": 60,
+    "resueltoEnHoras": 20,
+    "asignado": "Bryan"
+   }
+  ]
+ },
+ {
+  "id": "573104440020",
+  "name": "Andrés Felipe Gil",
+  "stage": "calificado",
+  "sentiment": "neutral",
+  "lastMinutesAgo": 200,
+  "unread": 1,
+  "summary": "Restaurante La Brasa (2 locales); pregunta por propinas y división de cuenta en el POS.",
+  "data": {
+   "producto": "XENTRIS POS",
+   "empresa": "Restaurante La Brasa",
+   "usuarios": "2 locales"
+  },
+  "signals": {
+   "interes": 2,
+   "urgencia": "baja"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "¿El POS deja dividir la cuenta y manejar propinas?"
+   },
+   {
+    "role": "assistant",
+    "text": "Las propinas y la división de cuenta llegan en la versión 7.4, este mes. ¿Quieres verlo en una demo cuando salga?"
+   },
+   {
+    "role": "user",
+    "text": "Sí, avísame"
+   }
+  ]
+ },
+ {
+  "id": "573104440021",
+  "name": "Martín Echeverri",
+  "stage": "ganado",
+  "sentiment": "neutral",
+  "lastMinutesAgo": 45,
+  "unread": 1,
+  "summary": "Grupo Echeverri (Enterprise); 12 sucursales con POS; reporta que la facturación electrónica rechaza documentos.",
+  "data": {
+   "producto": "XENTRIS POS",
+   "empresa": "Grupo Echeverri",
+   "usuarios": "12 sucursales",
+   "plan_soporte": "Enterprise",
+   "valor": 26000
+  },
+  "signals": {
+   "interes": 2,
+   "urgencia": "alta"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Desde esta mañana la facturación electrónica nos rechaza documentos en 3 sucursales"
+   },
+   {
+    "role": "assistant",
+    "text": "Gracias por avisar, Martín. Quedó como incidente alto para soporte Enterprise; te escriben enseguida."
+   },
+   {
+    "role": "assistant",
+    "text": "Martín, soy Bryan. Ya lo estamos revisando con el proveedor de facturación; te actualizo en una hora.",
+    "author": "human",
+    "by": "Bryan"
+   }
+  ],
+  "tickets": [
+   {
+    "asunto": "La facturación electrónica rechaza documentos en 3 sucursales",
+    "tipo": "incidente",
+    "prioridad": "alta",
+    "estado": "en_progreso",
+    "producto": "XENTRIS POS",
+    "haceHoras": 6.5,
+    "primeraRespuestaEnMin": 18,
+    "resueltoEnHoras": null,
+    "asignado": "Bryan"
+   },
+   {
+    "asunto": "Agregar la sucursal 13 al POS",
+    "tipo": "solicitud",
+    "prioridad": "baja",
+    "estado": "abierto",
+    "producto": "XENTRIS POS",
+    "haceHoras": 26,
+    "primeraRespuestaEnMin": 90,
+    "resueltoEnHoras": null,
+    "asignado": "Laura"
+   }
+  ]
+ },
+ {
+  "id": "573104440022",
+  "name": "Lucía Fernández",
+  "stage": "perdido",
+  "sentiment": "neutral",
+  "lastMinutesAgo": 21600,
+  "unread": 0,
+  "summary": "Spa Serena; le pareció caro para un solo local.",
+  "data": {
+   "producto": "XENTRIS POS",
+   "empresa": "Spa Serena",
+   "motivo_perdida": "Precio"
+  },
+  "signals": {
+   "interes": 1,
+   "urgencia": "baja",
+   "tiene_objecion": true,
+   "objecion": "Precio"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Gracias, pero para un solo local nos sale muy caro"
+   },
+   {
+    "role": "assistant",
+    "text": "Entiendo, Lucía. Si cambian las cosas, aquí estamos."
+   }
+  ]
+ },
+ {
+  "id": "573104440023",
+  "name": "Tomás Arias",
+  "stage": "demo_agendada",
+  "sentiment": "positivo",
+  "lastMinutesAgo": 260,
+  "unread": 0,
+  "summary": "Logística Express; 30 mensajeros; demo de XENTRIS Field agendada para la próxima semana.",
+  "data": {
+   "producto": "XENTRIS Field",
+   "empresa": "Logística Express",
+   "usuarios": "30 mensajeros",
+   "plazo": "enero",
+   "valor": 8700
+  },
+  "signals": {
+   "interes": 3,
+   "quiere_cita": true,
+   "urgencia": "media"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Queremos ver cómo funciona lo de las rutas para 30 mensajeros"
+   },
+   {
+    "role": "assistant",
+    "text": "¡Con gusto, Tomás! Te muestro rutas, firmas y fotos en una demo de 45 minutos. ¿El martes a las 9:00 a. m.?"
+   },
+   {
+    "role": "user",
+    "text": "Perfecto"
+   }
+  ],
+  "appointmentInHours": 120
  }
 ]

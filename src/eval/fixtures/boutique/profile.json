@@ -1,16 +1,16 @@
 {
   "identity": {
-    "name": "DUNOR Boutique",
+    "name": "Atelier Demo",
     "description": "Tu armario personal de lujo en Barranquilla: alquiler premium de trajes, esmóquines y accesorios, diseño a la medida y asesoría de imagen para hombres que quieren brillar en bodas, grados y eventos especiales. Atención solo con cita previa.",
-    "siteUrl": "https://dunor.co",
+    "siteUrl": "https://atelier-demo.example",
     "city": "Barranquilla"
   },
   "contact": {
     "whatsapp": "",
     "phone": "",
     "email": "",
-    "instagram": "@dunorboutique",
-    "human": "escríbenos al WhatsApp +57 321 610 5383 o por Instagram @dunorboutique."
+    "instagram": "@atelierdemo",
+    "human": "escríbenos al WhatsApp +57 300 000 0001 o por Instagram @atelierdemo."
   },
   "service": {
     "address": "",
@@ -43,9 +43,9 @@
     }
   ],
   "notes": {
-    "contact.whatsapp": "El sitio muestra +57 321 610 5383 en el texto, pero los botones enlazan a wa.me/573332370192. «Cómo hablar con una persona» usa hoy el 321.",
+    "contact.whatsapp": "El sitio muestra +57 300 000 0001 en el texto, pero los botones enlazan a wa.me/573000000002. «Cómo hablar con una persona» usa hoy el 321.",
     "service.address": "Hoy el bot dice que la dirección exacta se comparte al confirmar la cita.",
-    "service.hours": "La agenda de citas ofrece lunes a sábado, 10:00-13:00 y 15:00-19:00 (appointments en xencrm.config.json): falta que DUNOR lo confirme.",
+    "service.hours": "La agenda de citas ofrece lunes a sábado, 10:00-13:00 y 15:00-19:00 (appointments en xencrm.config.json): falta que Atelier Demo lo confirme.",
     "service.area": "¿Atienden a clientes fuera de Barranquilla?",
     "payments.methods": "También: política de abono.",
     "prices": "Alquiler de traje, esmoquin, accesorios, diseño a la medida y asesoría de imagen.",

@@ -1,4 +1,5 @@
 import type { ChatMessage } from '../llm/ollama.js';
+import { V } from '../vocabulario.js';
 import { classify as classifyWith, fallbackOrder, roleEngine, type Engine } from '../llm/engines.js';
 import { business } from '../config.js';
 import { asksAvailability } from '../crm/when.js';
@@ -144,7 +145,7 @@ export function ruleIntent(text: string, history: ChatMessage[] = []): GateResul
 // pregunta va al modelo a propósito: no se anota.
 const TEACHABLE: Partial<Record<Intent, { reading: string; suggestion: string }>> = {
   saludo: { reading: 'un saludo', suggestion: 'hola' },
-  cita: { reading: 'quiere una cita', suggestion: 'quiero agendar una cita' },
+  get cita() { return { reading: `quiere ${V.una} ${V.cita}`, suggestion: `quiero agendar ${V.una} ${V.cita}` }; },
   humano: { reading: 'quiere hablar con una persona', suggestion: 'quiero hablar con una persona' },
   info_tienda: { reading: 'pregunta de la tienda', suggestion: '' },
 };
