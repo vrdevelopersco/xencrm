@@ -1,4 +1,5 @@
 // Notificaciones para el equipo: lo que merece atención, derivado del bus de eventos. Se guardan en memoria (últimas 100).
+import { regla } from '../reglas.js';
 import { business } from '../config.js';
 import { onEvent, emitEvent, type CrmEvent } from './events.js';
 import { getContact, type Contact } from './contacts.js';
@@ -63,7 +64,8 @@ export function startNotifications() {
     if (ev.type === 'analysis') {
       const score = Number(p.score ?? 0);
       const prev = Number(p.prevScore ?? 0);
-      if (score >= 60 && prev < 60) {
+      const caliente = regla<number>('puntaje.caliente');
+      if (score >= caliente && prev < caliente) {
         const c = p.contact as Contact | undefined;
         const why = c ? recap(c, nextAppointmentFor(c.id)) || c.summary : '';
         push('hot', ev.userId, `${nameOf(ev.userId)} está caliente (${score})`, why || 'Vale la pena darle seguimiento.');

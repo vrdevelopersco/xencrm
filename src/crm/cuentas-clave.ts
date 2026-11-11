@@ -10,6 +10,7 @@
 //
 // 🪤 Las CANDIDATAS salen de reglas igual de claras (ya compró, volvió, vino a su cita, caliente con cita, de las de
 // mayor valor). Se proponen, no se marcan solas: una lista que se llena sola deja de ser la de las que importan.
+import { regla } from '../reglas.js';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { addEvent, esPersona, getContact, listContacts, rolDe, STAGE_LABELS, type Contact } from './contacts.js';
@@ -21,15 +22,17 @@ import { valorDe } from './valor.js';
 
 const DIA = 86400_000;
 /** El plan de cuenta es una nota corta: lo que hay que saber antes de hablarle, no su historia entera. */
-export const MAX_NOTA = 600;
+export const MAX_NOTA = 600; // el de fábrica: lo que manda es la regla kam.maxNota (maxNota())
+export const maxNota = (): number => regla<number>('kam.maxNota');
 /**
  * Cuánto silencio aguanta una cuenta clave. 🪤 No son los 24 h de Seguimientos: a un cliente que ya compró no se le
  * escribe cada día. Tres semanas sin hablar ya es para mirar; mes y medio, para preocuparse.
  */
+// Los de fábrica (21 y 45); lo que manda son las reglas kam.diasAtencion y kam.diasRiesgo (Configuración › Reglas).
 export const DIAS_ATENCION = 21;
 export const DIAS_RIESGO = 45;
-/** Lo mismo que «caliente» en Hoy y en Seguimientos. */
-const CALIENTE = 60;
+const diasAtencion = (): number => regla<number>('kam.diasAtencion');
+const diasRiesgo = (): number => regla<number>('kam.diasRiesgo');
 
 export interface CuentaClave {
   id: string;
@@ -76,7 +79,7 @@ export function marcarCuentaClave(id: string, on: boolean, por: string, now = Da
 export function notaDeCuenta(id: string, nota: unknown, por: string, now = Date.now()): CuentaClave {
   if (!esCuentaClave(id)) throw new Error('esa ficha no es una cuenta clave');
   const limpia = String(nota ?? '').replace(/\r\n/g, '\n').trim();
-  if (limpia.length > MAX_NOTA) throw new Error(`el plan de cuenta va hasta ${MAX_NOTA} letras (tiene ${limpia.length})`);
+  if (limpia.length > maxNota()) throw new Error(`el plan de cuenta va hasta ${maxNota()} letras (tiene ${limpia.length})`);
   getDb().prepare('UPDATE cuentas_clave SET nota = ?, nota_por = ?, nota_at = ? WHERE user_id = ?').run(limpia, limpia ? por : null, limpia ? now : null, id);
   return esCuentaClave(id)!;
 }
@@ -94,7 +97,7 @@ export function unirCuentasClave(keepId: string, dropId: string): void {
     db.prepare('UPDATE cuentas_clave SET user_id = ? WHERE user_id = ?').run(keepId, dropId);
     return;
   }
-  const nota = [keep.nota, drop.nota].map((n) => n.trim()).filter(Boolean).join('\n').slice(0, MAX_NOTA);
+  const nota = [keep.nota, drop.nota].map((n) => n.trim()).filter(Boolean).join('\n').slice(0, maxNota());
   db.prepare('UPDATE cuentas_clave SET nota = ?, desde = ? WHERE user_id = ?').run(nota, Math.min(keep.desde, drop.desde), keepId);
   db.prepare('DELETE FROM cuentas_clave WHERE user_id = ?').run(dropId);
 }
@@ -139,7 +142,7 @@ export function saludDe(x: DatosDeSalud): { salud: Salud; motivos: Motivo[] } {
   // Lo que espera a alguien del equipo (las mismas reglas del próximo paso de cada ficha).
   if (x.paso.tipo === 'responder') {
     const espera = x.paso.cuando != null ? x.now - x.paso.cuando : 0;
-    m.push(espera >= DIA ? { nivel: 'riesgo', texto: `Escribió hace ${hace(espera)} y nadie le ha contestado` } : { nivel: 'atencion', texto: `Escribió hace ${hace(espera)}: falta contestarle` });
+    m.push(espera >= regla<number>('kam.horasSinRespuesta') * 3600_000 ? { nivel: 'riesgo', texto: `Escribió hace ${hace(espera)} y nadie le ha contestado` } : { nivel: 'atencion', texto: `Escribió hace ${hace(espera)}: falta contestarle` });
   } else if (x.paso.tipo === 'persona') m.push({ nivel: 'atencion', texto: 'Pidió hablar con una persona' });
   else if (x.paso.tipo === 'verificar') m.push({ nivel: 'atencion', texto: 'Quedó algo por averiguarle' });
   else if (x.paso.tipo === 'resultado') m.push({ nivel: 'atencion', texto: 'Falta anotar cómo le fue en la cita' });
@@ -148,15 +151,15 @@ export function saludDe(x: DatosDeSalud): { salud: Salud; motivos: Motivo[] } {
   // silencio no se cuenta dos veces.
   if (callado == null) m.push({ nivel: 'atencion', texto: 'Todavía no hay conversación con esta cuenta' });
   else if (x.paso.tipo !== 'responder') {
-    if (callado >= DIAS_RIESGO * DIA) m.push({ nivel: 'riesgo', texto: `${hace(callado)} sin hablar (más de ${DIAS_RIESGO})` });
-    else if (callado >= DIAS_ATENCION * DIA) m.push({ nivel: 'atencion', texto: `${hace(callado)} sin hablar (más de ${DIAS_ATENCION})` });
+    if (callado >= diasRiesgo() * DIA) m.push({ nivel: 'riesgo', texto: `${hace(callado)} sin hablar (más de ${diasRiesgo()})` });
+    else if (callado >= diasAtencion() * DIA) m.push({ nivel: 'atencion', texto: `${hace(callado)} sin hablar (más de ${diasAtencion()})` });
   }
 
   if (!x.responsable || !esPersona(x.responsable)) m.push({ nivel: 'atencion', texto: 'Nadie la tiene asignada' });
   if (x.falto > 0 && !x.proximaCita) m.push({ nivel: 'atencion', texto: x.falto === 1 ? 'Faltó a una cita y no tiene otra' : `Faltó a ${x.falto} citas y no tiene otra` });
 
   // Lo que va bien: también se dice, para que «Sana» no sea un silencio.
-  if (callado != null && callado < DIAS_ATENCION * DIA && x.paso.tipo !== 'responder') m.push({ nivel: 'bien', texto: callado < DIA ? 'Habló hoy' : `Habló hace ${hace(callado)}` });
+  if (callado != null && callado < diasAtencion() * DIA && x.paso.tipo !== 'responder') m.push({ nivel: 'bien', texto: callado < DIA ? 'Habló hoy' : `Habló hace ${hace(callado)}` });
   if (x.animo === 'positivo') m.push({ nivel: 'bien', texto: 'Contento en su último análisis' });
   if (x.proximaCita) m.push({ nivel: 'bien', texto: 'Tiene cita por delante' });
   if (x.etapaRol === 'ganado') m.push({ nivel: 'bien', texto: 'Ya compró' });
@@ -183,9 +186,9 @@ export function porQueCandidata(x: DatosDeCandidata): string[] {
   if (x.etapaRol === 'perdido') return [];
   const r: string[] = [];
   if (x.etapaRol === 'ganado') r.push(x.volvio > 0 ? (x.volvio === 1 ? 'Compró y volvió' : `Compró y volvió ${x.volvio} veces`) : 'Ya compró');
-  else if (x.volvio >= 2) r.push(`Volvió ${x.volvio} veces`);
-  if (x.valorAlto != null && x.valor > 0 && x.valor >= x.valorAlto) r.push('Entre el 25 % de mayor valor');
-  if (x.scoreBase >= CALIENTE && x.proximaCita) r.push('Caliente y con cita');
+  else if (x.volvio >= regla<number>('kam.volvioVeces')) r.push(`Volvió ${x.volvio} veces`);
+  if (x.valorAlto != null && x.valor > 0 && x.valor >= x.valorAlto) r.push(`Entre el ${regla<number>('kam.valorAltoPct')} % de mayor valor`);
+  if (x.scoreBase >= regla<number>('puntaje.caliente') && x.proximaCita) r.push('Caliente y con cita');
   if (x.citasCumplidas > 0) r.push(x.citasCumplidas === 1 ? 'Vino a su cita' : `Vino a ${x.citasCumplidas} citas`);
   return r;
 }
@@ -193,8 +196,9 @@ export function porQueCandidata(x: DatosDeCandidata): string[] {
 /** El valor desde el que se está en el cuarto de arriba. Con menos de 4 precios, no se dice: sería azar. */
 export function umbralDeValorAlto(valores: number[]): number | null {
   const v = valores.filter((n) => n > 0).sort((a, b) => a - b);
-  if (v.length < 4) return null;
-  return v[Math.floor(v.length * 0.75)]!;
+  if (v.length < regla<number>('kam.valorAltoMinPrecios')) return null;
+  // El tramo de arriba (25 % de fábrica): desde la posición que deja ese porcentaje por encima.
+  return v[Math.min(v.length - 1, Math.floor(v.length * (1 - regla<number>('kam.valorAltoPct') / 100)))]!;
 }
 
 // ---------- el panel ----------
@@ -312,7 +316,7 @@ export function panelKam(now = Date.now()): PanelKam {
     if (rol === 'perdido') continue;
     const valor = valores.get(c.id) ?? 0;
     // La historia lee la conversación: solo se pide para quien puede cumplir alguna regla que la necesita.
-    const necesita = rol === 'ganado' || ctx.proximaCita.has(c.id) || c.scoreBase >= CALIENTE;
+    const necesita = rol === 'ganado' || ctx.proximaCita.has(c.id) || c.scoreBase >= regla<number>('puntaje.caliente');
     const h = necesita ? historiaDe(c.id, { ahora: now, etapa: c.stage }) : null;
     const motivos = porQueCandidata({
       etapaRol: rol,
@@ -358,6 +362,6 @@ export function panelKam(now = Date.now()): PanelKam {
     },
     moneda: business.business.currency || 'COP',
     equipo: [...equipo].sort((a, b) => a.localeCompare(b, 'es')),
-    umbrales: { diasAtencion: DIAS_ATENCION, diasRiesgo: DIAS_RIESGO },
+    umbrales: { diasAtencion: diasAtencion(), diasRiesgo: diasRiesgo() },
   };
 }

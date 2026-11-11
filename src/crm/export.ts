@@ -1,5 +1,6 @@
 // Sacar los datos del CRM a una hoja de cálculo: contactos y citas. Es del negocio, así que tiene que poder
 // llevárselos cuando quiera. Separador ";" y BOM, que es lo que Excel en español abre bien de una vez.
+import { regla } from '../reglas.js';
 import { listAppointments, tzParts } from './appointments.js';
 import { contactNumber, listContacts, STAGE_LABELS, type Contact } from './contacts.js';
 import { CAMPOS_DE_CONTACTO, camposEditables, etiquetaDeCampo } from './ficha.js';
@@ -30,7 +31,7 @@ export function stamp(ts: number | null | undefined): string {
   return `${pad(p.d)}/${pad(p.m)}/${p.y} ${h12}:${pad(p.mm)} ${p.hh < 12 ? 'a. m.' : 'p. m.'}`;
 }
 
-const TEMP = (score: number) => (score >= 60 ? 'caliente' : score >= 30 ? 'tibio' : 'frío');
+const TEMP = (score: number) => (score >= regla<number>('puntaje.caliente') ? 'caliente' : score >= regla<number>('puntaje.tibio') ? 'tibio' : 'frío');
 const data = (c: Contact, key: string) => {
   const v = c.data[key];
   return v === null || v === undefined ? '' : String(v);

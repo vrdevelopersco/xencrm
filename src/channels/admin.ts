@@ -90,6 +90,7 @@ import { contextoDelPaso, proximoPaso } from '../crm/proximo.js';
 import { guardarFijados, leerFijados, reemplazarEnFijados } from '../crm/fijados.js';
 import { esCuentaClave, marcarCuentaClave, notaDeCuenta, panelKam } from '../crm/cuentas-clave.js';
 import { sentimiento } from '../crm/sentimiento.js';
+import { cambiarReglas, ponerRegla, regla, registro, valoresDeReglas } from '../reglas.js';
 
 /**
  * Lo que el tablero enseña de cada contacto además de la ficha: temperatura, recap (hechos de la ficha + próxima
@@ -228,7 +229,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     return c.json({
       total: todos.length,
       abiertos: abiertos.length,
-      calientes: abiertos.filter((x) => x.score >= 60).length,
+      calientes: abiertos.filter((x) => x.score >= regla<number>('puntaje.caliente')).length,
       mios: yo ? todos.filter((x) => esDe(x, yo)).length : 0,
     });
   });
@@ -817,6 +818,22 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     return c.json(await probarProveedor(id));
   });
 
+  /**
+   * Las reglas y umbrales (src/reglas.ts): cada número que decide algo de negocio, con su valor de fábrica, lo que
+   * trae el archivo del cliente, lo que se puso desde el tablero y cuál manda. Leerlas no es secreto (el tablero
+   * pinta con ellas); cambiarlas es de quien administra XENCRM: el candado cierra el PUT (no está en su lista de lo
+   * que se puede cambiar) y la consola se lo deja solo al super-admin (consola.ts, SOLO_SUPER_CAMBIA).
+   */
+  app.get('/admin/api/reglas', (c) => c.json(registro()));
+  app.get('/admin/api/reglas/valores', (c) => c.json(valoresDeReglas()));
+  app.put('/admin/api/reglas', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { cambios?: Record<string, unknown> };
+    if (!body.cambios || typeof body.cambios !== 'object' || Array.isArray(body.cambios)) return c.json({ error: 'manda { cambios: { "<id>": valor } } (null vuelve al de fábrica)' }, 400);
+    const r = cambiarReglas(body.cambios);
+    if (!r.ok) return c.json({ error: 'hay reglas que no valen: no se guardó ninguna', errores: r.errores }, 400);
+    return c.json({ ok: true, cambiadas: r.cambiadas, ...registro() });
+  });
+
   app.put('/admin/api/motores/tope', async (c) => {
     try {
       const b = (await c.req.json().catch(() => ({}))) as { tope?: number | string | null };
@@ -1389,7 +1406,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    */
   app.get('/admin/api/tiempos', (c) => {
     const dias = Math.min(90, Math.max(1, Number(c.req.query('dias') ?? 14) || 14));
-    const acuerdoMin = getSetting('sla.minutos', 15);
+    const acuerdoMin = regla<number>('atencion.acuerdoMinutos');
     const r = resumenTiempos({ desde: Date.now() - dias * 86400_000, acuerdoMin });
     // Quien espera se enseña con su nombre y su canal: una lista de números no sirve para ir a atender a nadie.
     const esperando = r.esperando.map((e) => {
@@ -1403,7 +1420,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const body = (await c.req.json().catch(() => ({}))) as { minutos?: number };
     const minutos = Number(body.minutos);
     if (!Number.isFinite(minutos) || minutos < 1 || minutos > 10080) return c.json({ error: 'pon los minutos, entre 1 y una semana' }, 400);
-    setSetting('sla.minutos', Math.round(minutos));
+    // La misma regla de Configuración › Reglas y umbrales (atencion.acuerdoMinutos, llave sla.minutos).
+    ponerRegla('atencion.acuerdoMinutos', Math.round(minutos));
     return c.json({ ok: true, minutos: Math.round(minutos) });
   });
 
@@ -1412,7 +1430,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * por persona lo que se puede atribuir, y cómo van las metas en la semana o el mes del calendario. Sin modelo y sin
    * red (crm/kpis.ts). Es del que vende: el candado lo deja leer.
    */
-  app.get('/admin/api/kpis', (c) => c.json(calcularKpis({ dias: Number(c.req.query('dias') ?? 30) || 30, acuerdoMin: getSetting('sla.minutos', 15) })));
+  app.get('/admin/api/kpis', (c) => c.json(calcularKpis({ dias: Number(c.req.query('dias') ?? 30) || 30, acuerdoMin: regla<number>('atencion.acuerdoMinutos') })));
 
   /**
    * Las metas. Leerlas es de todos (cada quien sabe a qué se apunta); ponerlas es de quien administra XENCRM: con el
@@ -1444,7 +1462,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * A quién avisar cuando alguien lleva esperando de más. Es lo único que funciona con el navegador cerrado, y
    * por eso va por WhatsApp: es lo que la gente mira.
    */
-  app.get('/admin/api/avisos', (c) => c.json({ numeros: aQuienAvisar(), acuerdoMin: getSetting('sla.minutos', 15), pendientes: loQueHayQueAvisar().length }));
+  app.get('/admin/api/avisos', (c) => c.json({ numeros: aQuienAvisar(), acuerdoMin: regla<number>('atencion.acuerdoMinutos'), pendientes: loQueHayQueAvisar().length }));
 
   app.put('/admin/api/avisos', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { numeros?: unknown };
@@ -1495,7 +1513,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const withUpcoming = new Set(listAppointments({ from: now, status: 'confirmada', limit: 1000 }).map((a) => a.userId));
     // Cita que ya pasó y sigue sin resultado: esos están en "¿Cómo les fue?", no en "sin seguimiento".
     const waitingOutcome = new Set(
-      listAppointments({ from: now - 14 * 86400_000, to: now, status: 'confirmada', limit: 1000 })
+      listAppointments({ from: now - regla<number>('seg.diasEsperandoResultado') * 86400_000, to: now, status: 'confirmada', limit: 1000 })
         .filter((a) => a.endsAt < now)
         .map((a) => a.userId),
     );
@@ -1506,14 +1524,14 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       resumen: {
         activas: open.length,
         nuevos: all.filter((x) => (x.firstSeen ?? 0) >= startOfDay.getTime()).length,
-        calientes: open.filter((x) => x.score >= 60).length,
+        calientes: open.filter((x) => x.score >= regla<number>('puntaje.caliente')).length,
         citasHoy: citasHoy.length,
       },
       // Lo que hay en el embudo, en dinero. Ver crm/valor.ts para de dónde sale y por qué 0 no es «no vale».
       embudo: valorDelEmbudo(),
       appointments: citasHoy.map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt), { withDay: false }), remindAt: reminderTime(a.startsAt, a.sede) })),
       // Citas que ya pasaron y siguen "confirmadas": su resultado (vino, no vino, compró) es lo que calibra el puntaje.
-      past: listAppointments({ from: now - 14 * 86400_000, to: now, status: 'confirmada' })
+      past: listAppointments({ from: now - regla<number>('seg.diasEsperandoResultado') * 86400_000, to: now, status: 'confirmada' })
         .filter((a) => a.endsAt < now)
         .map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })),
       // Recordatorios que no se pudieron enviar solos: el texto y el número para hacerlo desde el teléfono.
@@ -1527,7 +1545,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       hot: open
         // scoreBase: el puntaje de la conversación, sin el descuento por silencio. Justamente los que fueron buenos
         // prospectos y se enfriaron por falta de seguimiento son los que hay que retomar.
-        .filter((x) => x.scoreBase >= 60 && !withUpcoming.has(x.id) && !waitingOutcome.has(x.id) && (x.lastMessageAt ?? 0) < now - 24 * 3600_000 && !isSnoozed(x, now))
+        .filter((x) => x.scoreBase >= regla<number>('puntaje.caliente') && !withUpcoming.has(x.id) && !waitingOutcome.has(x.id) && (x.lastMessageAt ?? 0) < now - regla<number>('seg.horasSinSeguimiento') * 3600_000 && !isSnoozed(x, now))
         .slice(0, 20),
       upcoming: listAppointments({ from: endOfDay, to: endOfDay + 3 * 86400_000, status: 'confirmada' }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)), remindAt: reminderTime(a.startsAt, a.sede) })),
       // Lo que el bot no supo y prometió verificar: el cliente espera la respuesta del equipo.

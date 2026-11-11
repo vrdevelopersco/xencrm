@@ -9,6 +9,7 @@
 // 🪤 Ningún modelo aquí. Una lista son quinientas fichas cada vez que se abre: con un modelo serían quinientas
 // llamadas, y la frase cambiaría de una vez a otra sin que hubiera cambiado nada.
 
+import { regla } from '../reglas.js';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { listAppointments } from './appointments.js';
@@ -42,7 +43,6 @@ export interface ContextoPaso {
 }
 
 const DIA = 86400_000;
-const RETOMAR_DESDE = 60; // el mismo umbral de «caliente» de Hoy y de Seguimientos
 
 /** La fecha en el huso del negocio, para decir «hoy», «mañana» o «el jueves 16 oct» sin equivocarse de día. */
 function diaLocal(ts: number): string {
@@ -113,11 +113,13 @@ export function proximoPaso(c: Contact, ctx: ContextoPaso): ProximoPaso {
   }
 
   const callado = now - ultimo;
-  if (callado >= DIA) {
+  // Las mismas reglas de la Lista de trabajo: desde cuántas horas callado es seguimiento, y desde qué puntaje se
+  // «retoma» (el de caliente) en vez de «escribirle».
+  if (callado >= regla<number>('seg.horasSinSeguimiento') * 3600_000) {
     const n = Math.max(1, Math.round(callado / DIA));
     // Las mismas dos frases de Seguimientos, con el puntaje sin el descuento por silencio: justo los que fueron
     // buenos y se enfriaron por falta de seguimiento son los que hay que retomar.
-    return c.scoreBase >= RETOMAR_DESDE
+    return c.scoreBase >= regla<number>('puntaje.caliente')
       ? paso('retomar', `Retomar: ${dias(n)} sin escribir`, true, ultimo)
       : paso('escribir', `Escribirle: ${dias(n)} sin escribir`, false, ultimo);
   }

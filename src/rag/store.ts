@@ -49,6 +49,14 @@ let db: DatabaseSync | undefined;
 // por fuerza bruta tarda milisegundos y evita dependencias nativas.
 let vectors: { id: string; vec: Float32Array }[] = [];
 
+/**
+ * Si la base ya está abierta. Para quien lee un ajuste de paso (src/reglas.ts) sin querer ser quien la abra: una
+ * función pura que pide una regla no debe crear `data/xencrm.db` en una prueba que no usa base.
+ */
+export function baseAbierta(): boolean {
+  return db !== undefined;
+}
+
 export function getDb(): DatabaseSync {
   if (db) return db;
   mkdirSync(dirname(env.dbPath), { recursive: true });

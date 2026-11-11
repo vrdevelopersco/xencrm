@@ -4,6 +4,7 @@
 //
 // Los tramos son un estimado hecho con lo que hay (10 conversaciones reales, 3 con cita, 1 venta): el orden importa
 // más que el número exacto. Se revisa cuando haya ~20 citas con resultado marcado en Hoy › ¿Cómo les fue?
+import { regla } from '../reglas.js';
 import { rolDe } from './contacts.js';
 import type { ScoreFactor, Stage } from './contacts.js';
 
@@ -15,10 +16,12 @@ export function silencePenalty(lastMessageAt: number | null, stage: Stage, now =
   const rol = rolDe(stage);
   if (rol === 'cita' || rol === 'ganado' || !lastMessageAt) return 0;
   const days = (now - lastMessageAt) / DAY;
-  if (days < 3) return 0;
-  if (days < 7) return 10;
-  if (days < 14) return 25;
-  return 40;
+  // Los tramos son reglas (grupo Puntaje): de fábrica, 3 · 7 · 14 días y 10 · 25 · 40 puntos.
+  const t = (k: string) => regla<number>(`puntaje.silencio.${k}`);
+  if (days < t('dias1')) return 0;
+  if (days < t('dias2')) return t('descuento1');
+  if (days < t('dias3')) return t('descuento2');
+  return t('descuento3');
 }
 
 /** "4 días", "más de una semana", "3 semanas": para decir en la ficha por qué bajó. */

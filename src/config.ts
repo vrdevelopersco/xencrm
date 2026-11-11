@@ -347,6 +347,12 @@ export const BusinessConfigSchema = z.object({
   evalFile: z.string().default('data/scenarios.json'),
   /** Datos de demostración (pnpm seed). */
   seedFile: z.string().optional(),
+  /**
+   * Las reglas y umbrales de este cliente (src/reglas.ts): `{ "kam.diasAtencion": 30 }`. Es la capa del medio: manda
+   * sobre el valor de fábrica y pierde contra lo que se cambie desde el tablero (Configuración › Reglas y umbrales).
+   * Lo que no vale para su regla se ignora con un aviso en esa pantalla, no tumba el arranque.
+   */
+  reglas: z.record(z.string(), z.unknown()).default({}),
 });
 export type BusinessConfig = z.infer<typeof BusinessConfigSchema>;
 

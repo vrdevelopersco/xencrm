@@ -10,6 +10,7 @@
 // política del negocio, cambia, y deducirla de lo que alguien contestó una vez es la forma de dejar escrito en
 // piedra un plazo que ya no se cumple. Por eso un tema nace en `borrador`, sin respuesta, y no se usa para nada
 // hasta que una persona la escribe y la marca lista. Ver docs/aprender-del-historial.md.
+import { regla } from '../reglas.js';
 import { embed } from '../llm/embeddings.js';
 import { getDb } from '../rag/store.js';
 
@@ -38,10 +39,10 @@ export interface RespuestaRapida {
  * que no preguntó, con la seguridad de una respuesta aprobada; y en «Contesta» eso sale sin que nadie lo mire.
  * Es mucho mejor no reconocer una pregunta —entonces contesta el modelo, como siempre— que reconocerla mal.
  */
-const PARECIDO_MINIMO = 0.82;
+// 82 % de fábrica: manda la regla rapidas.parecidoPct (Configuración › Reglas y umbrales).
 
 /** Más largo que esto no es una pregunta de las de siempre: es un caso, y los casos no se contestan con plantilla. */
-const LARGO_MAXIMO = 320;
+// 320 letras de fábrica: manda la regla rapidas.largoMaximo.
 
 let lista = false;
 function tabla() {
@@ -208,7 +209,7 @@ export interface Acierto {
  */
 export async function buscarRespuestaRapida(texto: string): Promise<Acierto | null> {
   const limpio = texto.trim();
-  if (!limpio || limpio.length > LARGO_MAXIMO) return null;
+  if (!limpio || limpio.length > regla<number>('rapidas.largoMaximo')) return null;
   if (!cuantasListas()) return null;
 
   const filas = tabla()
@@ -238,7 +239,7 @@ export async function buscarRespuestaRapida(texto: string): Promise<Acierto | nu
     const sim = parecido(vec, v);
     if (!mejor || sim > mejor.sim) mejor = { id: f.id, texto: f.texto, sim };
   }
-  if (!mejor || mejor.sim < PARECIDO_MINIMO) return null;
+  if (!mejor || mejor.sim < regla<number>('rapidas.parecidoPct') / 100) return null;
   const r = respuestaRapida(mejor.id);
   return r ? { respuesta: r, parecido: mejor.sim, comoLoPreguntan: mejor.texto } : null;
 }

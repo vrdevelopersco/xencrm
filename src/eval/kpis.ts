@@ -155,7 +155,7 @@ const asesor = await app.request('/admin/api/metas', { method: 'PUT', headers: {
 check('con el candado, un asesor NO cambia las metas (403) y no se borran', asesor.status === 403 && leerMetas().citas?.valor === 25);
 check('pero sí las lee, y lee los KPIs (son del que vende)', (await app.request('/admin/api/metas', { headers: { ...T, 'x-xencrm-rol': 'asesor' } })).status === 200 && (await app.request('/admin/api/kpis', { headers: { ...T, 'x-xencrm-rol': 'asesor' } })).status === 200);
 check('el freno del candado: PUT metas cerrado para admin y asesor; para el super, abierto', frenoDelCandado('metas', 'PUT', 'admin', 'facil') !== null && frenoDelCandado('metas', 'PUT', 'asesor', 'facil') !== null && frenoDelCandado('metas', 'PUT', 'super', 'facil') === null);
-check('🪤 por la consola, las metas las cambia solo el super-admin (también fuera del modo fácil)', /const SOLO_SUPER_CAMBIA = \/\^\(retencion\|metas\)\(\\\/\|\$\)\/;/.test(consola), consola.match(/const SOLO_SUPER_CAMBIA = .*/)?.[0] ?? '');
+check('🪤 por la consola, las metas las cambia solo el super-admin (también fuera del modo fácil)', /const SOLO_SUPER_CAMBIA = \/\^\([^)]*\bmetas\b[^)]*\)\(\\\/\|\$\)\/;/.test(consola), consola.match(/const SOLO_SUPER_CAMBIA = .*/)?.[0] ?? '');
 
 console.log('— Lo que promete la pantalla');
 const bloque = js.slice(js.indexOf('// ===== XEN · KPIs y metas'), js.indexOf('// (fin de XEN · KPIs y metas)'));

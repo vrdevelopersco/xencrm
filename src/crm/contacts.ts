@@ -1,4 +1,5 @@
 // Ficha de prospecto (contacto) sobre la tabla users, con etapa, puntaje explicable y modo humano.
+import { regla } from '../reglas.js';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { decayed, silencePenalty } from './score.js';
@@ -332,7 +333,7 @@ export function stats() {
   // Calientes de hoy: el puntaje con el descuento por silencio, igual que en las listas. Solo se leen las tres
   // columnas que hacen falta: construir la ficha entera de cada contacto costaba 130 ms con 20.000.
   const hot = (db.prepare('SELECT score, stage, last_message_at FROM users WHERE archived = 0').all() as { score: number; stage: Stage; last_message_at: number | null }[]).filter(
-    (r) => Number(r.score) - silencePenalty(r.last_message_at, r.stage) >= 60,
+    (r) => Number(r.score) - silencePenalty(r.last_message_at, r.stage) >= regla<number>('puntaje.caliente'),
   ).length;
   const human = (db.prepare('SELECT COUNT(*) n FROM users WHERE human_mode = 1 AND archived = 0').get() as { n: number }).n;
   const unread = (db.prepare('SELECT COALESCE(SUM(unread), 0) n FROM users WHERE archived = 0').get() as { n: number }).n;

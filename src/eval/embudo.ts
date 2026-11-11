@@ -113,7 +113,8 @@ console.log('— Leído de la base, y por la ruta del tablero');
 
 console.log('— La cuenta del embudo en el tablero (calcularEmbudo)');
 {
-  const calcularEmbudo = new Function(`${funcion('calcularEmbudo')}; return calcularEmbudo;`)() as (l: unknown[], p: unknown, e: unknown[]) => {
+  // R: las reglas del tablero (src/reglas.ts); aquí, sin red, el valor de fábrica, como en el tablero antes de leerlas.
+  const calcularEmbudo = new Function(`var R = function (id, d) { return d; }; ${funcion('calcularEmbudo')}; return calcularEmbudo;`)() as (l: unknown[], p: unknown, e: unknown[]) => {
     total: number; tramos: { id: string; llegaron: number; ahora: number; valor: number; sinPrecio: number; perdidos: number; pasan: number | null }[]; peor: number | null;
     perdidos: { total: number; sinSaber: number; motivos: { motivo: string; n: number }[] }; sinHistoria: number; abiertos: number; valorAbierto: number; sinPrecioAbierto: number; ganados: number;
   };

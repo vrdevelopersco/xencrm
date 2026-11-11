@@ -7,6 +7,7 @@
 // 🪤 Todo lo de aquí se DEDUCE de lo que ya está guardado —citas y mensajes— y no se escribe en ninguna parte.
 // Un campo «amagó» que alguien tiene que marcar a mano se queda sin marcar, y entonces miente: dice que no pasó
 // cuando lo que pasa es que nadie lo apuntó. Calculado, siempre está al día y nadie tiene que acordarse.
+import { regla } from '../reglas.js';
 import { listAppointments } from './appointments.js';
 import { getMessages } from '../agent/memory.js';
 import { rolDe, type Stage } from './contacts.js';
@@ -47,7 +48,7 @@ export interface ComoVa {
 
 const DIA = 86400_000;
 /** Lo que separa una pausa de una vuelta. Catorce días: menos de eso es una conversación que respira. */
-const SILENCIO = 14 * DIA;
+const silencio = (): number => regla<number>('contactos.volvioDias') * DIA; // 14 días de fábrica
 
 export function historiaDe(userId: string, opts: ComoVa = {}): Historia {
   const ahora = opts.ahora ?? Date.now();
@@ -56,7 +57,7 @@ export function historiaDe(userId: string, opts: ComoVa = {}): Historia {
 
   let volvio = 0;
   for (let i = 1; i < msgs.length; i++) {
-    if (msgs[i]!.ts - msgs[i - 1]!.ts >= SILENCIO) volvio++;
+    if (msgs[i]!.ts - msgs[i - 1]!.ts >= silencio()) volvio++;
   }
 
   const cumplidas = citas.filter((a) => a.status === 'completada').length;
