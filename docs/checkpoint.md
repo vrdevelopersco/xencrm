@@ -27,7 +27,14 @@ fixture de las pruebas («Atelier Demo», `src/eval/fixtures/boutique/`). Hay un
 Mantenimientos y actualizaciones), y **todo es configurable** en tres capas (fábrica → `xencrm.config.json` →
 tablero): Reglas y umbrales (64 reglas), SLA y tickets, Mantenimientos y actualizaciones, y el vocabulario de la
 interfaz (`interfaz`: «demo», «turno»…). Detalle en `xencrm.md` › «Servicio y el ejemplo de XENTRIS LLC».
-**Batería: 3433 bien, 0 fallas.**
+**Batería: 3433 bien, 0 fallas.** Último commit de código: `2d7c011` (la unión de Tickets y SLA); después,
+solo documentación y capturas.
+
+**Dónde está cada cosa escrita**: `xencrm.md` (la referencia de XENCRM: piel, glosario, mapa, cada pantalla, Servicio,
+la configuración en tres capas y lo abierto), `guia-del-tablero.md` (para entrenar al equipo: ya con el menú por
+áreas, Embudo y vistas, Cuentas clave, Sentimiento, KPIs, Optimización, Servicio, Modelos de IA y «Todo es
+configurable»), `arquitectura.md` (módulos, tablas y reglas de XENCRM, y cómo corren las pruebas), el README y la
+bitácora. Las capturas, en `capturas/xencrm-next-evolution/` (21 pantallas a 1440 y a 390, en claro).
 
 **Cómo verlo en local, sin tocar nada real**: una base aparte y sin llaves —
 `DB_PATH=<carpeta temporal>/demo.db PORT=3711 ADMIN_TOKEN=<inventado> OPENAI_API_KEY= ANTHROPIC_API_KEY=

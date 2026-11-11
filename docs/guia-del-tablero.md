@@ -16,11 +16,25 @@ nada, porque ya entraste allá.
 **Si eres el negocio**, abre la dirección del tablero (termina en `/admin`) desde el computador o el celular y
 escribe el token que te dieron. En el computador las secciones van en la barra lateral; en el celular, abajo.
 
-Son cinco: **Hoy**, **Conversaciones**, **Calendario**, **Clientes** y **Análisis**. Las dos últimas tienen
-pestañas arriba de la pantalla: en Clientes, *Lista*, *Por etapa* y *Seguimientos*; en Análisis, *Resumen* y
-*Ventas*. Cada una se abre en la pestaña donde la dejaste. Al pie van la campana y **Configuración**, que tiene lo de
-tu negocio (Perfil del negocio, El negocio, El asistente, Canales, Lo que sabe), lo tuyo (tu nombre, el tema claro u
-oscuro, el sonido y **Salir**) y la Ayuda.
+El menú está ordenado como una suite de CRM (como Dynamics 365), en **áreas**. Abajo del menú, el botón **Área**
+cambia entre ellas:
+
+| Área | Grupo | Pantallas |
+|---|---|---|
+| **Ventas** | Mi trabajo | **Inicio** · **Bandeja omnicanal** · **Lista de trabajo** · **Citas** (o como las llame tu negocio: en XENTRIS, *Demos*) |
+| | Clientes | **Contactos** · **Cuentas clave** |
+| | Ventas | **Embudo** · **Tratos** · **Ventas** |
+| | Rendimiento | **KPIs y metas** · **Optimización de ventas** · **Analítica** |
+| **Servicio** | Mi trabajo · Clientes · Servicio | Bandeja omnicanal · **Tickets** · Contactos · Cuentas clave · **SLA** · **Mantenimientos y actualizaciones** |
+| **Configuración** | El negocio · El asistente y la IA · Canales · Servicio · Sistema | Guía de inicio, Perfil, El negocio, El asistente, Modelos de IA, Lo que sabe, Canales, SLA y tickets, Mantenimientos y actualizaciones, Reglas y umbrales, Trazabilidad y Ayuda (lo que puede ver cada quien) |
+
+Arriba del menú van **Recientes** (lo último que abriste) y **Fijados**. El **≡** de arriba lo contrae a íconos. Al
+pie, **Ajustes** (tu nombre, el tema claro u oscuro, el sonido, el modo fácil) y tu cuenta, con **Salir**. En el
+celular, el menú se abre desde la barra de arriba.
+
+Si venías de antes, los nombres cambiaron: *Hoy* es **Inicio**; *Conversaciones*, **Bandeja omnicanal**; *Clientes ›
+Lista*, **Contactos**; *Por etapa*, **Tratos**; *Seguimientos*, **Lista de trabajo**; *Análisis*, **Analítica**; y tomar
+una conversación es **Pausar automatización**.
 
 **Perfil** y **El negocio** no son pantallas: abren un **modal con dos pestañas** encima de lo que estés haciendo,
 y al cerrarlo vuelves donde estabas.
@@ -66,7 +80,7 @@ no responde»). Cuando lo obligatorio está hecho, dice **Todo listo** y Hoy dej
 revisar al abrirla, al volver a la pestaña y al cerrar el perfil o El negocio. El **tutorial** de Ayuda sigue ahí:
 el tutorial explica el tablero; la guía deja listo el negocio.
 
-## Hoy
+## Inicio
 
 Lo que hay que atender, ordenado por lo que cuesta dejarlo esperando. Cada fila abre la conversación.
 
@@ -97,12 +111,16 @@ Si una conversación llegó por **WhatsApp oficial** y pasaron más de 24 horas 
 WhatsApp no deja escribirle. El tablero lo advierte antes de que escribas. Toca esperar a que el cliente vuelva a
 escribir o usar una plantilla aprobada por Meta.
 
-## Conversaciones
+## Bandeja omnicanal
 
-A la izquierda la lista, con los filtros encima: *Todos*, *Sin leer*, *Con una persona*, *Prospectos*,
-*Interesados*, *Con cita* y *Archivados*. Al final va **Marcar todo como leído**, para el día que se atendió todo
-desde el teléfono. En el centro, el chat. A la derecha, **el perfil de la persona**: quién es, qué quiere, lo que
-contó y su historia, para atenderla sin tener que leerse la conversación entera. En el celular se abre con el
+Todos los canales (WhatsApp, el chat del sitio) en un solo sitio. A la izquierda la lista: cada conversación con su
+avatar y la insignia de su canal, la hora (en verde si hay algo sin leer) y lo que dijo. Encima, **Mías · Sin asignar
+· Todas** y el desplegable **Todos los estados** (*Sin leer*, *Prospectos* y, en el modo completo, *Con una
+persona*, *Interesados*, *Con cita* y *Archivados*). El ✓✓ es **Marcar todo como leído**, para el día que se atendió
+todo desde el teléfono. En el centro, el chat. A la derecha, **la ficha del contacto**: quién es, cómo contactarlo,
+a quién está asignado, su etapa, el próximo paso, «Lo que busca» (en violeta: lo resumió la IA), lo que contó y su
+historia, para atenderlo sin leerse la conversación entera. Desde ahí, **Crear ticket** si es un cliente con un
+problema. En el celular se abre con el
 botón **Ficha** de arriba del chat, y **‹ Volver a la conversación** te devuelve.
 
 **¿Por qué contestó eso?** Si administras, debajo de cada respuesta del asistente hay un **¿por qué?**. Dice qué
@@ -114,8 +132,12 @@ respuesta te parece rara.
 escribe "facturación electrónica" y salen las conversaciones donde aparece, cada una con el pedacito donde se dijo y quién lo
 dijo.
 
-**Quién responde.** Arriba del chat está el switch **Responde: Xen | Tú**. En *Tú*, el asistente no contesta y tú
-escribes; en *Xen*, vuelve a responder solo. Escribir a mano también te pasa la conversación. En WhatsApp el
+**Quién responde.** Arriba del chat, **Pausar automatización** detiene al asistente en esta conversación y la
+tomas tú (queda «Automatización pausada · la lleva Laura»); **Reanudar automatización** se la devuelve. Escribir a
+mano también la pausa. Al lado, **Asignado a** dice de quién es el cliente (no es lo mismo que quién contesta ahora).
+
+**Nota interna.** El cajón de escribir tiene dos pestañas: **Enviar mensaje** (le llega al cliente) y **Nota
+interna** (se vuelve arena y dice «Solo la ve el equipo»: queda en la historia de la ficha y el cliente no la ve). En WhatsApp el
 cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo número.
 
 **Cuando la llevas tú, Xen acompaña.** Si el cliente pregunta algo que Xen sabe —un precio, el horario, si hacen
@@ -181,7 +203,7 @@ contestan lo mismo dos veces. El aviso desaparece solo cuando el otro cierra o s
 
 Cada respuesta va firmada con el nombre de quien la escribió, así que en el chat se ve quién dijo qué.
 
-## Calendario
+## Citas
 
 La semana con las citas. Toca una para ver el detalle o cambiar su estado (completada, no asistió, cancelada), o
 agenda una a mano. En el celular abre en **Agenda**, la lista de la semana; con **Semana** ves la cuadrícula (se
@@ -194,13 +216,13 @@ ficha, y agendar a mano pide la sede: sin ella la cita no se agenda. La ficha qu
 Los bloques *Ocupado* también son de la sede que miras: el calendario del dueño ocupa todas, y si una sede tiene el
 suyo, ese solo ocupa esa sede. Al crear una persona a mano en Clientes, se escoge a qué sede llegó.
 
-## Clientes
+## Contactos y Tratos
 
 Todas las personas que te han escrito, en tres pestañas: **Lista** para buscar a alguien, **Por etapa** para
 moverlas por el embudo y **Seguimientos** para retomar a quien se quedó callado. Quien escribe por el chat del sitio
 sin dar su nombre sale como *Visitante del sitio*, con cuatro letras para distinguirlo de otro.
 
-### Por etapa
+### Tratos (por etapa)
 
 Una columna por etapa. Las etapas son **las de tu negocio**: XENTRIS va *Nuevo → Calificado → Evaluando → Demo
 agendada → Ganado*; una boutique, *Nuevo → Conversando → Interesado → Cita agendada → Vendido*; una financiera, *Nuevo → En revisión → Con un asesor → Resuelto*; una litografía,
@@ -224,7 +246,7 @@ la ficha.
 Con varias sedes, arriba se escoge cuál mirar, y cada tarjeta dice la suya. **Sin sede todavía** junta a quienes no
 han escogido: es donde hay que ir a preguntarles.
 
-### Lista
+### Contactos (la lista)
 
 El directorio de todas las personas, para buscar a alguien y saber de un vistazo qué pasa con cada una. Arriba,
 pestañas con su número: *Todos*, *Míos* (las que llevas tú), *🔥 Calientes*, *Prospectos*, *Clientes* y
@@ -242,12 +264,43 @@ cambia ahí mismo. Arriba, **3 de 23** pasa a la siguiente de la lista sin volve
 teclado. **Fijar** la deja en la barra lateral, debajo de las listas. Los fijados son tuyos: cada quien fija a los
 suyos. Se guardan con el nombre con el que respondes, así que te siguen a otro computador o al celular.
 
-### Seguimientos
+### Lista de trabajo
 
 Quienes llevan días sin escribir y valdría la pena retomar, los calientes primero. Si hay calientes esperando, la
 sección Clientes lo dice con un número en rojo.
 
-## Análisis
+### Las vistas y los filtros
+
+Contactos, Tratos y Embudo comparten la misma forma de filtrar, como en Dynamics:
+
+- **Vistas** arriba, cada una con su número: *Todos*, *Tratos abiertos*, *Mis tratos*, *Sin asignar*, *Calientes*,
+  *Con cita*, *Ganados este mes*, *Perdidos este mes* (en Contactos, además, los grupos de siempre).
+- **Filtros** abre un panel: etapa, asignado a, canal, temperatura (en el modo completo), valor desde y hasta,
+  última actividad y un dato captado. Cada condición queda como una píldora con **×** para quitarla.
+- **Guardar vista** le pone nombre a lo que tienes filtrado (hasta 20 por persona; se guardan en tu navegador).
+- En **Tratos** puedes cambiar entre **Tablero** y **Lista**.
+
+## Embudo
+
+Cuántos tratos **llegaron** a cada etapa (o más allá), qué parte pasa a la siguiente, cuántos están **hoy** en cada
+una y cuánto valen. Donde más se queda la gente lo marca «Aquí se quedan más» (cuando hay suficientes tratos para
+decirlo). A la derecha, **Dónde se caen**: los perdidos por la etapa en que estaban y sus motivos. Tocar una etapa
+abre Tratos filtrado por ella. Arriba eliges desde cuándo entraron los tratos que se cuentan.
+
+## Cuentas clave
+
+Los clientes que más importan (el *key account management*). Una cuenta se marca con la **estrella** de su ficha o
+desde las **candidatas** que propone la pantalla (ya compró, compró y volvió, vino a su cita, caliente con cita,
+entre los de mayor valor), cada una con su porqué. Nunca se marcan solas.
+
+Cada cuenta muestra quién la lleva (**KAM**: el «Asignado a»), lo vendido y lo abierto, el último trato con su próximo
+paso, el ánimo y el interés del último análisis, y su **salud**: *Sana*, *Atención* o *En riesgo*, con el motivo al
+tocarla (por ejemplo, «escribió hace más de 24 h y nadie contestó», «más de 45 días sin hablar», «molesto en su
+último análisis»). El **plan de cuenta** se escribe ahí mismo. Arriba, las cifras: cuántas, su valor, en riesgo y
+sin KAM. Los días y las reglas que deciden la salud se cambian en **Reglas y umbrales**.
+
+
+## Analítica
 
 En dos pestañas: **Resumen** y **Ventas** (lo vendido en 30 días, 90 días o un año). En Resumen, los números del
 negocio: embudo por etapa, ánimo de los clientes y más. Cada número abre la lista de conversaciones
@@ -273,6 +326,73 @@ agendadas. La primera semana no hay con qué comparar y lo dice, en vez de inven
 
 🪤 Los días y las horas se cuentan en la **zona horaria del negocio** (la de Configuración › El negocio), no en
 la del servidor: un mensaje de las 11 de la noche no puede aparecer al día siguiente.
+
+### Sentimiento
+
+La segunda pestaña de Analítica. Sale del análisis de cada conversación (sin preguntarle a nadie más):
+
+- **Interés**, de más a menos: 🤩 *Quiere comprar* · 🙂 *Interés claro* · 🤔 *Curiosidad* · 😶 *Sin interés*.
+- **Ánimo**: 😊 *Contento* · 😐 *Neutral* · 😠 *Molesto*.
+- Toca un nivel y salen esas personas; cada una abre su ficha.
+- **Interés × ánimo** marca a quien quiere comprar y está molesto: es a quien hay que cuidar primero.
+- **Lo que frena** son las objeciones que más se repiten, y **Cómo cambió**, el ánimo día por día.
+- **Sentimiento por voz** está **por desarrollar**: la tarjeta dice qué hará y qué falta, y no muestra cifras.
+
+## KPIs y metas
+
+Diez indicadores del periodo (7, 30 o 90 días) comparados con el anterior igual de largo: conversaciones nuevas,
+tiempo de respuesta, contestadas a tiempo, citas, asistencia, tratos ganados y perdidos, tasa de cierre, ventas y
+valor del embudo. Lo que no se sabe sale «—», nunca cero.
+
+Las **metas** (por semana o por mes) llevan su barra y una raya de dónde deberías ir hoy, con *A tiempo*, *Atrasada*
+o *Cumple*. Solo quien administra las pone y las cambia (**Editar metas**); el equipo las ve. Abajo, **Por persona**:
+lo ganado y lo vendido es de quien tiene asignado el contacto; las respuestas, de quien las escribió; el asistente va
+en su propia fila.
+
+## Optimización de ventas
+
+Hallazgos con reglas fijas sobre tus datos, sin inteligencia artificial: dónde se caen los tratos, cuáles están
+estancados, quién espera que le escriban, quién quiere comprar y está molesto, respuestas fuera del acuerdo de
+tiempo, si contestar rápido vende más, motivos de pérdida y objeciones que se repiten, horas pico, canales… Cada uno
+trae **su cifra con su base** («6 de 15»), por qué importa, **qué hacer** y un botón a la pantalla que lo resuelve.
+Si hay pocos datos, dice «poca evidencia» en vez de sacar conclusiones. Abajo, **Tratos estancados** con
+**Retomar**. Los mínimos de cada regla se cambian en **Reglas y umbrales**.
+
+## Servicio
+
+El área de lo que se le debe a quien ya es cliente. Se entra con **Área › Servicio**.
+
+### Tickets
+
+Lo que reportan los clientes. Cada ticket dice su prioridad, su estado, quién lo lleva y **el reloj del SLA** en una
+frase: «Responder antes de las 3:40 p. m. · en 2 h», «La primera respuesta venció hace 31 min». El estado del SLA va
+con palabra e ícono: *A tiempo*, *En riesgo* (gastó el 75 % de su tiempo), *Incumplido*, *En pausa*, *Cumplido* o
+*Sin SLA* (el cliente no tiene plan).
+
+- **Nuevo ticket** aquí, o **Crear ticket** desde la Bandeja y desde la ficha del contacto (que también muestra sus
+  tickets).
+- Vistas: *Abiertos*, *Mis tickets*, *Sin asignar*, *En riesgo*, *Incumplidos*, *Terminados*; filtros por prioridad,
+  plan y asignado.
+- Al abrir un ticket cambias su estado, prioridad o quién lo lleva, y ves su historia.
+- El reloj corre solo en el horario de soporte (o 24/7 si el plan lo dice). *Esperando al cliente* pausa el reloj de
+  la solución. La primera respuesta cuenta con el primer mensaje de una persona del equipo después de abrirlo (el
+  asistente no cuenta), con **Marcar como respondido** o al cerrarlo.
+
+### SLA
+
+Si se está cumpliendo lo prometido a cada plan: el porcentaje de primeras respuestas y de soluciones a tiempo (con su
+base: «8 de 9 tickets»), por plan y por prioridad; lo que hay que mirar ya; y cómo van los mantenimientos y las
+actualizaciones. Los objetivos se ven aquí y se cambian en **Configuración › SLA y tickets**.
+
+### Mantenimientos y actualizaciones
+
+- **Próximos mantenimientos**: la ventana (inicio y fin), la aplicación, los planes y los **clientes afectados**, cada
+  uno con su aviso: *A tiempo*, *Por avisar* (con la fecha límite según su plan), *Atrasado*, *Preparado*, *No salió*.
+- **Preparar aviso** deja el mensaje listo en la conversación de cada afectado para que alguien lo revise y lo mande:
+  **nunca se envía solo**. El aviso cuenta cuando de verdad salió, o con **Ya le avisé** si avisaste por otro medio.
+- **Actualizaciones** por aplicación: la última versión, hace cuánto, la próxima y si va al día con su cadencia.
+- **Programar mantenimiento** y **Registrar actualización** son de quien administra (se puede abrir al equipo).
+
 
 ## Perfil
 
@@ -359,6 +479,15 @@ Nada se guarda sin validar, y antes de pisar el archivo queda una copia del ante
 - **Diccionario del negocio**: los temas, verbos y expresiones que el asistente ya conoce. Se puede exportar e
   importar como archivo.
 
+## Modelos de IA
+
+Solo para quien administra (Configuración › El asistente y la IA). Conecta los proveedores —OpenAI, Anthropic
+(Claude), Apple Foundation Models, Ollama, LM Studio u otra API compatible con OpenAI— y elige cuál hace cada cosa
+(responder, lo específico, clasificar, analizar). Cada proveedor dice su estado (*Conectado*, *Sin llave*, *No
+disponible*…) y tiene **Probar conexión**, que no gasta. La llave se pega y no vuelve a mostrarse entera. Lo que se
+guarda se aplica al reiniciar, y la pantalla lo dice.
+
+
 ## Canales
 
 Por dónde llegan los clientes. Cada canal dice si está conectado, cuántos mensajes llegaron en la semana y qué
@@ -382,6 +511,25 @@ celular. XENCRM la revisa cada 5 minutos. Si deja de responder, avisa en la camp
 ## Lo que sabe
 
 La información que el asistente tiene (catálogo y textos del negocio), para buscar qué sabe de un tema.
+
+## Todo es configurable
+
+Lo que decide algo en XENCRM tiene un valor de fábrica, puede traer otro en el archivo del negocio y se puede cambiar
+desde el tablero (solo quien administra). Manda lo último. Cada pantalla dice de dónde sale cada valor y tiene
+**Volver al de fábrica**; si algo no vale, no se guarda nada y lo escrito no se borra.
+
+- **SLA y tickets**: los planes de soporte, las prioridades, los tipos y estados de un ticket (cuáles lo cierran y
+  cuáles pausan el reloj), los objetivos de primera respuesta y de solución por plan y prioridad, el horario de
+  soporte o 24/7, desde cuándo un ticket está *En riesgo* y quién puede abrir, mover y cambiar las políticas.
+- **Mantenimientos y actualizaciones**: el aviso mínimo por plan (de fábrica, 48 h, 72 h y 7 días), cada cuánto debe
+  salir una actualización, quién cuenta como afectado y la plantilla del aviso, con vista previa.
+- **Reglas y umbrales**: 64 reglas por grupo, con buscador. Por ejemplo, desde qué puntaje alguien es *caliente* (60)
+  o *tibio* (30), cuánto suma cada señal, los días de una cuenta clave, los mínimos de Optimización, las horas para
+  que un caliente pida seguimiento o el tope de contactos. Abajo dice lo que se configura en otro sitio, con su
+  enlace.
+- La palabra con que el negocio llama a lo que se agenda (cita, demo, turno), la bienvenida y los ejemplos de los
+  campos vienen del archivo del negocio.
+
 
 ## Ayuda
 

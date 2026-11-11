@@ -15,6 +15,16 @@ Qué cambia en esta generación:
   cualquier API compatible con OpenAI, y elegir cuál hace cada cosa.
 - **Sentimiento** en Analítica, con emojis por interés y desinterés, y el análisis por voz como pantalla por
   desarrollar.
+- **Una suite de CRM, como Dynamics 365.** El menú va por áreas (**Ventas**, **Servicio**, **Configuración**) y
+  grupos (Mi trabajo, Clientes, Ventas, Rendimiento), con Recientes y Fijados. Pantallas nuevas: **Embudo**, vistas y
+  filtros guardados, **KPIs y metas**, **Cuentas clave** (KAM), **Optimización de ventas** y la **Lista de trabajo**.
+- **Servicio con SLA.** **Tickets** con el reloj del SLA de cada plan (hábil o 24/7, en riesgo, incumplido), la
+  pantalla **SLA** con el cumplimiento por plan y prioridad, y **Mantenimientos y actualizaciones** con los clientes
+  afectados y el aviso mínimo de su plan (el aviso se prepara, nunca sale solo).
+- **Todo configurable**, en tres capas (fábrica → `xencrm.config.json` → el tablero): Reglas y umbrales (64 reglas),
+  SLA y tickets, Mantenimientos y actualizaciones, y el vocabulario del negocio (cita, demo, turno…).
+- **El ejemplo es XENTRIS LLC**, una firma de software (`examples/xentris`). Capturas de todas las pantallas en
+  [`docs/capturas/xencrm-next-evolution/`](docs/capturas/xencrm-next-evolution/).
 
 XENCRM atiende clientes por WhatsApp y por el chat del sitio con un agente de IA que resuelve lo que puede con
 reglas y usa el modelo cuando hace falta: OpenAI con un modelo por tarea, o motores que corren en el Mac (Gemma en
@@ -49,6 +59,8 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
 
 - Este README: qué hace, cómo se instala y cómo se configura un cliente.
 - **Ayuda**, dentro del tablero: el tutorial rápido para el equipo del negocio.
+- [`docs/xencrm.md`](docs/xencrm.md): XENCRM de punta a punta: la piel, los tokens y el glosario, el mapa de
+  Dynamics, cada pantalla nueva, Servicio y el SLA, la configuración en tres capas y lo que queda abierto.
 - [`docs/guia-del-tablero.md`](docs/guia-del-tablero.md): la referencia completa del tablero, para entrenar al
   equipo: qué hay en cada pantalla y qué hacer con cada cosa.
 - [`docs/arquitectura.md`](docs/arquitectura.md): para quien cambia el código. Cubre el recorrido de un mensaje,
@@ -84,12 +96,14 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
 | **Motores por rol** | Uno liviano para saludos, info y compras puntuales; uno pesado para recomendar, comparar y explicar; uno para clasificar y otro para el análisis. Cada uno puede ser OpenAI (con su modelo), Gemma u Apple, y hay respaldo si uno falla. |
 | **Aprende las frases de sus clientes** | Lo que las reglas no entienden ("a la hora del cafecito", "la madrugadora") queda en **Frases que no entendimos** y se enseña desde el tablero; la próxima vez se entiende sin IA. |
 | **Perfil del negocio** | Dirección, horarios, pagos, precios, políticas y datos propios, editables desde el tablero; lo vacío queda "por confirmar" y el bot no lo supone. |
-| **Análisis comercial por turno** | Sentimiento, interés, urgencia, objeciones, presupuesto y los campos que definas (prenda, ocasión, fecha del evento…). |
-| **Puntaje explicable** | 0 a 100 con factores visibles ("Pidió cita +30", "Objeción −10"). Etapas: nuevo, conversando, interesado, cita agendada, vendido, perdido. |
+| **Análisis comercial por turno** | Sentimiento, interés, urgencia, objeciones, presupuesto y los campos que defina cada negocio (en XENTRIS: producto, empresa, usuarios, plan de soporte, plazo). |
+| **Puntaje explicable** | 0 a 100 con factores visibles ("Pidió demo +30", "Objeción −10"); los pesos y los cortes son reglas configurables. Las etapas las pone cada negocio (en XENTRIS: Nuevo, Calificado, Evaluando, Demo agendada, Ganado, Perdido). |
 | **Citas** | Flujo determinista: ofrece espacios reales según tu agenda, entiende muletillas ("al medio día", "la que sea", "en ocho días"), confirma, cambia o cancela por el chat y **recuerda la cita la mañana del día**. El modelo nunca inventa fechas. |
 | **Una ficha por persona** | Si el mismo cliente escribe por el chat del sitio y por WhatsApp, el tablero lo detecta por el número y ofrece unir las dos fichas en una: conversación, citas, análisis y consumo quedan juntos. |
 | **Traspaso humano** | El cliente pide una persona o el equipo toma el control desde el tablero; el bot se calla y las respuestas humanas llegan al mismo chat (WhatsApp o widget). |
-| **Tablero** | Hoy (lo que hay que atender), conversaciones con ficha, calendario, prospectos, análisis, perfil, agente y canales. En vivo, en el computador o el celular. |
+| **Tablero** | Una suite de CRM por áreas: Inicio con el Copiloto XEN, Bandeja omnicanal, Lista de trabajo, Citas, Contactos, Cuentas clave, Embudo, Tratos, Ventas, KPIs y metas, Optimización de ventas y Analítica. En vivo, en el computador o el celular. |
+| **Servicio y SLA** | Tickets con el reloj del SLA del plan de cada cliente, cumplimiento por plan y prioridad, mantenimientos con sus clientes afectados y avisos a tiempo, y la cadencia de actualizaciones por producto. |
+| **Todo configurable** | Cada umbral, peso, plan, prioridad, estado, plazo y texto de negocio tiene su valor de fábrica, el del archivo del cliente y el del tablero, con «Volver al de fábrica». |
 | **Canales** | WhatsApp por QR (Baileys) o por Meta Cloud API (oficial, con credenciales desde el tablero), chat del sitio con la marca del cliente, MCP para otros agentes. |
 
 ## Arquitectura
@@ -373,22 +387,14 @@ Para no gastar tokens de más (`src/crm/signals.ts`):
 ## Tablero
 
 `http://localhost:3000/admin` con el token `ADMIN_TOKEN` (si está vacío, el servidor imprime uno al arrancar).
-Todo se actualiza en vivo y funciona en el celular: abajo quedan Hoy, Chats, Calendario, Prospectos y **Más**
-(el resto de secciones, el tema, el sonido y Salir).
+Todo se actualiza en vivo y funciona en el celular (el menú se abre desde la barra de arriba). El menú va por áreas:
 
-- **Hoy**: por verificar, esperan respuesta, pidieron una persona, cómo les fue en las citas que ya pasaron
-  (vino, no vino, compró: el dato para calibrar el puntaje), recordar a mano, citas y calientes sin seguimiento.
-- **Bandeja omnicanal**: chat y ficha. «Pausar automatización» cambia quién lleva la conversación; escribir a mano
-  también la pausa.
-- **Calendario**.
-- **Prospectos**: se arrastra o se usa «Mover a…».
-- **Análisis**: cada número abre la lista que lo explica.
-- **Perfil**.
-- **Agente**: consumo, calendario, frases que no entendimos y diccionario.
-- **Canales**.
-- **Lo que sabe**: la información que tiene el agente.
-- **Ayuda**: tutorial rápido de seis pasos, preguntas frecuentes y lo que el asistente nunca hace. La primera vez,
-  Hoy muestra un aviso que lleva ahí.
+- **Ventas** — *Mi trabajo*: Inicio (el Copiloto XEN y lo que espera a alguien), Bandeja omnicanal, Lista de trabajo,
+  Citas (o como las llame el negocio). *Clientes*: Contactos, Cuentas clave. *Ventas*: Embudo, Tratos, Ventas.
+  *Rendimiento*: KPIs y metas, Optimización de ventas, Analítica (con Sentimiento).
+- **Servicio** — Bandeja omnicanal, Tickets, Contactos, Cuentas clave, SLA, Mantenimientos y actualizaciones.
+- **Configuración** — Guía de inicio, Perfil, El negocio, El asistente, Modelos de IA, Lo que sabe, Canales, SLA y
+  tickets, Mantenimientos y actualizaciones, Reglas y umbrales, Trazabilidad y Ayuda (según quién entró).
 
 La guía para el equipo está en [`docs/guia-del-tablero.md`](docs/guia-del-tablero.md) y las reglas de diseño en
 [`docs/diseno-tablero.md`](docs/diseno-tablero.md).

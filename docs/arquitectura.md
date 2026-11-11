@@ -106,7 +106,9 @@ y por qué.
 | `src/channels/` | `web.ts` (servidor, widget, página demo), `admin.ts` (API del tablero y SSE), `whatsapp.ts` (Baileys), `meta.ts` (Cloud API) + `meta-credentials.ts`, `registry.ts` + `switches.ts` (Canales), `calendar.ts` (rutas públicas), `public-check.ts` (¿responde la dirección pública?) |
 | `src/` | `config.ts` (esquemas y variables), `profile.ts` (perfil del negocio), `ajustes.ts` (lo editable de la configuración desde el tablero), `brand.ts` (color, contraste y logo), `envfile.ts` (escribir `.env`), `index.ts` (arranque), `onboard.ts`, `cli.ts`, `seed.ts` |
 | `src/` (varios clientes) | `clientes.ts` (alta, baja, índice, tokens), `consola.ts` (tickets, bandeja, proxy del tablero), `consola-usuarios.ts` (quién entra: claves, roles, sesiones), `paquete.ts` (el ZIP del despliegue) |
-| `src/eval/` | pruebas sin modelo, escenarios, repasos y consumo |
+| `src/crm/` (XENCRM) | `embudo.ts` (hasta dónde llegó cada trato, de la historia de etapas), `kpis.ts` (KPIs y metas), `cuentas-clave.ts` (KAM: marca, plan, salud y candidatas), `optimizacion.ts` (hallazgos por reglas fijas), `resultados.ts` (ventas, seguimientos y `cuandoPasoA`, la única regla de «cuándo se cerró»), `sentimiento.ts` (interés y ánimo agregados), `tickets.ts` (tickets, SLA, reloj hábil, políticas y su configuración), `mantenimientos.ts` + `mantenimientos-reglas.ts` (ventanas, afectados, avisos, cadencia y sus reglas), `tickets-demo.ts` y `servicio-demo.ts` (la semilla de Servicio) |
+| `src/` (XENCRM) | `reglas.ts` (el registro común de reglas en tres capas), `vocabulario.ts` (la palabra de la agenda y su concordancia: «la cita», «el turno»), `proveedores.ts` (Modelos de IA: OpenAI, Anthropic, Apple, Ollama, LM Studio y API compatible) |
+| `src/eval/` | pruebas sin modelo, escenarios, repasos y consumo; `fixtures/boutique/` es el negocio de las pruebas («Atelier Demo») |
 | `public/` | `admin.html` + `admin.js` (tablero, sin framework), `consola.html` (la consola), `inicio.html` (la portada), `widget.js`, `demo.html` |
 | `herramientas/` | `mirar.mjs` (abrir una pantalla en un navegador de verdad y ver sus errores), `sonda-hosting/` |
 
@@ -120,6 +122,13 @@ Una base SQLite por cliente (`DB_PATH`, WAL):
 | `users` | contactos: canal, nombre, teléfono, etapa (y si se fijó a mano), puntaje y factores, ánimo, modo humano y quién lo tiene, **quién está a cargo** (`responsable`, que no se borra cuando vuelve a contestar el asistente), datos capturados (el motivo de pérdida va en `data.motivo_perdida`; lo de contacto —`correo`, `whatsapp`, `instagram`, `facebook`, `contacto_por`— también va en `data`, y lo que el equipo escribió a mano queda en `data._amano`, que el análisis no pisa: `crm/ficha.ts`), etiquetas, notas, resumen, archivada |
 | `messages` | la conversación, con autor (`customer`, `bot`, `human`), quién del equipo escribió y, si no le llegó al cliente, **por qué** (`fallo`; se reintenta desde el tablero y es el mismo mensaje) |
 | `analyses` | cada análisis: motor, ánimo, señales, puntaje y factores (el costo está en `llm_usage`) |
+| `cuentas_clave` | la marca de cuenta clave de un contacto: quién la marcó, desde cuándo y su plan de cuenta (XENCRM) |
+| `tickets` | los tickets de Servicio: contacto, asunto, tipo, prioridad, estado, producto, asignado, primera respuesta, solución, pausas y su historia (XENCRM) |
+| `mantenimientos` · `mantenimiento_avisos` · `actualizaciones` | las ventanas programadas, el aviso de cada cliente afectado (preparado, salió, a mano) y las versiones publicadas o planeadas (XENCRM) |
+
+Todas las de XENCRM se limpian con la ficha: borrar y `purgeContact` las quitan, unir fichas las pasa a la que queda
+(`merge.ts`) y anonimizar vacía su texto (`retencion.ts`, `CON_TEXTO`). 🪤 Los avisos de mantenimiento todavía no se
+mudan al unir fichas (anotado en `xencrm.md`).
 
 **Aprender del historial** (`crm/historial.ts`, pantalla en Perfil › *Lo que aprendimos de sus chats*): lo que el
 cliente ya tiene conversado entra a la tabla `import_messages` —aparte, **nunca al índice de conocimiento**— por
@@ -264,6 +273,27 @@ Precedencia:
   Guardar deja el archivo listo y el tablero avisa que hay cambios sin aplicar; se aplican al reiniciar ese
   cliente. Por eso `ajustes.ts` valida contra el mismo esquema con el que se lee al arrancar: lo que se guarde
   tiene que poder levantar el proceso.
+
+### Reglas: fábrica → archivo → tablero (XENCRM)
+
+Toda regla de negocio de XENCRM tiene **tres capas** y manda la última que tenga un valor válido: el **defecto en el
+código**, lo que trae el cliente en **`xencrm.config.json`**, y lo que se cambia **desde el tablero** (tabla
+`settings`). Lo que no vale en una capa se ignora con un aviso y se usa la de abajo; nunca tumba el arranque.
+
+| Qué | Código | Archivo | Tablero |
+|---|---|---|---|
+| Umbrales y pesos (64 reglas) | `src/reglas.ts` (`regla(id)`, `registrarReglas`) | `reglas: { "<id>": valor }` | `reglas.<id>` · Configuración › Reglas y umbrales |
+| SLA y tickets | `crm/tickets.ts` (`FABRICA`, `configSla()`) | `servicio.sla` | `sla.config` + `reglas.sla.*` · Configuración › SLA y tickets |
+| Mantenimientos y actualizaciones | `crm/mantenimientos-reglas.ts` | `servicio.mantenimientos` | `reglas.mant.*` · Configuración › Mantenimientos y actualizaciones |
+| Metas de KPIs | `crm/kpis.ts` | — | `kpis.metas` · Rendimiento › KPIs y metas |
+| Vocabulario e interfaz | `src/vocabulario.ts` (defecto neutro) | `interfaz` | — |
+
+- Las reglas se aplican en vivo (caché de 2 s que el tablero borra al guardar), salvo lo que diga su pantalla.
+- Guardar es todo o nada; `PUT /admin/api/reglas` responde 400 con los errores por regla y no guarda ninguna.
+- Los planes de Mantenimientos son los vigentes del SLA (`configSla().planes`): un solo «Pro» en las dos pantallas.
+- Cambiar reglas, metas y la configuración de Mantenimientos es de quien administra: el candado no las deja pasar
+  y la consola las cierra a quien no es super-admin (`SOLO_SUPER_CAMBIA`). Quién cambia el SLA es configurable y lo
+  decide su ruta con el rol de la sesión.
 
 ## Varios clientes
 
@@ -414,6 +444,10 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 
 ## Pruebas
 
+🪤 **Cada guion de prueba fija su negocio** (`XENCRM_CONFIG=src/eval/fixtures/boutique/xencrm.config.json`, en
+`package.json`): así cambiar el ejemplo de la raíz no rompe la batería. Una suite suelta se corre con `pnpm test:x`,
+no con `npx tsx src/eval/x.ts` (esa usaría la configuración de la raíz).
+
 | Comando | Qué prueba | Modelo |
 |---|---|---|
 | `pnpm test` | todas las de abajo, en orden | no |
@@ -428,6 +462,10 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 | `pnpm test:misses` | frases que no entendimos y expresiones | no |
 | `pnpm test:reminders` | recordatorio: cuándo, por qué canal, a mano, respuesta | no |
 | `pnpm test:brand` | contraste de la marca con 500 colores | no |
+| `pnpm test:bandeja` · `test:contactos` · `test:sentimiento` · `test:modelos` | la Bandeja omnicanal, Contactos/ficha/Tratos, el sentimiento, los proveedores de IA | no |
+| `pnpm test:embudo` · `test:kpis` · `test:kam` · `test:optimizacion` | el embudo y el filtrado, KPIs y metas, cuentas clave, los hallazgos | no |
+| `pnpm test:sla` · `test:mantenimientos` · `test:reglas` | tickets y SLA, mantenimientos y avisos, el registro de reglas (las tres capas) | no |
+| `pnpm test:ejemplo` | el ejemplo XENTRIS y que nada visible de negocio quede fijo en el código | no |
 | `pnpm test:meta` | credenciales de Meta: validar, verificar, guardar | no (Meta simulado) |
 | `pnpm test:profile` | perfil: guardar, aplicar, lo que llega al bot | no |
 | `pnpm test:ajustes` | configuración del negocio: qué se guarda, qué se rechaza, qué no se toca | no |
