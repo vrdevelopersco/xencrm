@@ -156,6 +156,9 @@ const recorrer = (css: string) => {
     let n = 1, j = abre + 1;
     for (; j < css.length && n; j++) { if (css[j] === '{') n++; else if (css[j] === '}') n--; }
     if (cab.startsWith('@media') || cab.startsWith('@supports')) recorrer(css.slice(abre + 1, j - 1));
+    // Una animación (el brillo de los esqueletos de Inicio) no es una regla: no pinta nada hasta que una regla de
+    // la piel la nombra. Sus «0%» y «to» no son selectores.
+    else if (cab.startsWith('@keyframes')) { /* nada que vigilar */ }
     else if (cab) selectores.push(...cab.split(',').map((x) => x.trim()));
     i = j;
   }
@@ -186,6 +189,43 @@ const resumen = funcion('pintarResumenDelDia');
 check('el resumen del día cuenta lo que espera a alguien, sin las citas ni lo ya leído', /\['citas', 'leidas', 'proximas'\]\.indexOf\(s\.tono\) < 0/.test(resumen));
 check('y cada cosa lleva a su recuadro', /#today \.panel\[data-tono="/.test(resumen) && /scrollIntoView/.test(resumen));
 check('🪤 lo que espera a alguien sigue en Inicio: no se perdió nada de Hoy al vestirlo de Nexora', /if \(facil\) pintarInicio\(t, sections\);/.test(js) && /\$\('today'\)\.hidden = facil && !\$\('today'\)\.childElementCount;/.test(js));
+
+console.log('— El copiloto XEN (Inicio de XENCRM)');
+check('la cifra del copiloto es la suma de las de los recuadros, nada estimado', /var total = pend\.reduce\(function \(a, s\) \{ return a \+ s\.n; \}, 0\);/.test(resumen));
+check('se pinta con /today entero (pintarInicio se lo pasa)', /pintarResumenDelDia\(sections, t\);/.test(inicio));
+// Los recuadros de Hoy y sus colores, en el mismo orden. 🪤 Iban corridos: «Esperan tu respuesta» llevaba el tono de
+// los grupos (rojo y gris cambiados) y el copiloto buscaba a quién contestar entre los grupos.
+const deHoy = js.slice(js.indexOf('function loadToday()'), js.indexOf('var TONOS'));
+const titulos = [...deHoy.matchAll(/\{ t: '([^']+)'/g)].map((m) => m[1]!);
+const tonosHoy = ((js.match(/var TONOS = \[([^\]]*)\]/)?.[1] ?? '').match(/'([a-z]+)'/g) || []).map((x) => x.slice(1, -1));
+const tonoDe: Record<string, string> = { 'Por verificar': 'verificar', 'Te escribieron en un grupo': 'grupos', 'Esperan tu respuesta': 'esperan', 'Pidieron una persona': 'persona', '¿Cómo les fue? (citas que ya pasaron)': 'pasadas', 'Recordar a mano': 'recordar', 'Citas de hoy': 'citas', 'Calientes sin seguimiento (más de 24 h)': 'calientes', 'Próximas citas (3 días)': 'proximas' };
+check('🪤 cada recuadro de Hoy lleva SU tono, en el mismo orden (no solo la misma cuenta)', titulos.length === tonosHoy.length && titulos.every((t, i) => (tonoDe[t] ?? (t.startsWith('Sin leer') ? 'leidas' : '?')) === tonosHoy[i]), titulos.map((t, i) => `${t} → ${tonosHoy[i]}`).join(' | '));
+// Las acciones, de verdad: con un /today de juguete, cada acción es una fila de un recuadro pendiente, en su orden.
+const acciones = new Function('rel', 'nameOf', 'short', 'go', 'openContact', 'followupDraft', `${funcion('accionesDelCopiloto')}; return accionesDelCopiloto;`)(
+  () => '5 min', (c: { name?: string; id: string }) => c.name || c.id, (id: string) => id.split('@')[0], () => {}, () => {}, () => 'borrador',
+) as (pend: { tono: string; n: number }[], t: Record<string, unknown[]>, ir: (tono: string) => void) => { que: string; tono: string; boton: string; detalle: string }[];
+const hoyDeJuguete = {
+  unanswered: [{ id: 'a', name: 'Ana', lastMessageAt: 1, recap: 'traje azul' }, { id: 'b', name: 'Beto', lastMessageAt: 1 }],
+  handoffs: [{ id: 'c', name: 'Caro' }],
+  hot: [{ id: 'd', name: 'Dani', lastMessageAt: 1 }],
+  verifications: [{ id: 1, userId: 'e@x', contactName: 'Eva', question: '¿Tienen parqueadero?' }],
+  appointments: [{ userId: 'f@x', contactName: 'Fabio', label: '5:00 p. m.' }],
+  unread: [{ id: 'g', name: 'Gabi' }],
+};
+const pendDeJuguete = [{ tono: 'verificar', n: 1 }, { tono: 'esperan', n: 2 }, { tono: 'persona', n: 1 }, { tono: 'calientes', n: 1 }];
+const salen = acciones(pendDeJuguete, hoyDeJuguete, () => {});
+check('una acción por cada fila pendiente, en el orden de Hoy (el costo del silencio)', salen.map((x) => x.que).join(' | ') === 'Verificar lo que preguntó Eva | Contestar a Ana | Contestar a Beto | Atender a Caro | Retomar a Dani', salen.map((x) => x.que).join(' | '));
+check('🪤 nada inventado: lo que dice cada acción sale de su fila (lo que preguntó, de qué habló)', salen[0]!.detalle === '«¿Tienen parqueadero?»' && /traje azul/.test(salen[1]!.detalle) && !/traje azul/.test(salen[2]!.detalle));
+check('las citas de hoy y lo ya leído no son acciones: se miran, no se atienden', !salen.some((x) => /Fabio|Gabi/.test(x.que)));
+check('cada acción tiene un verbo en su botón', salen.every((x) => /^(Responder|Contestar|Atender|Escribirle|Revisar|Anotar|Recordar)$/.test(x.boton)));
+check('sin pendientes, el copiloto dice «Todo al día» y no se inventa trabajo', /'Todo al día'/.test(resumen) && acciones([], hoyDeJuguete, () => {}).length === 0);
+check('🪤 sin /today, Inicio lo dice y ofrece reintentar (no se queda en esqueleto)', /if \(!t \|\| t\.error \|\| !Array\.isArray\(t\.unanswered\)\) \{ pintarErrorDeInicio\(t && t\.error\); return; \}/.test(js) && /Reintentar/.test(funcion('pintarErrorDeInicio')) && /\.catch\(function \(e\) \{[\s\S]{0,200}pintarErrorDeInicio\(\);/.test(js));
+check('🪤 y lo que no depende de /today se carga igual (la semana, el embudo, la actividad)', ['cargarSerieFacil()', "api('/stats')", 'pintarActividadFacil()'].every((x) => funcion('pintarErrorDeInicio').includes(x)));
+check('el violeta es solo de la IA: ninguna de las cuatro cifras lo usa', !/tono: 'violeta'/.test(inicio));
+check('la gráfica no trae colores a pelo: los pone la hoja con los tokens (y siguen al tema)', !/#[0-9a-fA-F]{3,6}\b/.test(funcion('dibujarSerieFacil')) && /\.fx-grafica \.fx-stop\{stop-color:var\(--fx-acento\)\}/.test(bloque));
+check('y las citas van punteadas además de en su color (no solo el color distingue las dos líneas)', /\.linea-citas\{[^}]*stroke-dasharray/.test(bloque));
+check('el embudo pinta cada etapa con el color de su papel, el mismo de Tratos', /data-rol="' \+ esc\(e\.rol/.test(funcion('pintarEtapasFacil')) && ['inicio', 'activo', 'interes', 'cita', 'ganado', 'perdido'].every((r) => bloque.includes(`.fx-barra[data-rol="${r}"] .pista i{`)));
+check('mientras carga, cada pieza enseña su esqueleto (nada salta al llegar los datos)', ['fx-resumen', 'fx-kpis', 'fx-serie', 'fx-etapas', 'fx-actividad'].every((id) => html.indexOf(`id="${id}"`) > 0 && html.slice(html.indexOf(`id="${id}"`), html.indexOf(`id="${id}"`) + 600).includes('class="fx-esq')) && /@media \(prefers-reduced-motion:reduce\)\{\.fx-esq\{animation:none\}/.test(bloque));
 
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

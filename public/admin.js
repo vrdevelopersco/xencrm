@@ -1595,6 +1595,8 @@
 
   function loadToday() {
     api('/today').then(function (t) {
+      // XENCRM: sin /today, Inicio lo dice en el copiloto y ofrece reintentar, en vez de quedarse en esqueleto.
+      if (!t || t.error || !Array.isArray(t.unanswered)) { pintarErrorDeInicio(t && t.error); return; }
       var d = new Date();
       $('today-sub').textContent = d.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }) + (state.name ? ' · ' + state.name : '');
       pintarKpis(t.resumen || {}, t.embudo || null);
@@ -1638,7 +1640,9 @@
         ? '<div class="panel help-first" role="alert"><span class="grow"><b>La dirección pública no responde.</b> <span class="small">' + esc(publicDetail(t.public)) + '</span></span><button class="btn primary" data-go="channels">Ver en Canales</button></div>'
         : '';
       // Cada sección con su color: lo urgente no puede verse igual que lo que ya está resuelto.
-      var TONOS = ['verificar', 'esperan', 'grupos', 'persona', 'pasadas', 'recordar', 'citas', 'calientes', 'leidas', 'proximas'];
+      // 🪤 En el MISMO orden que los recuadros de arriba. Iba 'esperan' antes que 'grupos' (al revés que los recuadros),
+      // así que «Esperan tu respuesta» se pintaba como el de los grupos y el copiloto no encontraba a quién contestar.
+      var TONOS = ['verificar', 'grupos', 'esperan', 'persona', 'pasadas', 'recordar', 'citas', 'calientes', 'leidas', 'proximas'];
       sections.forEach(function (s, i) { s.tono = TONOS[i] || ''; });
       // 🪤 En el modo fácil solo sale lo que tiene algo. Nueve recuadros, siete diciendo «nada pendiente», es lo
       // que hacía sentir a aiva complicado: hay que leerlos todos para descubrir que no hay que hacer nada.
@@ -1653,6 +1657,8 @@
       // alguien: si no hay nada, no hay fila —el «Todo al día» lo dice el resumen del día, a la derecha—.
       $('today').hidden = facil && !$('today').childElementCount;
       if (facil) pintarInicio(t, sections);
+      // Si no hay nada que atender, la columna de al lado no está: la actividad ocupa la fila entera.
+      if ($('today').closest('.fx-atender')) $('today').closest('.fx-atender').hidden = $('today').hidden;
       $('today').querySelectorAll('.row').forEach(function (r) {
         r.onclick = function () { go('inbox'); openContact(r.getAttribute('data-id')); };
         r.oncontextmenu = function (e) { e.preventDefault(); abrirMenu(e.clientX, e.clientY, r.getAttribute('data-id')); };
@@ -1709,6 +1715,11 @@
           api('/appointments/' + b.getAttribute('data-reminded') + '/reminded', { method: 'POST', body: { by: state.name } }).then(loadToday);
         };
       });
+    }).catch(function (e) {
+      // 🪤 El 401 ya lo atiende api() (pide el token): aquí solo la red caída o una respuesta rota.
+      if (e && e.message === '401') return;
+      console.error('[inicio]', e);
+      pintarErrorDeInicio();
     });
   }
   // ---------- Inicio en el modo fácil ----------
@@ -1720,50 +1731,82 @@
     var r = t.resumen || {};
     var tarjetas = [
       { k: 'activas', t: 'Conversaciones activas', ic: 'burbuja', tono: '', p: 'Ni ganadas ni perdidas', ir: function () { go('inbox', { filter: 'all' }); } },
-      { k: 'nuevos', t: 'Prospectos nuevos', ic: 'users', tono: 'violeta', p: 'Escribieron hoy por primera vez', ir: function () { go('inbox', { filter: 'all' }); } },
+      { k: 'nuevos', t: 'Prospectos nuevos', ic: 'users', tono: 'cielo', p: 'Escribieron hoy por primera vez', ir: function () { go('inbox', { filter: 'all' }); } },
       { k: 'calientes', t: 'Prospectos calientes', ic: 'objetivo', tono: 'verde', p: 'Con ganas de comprar', ir: function () { go('inbox', { filter: 'hot' }); } },
-      { k: 'citasHoy', t: 'Citas hoy', ic: 'reloj', tono: '', p: d2(), ir: function () { go('calendar'); } }
+      { k: 'citasHoy', t: 'Citas hoy', ic: 'reloj', tono: 'indigo', p: d2(), ir: function () { go('calendar'); } }
     ];
+    $('fx-kpis').removeAttribute('aria-busy');
     $('fx-kpis').innerHTML = tarjetas.map(function (x) {
       return '<button class="fx-kpi" data-k="' + x.k + '"><span class="fx-kpi-cab"><span class="t">' + esc(x.t) + '</span>' +
         '<span class="fx-ic ' + x.tono + '"><i class="ic" data-ic="' + x.ic + '"></i></span></span>' +
-        '<span class="n">' + esc(r[x.k] == null ? '—' : String(r[x.k])) + '</span><span class="p">' + esc(x.p) + '</span></button>';
+        '<span class="n">' + esc(r[x.k] == null ? '—' : Number(r[x.k]).toLocaleString('es-CO')) + '</span><span class="p">' + esc(x.p) + '</span></button>';
     }).join('');
     iconos($('fx-kpis'));
     $('fx-kpis').querySelectorAll('.fx-kpi').forEach(function (b) {
       var x = tarjetas.filter(function (y) { return y.k === b.getAttribute('data-k'); })[0];
       if (x) b.onclick = x.ir;
     });
-    pintarResumenDelDia(sections);
+    pintarResumenDelDia(sections, t);
     cargarSerieFacil();
-    api('/stats').then(pintarEtapasFacil).catch(function () {});
+    api('/stats').then(pintarEtapasFacil).catch(function (e) { if ((!e || e.message !== '401') && $('fx-etapas')) $('fx-etapas').innerHTML = vacioFacil('No se pudo cargar', 'Vuelve a intentarlo con «Actualizar».'); });
     pintarActividadFacil();
   }
 
-  // El resumen del día, en la tarjeta oscura: lo que espera a alguien, contado, y cada cosa lleva a su recuadro.
-  function pintarResumenDelDia(sections) {
+  // El copiloto XEN (antes «Resumen del día», en la tarjeta oscura): lo que espera a alguien, contado, y las
+  // siguientes acciones, cada una con su verbo y su botón (la idea del panel de recomendaciones de Dynamics 365).
+  // 🪤 Todo sale de /today: la cifra es la suma de las `n` de los recuadros y cada acción es una fila de esos mismos
+  // recuadros, en el orden de Hoy (el costo del silencio). Nada se estima ni se adorna: si no hay nada, lo dice.
+  function pintarResumenDelDia(sections, t) {
     // Lo que pide que alguien haga algo. Las citas de hoy, las próximas y lo ya leído no: eso se mira, no se atiende.
     var pend = (sections || []).filter(function (s) { return s.n > 0 && ['citas', 'leidas', 'proximas'].indexOf(s.tono) < 0; });
     var total = pend.reduce(function (a, s) { return a + s.n; }, 0);
     var agente = state.agentName || 'Aiva';
-    $('fx-resumen').innerHTML = '<div class="fx-oscura-cab"><i class="ic" data-ic="chispa"></i>Resumen del día</div>' +
+    var caja = $('fx-resumen');
+    // Ir al recuadro donde eso se atiende, resaltarlo un momento y dejarle el foco a quien va con el teclado.
+    var irAlRecuadro = function (tono) {
+      var p = document.querySelector('#today .panel[data-tono="' + tono + '"]');
+      if (!p) return;
+      var quieto = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      p.scrollIntoView({ behavior: quieto ? 'auto' : 'smooth', block: 'start' });
+      p.setAttribute('tabindex', '-1'); p.focus({ preventScroll: true });
+      p.classList.add('fx-resalta'); setTimeout(function () { p.classList.remove('fx-resalta'); }, 1600);
+    };
+    var acciones = accionesDelCopiloto(pend, t || {}, irAlRecuadro);
+    var visibles = acciones.slice(0, 5), resto = acciones.length - visibles.length;
+    var hoy = ((t && t.appointments) || []);
+    var hora = new Date().toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' });
+    caja.removeAttribute('aria-busy');
+    caja.innerHTML = '<div class="fx-cop-cab"><span class="fx-cop-marca" aria-hidden="true"><i class="ic" data-ic="chispa"></i></span>' +
+      '<span class="fx-cop-nombre" id="fx-cop-titulo">Copiloto XEN</span><span class="fx-cop-hora">Con lo que pasó hasta las ' + esc(hora) + '</span></div>' +
+      '<div class="fx-cop-cuerpo"><div class="fx-cop-main">' +
       '<h2>' + (total ? (total === 1 ? 'Una cosa espera a alguien' : total + ' cosas esperan a alguien') : 'Todo al día') + '</h2>' +
-      '<p>' + esc(total ? 'Esto es lo que no puede esperar. Lo demás lo va llevando ' + agente + '.' : 'Nadie espera respuesta, no hay citas sin resultado y ' + agente + ' supo contestar todo.') + '</p>' +
-      '<div class="fx-caja">' + (pend.length
-        ? pend.map(function (s) { return '<button data-tono="' + s.tono + '"><span>' + esc(s.t) + '</span><b>' + s.n + '</b></button>'; }).join('')
-        : '<div class="nada">Nada pendiente por ahora.</div>') + '</div>' +
+      '<p>' + esc(total ? 'Esto es lo que no puede esperar, en orden. Lo demás lo va llevando ' + agente + '.' : 'Nadie espera respuesta, no hay citas sin resultado y ' + agente + ' supo contestar todo.') + '</p>' +
+      (visibles.length ? '<ol class="fx-cop-acciones" aria-label="Siguientes acciones">' + visibles.map(function (x, i) {
+        return '<li class="fx-cop-accion"><span class="fx-cop-ic ' + x.color + '" aria-hidden="true"><i class="ic" data-ic="' + x.ic + '"></i></span>' +
+          '<span class="fx-cop-txt"><b>' + esc(x.que) + '</b>' + (x.detalle ? '<span title="' + esc(x.detalle) + '">' + esc(x.detalle) + '</span>' : '') + '</span>' +
+          '<button class="btn sm' + (i === 0 ? ' primary' : '') + '" type="button" data-accion="' + i + '">' + esc(x.boton) + '</button></li>';
+      }).join('') + '</ol>' : '') +
+      (resto > 0 ? '<button class="fx-cop-mas" type="button" id="fx-cop-mas">Y ' + (resto === 1 ? 'una más' : resto + ' más') + ' en «Para atender»</button>' : '') +
+      '</div><div class="fx-cop-lado">' +
+      '<h3>Pendientes</h3>' + (pend.length
+        ? '<div class="fx-cop-pend">' + pend.map(function (s) { return '<button type="button" data-tono="' + s.tono + '"><span>' + esc(s.t) + '</span><b>' + s.n + '</b></button>'; }).join('') + '</div>'
+        : '<div class="fx-cop-nada">Nada pendiente por ahora.</div>') +
+      '<h3>Hoy en la agenda</h3>' + (hoy.length
+        ? '<div class="fx-cop-agenda">' + hoy.map(function (a) {
+            return '<button type="button" data-cita="' + esc(a.userId) + '"><time>' + esc(a.label || '') + '</time><span>' + esc(a.contactName || short(a.userId)) + '</span></button>';
+          }).join('') + '</div>'
+        : '<div class="fx-cop-nada">Sin citas hoy.</div>') +
+      '</div></div>' +
       (esFacil() && mandaEnElModo() ? '<button class="fx-todo" type="button" id="hoy-ver-todo">Estás en el modo fácil · Ver todo XENCRM</button>' : '');
-    iconos($('fx-resumen'));
-    $('fx-resumen').querySelectorAll('[data-tono]').forEach(function (b) {
-      b.onclick = function () {
-        var p = document.querySelector('#today .panel[data-tono="' + b.getAttribute('data-tono') + '"]');
-        if (p) { p.scrollIntoView({ behavior: 'smooth', block: 'start' }); p.classList.add('fx-resalta'); setTimeout(function () { p.classList.remove('fx-resalta'); }, 1600); }
-      };
-    });
+    iconos(caja);
+    caja.querySelectorAll('[data-accion]').forEach(function (b) { b.onclick = function () { visibles[Number(b.getAttribute('data-accion'))].ir(); }; });
+    caja.querySelectorAll('[data-tono]').forEach(function (b) { b.onclick = function () { irAlRecuadro(b.getAttribute('data-tono')); }; });
+    caja.querySelectorAll('[data-cita]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-cita')); }; });
+    if ($('fx-cop-mas')) $('fx-cop-mas').onclick = function () { irAlRecuadro(acciones[visibles.length].tono); };
     if ($('hoy-ver-todo')) $('hoy-ver-todo').onclick = function () { $('modo-btn').click(); };
   }
 
-  // Cómo va la semana: conversaciones nuevas (área azul) y citas agendadas (línea verde), por día.
+  // Cómo va la semana: conversaciones nuevas (área del acento) y citas agendadas (línea índigo, el color de la cita), por día.
   function cargarSerieFacil() {
     api('/series?dias=' + Math.max(7, FX.dias)).then(function (d) {
       if (!d || d.error || !d.nuevas) { $('fx-serie').innerHTML = vacioFacil('No se pudo cargar', 'Vuelve a intentarlo con «Actualizar».'); return; }
@@ -1775,7 +1818,7 @@
         ? 'Esta semana: ' + s.ahora + (s.ahora === 1 ? ' conversación nueva' : ' conversaciones nuevas') + (s.delta == null ? '' : ' (' + (s.delta >= 0 ? '+' : '') + s.delta + ' % contra la anterior)')
         : 'Conversaciones nuevas y citas agendadas';
       dibujarSerieFacil();
-    }).catch(function () {});
+    }).catch(function (e) { if (!e || e.message !== '401') $('fx-serie').innerHTML = vacioFacil('No se pudo cargar', 'Vuelve a intentarlo con «Actualizar».'); });
   }
   function vacioFacil(t, d) { return '<div class="fx-vacio"><b>' + esc(t) + '</b><span>' + esc(d) + '</span></div>'; }
   function diaCorto(iso) { return new Date(iso + 'T12:00:00').toLocaleDateString('es-CO', { weekday: 'short' }).replace('.', ''); }
@@ -1815,7 +1858,8 @@
     var pa = datos.map(function (x, i) { return [X(i), Y(x.a)]; }), pb = datos.map(function (x, i) { return [X(i), Y(x.b)]; });
     var cada = Math.ceil(datos.length / 8);
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(datos.map(function (x) { return diaLargo(x.dia) + ': ' + x.a + ' nuevas, ' + x.b + ' citas'; }).join('; ')) + '">' +
-      '<defs><linearGradient id="fx-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#2563eb" stop-opacity=".24"/><stop offset="95%" stop-color="#2563eb" stop-opacity="0"/></linearGradient></defs>';
+      // Los colores los pone la hoja (stop-color y stroke son propiedades de CSS): así siguen al tema y a los tokens.
+      '<defs><linearGradient id="fx-grad" x1="0" y1="0" x2="0" y2="1"><stop class="fx-stop" offset="5%" stop-opacity=".22"/><stop class="fx-stop" offset="95%" stop-opacity="0"/></linearGradient></defs>';
     for (var g = 0; g <= 4; g++) {
       var v = tope / 4 * g, y = Y(v);
       svg += '<line class="rejilla" x1="' + izq + '" x2="' + (W - der) + '" y1="' + y + '" y2="' + y + '"/><text class="eje" x="' + (izq - 8) + '" y="' + (y + 4) + '" text-anchor="end">' + v + '</text>';
@@ -1823,16 +1867,16 @@
     datos.forEach(function (x, i) { if (i % cada === 0 || i === datos.length - 1) svg += '<text class="eje" x="' + X(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(diaCorto(x.dia)) + '</text>'; });
     var curva = curvaSuave(pa);
     svg += '<path d="' + curva + 'L' + X(datos.length - 1) + ',' + Y(0) + 'L' + X(0) + ',' + Y(0) + 'Z" fill="url(#fx-grad)"/>' +
-      '<path class="linea-azul" d="' + curva + '"/><path class="linea-verde" d="' + curvaSuave(pb) + '"/>';
+      '<path class="linea-nuevas" d="' + curva + '"/><path class="linea-citas" d="' + curvaSuave(pb) + '"/>';
     datos.forEach(function (x, i) {
       svg += '<g class="col" data-i="' + i + '"><rect class="zona" x="' + (X(i) - paso / 2) + '" y="' + arr + '" width="' + paso + '" height="' + (H - arr - aba) + '"/>' +
-        '<circle class="punto" cx="' + X(i) + '" cy="' + Y(x.a) + '" r="4" stroke="#2563eb"/><circle class="punto" cx="' + X(i) + '" cy="' + Y(x.b) + '" r="4" stroke="#10b981"/></g>';
+        '<circle class="punto nuevas" cx="' + X(i) + '" cy="' + Y(x.a) + '" r="4"/><circle class="punto citas" cx="' + X(i) + '" cy="' + Y(x.b) + '" r="4"/></g>';
     });
     caja.innerHTML = svg + '</svg><div class="fx-globo" id="fx-globo" hidden></div>';
     caja.querySelectorAll('.col').forEach(function (c) {
       c.onmouseenter = function () {
         var i = Number(c.getAttribute('data-i')), x = datos[i], gl = $('fx-globo');
-        gl.innerHTML = '<b>' + esc(diaLargo(x.dia)) + '</b><span class="a">Conversaciones nuevas: ' + x.a + '</span><br><span class="v">Citas agendadas: ' + x.b + '</span>';
+        gl.innerHTML = '<b>' + esc(diaLargo(x.dia)) + '</b><span class="nuevas">Conversaciones nuevas: ' + x.a + '</span><br><span class="citas">Citas agendadas: ' + x.b + '</span>';
         gl.hidden = false;
         var izqG = Math.min(Math.max(0, X(i) + 12), caja.clientWidth - gl.offsetWidth);
         gl.style.left = (X(i) + 12 + gl.offsetWidth > caja.clientWidth ? X(i) - 12 - gl.offsetWidth : izqG) + 'px';
@@ -1848,13 +1892,14 @@
   // Dónde está cada persona hoy: una barra por etapa, en el orden del embudo del negocio.
   function pintarEtapasFacil(s) {
     var caja = $('fx-etapas');
-    if (!caja || !s || !s.byStage) return;
+    if (!caja) return;
+    if (!s || !s.byStage) { caja.innerHTML = vacioFacil('No se pudo cargar', 'Vuelve a intentarlo con «Actualizar».'); return; }
     var etapas = (state.stages || []).length ? state.stages : Object.keys(s.stageLabels || {}).map(function (k) { return { id: k, label: s.stageLabels[k] }; });
     var max = Math.max(1, Math.max.apply(null, etapas.map(function (e) { return s.byStage[e.id] || 0; })));
     if (!etapas.some(function (e) { return s.byStage[e.id]; })) { caja.innerHTML = vacioFacil('Nadie en el embudo todavía', 'Aquí se ve cuántas personas hay en cada etapa.'); return; }
     caja.innerHTML = etapas.map(function (e) {
       var n = s.byStage[e.id] || 0;
-      return '<button class="fx-barra" data-stage="' + esc(e.id) + '" title="Ver en el pipeline"><span class="nom">' + esc(e.label || e.id) + '</span>' +
+      return '<button class="fx-barra" data-stage="' + esc(e.id) + '" data-rol="' + esc(e.rol || '') + '" title="Ver en Tratos" aria-label="' + esc((e.label || e.id) + ': ' + n + (n === 1 ? ' contacto' : ' contactos')) + '"><span class="nom">' + esc(e.label || e.id) + '</span>' +
         // Cero es nada: ni una rayita, que se lee como «casi nada».
         '<span class="pista"><i' + (n ? '' : ' class="cero"') + ' style="width:' + Math.round((n / max) * 100) + '%"></i></span><span class="cuantos">' + n + '</span></button>';
     }).join('');
@@ -1867,7 +1912,7 @@
   function pintarActividadFacil() {
     var caja = $('fx-actividad');
     if (!caja) return;
-    var tono = function (k) { return k === 'appointment' || k === 'recordatorio' ? ['citas', 'verde'] : k === 'handoff' || k === 'verify' ? ['user', 'ambar'] : k === 'new' ? ['users', ''] : k === 'hot' ? ['objetivo', 'verde'] : ['actividad', '']; };
+    var tono = function (k) { return k === 'appointment' || k === 'recordatorio' ? ['citas', 'indigo'] : k === 'handoff' || k === 'verify' ? ['user', 'ambar'] : k === 'new' ? ['users', 'cielo'] : k === 'hot' ? ['objetivo', 'verde'] : ['actividad', '']; };
     var fila = function (x) {
       return '<button class="fx-act" data-id="' + esc(x.id) + '"><span class="fx-ic ' + x.tono[1] + '"><i class="ic" data-ic="' + x.tono[0] + '"></i></span>' +
         '<span class="cuerpo"><span class="t">' + esc(x.t) + '</span><span class="d">' + esc(x.d) + '</span></span><time>' + esc(x.cuando ? 'hace ' + rel(x.cuando) : '') + '</time></button>';
@@ -5398,6 +5443,50 @@
 
 
   // ===== XEN · Inicio: lo nuevo del agente de Inicio (lo de antes sigue en su sitio) =====
+  /**
+   * Las siguientes acciones del copiloto: una por cada fila de los recuadros que piden hacer algo, en su orden.
+   * 🪤 Solo filas de /today, con sus datos tal cual: el nombre, cuándo escribió, lo que preguntó. Si un recuadro
+   * nuevo aparece en Hoy y no está aquí, simplemente no sale como acción (la cifra de arriba sí lo cuenta).
+   */
+  function accionesDelCopiloto(pend, t, irAlRecuadro) {
+    var fuente = { verificar: t.verifications, grupos: t.enGrupos, esperan: t.unanswered, persona: t.handoffs, pasadas: t.past, recordar: t.remind, calientes: t.hot };
+    var hace = function (ts) { return ts ? 'hace ' + rel(ts) : ''; };
+    var alRecuadro = function (tono) { return function () { irAlRecuadro(tono); }; };
+    var alChat = function (c, conBorrador) { return function () { go('inbox'); openContact(c.id, conBorrador ? followupDraft(c) : undefined); }; };
+    var quienCita = function (a) { return a.contactName || short(a.userId); };
+    var una = {
+      verificar: function (v) { return { que: 'Verificar lo que preguntó ' + (v.contactName || short(v.userId)), detalle: v.question ? '«' + v.question + '»' : '', boton: 'Responder', ic: 'check', color: 'ambar', ir: alRecuadro('verificar') }; },
+      grupos: function (p) { return { que: 'Contestar en el grupo ' + p.grupo, detalle: p.sobre || p.texto || '', boton: 'Revisar', ic: 'users', color: 'ambar', ir: alRecuadro('grupos') }; },
+      esperan: function (c) { return { que: 'Contestar a ' + nameOf(c), detalle: [c.lastMessageAt ? 'Escribió ' + hace(c.lastMessageAt) : '', c.recap || c.summary || ''].filter(Boolean).join(' · '), boton: 'Contestar', ic: 'burbuja', color: 'rojo', ir: alChat(c) }; },
+      persona: function (c) { return { que: 'Atender a ' + nameOf(c), detalle: 'Pidió hablar con una persona' + (c.lastMessageAt ? ' · ' + hace(c.lastMessageAt) : ''), boton: 'Atender', ic: 'user', color: 'ambar', ir: alChat(c) }; },
+      pasadas: function (a) { return { que: 'Anotar cómo le fue a ' + quienCita(a), detalle: a.label ? 'Cita: ' + a.label : '', boton: 'Anotar', ic: 'citas', color: 'indigo', ir: alRecuadro('pasadas') }; },
+      recordar: function (a) { return { que: 'Recordarle la cita a ' + quienCita(a), detalle: a.label || '', boton: 'Recordar', ic: 'bell', color: 'indigo', ir: alRecuadro('recordar') }; },
+      calientes: function (c) { return { que: 'Retomar a ' + nameOf(c), detalle: 'Caliente y sin seguimiento' + (c.lastMessageAt ? ' · su último mensaje fue ' + hace(c.lastMessageAt) : ''), boton: 'Escribirle', ic: 'objetivo', color: 'verde', ir: alChat(c, true) }; }
+    };
+    var out = [];
+    pend.forEach(function (s) {
+      if (!una[s.tono]) return;
+      (fuente[s.tono] || []).forEach(function (x) { var a = una[s.tono](x); a.tono = s.tono; out.push(a); });
+    });
+    return out;
+  }
+  // Sin /today no hay Inicio: el copiloto lo dice, con salida. Lo demás se queda como esté (las gráficas piden lo suyo).
+  function pintarErrorDeInicio(motivo) {
+    var caja = $('fx-resumen');
+    if (!caja) return;
+    caja.removeAttribute('aria-busy');
+    caja.innerHTML = '<div class="fx-cop-cab"><span class="fx-cop-marca" aria-hidden="true"><i class="ic" data-ic="chispa"></i></span><span class="fx-cop-nombre" id="fx-cop-titulo">Copiloto XEN</span></div>' +
+      '<div class="fx-cop-error" role="alert"><h2>No se pudo cargar lo de hoy</h2><p>' + esc(motivo ? 'El servidor contestó: ' + motivo + '.' : 'No hubo respuesta del servidor. Revisa la conexión y vuelve a intentarlo.') + '</p>' +
+      '<button class="btn primary" type="button" id="fx-cop-reintentar">Reintentar</button></div>';
+    iconos(caja);
+    $('fx-cop-reintentar').onclick = function () { caja.setAttribute('aria-busy', 'true'); loadToday(); };
+    if ($('fx-kpis') && $('fx-kpis').getAttribute('aria-busy')) { $('fx-kpis').removeAttribute('aria-busy'); $('fx-kpis').innerHTML = ''; }
+    // 🪤 La semana, el embudo y la actividad no dependen de /today: sin esto se quedaban en esqueleto para siempre.
+    if ($('today').closest('.fx-atender')) $('today').closest('.fx-atender').hidden = true;
+    cargarSerieFacil();
+    api('/stats').then(pintarEtapasFacil).catch(function (e) { if ((!e || e.message !== '401') && $('fx-etapas')) $('fx-etapas').innerHTML = vacioFacil('No se pudo cargar', 'Vuelve a intentarlo con «Actualizar».'); });
+    pintarActividadFacil();
+  }
   // (fin de XEN · Inicio)
 
   // ===== XEN · Bandeja omnicanal: lo nuevo del agente de la bandeja =====

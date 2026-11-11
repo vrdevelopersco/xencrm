@@ -1561,98 +1561,126 @@ dialog.perdida input{width:100%}
 :root[data-piel="xen"] .empty{color:var(--fx-t2)}
 
 /* ---------- Inicio ---------- */
-:root[data-piel="xen"] #view-today.active{display:block;overflow:auto}
-.fx-kpis{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));padding:28px 28px 0}
-.fx-kpi{display:block;width:100%;text-align:left;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);padding:16px;cursor:pointer;
-  font:inherit;color:inherit;box-shadow:0 1px 2px rgb(15 23 42/.03);transition:transform var(--fx-t-rapido),box-shadow var(--fx-t-rapido)}
-.fx-kpi:hover{transform:translateY(-2px);box-shadow:var(--fx-sombra-md)}
+/* El orden: el copiloto (lo único que llama la atención), las cuatro cifras, la semana y el embudo, y lo último que
+   pasó con lo que hay para atender al lado. Margen de página de 28 px, el mismo de la cabecera. */
+:root[data-piel="xen"] #view-today.active{display:block;overflow:auto;padding-bottom:28px}
+:root[data-piel="xen"] #view-today>.topbar{padding-bottom:4px}
+.fx-kpis{display:grid;gap:16px;grid-template-columns:repeat(4,minmax(0,1fr));padding:20px 28px 0}
+.fx-kpis:empty{display:none}
+.fx-kpi{display:block;width:100%;text-align:left;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);padding:18px 20px;cursor:pointer;
+  font:inherit;color:inherit;box-shadow:var(--fx-sombra-xs);transition:transform var(--fx-t-rapido),box-shadow var(--fx-t-rapido),border-color var(--fx-t-rapido)}
+.fx-kpi:hover{transform:translateY(-2px);box-shadow:var(--fx-sombra-md);border-color:var(--fx-t4)}
 .fx-kpi .fx-kpi-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.fx-kpi .t{font-size:14px;font-weight:500;color:var(--fx-t2)}
-.fx-kpi .fx-ic{display:inline-grid;place-items:center;padding:8px;border-radius:var(--fx-r-lg);background:var(--fx-suave);color:var(--fx-acento)}
-.fx-kpi .fx-ic.violeta{background:var(--fx-violeta-s);color:#7c3aed}
-.fx-kpi .fx-ic.verde{background:var(--fx-verde-s);color:#059669}
-.fx-kpi .fx-ic .ic{width:16px;height:16px;color:currentColor}
-.fx-kpi .n{display:block;margin-top:12px;font-size:24px;line-height:1.3;font-weight:600;letter-spacing:-.025em;color:var(--fx-t0);font-variant-numeric:tabular-nums}
-.fx-kpi .n.flojo{font-size:16px}
-.fx-kpi .p{display:block;margin-top:8px;font-size:12px;color:var(--fx-t3)}
+.fx-kpi .t{font-size:14px;font-weight:600;color:var(--fx-t2)}
+.fx-kpi .fx-ic{display:inline-grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:var(--fx-r-md);background:var(--fx-suave);color:var(--fx-acento-t)}
+.fx-kpi .fx-ic.cielo{background:var(--fx-cielo-s);color:var(--fx-cielo-t)}
+.fx-kpi .fx-ic.verde{background:var(--fx-verde-s);color:var(--fx-verde-t)}
+.fx-kpi .fx-ic.indigo{background:var(--fx-indigo-s);color:var(--fx-indigo-t)}
+.fx-kpi .fx-ic .ic{width:18px;height:18px;color:currentColor}
+.fx-kpi .n{display:block;margin-top:10px;font-size:34px;line-height:1.1;font-weight:700;letter-spacing:-.03em;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+.fx-kpi .n.flojo{font-size:18px}
+.fx-kpi .p{display:block;margin-top:6px;font-size:13px;color:var(--fx-t2)}
 .fx-kpi .p b{font-weight:600}
-.fx-kpi .p .sube{color:#059669}.fx-kpi .p .baja{color:#e11d48}
-/* Lo que espera a alguien: las mismas tarjetas de Hoy, con la piel de Nexora. Si no hay nada, no hay fila. */
-:root[data-piel="xen"] #today{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;padding:20px 28px 28px;overflow:visible;align-items:start}
+.fx-kpi .p .sube{color:var(--fx-verde-t)}.fx-kpi .p .baja{color:var(--fx-rojo-t)}
+/* Lo que espera a alguien: los recuadros de Hoy, compactos, en la columna «Para atender». Si no hay nada, no hay columna. */
+:root[data-piel="xen"] #today{display:flex;flex-direction:column;gap:12px;padding:0;overflow:visible}
 :root[data-piel="xen"] #today[hidden]{display:none}
-:root[data-piel="xen"] #today .panel{padding:20px;border-radius:var(--fx-r-xl);box-shadow:var(--fx-sombra-sm)}
-:root[data-piel="xen"] #today .panel h3{font-size:16px;font-weight:600;color:var(--fx-t1);margin:0 0 8px;padding:0;border:0}
-:root[data-piel="xen"] #today .panel h3 .chip{background:var(--fx-suave);color:var(--fx-suave-t)}
+:root[data-piel="xen"] #today .panel{padding:16px 18px;border-radius:var(--fx-r-xl);box-shadow:var(--fx-sombra-xs);scroll-margin-top:16px}
+:root[data-piel="xen"] #today .panel h3{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:650;color:var(--fx-t1);margin:0 0 6px;padding:0;border:0}
+:root[data-piel="xen"] #today .panel h3 .chip{margin-left:auto;background:var(--fx-suave);color:var(--fx-suave-t);font-variant-numeric:tabular-nums}
 :root[data-piel="xen"] #today .panel[data-tono="esperan"] h3 .chip,:root[data-piel="xen"] #today .panel[data-tono="verificar"] h3 .chip{background:var(--fx-rojo-s);color:var(--fx-rojo-t)}
+:root[data-piel="xen"] #today .panel[data-tono="persona"] h3 .chip,:root[data-piel="xen"] #today .panel[data-tono="grupos"] h3 .chip{background:var(--fx-ambar-s);color:var(--fx-ambar-t)}
+:root[data-piel="xen"] #today .panel[data-tono="calientes"] h3 .chip{background:var(--fx-verde-s);color:var(--fx-verde-t)}
+:root[data-piel="xen"] #today .panel[data-tono="citas"] h3 .chip,:root[data-piel="xen"] #today .panel[data-tono="pasadas"] h3 .chip,:root[data-piel="xen"] #today .panel[data-tono="recordar"] h3 .chip,:root[data-piel="xen"] #today .panel[data-tono="proximas"] h3 .chip{background:var(--fx-indigo-s);color:var(--fx-indigo-t)}
 :root[data-piel="xen"] #today .panel::before,:root[data-piel="xen"] #today .panel h3::after{display:none}
-:root[data-piel="xen"] #today .row{border:0;border-bottom:1px solid var(--fx-borde-2);border-radius:0;box-shadow:none;background:none;padding:12px 0;margin:0}
+:root[data-piel="xen"] #today .panel:focus{outline:none}
+:root[data-piel="xen"] #today .panel:focus-visible{box-shadow:var(--fx-anillo)}
+:root[data-piel="xen"] #today .row{border:0;border-bottom:1px solid var(--fx-borde-2);border-radius:0;box-shadow:none;background:none;padding:10px 0;margin:0;min-height:0}
 :root[data-piel="xen"] #today .row:last-child{border-bottom:0}
+/* 🪤 La fila de aquí no es la de la bandeja (que tiene avatar en una primera columna de 32 px): sin su propia
+   rejilla, el resumen caía en esa columna y salía «La ú…» delante del nombre. */
+:root[data-piel="xen"] #today .row{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:4px;padding:10px 4px;border-left:0}
+:root[data-piel="xen"] #today .row .name{grid-column:1;grid-row:1;font-size:14px;font-weight:650;color:var(--fx-t1)}
+:root[data-piel="xen"] #today .row .time{grid-column:2;grid-row:1;font-size:12px;color:var(--fx-t2)}
+:root[data-piel="xen"] #today .row .snip{grid-column:1/-1;grid-row:2;font-size:13px;color:var(--fx-t2);white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+:root[data-piel="xen"] #today .row .meta{grid-column:1/-1;grid-row:3;margin-top:2px}
+:root[data-piel="xen"] #today .row .acts{grid-column:1/-1;grid-row:4}
+:root[data-piel="xen"] #today .row .unread{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:var(--fx-r-pill);background:var(--fx-acento);color:var(--fx-sobre-acento);font-size:11px;font-weight:700}
 :root[data-piel="xen"] #today .row::before,:root[data-piel="xen"] #today .appt::before,:root[data-piel="xen"] #today .verify::before{display:none}
 :root[data-piel="xen"] #today .row:hover{background:var(--fx-fila)}
-:root[data-piel="xen"] #today .appt,:root[data-piel="xen"] #today .verify{border:0;border-bottom:1px solid var(--fx-borde-2);border-radius:0;box-shadow:none;background:none;padding:12px 0;margin:0}
+:root[data-piel="xen"] #today .appt,:root[data-piel="xen"] #today .verify{border:0;border-bottom:1px solid var(--fx-borde-2);border-radius:0;box-shadow:none;background:none;padding:10px 0;margin:0}
 :root[data-piel="xen"] #today .appt:last-child,:root[data-piel="xen"] #today .verify:last-child{border-bottom:0}
 .fx-fila{display:grid;gap:20px;padding:20px 28px 0}
 .fx-fila-graficas{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
-.fx-fila-actividad{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
-.fx-card{border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);padding:20px;box-shadow:var(--fx-sombra-sm);min-width:0}
-.fx-card-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
-.fx-card-cab h2{margin:0;font-size:16px;font-weight:600;color:var(--fx-t1)}
-.fx-card-cab p{margin:0;font-size:14px;color:var(--fx-t2)}
+.fx-fila-actividad{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start}
+/* Sin nada que atender, la actividad ocupa la fila entera. */
+.fx-fila-actividad:has(>.fx-atender[hidden]){grid-template-columns:minmax(0,1fr)}
+.fx-atender[hidden]{display:none}
+.fx-atender{min-width:0}
+.fx-sec{margin:2px 0 12px;font-size:16px;font-weight:650;color:var(--fx-t1)}
+.fx-card{border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);padding:20px;box-shadow:var(--fx-sombra-xs);min-width:0}
+.fx-card-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.fx-card-cab h2{margin:0;font-size:16px;font-weight:650;color:var(--fx-t1)}
+.fx-card-cab p{margin:2px 0 0;font-size:13.5px;color:var(--fx-t2)}
 .fx-card-cab select{width:150px;flex:0 0 150px}
-.fx-btn-ghost{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:0;border-radius:var(--fx-r-md);background:none;color:var(--fx-t1);font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.fx-btn-ghost{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border:0;border-radius:var(--fx-r-md);background:none;color:var(--fx-acento-t);font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex:0 0 auto}
 .fx-btn-ghost:hover{background:var(--fx-suave);color:var(--fx-suave-t)}
 .fx-btn-ghost .ic{width:16px;height:16px;color:currentColor}
 .fx-card-cab .fx-ico{color:var(--fx-t3)}
-.fx-grafica{height:288px;position:relative}
+.fx-grafica{height:280px;position:relative}
 .fx-grafica svg{display:block;width:100%;height:100%;overflow:visible}
 .fx-grafica .eje{font-size:12px;fill:var(--fx-t2)}
 .fx-grafica .rejilla{stroke:var(--fx-borde);stroke-dasharray:3 3}
-.fx-grafica .linea-azul{fill:none;stroke:var(--fx-acento);stroke-width:2.5}
-.fx-grafica .linea-verde{fill:none;stroke:var(--fx-verde);stroke-width:2}
+.fx-grafica .fx-stop{stop-color:var(--fx-acento)}
+.fx-grafica .linea-nuevas{fill:none;stroke:var(--fx-acento);stroke-width:2.5}
+.fx-grafica .linea-citas{fill:none;stroke:var(--fx-indigo);stroke-width:2;stroke-dasharray:6 4}
 .fx-grafica .punto{fill:var(--fx-panel);stroke-width:2;opacity:0;transition:opacity var(--fx-t-rapido)}
+.fx-grafica .punto.nuevas{stroke:var(--fx-acento)}.fx-grafica .punto.citas{stroke:var(--fx-indigo)}
 .fx-grafica .col:hover .punto{opacity:1}
 .fx-grafica .col .zona{fill:transparent}
-.fx-grafica .col:hover .zona{fill:rgb(148 163 184/.08)}
-.fx-globo{position:absolute;pointer-events:none;background:var(--fx-panel);border:1px solid var(--fx-borde);border-radius:12px;padding:8px 12px;font-size:12px;box-shadow:var(--fx-sombra-md);white-space:nowrap;z-index:2}
+.fx-grafica .col:hover .zona{fill:var(--fx-fila)}
+.fx-globo{position:absolute;pointer-events:none;background:var(--fx-panel);border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);padding:8px 12px;font-size:12px;box-shadow:var(--fx-sombra-md);white-space:nowrap;z-index:2}
 .fx-globo b{display:block;font-size:12px;margin-bottom:2px;color:var(--fx-t1)}
-.fx-globo .a{color:var(--fx-acento)}.fx-globo .v{color:#059669}
-.fx-vacio{display:flex;min-height:224px;flex-direction:column;align-items:center;justify-content:center;border:1px dashed var(--fx-t4);border-radius:var(--fx-r-xl);background:color-mix(in srgb,var(--fx-fondo) 50%,transparent);padding:32px;text-align:center}
-.fx-vacio b{font-weight:500;color:var(--fx-t1)}
+.fx-globo .nuevas{color:var(--fx-acento-t)}.fx-globo .citas{color:var(--fx-indigo-t)}
+.fx-vacio{display:flex;min-height:200px;flex-direction:column;align-items:center;justify-content:center;border:1px dashed var(--fx-t4);border-radius:var(--fx-r-xl);background:var(--fx-panel-2);padding:28px;text-align:center}
+.fx-vacio b{font-weight:600;color:var(--fx-t1)}
 .fx-vacio span{margin-top:4px;font-size:14px;color:var(--fx-t2)}
-.fx-leyenda{display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--fx-t2)}
-.fx-leyenda i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
-.fx-l-azul{background:var(--fx-acento)}.fx-l-verde{background:var(--fx-verde)}
-.fx-barras{height:288px;display:flex;flex-direction:column;justify-content:space-around;padding:8px 0}
-.fx-barra{display:grid;grid-template-columns:96px minmax(0,1fr) 3ch;align-items:center;gap:12px;font-size:12px;color:var(--fx-t2);border:0;background:none;font-family:inherit;text-align:right;cursor:pointer;padding:4px 0;border-radius:6px}
+/* La leyenda repite la forma de cada línea (llena o punteada), no solo su color. */
+.fx-leyenda{display:flex;flex-wrap:wrap;gap:16px;margin-top:8px;font-size:12.5px;color:var(--fx-t2)}
+.fx-leyenda i{display:inline-block;width:14px;height:0;border-top:3px solid;border-radius:2px;margin-right:6px;vertical-align:middle}
+.fx-l-nuevas{border-color:var(--fx-acento)}.fx-l-citas{border-color:var(--fx-indigo);border-top-style:dashed!important}
+/* El embudo: una barra por etapa, del color del papel de su etapa (el mismo de Tratos y de las etiquetas). */
+.fx-barras{min-height:240px;display:flex;flex-direction:column;justify-content:space-around;gap:4px;padding:4px 0}
+.fx-barra{display:grid;grid-template-columns:minmax(72px,104px) minmax(0,1fr) 3ch;align-items:center;gap:12px;font-size:13px;color:var(--fx-t2);border:0;background:none;font-family:inherit;text-align:right;cursor:pointer;padding:6px 6px;border-radius:var(--fx-r-md)}
 .fx-barra:hover{background:var(--fx-fila)}
 .fx-barra .nom{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fx-barra .pista{height:18px;display:block}
-.fx-barra .pista i{display:block;height:100%;min-width:4px;background:var(--fx-acento);border-radius:0 6px 6px 0}
-.fx-barra .cuantos{text-align:left;color:var(--fx-t1);font-weight:600;font-variant-numeric:tabular-nums}
-.fx-actividad{display:flex;flex-direction:column;gap:4px}
-.fx-act{position:relative;display:flex;gap:12px;padding:12px 0;width:100%;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:6px}
+.fx-barra .pista{height:14px;display:block;background:var(--fx-panel-2);border-radius:var(--fx-r-pill);overflow:hidden}
+.fx-barra .pista i{display:block;height:100%;min-width:6px;background:var(--fx-t3);border-radius:var(--fx-r-pill)}
+.fx-barra .pista i.cero{min-width:0;width:0}
+.fx-barra[data-rol="inicio"] .pista i{background:var(--fx-t3)}
+.fx-barra[data-rol="activo"] .pista i{background:var(--fx-cielo)}
+.fx-barra[data-rol="interes"] .pista i{background:var(--fx-ambar)}
+.fx-barra[data-rol="cita"] .pista i{background:var(--fx-indigo)}
+.fx-barra[data-rol="ganado"] .pista i{background:var(--fx-verde)}
+.fx-barra[data-rol="perdido"] .pista i{background:var(--fx-rojo)}
+.fx-barra .cuantos{text-align:left;color:var(--fx-t1);font-weight:700;font-variant-numeric:tabular-nums}
+/* Lo último que pasó: una línea de tiempo, cada aviso con el tono de su dato. */
+.fx-actividad{display:flex;flex-direction:column}
+.fx-act{position:relative;display:flex;gap:12px;padding:10px 6px;width:100%;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:var(--fx-r-md)}
+.fx-act:hover{background:var(--fx-fila)}
 .fx-act:hover .t{color:var(--fx-acento-t)}
-.fx-act:not(:last-child)::before{content:"";position:absolute;left:15px;top:44px;bottom:0;width:1px;background:var(--fx-borde)}
-.fx-act .fx-ic{position:relative;z-index:1;display:inline-grid;place-items:center;width:32px;height:32px;flex:0 0 32px;border-radius:999px;background:var(--fx-suave);color:var(--fx-acento)}
-.fx-act .fx-ic.verde{background:var(--fx-verde-s);color:#059669}
+.fx-act:not(:last-child)::before{content:"";position:absolute;left:22px;top:46px;bottom:-6px;width:1px;background:var(--fx-borde)}
+.fx-act .fx-ic{position:relative;z-index:1;display:inline-grid;place-items:center;width:32px;height:32px;flex:0 0 32px;border-radius:999px;background:var(--fx-suave);color:var(--fx-acento-t)}
+.fx-act .fx-ic.verde{background:var(--fx-verde-s);color:var(--fx-verde-t)}
 .fx-act .fx-ic.ambar{background:var(--fx-ambar-s);color:var(--fx-ambar-t)}
+.fx-act .fx-ic.cielo{background:var(--fx-cielo-s);color:var(--fx-cielo-t)}
+.fx-act .fx-ic.indigo{background:var(--fx-indigo-s);color:var(--fx-indigo-t)}
 .fx-act .fx-ic .ic{width:16px;height:16px;color:currentColor}
 .fx-act .cuerpo{min-width:0;flex:1}
-.fx-act .t{display:block;font-size:14px;font-weight:500;color:var(--fx-t1)}
-.fx-act .d{display:block;font-size:14px;color:var(--fx-t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fx-act time{font-size:12px;color:var(--fx-t3);white-space:nowrap}
-.fx-oscura{background:var(--fx-oscura);color:#fff;border-color:var(--fx-borde)}
-:root[data-piel="xen"][data-theme=dark] .fx-oscura{border-color:#1e293b}
-.fx-oscura .fx-oscura-cab{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
-.fx-oscura .fx-oscura-cab .ic{width:16px;height:16px;color:#60a5fa}
-.fx-oscura h2{margin:16px 0 0;font-size:20px;line-height:1.35;font-weight:600;letter-spacing:-.025em}
-.fx-oscura p{margin:8px 0 0;font-size:14px;line-height:24px;color:var(--fx-oscura-t)}
-.fx-oscura .fx-caja{margin-top:20px;border:1px solid rgb(255 255 255/.1);border-radius:var(--fx-r-lg);background:rgb(255 255 255/.05);padding:4px}
-.fx-oscura .fx-caja button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:8px 10px;border:0;border-radius:6px;background:none;color:#e2e8f0;font:inherit;font-size:14px;text-align:left;cursor:pointer}
-.fx-oscura .fx-caja button:hover{background:rgb(255 255 255/.08)}
-.fx-oscura .fx-caja button b{font-variant-numeric:tabular-nums;color:#fff}
-.fx-oscura .fx-caja .nada{padding:8px 10px;font-size:14px;color:var(--fx-oscura-t)}
-.fx-oscura .fx-todo{margin-top:12px;background:none;border:0;color:#93c5fd;font:inherit;font-size:13px;cursor:pointer;padding:0}
+.fx-act .t{display:block;font-size:14px;font-weight:600;color:var(--fx-t1)}
+.fx-act .d{display:block;font-size:13.5px;color:var(--fx-t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx-act time{font-size:12px;color:var(--fx-t2);white-space:nowrap}
+.fx-todo{margin-top:14px;background:none;border:0;color:var(--fx-ia-t);font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px}
 @media (max-width:1279px){
   .fx-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .fx-fila-graficas{grid-template-columns:minmax(0,1fr)}
@@ -1888,6 +1916,85 @@ dialog.perdida input{width:100%}
 :root[data-piel="xen"] .details .appt .t{min-width:0}
 .fx-barra .pista i.cero{min-width:0;width:0}
 /* ---------- XEN · Inicio (complementos nuevos del agente de Inicio; lo de antes sigue en «Inicio», arriba) ---------- */
+/* El copiloto XEN: lo único de XENCRM que llama la atención. Borde con el degradado teal → violeta (lo que se hace
+   y lo que dice la IA), una franja arriba y la marca; el texto va siempre sobre el panel liso, medido como el resto. */
+.fx-copiloto{position:relative;margin:20px 28px 0;padding:22px 24px 20px;border:1px solid transparent;border-radius:var(--fx-r-xl);
+  background:linear-gradient(var(--fx-panel),var(--fx-panel)) padding-box,linear-gradient(120deg,color-mix(in srgb,var(--fx-acento) 60%,var(--fx-borde)),color-mix(in srgb,var(--fx-ia) 65%,var(--fx-borde))) border-box;
+  box-shadow:var(--fx-sombra-sm);overflow:hidden;min-width:0}
+.fx-copiloto::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--fx-acento),var(--fx-ia))}
+.fx-cop-cab{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px}
+.fx-cop-marca{display:inline-grid;place-items:center;width:30px;height:30px;flex:0 0 30px;border-radius:var(--fx-r-md);background:linear-gradient(135deg,var(--fx-acento),var(--fx-ia));color:var(--fx-sobre-acento)}
+.fx-cop-marca .ic{width:16px;height:16px;color:currentColor}
+.fx-cop-nombre{font-family:var(--fx-display);font-size:15px;font-weight:700;letter-spacing:.01em;color:var(--fx-ia-t)}
+.fx-cop-hora{margin-left:auto;font-size:12.5px;color:var(--fx-t2)}
+.fx-cop-cuerpo{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:28px;margin-top:14px}
+.fx-cop-main{min-width:0}
+.fx-cop-main h2,.fx-cop-error h2{margin:0;font-family:var(--fx-display);font-size:28px;line-height:1.15;font-weight:700;letter-spacing:-.025em;color:var(--fx-t0)}
+.fx-cop-main>p,.fx-cop-error p{margin:6px 0 0;font-size:14.5px;color:var(--fx-t2)}
+.fx-cop-acciones{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.fx-cop-accion{display:flex;align-items:center;gap:12px;min-width:0;padding:10px 12px;border:1px solid var(--fx-borde-2);border-radius:var(--fx-r-lg);background:var(--fx-panel-2)}
+.fx-cop-ic{display:inline-grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:999px;background:var(--fx-suave);color:var(--fx-acento-t)}
+.fx-cop-ic .ic{width:16px;height:16px;color:currentColor}
+.fx-cop-ic.rojo{background:var(--fx-rojo-s);color:var(--fx-rojo-t)}
+.fx-cop-ic.ambar{background:var(--fx-ambar-s);color:var(--fx-ambar-t)}
+.fx-cop-ic.verde{background:var(--fx-verde-s);color:var(--fx-verde-t)}
+.fx-cop-ic.indigo{background:var(--fx-indigo-s);color:var(--fx-indigo-t)}
+.fx-cop-txt{display:flex;flex-direction:column;min-width:0;flex:1}
+.fx-cop-txt b{font-size:14.5px;font-weight:650;color:var(--fx-t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx-cop-txt span{font-size:13px;color:var(--fx-t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx-cop-accion .btn{flex:0 0 auto}
+.fx-cop-mas{margin-top:10px;padding:4px 0;border:0;background:none;color:var(--fx-acento-t);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.fx-cop-mas:hover{text-decoration:underline;text-underline-offset:3px}
+.fx-cop-lado{min-width:0;padding-left:24px;border-left:1px solid var(--fx-borde-2)}
+.fx-cop-lado h3{margin:2px 0 6px;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--fx-t3)}
+.fx-cop-lado h3~h3{margin-top:18px}
+.fx-cop-pend,.fx-cop-agenda{display:flex;flex-direction:column;gap:2px}
+.fx-cop-pend button,.fx-cop-agenda button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:36px;padding:6px 10px;border:0;border-radius:var(--fx-r-md);background:none;color:var(--fx-t1);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.fx-cop-pend button:hover,.fx-cop-agenda button:hover{background:var(--fx-fila)}
+.fx-cop-pend button span,.fx-cop-agenda button span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx-cop-pend b{display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 7px;flex:0 0 auto;border-radius:var(--fx-r-pill);background:var(--fx-ia-s);color:var(--fx-ia-t);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.fx-cop-agenda button{justify-content:flex-start}
+.fx-cop-agenda time{flex:0 0 auto;font-weight:700;color:var(--fx-indigo-t);font-variant-numeric:tabular-nums}
+.fx-cop-nada{padding:6px 10px;font-size:14px;color:var(--fx-t2)}
+.fx-cop-error{margin-top:14px}
+.fx-cop-error .btn{margin-top:14px}
+/* El resaltado al llegar a un recuadro desde el copiloto: el violeta de la IA, porque fue ella quien lo señaló. */
+:root[data-piel="xen"] #today .panel.fx-resalta{box-shadow:0 0 0 3px color-mix(in srgb,var(--fx-ia) 45%,transparent),var(--fx-sombra-sm);transition:box-shadow 300ms}
+/* Cargando: esqueletos con la forma de lo que viene, para que nada salte al llegar los datos. */
+.fx-esq{border-radius:var(--fx-r-md);background:linear-gradient(90deg,var(--fx-panel-2) 25%,var(--fx-hover) 50%,var(--fx-panel-2) 75%);background-size:200% 100%;animation:fx-esq 1.4s ease-in-out infinite}
+@keyframes fx-esq{from{background-position:100% 0}to{background-position:-100% 0}}
+.fx-esq-titulo{height:30px;width:min(360px,70%);margin-top:16px}
+.fx-esq-linea{height:14px;width:min(480px,90%);margin-top:10px}
+.fx-esq-fila{height:52px;margin-top:10px;border-radius:var(--fx-r-lg)}
+.fx-esq-kpi{height:124px;border-radius:var(--fx-r-xl)}
+.fx-esq-grafica{height:100%;border-radius:var(--fx-r-lg)}
+.fx-esq-barra{height:22px;border-radius:var(--fx-r-pill)}
+@media (max-width:1023px){
+  .fx-cop-cuerpo{grid-template-columns:minmax(0,1fr);gap:18px}
+  .fx-cop-lado{padding:16px 0 0;border-left:0;border-top:1px solid var(--fx-borde-2)}
+}
+@media (max-width:900px){
+  .fx-copiloto{margin:16px 20px 0;padding:18px 16px 16px}
+  :root[data-piel="xen"] #view-today>.topbar{padding-bottom:0}
+  /* 🪤 La regla del celular del marco le da 20 px a #today; aquí vive dentro de su columna, que ya tiene margen. */
+  :root[data-piel="xen"] #today{padding:0}
+  .fx-kpis{padding:16px 20px 0}
+  .fx-fila{padding:16px 20px 0;gap:16px}
+}
+@media (max-width:639px){
+  .fx-cop-hora{flex-basis:100%;margin-left:40px}
+  .fx-cop-main h2,.fx-cop-error h2{font-size:23px}
+  .fx-cop-accion{padding:10px}
+  .fx-cop-ic{display:none}
+  .fx-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .fx-kpi{padding:14px}
+  .fx-kpi .n{font-size:28px}
+  .fx-kpi .fx-ic{width:30px;height:30px;flex-basis:30px}
+  .fx-kpi .t{font-size:13px}
+  .fx-grafica{height:220px}
+  .fx-barra{grid-template-columns:minmax(64px,88px) minmax(0,1fr) 3ch;gap:8px}
+}
+@media (prefers-reduced-motion:reduce){.fx-esq{animation:none}:root[data-piel="xen"] #today .panel.fx-resalta{transition:none}}
 /* (fin de XEN · Inicio) */
 
 /* ---------- XEN · Bandeja omnicanal (complementos nuevos del agente de la bandeja) ---------- */
@@ -2010,35 +2117,42 @@ dialog.perdida input{width:100%}
     <!-- Hoy -->
     <section class="view active" id="view-today">
       <div class="topbar"><h1 id="today-title">Hoy</h1><span class="muted small" id="today-sub"></span><span class="grow"></span><button class="btn sm" id="today-refresh">Actualizar</button></div>
-      <!-- Los números de arriba no van en el modo fácil: lo que pide hacer algo ya está en los recuadros. -->
+      <!-- Los números de arriba del completo: en XENCRM los cuenta Inicio con sus tarjetas (la piel los esconde). -->
       <div class="kpis solo-completo" id="kpis"></div>
-      <!-- Modo fácil: Inicio como el de Nexora. Arriba los cuatro números, luego las dos gráficas, después lo último
-           que pasó con el resumen del día y, al final, lo que espera a alguien (solo si hay algo). Se pinta en
-           pintarInicio(). -->
-      <div class="fx-kpis solo-facil" id="fx-kpis"></div>
+      <!-- XENCRM: Inicio. Arriba el copiloto XEN (lo único que llama la atención en todo el producto: lo que espera a
+           alguien, contado, y las siguientes acciones, todo sacado de /today); luego las cuatro cifras, cómo va la
+           semana, el embudo por etapa, lo último que pasó y, al lado, lo que hay para atender. Se pinta en
+           pintarInicio(); mientras llega, cada pieza enseña un esqueleto con su forma para que nada salte. -->
+      <section class="fx-copiloto solo-facil" id="fx-resumen" aria-labelledby="fx-cop-titulo" aria-busy="true">
+        <div class="fx-cop-cab"><span class="fx-cop-marca" aria-hidden="true"><i class="ic" data-ic="chispa"></i></span><span class="fx-cop-nombre" id="fx-cop-titulo">Copiloto XEN</span></div>
+        <div class="fx-esq fx-esq-titulo"></div><div class="fx-esq fx-esq-linea"></div><div class="fx-esq fx-esq-fila"></div><div class="fx-esq fx-esq-fila"></div>
+      </section>
+      <div class="fx-kpis solo-facil" id="fx-kpis" aria-busy="true"><div class="fx-esq fx-esq-kpi"></div><div class="fx-esq fx-esq-kpi"></div><div class="fx-esq fx-esq-kpi"></div><div class="fx-esq fx-esq-kpi"></div></div>
       <div class="fx-fila fx-fila-graficas solo-facil">
         <section class="fx-card">
           <div class="fx-card-cab"><div><h2>Cómo va la semana</h2><p id="fx-serie-sub">Conversaciones nuevas y citas agendadas</p></div>
             <select id="fx-serie-dias" aria-label="Cuántos días"><option value="7">Últimos 7 días</option><option value="14">Últimos 14 días</option><option value="30">Últimos 30 días</option></select></div>
-          <div class="fx-grafica" id="fx-serie"></div>
-          <div class="fx-leyenda"><span><i class="fx-l-azul"></i>Conversaciones nuevas</span><span><i class="fx-l-verde"></i>Citas agendadas</span></div>
+          <div class="fx-grafica" id="fx-serie"><div class="fx-esq fx-esq-grafica"></div></div>
+          <div class="fx-leyenda"><span><i class="fx-l-nuevas"></i>Conversaciones nuevas</span><span><i class="fx-l-citas"></i>Citas agendadas</span></div>
         </section>
         <section class="fx-card">
-          <div class="fx-card-cab"><div><h2>Clientes por etapa</h2><p>Dónde está cada persona hoy</p></div>
-            <button class="fx-ico" id="fx-ir-pipeline" aria-label="Ver el pipeline"><i class="ic" data-ic="mas-h"></i></button></div>
-          <div class="fx-barras" id="fx-etapas"></div>
+          <div class="fx-card-cab"><div><h2>Contactos por etapa</h2><p>Dónde está cada persona hoy</p></div>
+            <button class="fx-btn-ghost" id="fx-ir-pipeline">Ver tratos <i class="ic" data-ic="derecha"></i></button></div>
+          <div class="fx-barras" id="fx-etapas"><div class="fx-esq fx-esq-barra"></div><div class="fx-esq fx-esq-barra"></div><div class="fx-esq fx-esq-barra"></div><div class="fx-esq fx-esq-barra"></div></div>
         </section>
       </div>
       <div class="fx-fila fx-fila-actividad solo-facil">
         <section class="fx-card">
           <div class="fx-card-cab"><h2>Actividad reciente</h2><button class="fx-btn-ghost" id="fx-ver-todo">Ver todo <i class="ic" data-ic="derecha"></i></button></div>
-          <div class="fx-actividad" id="fx-actividad"></div>
+          <div class="fx-actividad" id="fx-actividad"><div class="fx-esq fx-esq-fila"></div><div class="fx-esq fx-esq-fila"></div><div class="fx-esq fx-esq-fila"></div></div>
         </section>
-        <section class="fx-card fx-oscura" id="fx-resumen"></section>
+        <!-- Lo que espera a alguien: los recuadros de Hoy, con todo lo que se hace ahí mismo (verificar, anotar cómo
+             les fue, recordar a mano). El copiloto lleva a cada uno. Si no hay nada, la columna no está. -->
+        <section class="fx-atender" aria-labelledby="fx-atender-titulo">
+          <h2 class="fx-sec" id="fx-atender-titulo">Para atender</h2>
+          <div class="today" id="today"></div>
+        </section>
       </div>
-      <!-- Lo que espera a alguien. En el completo es Hoy entero; en el fácil va al final, como la fila de abajo de
-           Inicio, y el resumen del día lleva a cada recuadro. -->
-      <div class="today" id="today"></div>
     </section>
     <!-- Conversaciones -->
     <section class="view" id="view-inbox">
