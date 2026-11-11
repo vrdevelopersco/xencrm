@@ -30,7 +30,7 @@ const intentar = (cambios: unknown) => {
 };
 
 const base = ajustesDe();
-check('lee lo que está corriendo', base.negocio.name === 'Casa Verde' && base.agente.name === 'Aiva', JSON.stringify(base.negocio).slice(0, 80));
+check('lee lo que está corriendo', base.negocio.name === 'Casa Verde' && base.agente.name === 'Xen', JSON.stringify(base.negocio).slice(0, 80));
 
 // --- guardar lo normal ---
 const cambiado = JSON.parse(JSON.stringify(base)) as typeof base;

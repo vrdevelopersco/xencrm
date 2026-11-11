@@ -1,8 +1,8 @@
 {
-  "name": "aiva",
+  "name": "xencrm",
   "version": "0.1.0",
   "private": true,
-  "description": "Asistente de compras local (Ollama) accesible por WhatsApp, widget web y MCP",
+  "description": "XENCRM: CRM conversacional con IA para WhatsApp y el chat del sitio, con bandeja omnicanal, tratos y citas (la siguiente generación de aiva)",
   "type": "module",
   "engines": {
     "node": ">=22.13"

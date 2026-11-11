@@ -115,7 +115,7 @@ export function ticketsDe(cliente: ClienteRef, e: EstadoCliente): Ticket[] {
     t.push({
       urgencia: 'alta',
       titulo: 'Su WhatsApp está abierto en dos sitios',
-      detalle: 'Cada sesión echa a la otra y no entra ningún mensaje. Hay que dejarlo en un solo sitio (teléfono › Dispositivos vinculados, u otra máquina con aiva) y volver a encender el canal en su tablero.',
+      detalle: 'Cada sesión echa a la otra y no entra ningún mensaje. Hay que dejarlo en un solo sitio (teléfono › Dispositivos vinculados, u otra máquina con XENCRM) y volver a encender el canal en su tablero.',
     });
   } else if (e.whatsapp && !['conectado', 'apagado', 'no_disponible', 'sin_configurar'].includes(e.whatsapp)) {
     t.push({ urgencia: 'media', titulo: `WhatsApp en "${e.whatsapp}"`, detalle: 'Puede que haya que volver a escanear el código.' });
@@ -343,8 +343,8 @@ const SOLO_SUPER_CAMBIA = /^retencion(\/|$)/;
  */
 function vedado(esSuper: boolean, ruta: string, metodo: string): string | null {
   if (esSuper) return null;
-  if (SOLO_SUPER.test(ruta)) return 'eso lo lleva quien administra aiva, no el negocio';
-  if (SOLO_SUPER_CAMBIA.test(ruta) && metodo !== 'GET' && metodo !== 'HEAD') return 'eso lo cambia quien administra aiva; verlo sí puedes';
+  if (SOLO_SUPER.test(ruta)) return 'eso lo lleva quien administra XENCRM, no el negocio';
+  if (SOLO_SUPER_CAMBIA.test(ruta) && metodo !== 'GET' && metodo !== 'HEAD') return 'eso lo cambia quien administra XENCRM; verlo sí puedes';
   return null;
 }
 
@@ -952,7 +952,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     puerta.listen(ruta, () => console.log(`   y también por ${ruta}`));
   }
   const servidor = serve({ fetch: app.fetch, port: PUERTO, hostname: HOST }, () => {
-    console.log(`\n🛠  Consola de aiva · http://localhost:${PUERTO}`);
+    console.log(`\n🛠  Consola de XENCRM · http://localhost:${PUERTO}`);
     console.log(`   clientes: ${leerIndice().length}`);
     console.log(`   token: el de CONSOLA_TOKEN en .env${envRaiz('CONSOLA_TOKEN') ? ` (termina en …${CONSOLA_TOKEN.slice(-4)})` : `; no estaba, esta vez es ${CONSOLA_TOKEN}`}`);
     console.log(`   escucha solo en ${HOST}: quien entre aquí ve todos los clientes.\n`);

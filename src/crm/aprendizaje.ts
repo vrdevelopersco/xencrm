@@ -57,7 +57,7 @@ export function revisarAprendizaje(
   crudo: unknown,
   slugDestino: string,
 ): { error: string } | { aprendizaje: Aprendizaje; otroCliente: boolean; conversaciones: number; temas: number } {
-  if (!crudo || typeof crudo !== 'object') return { error: 'eso no es un archivo de aprendizaje de aiva' };
+  if (!crudo || typeof crudo !== 'object') return { error: 'eso no es un archivo de aprendizaje de XENCRM' };
   const a = crudo as Partial<Aprendizaje>;
   if (a.version !== VERSION_APRENDIZAJE) return { error: `el archivo es de otra versión (${String(a.version)}), y no se puede leer` };
   if (!a.slug) return { error: 'el archivo no dice de qué cliente salió' };

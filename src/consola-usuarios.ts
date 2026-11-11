@@ -85,16 +85,18 @@ export function colorDe(usuario: { usuario: string; color?: string }): string {
 
 /**
  * Los colores que puede tener la consola de cada quien. Es preferencia de la persona, no del negocio: cambia lo que
- * ve ella y nada más. Azul es el de siempre y va primero. Cada uno tiene su variante clara para la barra oscura en
- * public/consola.html, y test:tablero falla si aquí aparece uno que allá no esté pintado.
+ * ve ella y nada más. El verde agua de XENCRM («xen») es el de siempre y va primero; el azul, que lo fue en aiva,
+ * queda como una opción más. Cada uno tiene su pintura en public/consola.html, y test:tablero falla si aquí
+ * aparece uno que allá no esté pintado.
  */
-export const ACENTOS = ['azul', 'dorado', 'grafito', 'morado'] as const;
+export const ACENTOS = ['xen', 'azul', 'dorado', 'grafito', 'morado'] as const;
 export type Acento = (typeof ACENTOS)[number];
 
-/** El azul no se guarda: «no eligió» y «eligió el de siempre» son lo mismo, y así un cambio del de siempre los alcanza. */
+/** El de siempre no se guarda: «no eligió» y «eligió el de siempre» son lo mismo, y así un cambio del de siempre los
+ * alcanza. 🪤 Por eso quien en aiva tenía el azul (que no se guardaba) entra a XENCRM con el verde agua. */
 const acentoLimpio = (acento: string | undefined): Acento | undefined => {
   const a = String(acento ?? '').trim();
-  if (!a || a === 'azul') return undefined;
+  if (!a || a === 'xen') return undefined;
   if (!(ACENTOS as readonly string[]).includes(a)) throw new Error('ese color de consola no está en la lista');
   return a as Acento;
 };
@@ -273,7 +275,7 @@ export function crearComo(actor: UsuarioPublico | null, datos: Parameters<typeof
   if (!manejaEquipo(actor)) throw new Error('el equipo lo maneja el admin de tu cliente');
   if (!actor || actor.rol === 'super') return crearUsuario(datos);
   const rol = rolDe(datos.rol, 'asesor');
-  if (rol === 'super') throw new Error('un super-admin solo lo crea quien administra aiva');
+  if (rol === 'super') throw new Error('un super-admin solo lo crea quien administra XENCRM');
   return crearUsuario({ ...datos, rol, clientes: clientesDelAdmin(actor, datos.clientes?.length ? datos.clientes : actor.clientes) });
 }
 
@@ -294,9 +296,9 @@ export function actualizarComo(actor: UsuarioPublico | null, usuario: string, ca
   if (!objetivo || !administra(actor, objetivo)) throw new Error('ese usuario no existe');
   const limpios: Record<string, unknown> = {};
   for (const k of CAMPOS_DEL_ADMIN) if (cambios[k] !== undefined) limpios[k] = cambios[k];
-  if (limpios.rol !== undefined && rolDe(limpios.rol, objetivo.rol) === 'super') throw new Error('un super-admin solo lo nombra quien administra aiva');
+  if (limpios.rol !== undefined && rolDe(limpios.rol, objetivo.rol) === 'super') throw new Error('un super-admin solo lo nombra quien administra XENCRM');
   if (usuario === actor.usuario && (limpios.rol !== undefined || limpios.clientes !== undefined || limpios.activo !== undefined)) {
-    throw new Error('tu propio rol y tus clientes los cambia otro admin o quien administra aiva');
+    throw new Error('tu propio rol y tus clientes los cambia otro admin o quien administra XENCRM');
   }
   if (limpios.clientes !== undefined) limpios.clientes = clientesDelAdmin(actor, Array.isArray(limpios.clientes) ? (limpios.clientes as string[]) : []);
   return actualizarUsuario(usuario, limpios);

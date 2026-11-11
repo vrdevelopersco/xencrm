@@ -307,10 +307,10 @@ check('lo de una vez al mes va en «⋯» sin perder sus clases, que es por dond
   ['respaldar', 'restaurar', 'copiar', 'baja', 'prio'].every((k) => new RegExp(`<details class="mas">[\\s\\S]*?class="[^"]*\\b${k}\\b`).test(consola)));
 check('el menú «⋯» se cierra al hacer clic fuera o con Escape', /details\.mas\[open\][\s\S]{0,120}d\.open = false/.test(consola) && /e\.key === 'Escape'[\s\S]{0,120}details\.mas\[open\]/.test(consola));
 check('la hoja de la consola no repite reglas copiadas dos veces', (consola.match(/\.micro\{display:grid/g) || []).length === 1);
-// Cada color de consola que acepta el servidor tiene su pintura en la hoja; el azul es la base.
+// Cada color de consola que acepta el servidor tiene su pintura en la hoja; el verde agua de XENCRM es la base.
 const { ACENTOS } = await import('../consola-usuarios.js');
-const sinPintar = ACENTOS.filter((a) => a !== 'azul').filter((a) => !new RegExp(`:root\\[data-acento=${a}\\]:has\\(#app:not\\(\\[hidden\\]\\)\\)\\{[^}]*--brand:`).test(consola) || !consola.includes(`.acento[data-acento=${a}] i{`));
-check('cada color de consola de la lista tiene su pintura y su muestra', sinPintar.length === 0 && consola.includes('.acento[data-acento=azul] i{'), `sin pintar: ${sinPintar.join(', ')}`);
+const sinPintar = ACENTOS.filter((a) => a !== 'xen').filter((a) => !new RegExp(`:root\\[data-acento=${a}\\]:has\\(#app:not\\(\\[hidden\\]\\)\\)\\{[^}]*--brand:`).test(consola) || !consola.includes(`.acento[data-acento=${a}] i{`));
+check('cada color de consola de la lista tiene su pintura y su muestra', sinPintar.length === 0 && consola.includes('.acento[data-acento=xen] i{'), `sin pintar: ${sinPintar.join(', ')}`);
 check('🪤 al guardar «Mi cuenta» el botón del perfil no se queda en texto plano', !/\$\('yo'\)\.textContent = yo\./.test(consola) && /function pintarYo\(\)/.test(consola));
 // El acceso de cada cliente (2026-10-16): el super-admin no sabía con qué usuario entraba cada negocio, y la clave
 // guardada no se puede mostrar (es una huella). Se crea o se reemplaza desde la fila del cliente y se ve una sola vez.

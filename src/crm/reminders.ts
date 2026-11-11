@@ -80,7 +80,7 @@ function manualReason(c: Contact | null): string | null {
   // 🪤 «Solo escuchar» es modo aprendizaje: aiva mira cómo atiende el negocio y no le escribe al cliente. Un
   // recordatorio automático lo rompería justo donde más se nota — el cliente recibiría un mensaje de un robot
   // en una conversación que hasta ahora llevaba una persona. Se recuerda igual, pero a través del equipo.
-  if (soloEscucha(c.channel as ChannelId)) return 'El canal está en solo escuchar: aiva no le escribe al cliente. Mándaselo tú.';
+  if (soloEscucha(c.channel as ChannelId)) return 'El canal está en solo escuchar: XENCRM no le escribe al cliente. Mándaselo tú.';
   // «bot» es quien hizo el traspaso (pidió una persona, o se llegó al tope de gasto), no quien la lleva.
   if (c.humanMode) return `La conversación la lleva ${c.humanBy && c.humanBy !== 'bot' ? c.humanBy : 'alguien del equipo'}: el recordatorio va mejor de su parte.`;
   if (c.channel === 'whatsapp' || c.channel === 'meta') return null;

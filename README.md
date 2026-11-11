@@ -1,10 +1,33 @@
-# Aiva · CRM conversacional con IA para WhatsApp
+# XENCRM · CRM conversacional con IA para WhatsApp
 
-Aiva atiende clientes por WhatsApp y por el chat del sitio con un agente de IA que resuelve lo que puede con
+**XENCRM es la siguiente generación de aiva**: el mismo motor —agente de IA, citas, puntaje, traspaso a una
+persona— con una interfaz rehecha para trabajar como un CRM de mensajería. Esta carpeta nació como copia de aiva
+para ver en qué puede convertirse; lo que cambia y por qué está en [`docs/xencrm.md`](docs/xencrm.md).
+
+Qué cambia frente a aiva:
+
+- **Una sola piel.** La interfaz del modo fácil es la de todos, con identidad propia (bruma verde agua, tinta verde
+  petróleo, el acento teal y el violeta solo para lo que dice la IA). El modo fácil sigue existiendo, pero ya no
+  cambia el aspecto: solo esconde lo avanzado y pone el candado.
+- **El vocabulario de un CRM de mensajería.** La bandeja es la **Bandeja omnicanal**; cada persona en su etapa, un
+  **trato**; tomar una conversación es **pausar la automatización**.
+- **Modelos de IA** en Configuración: conectar OpenAI, Anthropic, Apple Foundation Models, Ollama, LM Studio o
+  cualquier API compatible con OpenAI, y elegir cuál hace cada cosa.
+- **Sentimiento** en Analítica, con emojis por interés y desinterés, y el análisis por voz como pantalla por
+  desarrollar.
+
+XENCRM atiende clientes por WhatsApp y por el chat del sitio con un agente de IA que resuelve lo que puede con
 reglas y usa el modelo cuando hace falta: OpenAI con un modelo por tarea, o motores que corren en el Mac (Gemma en
 Ollama y Apple Foundation Models). Convierte cada conversación en un prospecto con **puntaje explicable**,
 **análisis de sentimiento**, **datos capturados**, **citas agendadas con recordatorio** y **traspaso a una persona
 del equipo**, desde un tablero en vivo. Lo que no sabe no lo inventa: lo verifica con el equipo y lo aprende.
+
+> **Lo que conserva el nombre de aiva, a propósito.** Los identificadores técnicos siguen como estaban para no
+> romper los datos ni los despliegues de los clientes que ya existen: las variables `AIVA_*`, el archivo
+> `aiva.config.json`, la base `data/aiva.db` y sus respaldos `aiva-*.db`, la galleta `aiva_consola`, las cabeceras
+> `x-aiva-*`, las llaves `aiva.*` del navegador, los procesos `aiva-<cliente>` de pm2 y la herramienta MCP
+> `ask_aiva`. Tampoco cambia el nombre del asistente de cada cliente (`agent.name`): es el que ya conocen sus
+> clientes. Los clientes nuevos arrancan con «Xen».
 
 Nació como asistente de compras y hoy es un CRM conversacional **multicliente**: cada negocio corre en su propia
 instancia —su base, su WhatsApp, su token, su dominio— y se operan todos desde una consola (`pnpm consola`), donde
@@ -24,7 +47,7 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
 - [`docs/guia-del-tablero.md`](docs/guia-del-tablero.md): la referencia completa del tablero, para entrenar al
   equipo: qué hay en cada pantalla y qué hacer con cada cosa.
 - [`docs/arquitectura.md`](docs/arquitectura.md): para quien cambia el código. Cubre el recorrido de un mensaje,
-  los módulos, los datos, la configuración por capas, las pruebas y cómo extender aiva.
+  los módulos, los datos, la configuración por capas, las pruebas y cómo extender XENCRM.
 - [`docs/diseno-tablero.md`](docs/diseno-tablero.md): las reglas de diseño del tablero (contraste, material,
   colores de dato), con sus mediciones.
 - [`docs/demo.md`](docs/demo.md): el guion del demo en vivo, con la lista de lo que hay que dejar listo antes.
@@ -36,7 +59,7 @@ para responder, clasificar y analizar, y `gpt-5.4` para las respuestas pesadas.
   pantalla, roles y qué pasa al dar de baja a un cliente.
 - [`docs/desplegar.md`](docs/desplegar.md): subir todos los clientes en un solo despliegue, separados por ruta:
   qué queda publicado, qué variables van en el panel y dónde quedan los datos.
-- [`docs/aiva-producto.pdf`](docs/aiva-producto.pdf): lo que hace aiva, en una hoja, para mostrarle a un cliente
+- [`docs/xencrm-producto.pdf`](docs/xencrm-producto.pdf): lo que hace XENCRM, en una hoja, para mostrarle a un cliente
   (se regenera con `pnpm producto`).
 - [`herramientas/mirar.mjs`](herramientas/mirar.mjs): abre una pantalla en un navegador de verdad, con la sesión
   puesta, y dice qué se ve y qué errores de JavaScript hubo. Las pruebas no cogen eso.
@@ -101,7 +124,7 @@ pnpm test:scenarios         # batería de conversaciones del cliente
 pnpm dev                    # web (:3000), tablero (/admin) y WhatsApp (QR)
 ```
 
-Aiva no está amarrada a un negocio: todo lo propio de cada cliente vive en su configuración.
+XENCRM no está amarrado a un negocio: todo lo propio de cada cliente vive en su configuración.
 
 | Dónde | Qué va | Ejemplos |
 |---|---|---|
@@ -110,7 +133,7 @@ Aiva no está amarrada a un negocio: todo lo propio de cada cliente vive en su c
 | Tablero › Perfil | Lo que el dueño confirma de su negocio | dirección, horarios, zona, contacto, pagos y abono, precios, políticas y datos propios (tallas, tiempos…) |
 | Tablero › Canales | Lo que se decide en el día a día | encender o apagar el chat web, WhatsApp (con su QR), WhatsApp oficial y MCP, sin reiniciar; credenciales de WhatsApp oficial |
 
-El **diccionario** es lo que cada cliente le enseña a aiva sin tocar código: temas que se responden
+El **diccionario** es lo que cada cliente le enseña a XENCRM sin tocar código: temas que se responden
 con su información (palabras que los disparan y con qué se busca), los verbos con que su gente
 pregunta por lo que ofrece y las **expresiones** propias de sus clientes, que se leen como otra cosa
 antes de aplicar las reglas (fechas, temas y el flujo de la cita), sin importar tildes ni mayúsculas.
@@ -161,9 +184,9 @@ aplica al instante.
 
 Pruebas: `pnpm test:profile`.
 
-La **marca** (`brand`: `color` en hex y `logo`, una URL https o un archivo png, jpg, svg o webp que aiva
+La **marca** (`brand`: `color` en hex y `logo`, una URL https o un archivo png, jpg, svg o webp que XENCRM
 sirve en `/brand/logo`) se ve en el chat del sitio (cabecera, burbujas, botones y el logo) y en la página
-de la cita. El color puede ser cualquiera: aiva calcula si el texto encima va blanco u oscuro y, si
+de la cita. El color puede ser cualquiera: XENCRM calcula si el texto encima va blanco u oscuro y, si
 ninguno se lee a 4.5:1, oscurece o aclara el color lo justo, en claro y en oscuro (`pnpm test:brand`
 lo prueba con 500 colores). `data-color` en el `<script>` del chat lo cambia solo en ese sitio.
 `pnpm onboard` pregunta la marca.
@@ -350,8 +373,8 @@ Todo se actualiza en vivo y funciona en el celular: abajo quedan Hoy, Chats, Cal
 
 - **Hoy**: por verificar, esperan respuesta, pidieron una persona, cómo les fue en las citas que ya pasaron
   (vino, no vino, compró: el dato para calibrar el puntaje), recordar a mano, citas y calientes sin seguimiento.
-- **Conversaciones**: chat y ficha. "Responde: Aiva | Tú" cambia quién lleva la conversación; escribir a mano toma
-  el control.
+- **Bandeja omnicanal**: chat y ficha. «Pausar automatización» cambia quién lleva la conversación; escribir a mano
+  también la pausa.
 - **Calendario**.
 - **Prospectos**: se arrastra o se usa «Mover a…».
 - **Análisis**: cada número abre la lista que lo explica.
@@ -379,15 +402,15 @@ el adaptador se construye cuando haya credenciales de prueba de Meta.
 - **Meta Cloud API** (oficial, para producción): las credenciales (`META_ACCESS_TOKEN`,
   `META_PHONE_NUMBER_ID`, `META_VERIFY_TOKEN`, `META_APP_SECRET`, `META_API_VERSION`, por defecto v26.0) se llenan en
   **Canales › WhatsApp oficial › Credenciales** o en `.env`. Al guardarlas:
-  - aiva las verifica con Meta y, si Meta las rechaza, no las guarda;
+  - XENCRM las verifica con Meta y, si Meta las rechaza, no las guarda;
   - las escribe en `.env` (no en la base ni en el repositorio) y las aplica sin reiniciar;
   - el tablero nunca vuelve a mostrar el token completo, solo sus últimos caracteres.
 
   Luego se registra el webhook `https://TU-DOMINIO/webhooks/meta` en Meta, con el token de verificación.
-  Meta puede mandar la misma notificación más de una vez: aiva recuerda el id de cada mensaje durante 7 días y lo
+  Meta puede mandar la misma notificación más de una vez: XENCRM recuerda el id de cada mensaje durante 7 días y lo
   repetido no entra ni se contesta dos veces. Con el canal en «Mira» o «Propone» no marca leído ni muestra
   «escribiendo…». Pruebas: `pnpm test:meta` y `pnpm test:repetidos`. Requiere negocio verificado y plantillas para escribir fuera de la ventana de
-  24 horas. aiva respeta esa ventana: si pasaron más de 24 horas desde el último mensaje del
+  24 horas. XENCRM respeta esa ventana: si pasaron más de 24 horas desde el último mensaje del
   cliente, no envía (ni guarda como enviado) lo que Meta rechazaría. El tablero lo advierte en la
   conversación y en "Por verificar" (con cuánto tiempo queda cuando faltan menos de 3 horas), y la
   verificación sigue pendiente hasta que el cliente vuelva a escribir. Este adaptador está escrito
@@ -395,7 +418,7 @@ el adaptador se construye cuando haya credenciales de prueba de Meta.
 - **Widget**: `<script src="https://TU-DOMINIO/widget.js" async></script>`. Carga el historial,
   muestra las respuestas del equipo en vivo y avisa cuando atiende una persona.
 - **Túnel** para el widget, el tablero y el webhook: `cloudflared tunnel --url http://localhost:3000`
-  (pon la URL en `PUBLIC_URL` y restringe `ALLOWED_ORIGINS`). aiva se llama a sí misma por esa dirección cada
+  (pon la URL en `PUBLIC_URL` y restringe `ALLOWED_ORIGINS`). XENCRM se llama a sí mismo por esa dirección cada
   5 minutos, comparando un código único del proceso. Si falla 3 veces seguidas, avisa en la campana, en Hoy y en
   **Canales › Dirección pública** (con "Revisar ahora"), y avisa otra vez cuando vuelve. Una falla suelta, como
   justo después de crear el túnel, no da alarma. Pruebas: `pnpm test:public`.
@@ -455,11 +478,11 @@ pm2 start "pnpm start" --name aiva --cwd /ruta/a/aiva
 pm2 save && pm2 startup
 ```
 
-**Respaldos.** Una vez al día (y al arrancar, si el último tiene más de un día) aiva copia la base con
+**Respaldos.** Una vez al día (y al arrancar, si el último tiene más de un día) XENCRM copia la base con
 `VACUUM INTO` a `data/backups/` (`BACKUP_DIR`) y conserva las últimas 14 (`BACKUP_KEEP`). Las copias solo las lee
 el dueño del equipo (600) y no van al repositorio: tienen datos de clientes. El tablero (Agente › Respaldo de la
 base) muestra el último y tiene "Respaldar ahora". Conviene que también queden fuera del equipo (Time Machine o
-similar). Para restaurar: detener aiva, copiar el respaldo elegido sobre `data/aiva.db` y arrancar.
+similar). Para restaurar: detener XENCRM, copiar el respaldo elegido sobre `data/aiva.db` y arrancar.
 Pruebas: `pnpm test:backup`.
 
 **Retención de conversaciones.** Las conversaciones que llevan mucho tiempo quietas se pueden anonimizar o borrar

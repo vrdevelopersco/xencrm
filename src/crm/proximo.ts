@@ -125,7 +125,7 @@ export function proximoPaso(c: Contact, ctx: ContextoPaso): ProximoPaso {
   // Conversación viva: no hay que hacer nada, pero sí saber quién la tiene.
   // «bot», «admin» y «equipo» no son el nombre de nadie (ver esPersona): la ficha no puede decir «admin está atendiendo».
   if (c.humanMode) return paso('atiende', `${esPersona(c.humanBy) ? c.humanBy : 'El equipo'} está atendiendo`);
-  return paso('atiende', `${business.agent.name || 'Aiva'} está atendiendo`);
+  return paso('atiende', `${business.agent.name || 'Xen'} está atendiendo`);
 }
 
 /**

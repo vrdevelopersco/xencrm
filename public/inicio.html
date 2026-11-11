@@ -3,69 +3,74 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>aiva · Artificial Intelligence Virtual Assistant</title>
-<meta name="description" content="aiva atiende a tus clientes por WhatsApp y por el chat de tu sitio: responde, agenda citas de tu agenda real, califica prospectos y le pasa a tu equipo solo lo que necesita una persona. Un producto de HRC Technologies.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='22' y='22' width='56' height='56' rx='10' fill='none' stroke='%23d4af13' stroke-width='9'/><rect x='42' y='42' width='16' height='16' rx='3' fill='%23d4af13'/></svg>">
+<title>XENCRM · CRM conversacional con IA</title>
+<meta name="description" content="XENCRM atiende a tus clientes por WhatsApp y por el chat de tu sitio en una sola bandeja: responde con IA, agenda citas de tu agenda real, lleva cada trato y le pasa a tu equipo solo lo que necesita una persona. Un producto de HRC Technologies.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='8' y='8' width='84' height='84' rx='24' fill='%230b7466'/><path d='M35 35l30 30M65 35L35 65' stroke='white' stroke-width='11' stroke-linecap='round'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* Lenguaje de la casa (hrctechnologies.com): Figtree, el dorado y el chip del logo. Aquí en claro: aiva se
-   muestra de día, no de noche, y el oro pesa más sobre papel que sobre negro. */
+/* XENCRM, la siguiente generación de aiva. La portada habla el mismo idioma que el tablero (docs/xencrm.md): la
+   bruma verde agua, la tinta verde petróleo, el acento teal para lo que se hace y el violeta solo para la IA.
+   Figtree para leer, Bricolage Grotesque para los títulos. Aquí en claro: se muestra de día. */
 :root{
-  --papel:#fafaf7; --panel:#fff; --tinta:#14110c; --suave:#5e5950; --tenue:#8b857a;
-  --oro:#7b660f;        /* texto y botones: 5.4:1 sobre el papel */
-  --oro-claro:#d4af13;  /* filetes y marcas */
-  --oro-vivo:#f1cb05;   /* el del chip del logo: solo en manchas pequeñas */
-  --oro-papel:#fdf6dd;
-  --linea:#e8e4da;
-  --sombra:0 1px 2px rgba(20,17,12,.05),0 8px 24px rgba(20,17,12,.06);
-  --alta:0 2px 6px rgba(20,17,12,.07),0 18px 44px rgba(20,17,12,.12);
-  --curva:cubic-bezier(.22,.7,.28,1);
+  --papel:#f4f7f6; --panel:#fff; --tinta:#0a2227; --suave:#4d666c; --tenue:#5c7177;
+  --acento:#0b7466;      /* texto y botones: 5.67:1 sobre blanco, y el blanco encima, igual */
+  --acento-2:#095e53;    /* al pasar el ratón */
+  --acento-vivo:#2fb5a0; /* filetes y marcas: nunca debajo de texto */
+  --acento-papel:#e2f2ee; --acento-borde:#bfe3da;
+  --ia:#6d4fe0;          /* solo lo que es de la IA (aquí, el final del degradado del título) */
+  --linea:#dae3e1;
+  --sombra:0 1px 2px rgba(10,34,39,.05),0 8px 24px rgba(10,34,39,.06);
+  --alta:0 2px 6px rgba(10,34,39,.07),0 18px 44px rgba(10,34,39,.12);
+  --curva:cubic-bezier(.2,.8,.2,1);
   --gutter:clamp(20px,5vw,72px);
+  --display:"Bricolage Grotesque",Figtree,-apple-system,sans-serif;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--papel);color:var(--tinta);font-family:Figtree,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 
-/* Fondo: papel cálido con un resplandor dorado y la retícula del circuito del logo, muy tenue. */
+/* Fondo: bruma con un resplandor verde agua y otro violeta, y una retícula muy tenue. */
 .fondo{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .fondo .halo{position:absolute;border-radius:50%;filter:blur(80px)}
-.fondo .halo.a{width:54vw;height:40vw;left:-14vw;top:-22vw;background:rgba(241,203,5,.10)}
-.fondo .halo.b{width:42vw;height:34vw;right:-14vw;top:-4vw;background:rgba(120,140,200,.08)}
-.fondo .rejilla{position:absolute;inset:0;opacity:.5;
+.fondo .halo.a{width:54vw;height:40vw;left:-14vw;top:-22vw;background:rgba(47,181,160,.16)}
+.fondo .halo.b{width:42vw;height:34vw;right:-14vw;top:-4vw;background:rgba(109,79,224,.10)}
+.fondo .rejilla{position:absolute;inset:0;opacity:.55;
   background-image:linear-gradient(var(--linea) 1px,transparent 1px),linear-gradient(90deg,var(--linea) 1px,transparent 1px);
   background-size:52px 52px;
   -webkit-mask-image:radial-gradient(120% 70% at 50% 0%,#000 30%,transparent 72%);
   mask-image:radial-gradient(120% 70% at 50% 0%,#000 30%,transparent 72%)}
 
-/* ── Barra flotante, como la de la casa ─────────────────────────────────────── */
+/* ── Barra flotante ─────────────────────────────────────────────────────────── */
 header{position:fixed;top:14px;left:var(--gutter);right:var(--gutter);z-index:30;display:flex;align-items:center;
-  gap:18px;padding:10px 12px 10px 20px;border-radius:999px;background:rgba(255,255,255,.82);
+  gap:18px;padding:10px 12px 10px 20px;border-radius:999px;background:rgba(255,255,255,.86);
   border:1px solid var(--linea);box-shadow:var(--sombra);backdrop-filter:blur(12px)}
 header .logo{display:flex;align-items:center}
 header .logo img{height:26px;width:auto;display:block}
 header .sep{width:1px;height:22px;background:var(--linea)}
-header .quien{font-weight:600;letter-spacing:-.01em}
-header .quien small{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--tenue);font-weight:500}
+header .quien{font-family:var(--display);font-weight:700;letter-spacing:-.01em;font-size:17px;line-height:1.15}
+header .quien .x{color:var(--acento)}
+header .quien small{display:block;font-family:Figtree,sans-serif;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--tenue);font-weight:600}
 nav{margin-left:auto;display:flex;align-items:center;gap:6px}
 nav a{color:var(--suave);text-decoration:none;font-size:14.5px;font-weight:500;padding:9px 14px;border-radius:999px;
   transition:background .2s var(--curva),color .2s var(--curva)}
-nav a:hover{background:var(--oro-papel);color:var(--tinta)}
-nav a.boton{background:var(--oro);color:#fff;font-weight:600;padding:11px 20px;box-shadow:var(--sombra)}
-nav a.boton:hover{background:#8f7614;color:#fff;box-shadow:var(--alta)}
-nav a:focus-visible{outline:2px solid var(--oro);outline-offset:2px}
-@media (max-width:820px){nav a:not(.boton){display:none}header{padding-left:16px}header .sep,header .quien{display:none}}
+nav a:hover{background:var(--acento-papel);color:var(--tinta)}
+nav a.boton{background:var(--acento);color:#fff;font-weight:600;padding:11px 20px;box-shadow:var(--sombra)}
+nav a.boton:hover{background:var(--acento-2);color:#fff;box-shadow:var(--alta)}
+nav a:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+@media (max-width:820px){nav a:not(.boton){display:none}header{padding-left:16px}header .quien small{display:none}}
+@media (max-width:460px){header .logo,header .sep{display:none}header{gap:10px}}
 
 /* ── Contenido ──────────────────────────────────────────────────────────────── */
 main{position:relative;z-index:1}
 section{max-width:1120px;margin:0 auto;padding:clamp(56px,9vh,104px) var(--gutter)}
-.marca-seccion{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.13em;
-  text-transform:uppercase;color:var(--oro);margin-bottom:16px}
-.marca-seccion::before{content:"";width:22px;height:2px;background:var(--oro-claro);border-radius:2px}
-h2{font-size:clamp(26px,3.6vw,40px);line-height:1.15;letter-spacing:-.025em;font-weight:700;margin:0 0 14px;max-width:18em}
-h2 em{font-style:normal;color:var(--oro)}
+.marca-seccion{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--acento);margin-bottom:16px}
+.marca-seccion::before{content:"";width:22px;height:2px;background:var(--acento-vivo);border-radius:2px}
+h2{font-family:var(--display);font-size:clamp(26px,3.6vw,42px);line-height:1.12;letter-spacing:-.025em;font-weight:700;margin:0 0 14px;max-width:18em}
+h2 em{font-style:normal;color:var(--acento)}
 .dice{color:var(--suave);font-size:clamp(16px,1.2vw,18px);max-width:40em;margin:0}
 
 /* ── Portada ────────────────────────────────────────────────────────────────── */
@@ -73,46 +78,47 @@ h2 em{font-style:normal;color:var(--oro)}
   padding-top:130px;padding-bottom:70px;max-width:none}
 .sello{display:inline-flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--linea);
   border-radius:999px;padding:7px 16px 7px 8px;font-size:13px;color:var(--suave);box-shadow:var(--sombra);margin-bottom:26px}
-.sello b{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:var(--oro-vivo);color:#14110c;font-size:12px}
-h1{font-size:clamp(34px,5.4vw,64px);line-height:1.08;letter-spacing:-.03em;font-weight:700;margin:0;max-width:15.5em;text-wrap:balance}
-h1 em{font-style:normal;background:linear-gradient(100deg,var(--oro) 0%,#b08f12 45%,var(--oro-claro) 100%);
+.sello b{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:var(--acento);color:#fff;font-size:12px}
+h1{font-family:var(--display);font-size:clamp(34px,5.6vw,68px);line-height:1.04;letter-spacing:-.035em;font-weight:700;margin:0;max-width:15em;text-wrap:balance}
+/* El único momento con dos colores: del teal de lo que se hace al violeta de la IA. */
+h1 em{font-style:normal;background:linear-gradient(100deg,var(--acento) 0%,#1a8f7e 40%,var(--ia) 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent}
 .bajada{margin:22px auto 0;max-width:36em;color:var(--suave);font-size:clamp(16px,1.5vw,19.5px)}
 .acciones{margin-top:34px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 .pastilla{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 26px;border-radius:999px;
-  background:var(--oro);color:#fff;text-decoration:none;font-weight:600;font-size:15.5px;box-shadow:var(--sombra);
+  background:var(--acento);color:#fff;text-decoration:none;font-weight:600;font-size:15.5px;box-shadow:var(--sombra);
   transition:transform .2s var(--curva),box-shadow .2s var(--curva),background .2s var(--curva)}
-.pastilla:hover{background:#8f7614;transform:translateY(-2px);box-shadow:var(--alta)}
+.pastilla:hover{background:var(--acento-2);transform:translateY(-2px);box-shadow:var(--alta)}
 .pastilla.calma{background:var(--panel);color:var(--tinta);border:1px solid var(--linea)}
-.pastilla.calma:hover{background:#fff;border-color:var(--oro-claro)}
-.pastilla:focus-visible{outline:2px solid var(--oro);outline-offset:3px}
+.pastilla.calma:hover{background:#fff;border-color:var(--acento-borde)}
+.pastilla:focus-visible{outline:2px solid var(--acento);outline-offset:3px}
 
 /* Números de la portada: lo que hace, en una línea */
 .cifras{display:flex;gap:clamp(18px,4vw,56px);flex-wrap:wrap;justify-content:center;margin-top:54px;
   padding-top:26px;border-top:1px solid var(--linea);width:min(100%,780px)}
-.cifra b{display:block;font-size:clamp(19px,2.2vw,26px);font-weight:700;letter-spacing:-.02em}
+.cifra b{display:block;font-family:var(--display);font-size:clamp(20px,2.3vw,28px);font-weight:700;letter-spacing:-.02em}
 .cifra span{font-size:13px;color:var(--tenue)}
 
 /* ── Tarjetas ───────────────────────────────────────────────────────────────── */
 .rejilla{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:38px}
 @media (max-width:1080px){.rejilla{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:560px){.rejilla{grid-template-columns:1fr}}
-.ficha{background:var(--panel);border:1px solid var(--linea);border-radius:18px;padding:22px;box-shadow:var(--sombra);
+.ficha{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:22px;box-shadow:var(--sombra);
   transition:box-shadow .25s var(--curva),transform .25s var(--curva),border-color .25s var(--curva)}
-.ficha:hover{box-shadow:var(--alta);transform:translateY(-2px);border-color:#ded8c8}
-.ficha .chip{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:var(--oro-papel);
-  border:1px solid #f0e4b0;margin-bottom:14px}
-.ficha .chip svg{width:19px;height:19px;stroke:var(--oro);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.ficha h3{margin:0 0 7px;font-size:17px;font-weight:600;letter-spacing:-.01em}
+.ficha:hover{box-shadow:var(--alta);transform:translateY(-2px);border-color:var(--acento-borde)}
+.ficha .chip{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:var(--acento-papel);
+  border:1px solid var(--acento-borde);margin-bottom:14px}
+.ficha .chip svg{width:19px;height:19px;stroke:var(--acento);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ficha h3{margin:0 0 7px;font-size:17px;font-weight:700;letter-spacing:-.01em}
 .ficha p{margin:0;color:var(--suave);font-size:15px}
 
-/* ── Pasos: cinco verbos en fila. Antes eran cinco renglones, cada uno con su explicación ───────────── */
+/* ── Pasos: cinco verbos en fila (sí son una secuencia: de un «hola» a la cita) ─────────────────────── */
 .pasos{list-style:none;margin:34px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:0;
   border-top:1px solid var(--linea);border-bottom:1px solid var(--linea)}
 .pasos li{padding:22px 18px 22px 0;display:flex;flex-direction:column;gap:2px}
 .pasos li + li{padding-left:18px;border-left:1px solid var(--linea)}
-.pasos b{color:var(--oro);font-weight:700;font-variant-numeric:tabular-nums;font-size:13px}
-.pasos strong{font-size:18px;font-weight:600;letter-spacing:-.01em}
+.pasos b{color:var(--acento);font-weight:700;font-variant-numeric:tabular-nums;font-size:13px}
+.pasos strong{font-size:18px;font-weight:700;letter-spacing:-.01em}
 .pasos span{color:var(--suave);font-size:14.5px;line-height:1.4}
 @media (max-width:820px){
   .pasos{grid-template-columns:1fr}
@@ -129,41 +135,42 @@ h1 em{font-style:normal;background:linear-gradient(100deg,var(--oro) 0%,#b08f12 
 .cierre .clave{margin:18px 0 0;color:var(--suave);font-size:14px}
 
 /* ── La vista del tablero: el producto, en vez de un párrafo que lo describa ─────────────────────────────
-   Hecha con HTML y con los colores del tablero de verdad (blanco, azul, barra oscura), no con los de esta
-   página: enseña lo que uno va a ver al entrar. Los datos son de ejemplo. */
-.vista{margin-top:52px;width:min(100%,940px);background:#fff;border:1px solid var(--linea);border-radius:16px;overflow:hidden;
-  box-shadow:0 2px 6px rgba(20,17,12,.06),0 30px 70px rgba(20,17,12,.14);text-align:left;font-size:13px;color:#101828}
-.vista-barra{display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid #e4e7ec;background:#f9fafb}
-.vista-barra i{width:10px;height:10px;border-radius:50%;background:#d0d5dd}
-.vista-barra span{margin-left:10px;font-weight:600;color:#475467}
-.vista-cuerpo{display:grid;grid-template-columns:54px 1fr}
-.vista-riel{background:#101828;display:flex;flex-direction:column;align-items:center;gap:12px;padding:14px 0}
-.vista-riel b{width:26px;height:26px;border-radius:8px;background:#2563eb;margin-bottom:6px}
-.vista-riel span{width:22px;height:6px;border-radius:3px;background:#344054}
-.vista-riel span.on{background:#60a5fa}
-.vista-tabla{min-width:0}
-.vf{display:grid;grid-template-columns:1.25fr 1fr .7fr 1.7fr .8fr;gap:12px;align-items:center;padding:11px 16px;border-top:1px solid #eaecf0}
-.vf.cab{border-top:0;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#667085;padding-top:12px;padding-bottom:9px}
+   Hecha con HTML y con los colores del tablero de XENCRM —el menú blanco, la bruma, las etiquetas de cada etapa
+   con su color de dato—, no con los de esta página. Los datos son de ejemplo. */
+.vista{margin-top:52px;width:min(100%,960px);background:#fff;border:1px solid var(--linea);border-radius:16px;overflow:hidden;
+  box-shadow:0 2px 6px rgba(10,34,39,.06),0 30px 70px rgba(10,34,39,.14);text-align:left;font-size:13px;color:#12333a}
+.vista-barra{display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid #dae3e1;background:#f5f8f7}
+.vista-barra i{width:10px;height:10px;border-radius:50%;background:#b8c6c4}
+.vista-barra span{margin-left:10px;font-weight:600;color:#4d666c}
+.vista-cuerpo{display:grid;grid-template-columns:150px 1fr}
+.vista-riel{background:#fff;border-right:1px solid #dae3e1;display:flex;flex-direction:column;gap:7px;padding:14px 12px}
+.vista-riel b{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-family:var(--display);font-size:13px}
+.vista-riel b::before{content:"D";display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:#0b7466;color:#fff;font-size:12px}
+.vista-riel span{height:8px;border-radius:4px;background:#e8eeed;margin:6px 4px}
+.vista-riel span.on{background:linear-gradient(90deg,#0b7466 0 3px,#e2f2ee 3px);height:24px;margin:0;border-radius:0 7px 7px 0}
+.vista-tabla{min-width:0;background:#eef3f2;padding:10px;display:flex;flex-direction:column;gap:6px}
+.vf{display:grid;grid-template-columns:1.25fr 1fr .7fr 1.7fr .8fr;gap:12px;align-items:center;padding:11px 14px;background:#fff;border:1px solid #e8eeed;border-radius:10px}
+.vf.cab{background:none;border:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#4d666c;padding:4px 14px 0}
 .vf > span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vf .n{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
-.vf.cab .n{font-weight:400}
 .vf .et{font-style:normal;display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600}
 .vf .et::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
-.vf .et.cita{background:#eff6ff;color:#1d4ed8}
-.vf .et.interes{background:#fffaeb;color:#b54708}
-.vf .et.ganado{background:#ecfdf3;color:#15803d}
-.vf .ps{color:#475467}
-.vf .ps.cita{color:#1d4ed8}
-.vf .ps.urge{color:#b54708;font-weight:600}
+.vf .et.cita{background:#ebedfd;color:#3730a3}
+.vf .et.interes{background:#fff4e0;color:#a14d06}
+.vf .et.ganado{background:#e6f5ec;color:#15703a}
+.vf .ps{color:#4d666c}
+.vf .ps.cita{color:#3730a3}
+.vf .ps.urge{color:#a14d06;font-weight:600}
 .vf .ll{display:flex;align-items:center;gap:7px}
-.vf .ll i{font-style:normal;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#eff6ff;color:#2563eb;font-size:9.5px;font-weight:700;flex:none}
-.vf .ll i.h{background:#fffaeb;color:#7a5d0c}
-@media (max-width:820px){.vf{grid-template-columns:1.3fr 1fr 1.6fr}.vf .n,.vf .ll{display:none}}
+.vf .ll i{font-style:normal;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#f1edfe;color:#5b3fd0;font-size:9.5px;font-weight:700;flex:none}
+.vf .ll i.h{background:#fcefd2;color:#8a4a05}
+@media (max-width:820px){.vf{grid-template-columns:1.3fr 1fr 1.6fr}.vf .n,.vf .ll{display:none}.vista-cuerpo{grid-template-columns:110px 1fr}}
 @media (max-width:520px){.vista-cuerpo{grid-template-columns:1fr}.vista-riel{display:none}.vf{grid-template-columns:1fr 1.3fr;gap:8px;padding:10px 12px}.vf > span:nth-child(2){display:none}}
 footer{border-top:1px solid var(--linea);background:var(--panel);position:relative;z-index:1}
 .pie{max-width:1120px;margin:0 auto;padding:26px var(--gutter) 34px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .pie img{height:22px;width:auto;opacity:.9}
 .pie .small{font-size:13px;color:var(--tenue)}
+.pie a{color:var(--acento)}
 .pie .grow{flex:1}
 
 /* ── Aparecer al bajar ──────────────────────────────────────────────────────── */
@@ -183,7 +190,7 @@ footer{border-top:1px solid var(--linea);background:var(--panel);position:relati
 <header>
   <a class="logo" href="https://hrctechnologies.com" aria-label="HRC Technologies"><img src="hrc-technologies.png" alt="HRC Technologies" width="520" height="107"></a>
   <span class="sep"></span>
-  <span class="quien">aiva<small>Virtual Assistant</small></span>
+  <span class="quien"><span class="x">XEN</span>CRM<small>CRM conversacional con IA</small></span>
   <nav>
     <a href="#hace">Qué hace</a>
     <a href="#pasos">Cómo trabaja</a>
@@ -199,23 +206,23 @@ footer{border-top:1px solid var(--linea);background:var(--panel);position:relati
   <section class="portada" id="inicio">
     <span class="sello"><b>✦</b> Un producto de HRC Technologies</span>
     <h1>Tus clientes, atendidos <em>siempre</em>.</h1>
-    <p class="bajada">Por WhatsApp y el chat de tu sitio. Tú entras solo cuando hace falta.</p>
+    <p class="bajada">WhatsApp y el chat de tu sitio en una sola bandeja. Tú entras solo cuando hace falta.</p>
     <div class="acciones">
       <a class="pastilla" href="consola">Entrar a la consola</a>
       <a class="pastilla calma" href="#hace">Ver qué hace</a>
     </div>
 
     <!-- Así se ve por dentro. Es una ilustración hecha con HTML, no una captura: los datos son de ejemplo. -->
-    <div class="vista" role="img" aria-label="Así se ve el tablero: cada cliente con su etapa, su valor, el próximo paso y quién lo atiende.">
-      <div class="vista-barra" aria-hidden="true"><i></i><i></i><i></i><span>Clientes</span></div>
+    <div class="vista" role="img" aria-label="Así se ve el tablero de XENCRM: cada contacto con la etapa de su trato, su valor, el próximo paso y a quién está asignado.">
+      <div class="vista-barra" aria-hidden="true"><i></i><i></i><i></i><span>Contactos</span></div>
       <div class="vista-cuerpo" aria-hidden="true">
-        <div class="vista-riel"><b></b><span class="on"></span><span></span><span></span><span></span></div>
+        <div class="vista-riel"><b>DUNOR</b><span></span><span></span><span class="on"></span><span></span><span></span><span></span></div>
         <div class="vista-tabla">
-          <div class="vf cab"><span>Quién</span><span>Etapa</span><span class="n">Valor</span><span>Próximo paso</span><span class="ll">La lleva</span></div>
-          <div class="vf"><span><b>Andrés Peña</b> 🔥</span><span><em class="et cita">Cita agendada</em></span><span class="n">$210 mil</span><span class="ps cita">Cita mañana, 10:00 a. m.</span><span class="ll"><i>A</i>Aiva</span></div>
+          <div class="vf cab"><span>Contacto</span><span>Etapa</span><span class="n">Valor</span><span>Próximo paso</span><span class="ll">Asignado a</span></div>
+          <div class="vf"><span><b>Andrés Peña</b> 🔥</span><span><em class="et cita">Cita agendada</em></span><span class="n">$210 mil</span><span class="ps cita">Cita mañana, 10:00 a. m.</span><span class="ll"><i>X</i>Xen</span></div>
           <div class="vf"><span><b>Camilo Restrepo</b></span><span><em class="et interes">Interesado</em></span><span class="n">$650 mil</span><span class="ps urge">Contestar: escribió hace 12 min</span><span class="ll"><i class="h">L</i>Laura</span></div>
-          <div class="vf"><span><b>Sebastián Molina</b> 🔥</span><span><em class="et interes">Interesado</em></span><span class="n">$150 mil</span><span class="ps urge">Retomar: 1 día sin escribir</span><span class="ll"><i>A</i>Aiva</span></div>
-          <div class="vf"><span><b>Ricardo Vélez</b></span><span><em class="et ganado">Vendido</em></span><span class="n">$320 mil</span><span class="ps">—</span><span class="ll"><i>A</i>Aiva</span></div>
+          <div class="vf"><span><b>Sebastián Molina</b> 🔥</span><span><em class="et interes">Interesado</em></span><span class="n">$150 mil</span><span class="ps urge">Retomar: 1 día sin escribir</span><span class="ll"><i>X</i>Xen</span></div>
+          <div class="vf"><span><b>Ricardo Vélez</b></span><span><em class="et ganado">Vendido</em></span><span class="n">$320 mil</span><span class="ps">—</span><span class="ll"><i>X</i>Xen</span></div>
         </div>
       </div>
     </div>
@@ -284,9 +291,9 @@ footer{border-top:1px solid var(--linea);background:var(--panel);position:relati
 <footer>
   <div class="pie">
     <img src="hrc-technologies.png" alt="HRC Technologies" width="520" height="107">
-    <span class="small">aiva · CRM conversacional con IA</span>
+    <span class="small">XENCRM · CRM conversacional con IA</span>
     <span class="grow"></span>
-    <span class="small"><a href="https://hrctechnologies.com" style="color:var(--oro)">hrctechnologies.com</a></span>
+    <span class="small"><a href="https://hrctechnologies.com">hrctechnologies.com</a></span>
   </div>
 </footer>
 

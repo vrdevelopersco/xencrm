@@ -90,7 +90,7 @@ function vcalendar(name: string, events: string[][], extra: string[] = []): stri
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    `PRODID:-//Aiva//${escapeText(business.business.name)}//ES`,
+    `PRODID:-//XENCRM//${escapeText(business.business.name)}//ES`,
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${escapeText(name)}`,
