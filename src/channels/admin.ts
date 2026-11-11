@@ -58,6 +58,8 @@ import { enUnaFrase, historiaDe } from '../crm/historia.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
 import { recap } from '../crm/recap.js';
+import { seguimientosPendientes, ventasDelPeriodo } from '../crm/resultados.js';
+import { optimizacion } from '../crm/optimizacion.js';
 import { channelCards, toggleChannel } from './registry.js';
 import { diagnosticoDeSalida } from './salida.js';
 // Solo el estado; lo que abre la sesión se carga dentro de los handlers que lo necesitan.
@@ -566,84 +568,18 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     return c.json({ contact: getContact(id), analyses: listAnalyses(id, 1) });
   });
 
-  /**
-   * Ventas: quién compró, por cuánto y cuándo.
-   *
-   * 🪤 El «cuándo» sale del EVENTO que movió la ficha a ganado, no de la última vez que escribió. Son cosas
-   * distintas y se notan en cuanto alguien mira un mes: quien compró en agosto y volvió a escribir ayer
-   * aparecería como venta de ayer, y el mes cerraría mal.
-   */
-  app.get('/admin/api/ventas', (c) => {
-    const dias = Math.min(365, Math.max(1, Number(c.req.query('days') ?? 90)));
-    const desde = Date.now() - dias * 86400_000;
-    const ganadas = listContacts({ limit: 2000 }).filter((x) => !x.archived && rolDe(x.stage) === 'ganado');
-    const filas = ganadas
-      .map((x) => {
-        const cerro = listEvents(x.id, 200)
-          .filter((e) => e.type === 'stage' && rolDe(String(e.payload.to ?? '') as Stage) === 'ganado')
-          .pop();
-        const cuando = cerro?.ts ?? x.lastSeen ?? x.firstSeen ?? 0;
-        return { id: x.id, nombre: x.name, phone: contactNumber(x), canal: x.channel, cuando, valor: valorDe(x), resumen: x.summary };
-      })
-      .filter((v) => v.cuando >= desde)
-      .sort((a, b) => b.cuando - a.cuando);
-    const total = filas.reduce((a, v) => a + v.valor.valor, 0);
-    // Las que se perdieron en el mismo periodo, y por qué. Las que no dicen motivo van aparte y se cuentan:
-    // esconderlas haría creer que el precio es el problema cuando nadie dijo nada de la mayoría.
-    const perdidas = listContacts({ limit: 2000 })
-      .filter((x) => !x.archived && rolDe(x.stage) === 'perdido')
-      .filter((x) => (listEvents(x.id, 200).filter((e) => e.type === 'stage' && rolDe(String(e.payload.to ?? '') as Stage) === 'perdido').pop()?.ts ?? x.lastSeen) >= desde);
-    const porMotivo = new Map<string, number>();
-    for (const x of perdidas) {
-      const m = String(x.data.motivo_perdida ?? '').trim();
-      if (m) porMotivo.set(m, (porMotivo.get(m) ?? 0) + 1);
-    }
-    return c.json({
-      dias,
-      total,
-      cuantas: filas.length,
-      // 🪤 Cuántas no tienen precio se dice aparte: un total que calla eso parece el total de verdad.
-      sinPrecio: filas.filter((v) => !v.valor.valor).length,
-      promedio: filas.length ? total / filas.filter((v) => v.valor.valor).length || 0 : 0,
-      ventas: filas.slice(0, 200),
-      perdidas: {
-        cuantas: perdidas.length,
-        sinMotivo: perdidas.filter((x) => !String(x.data.motivo_perdida ?? '').trim()).length,
-        // Empatados, por orden alfabético: si no, dos que pesan igual cambiarían de puesto cada vez que se abre.
-        motivos: [...porMotivo].map(([motivo, n]) => ({ motivo, n })).sort((a, b) => b.n - a.n || a.motivo.localeCompare(b.motivo, 'es')),
-      },
-    });
-  });
+  /** Ventas: quién compró, por cuánto y cuándo, y lo que se perdió y por qué. El cálculo vive en crm/resultados.ts. */
+  app.get('/admin/api/ventas', (c) => c.json(ventasDelPeriodo(Math.min(365, Math.max(1, Number(c.req.query('days') ?? 90))))));
+
+  /** Seguimientos: a quién hay que escribirle y por qué (la Lista de trabajo). El cálculo vive en crm/resultados.ts. */
+  app.get('/admin/api/seguimientos', (c) => c.json(seguimientosPendientes()));
 
   /**
-   * Seguimientos: a quién hay que escribirle y por qué.
-   *
-   * Es la misma lista que sale en Hoy, pero entera y con el motivo. En Hoy va recortada a veinte porque ahí
-   * compite con todo lo demás; aquí es lo único que hay que mirar.
+   * Optimización de ventas: dónde se pierden ventas y qué hacer distinto. Reglas fijas sobre lo que ya calculan
+   * ventas, seguimientos, tiempos, orígenes y sentimiento: sin modelo y sin red. Es del que vende, así que el
+   * candado deja leerla (channels/candado.ts lee todo menos lo avanzado).
    */
-  app.get('/admin/api/seguimientos', (c) => {
-    const now = Date.now();
-    const abiertos = listContacts({ limit: 2000 }).filter((x) => !x.archived && !estaCerrada(x.stage));
-    const conCita = new Set(
-      listAppointments({ from: now, status: 'confirmada', limit: 1000 }).map((a) => a.userId),
-    );
-    const esperandoResultado = new Set(
-      listAppointments({ from: now - 14 * 86400_000, to: now, status: 'confirmada', limit: 1000 })
-        .filter((a) => a.endsAt < now)
-        .map((a) => a.userId),
-    );
-    const filas = abiertos
-      .filter((x) => !conCita.has(x.id) && !esperandoResultado.has(x.id) && (x.lastMessageAt ?? 0) < now - 24 * 3600_000 && !isSnoozed(x, now))
-      .map((x) => {
-        const callado = Math.round((now - (x.lastMessageAt ?? x.lastSeen ?? now)) / 86400_000);
-        // El motivo en una frase: sin esto la lista es un montón de nombres y nadie sabe por cuál empezar.
-        const porque = x.scoreBase >= 60 ? `Puntaje ${x.scoreBase} y lleva ${callado} día${callado === 1 ? '' : 's'} callado` : `Lleva ${callado} día${callado === 1 ? '' : 's'} sin escribir`;
-        return { id: x.id, nombre: x.name, phone: contactNumber(x), canal: x.channel, etapa: x.stage, puntaje: x.scoreBase, callado, porque, resumen: x.summary, valor: valorDe(x) };
-      })
-      // Primero los que más valen la pena: puntaje alto y poco tiempo callados se enfrían rápido.
-      .sort((a, b) => b.puntaje - a.puntaje || a.callado - b.callado);
-    return c.json({ cuantos: filas.length, calientes: filas.filter((f) => f.puntaje >= 60).length, seguimientos: filas.slice(0, 200) });
-  });
+  app.get('/admin/api/optimizacion', (c) => c.json(optimizacion(Number(c.req.query('dias') ?? 30) || 30)));
 
   app.get('/admin/api/appointments', (c) => {
     const from = c.req.query('from') ? Number(c.req.query('from')) : Date.now() - 86400_000;

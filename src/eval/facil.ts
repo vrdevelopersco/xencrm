@@ -67,7 +67,7 @@ const lee: Record<string, string[]> = {
   // XEN · KPIs y metas
   kpis: ['stats', 'series'],
   // XEN · Optimización de ventas
-  optimizacion: ['stats'],
+  optimizacion: ['optimizacion'],
   // (fin de las pantallas de la suite)
 };
 for (const v of vistas) {

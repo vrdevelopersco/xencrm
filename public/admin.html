@@ -2722,6 +2722,117 @@ dialog.perdida input{width:100%}
 /* (fin de XEN · Panel KAM) */
 
 /* ---------- XEN · Optimización de ventas (agente de optimización) ---------- */
+/* Reglas fijas sobre los datos, no la IA: por eso va con el acento y los colores de dato, nunca con el violeta.
+   La prioridad se dice con palabra e ícono, y además con una franja de color arriba de cada hallazgo. */
+:root[data-piel="xen"] #xo-opt{display:flex;flex-direction:column;gap:20px}
+:root[data-piel="xen"] .xo-resumen{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px 20px;padding:20px 24px;background:var(--fx-panel);border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] .xo-resumen-ic{display:grid;place-items:center;width:48px;height:48px;border-radius:var(--fx-r-lg);background:var(--fx-suave);color:var(--fx-acento-t)}
+:root[data-piel="xen"] .xo-resumen-ic .ic{width:24px;height:24px}
+:root[data-piel="xen"] .xo-resumen-txt{min-width:0}
+:root[data-piel="xen"] .xo-resumen-txt h2{margin:0;font-family:var(--fx-display);font-size:22px;line-height:1.2;font-weight:700;letter-spacing:-.02em;color:var(--fx-t0)}
+:root[data-piel="xen"] .xo-resumen-txt p{margin:4px 0 0;font-size:14px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xo-resumen-pri{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+:root[data-piel="xen"] .xo-pri{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:var(--fx-r-pill);font-size:12.5px;font-weight:650;white-space:nowrap}
+:root[data-piel="xen"] .xo-pri .ic{width:14px;height:14px;flex:0 0 14px}
+:root[data-piel="xen"] .xo-pri.p-alta{background:var(--fx-rojo-s);color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xo-pri.p-media{background:var(--fx-ambar-s);color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xo-pri.p-baja{background:var(--fx-hover);color:var(--fx-t2)}
+:root[data-piel="xen"] .xo-impacto{display:flex;flex-direction:column;gap:2px;min-width:200px;max-width:260px;padding-left:20px;border-left:1px solid var(--fx-borde)}
+:root[data-piel="xen"] .xo-impacto b{font-family:var(--fx-display);font-size:28px;line-height:1.15;font-weight:700;letter-spacing:-.02em;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xo-impacto.sin b{font-size:18px;color:var(--fx-t1)}
+:root[data-piel="xen"] .xo-impacto>span:last-child{font-size:13px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xo-rot{display:block;margin-bottom:3px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fx-t3)}
+/* Los hallazgos: una tarjeta por cosa, con su franja de prioridad, la cifra con su base, el porqué y qué hacer. */
+:root[data-piel="xen"] .xo-hallazgos{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:16px}
+:root[data-piel="xen"] .xo-h{display:flex;flex-direction:column;gap:12px;min-width:0;padding:18px 20px;background:var(--fx-panel);border:1px solid var(--fx-borde);border-top:3px solid var(--fx-t4);border-radius:var(--fx-r-xl);box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] .xo-h.p-alta{border-top-color:var(--fx-rojo)}
+:root[data-piel="xen"] .xo-h.p-media{border-top-color:var(--fx-ambar)}
+/* Poca evidencia: punteada y en el pozo gris; la palabra lo dice también (el borde solo no lo nota todo el mundo). */
+:root[data-piel="xen"] .xo-h.poca{border-style:dashed;border-top-style:dashed;background:var(--fx-panel-2);box-shadow:none}
+:root[data-piel="xen"] .xo-h-cab{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+:root[data-piel="xen"] .xo-poca{display:inline-flex;align-items:center;padding:2px 9px;border:1px dashed var(--fx-t3);border-radius:var(--fx-r-pill);font-size:12px;font-weight:600;color:var(--fx-t2)}
+:root[data-piel="xen"] .xo-h h3{margin:0;font-size:16px;line-height:1.35;font-weight:650;color:var(--fx-t0);overflow-wrap:anywhere}
+:root[data-piel="xen"] .xo-cifra{margin:0;display:flex;flex-direction:column;gap:2px}
+:root[data-piel="xen"] .xo-cifra b{font-family:var(--fx-display);font-size:26px;line-height:1.15;font-weight:700;letter-spacing:-.02em;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xo-cifra span{font-size:13px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xo-porque{margin:0;font-size:14px;line-height:1.5;color:var(--fx-t1)}
+:root[data-piel="xen"] .xo-hacer{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:var(--fx-r-lg);background:var(--fx-suave);color:var(--fx-t1)}
+:root[data-piel="xen"] .xo-hacer>.ic{width:18px;height:18px;flex:0 0 18px;margin-top:16px;color:var(--fx-acento-t)}
+:root[data-piel="xen"] .xo-hacer p{margin:0;font-size:14px;line-height:1.5}
+:root[data-piel="xen"] .xo-hacer .xo-rot{color:var(--fx-suave-t)}
+:root[data-piel="xen"] .xo-h-pie{margin-top:auto;display:flex;justify-content:flex-start}
+:root[data-piel="xen"] .xo-h-pie .btn .ic{width:16px;height:16px}
+:root[data-piel="xen"] .xo-solo-admin{font-size:13px;color:var(--fx-t2)}
+/* Los tratos estancados: la lista que se puede resolver hoy. */
+:root[data-piel="xen"] .xo-sec{display:flex;flex-direction:column;gap:12px;scroll-margin-top:16px}
+:root[data-piel="xen"] .xo-sec-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+:root[data-piel="xen"] .xo-sec-cab h2{margin:0;font-size:18px;font-weight:650;color:var(--fx-t0)}
+:root[data-piel="xen"] .xo-sec-cab h2:focus{outline:none}
+:root[data-piel="xen"] .xo-sec-cab h2:focus-visible{box-shadow:var(--fx-anillo);border-radius:6px}
+:root[data-piel="xen"] .xo-sec-cab p{margin:4px 0 0;font-size:14px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xo-cuenta{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 8px;border-radius:var(--fx-r-pill);background:var(--fx-ambar-s);color:var(--fx-ambar-t);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xo-tabla td{vertical-align:middle}
+:root[data-piel="xen"] .xo-tabla .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+:root[data-piel="xen"] .xo-quien{display:flex;align-items:center;gap:10px;min-width:0}
+:root[data-piel="xen"] .xo-quien-txt{display:flex;flex-direction:column;min-width:0}
+:root[data-piel="xen"] .xo-quien .dato{display:block;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] .xo-acc{text-align:right;white-space:nowrap}
+:root[data-piel="xen"] .xo-nota{margin:0;font-size:13px;color:var(--fx-t2)}
+/* Vacío, error y «todo bien»: dicen qué pasa y qué hacer, nunca una caja en blanco. */
+:root[data-piel="xen"] .xo-vacio{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:180px;padding:28px;text-align:center;border:1px dashed var(--fx-t4);border-radius:var(--fx-r-xl);background:var(--fx-panel-2)}
+:root[data-piel="xen"] .xo-vacio b{font-size:15px;font-weight:650;color:var(--fx-t0)}
+:root[data-piel="xen"] .xo-vacio span{max-width:560px;font-size:14px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xo-vacio .btn{margin-top:8px}
+:root[data-piel="xen"] .xo-vacio.xo-bien{min-height:120px;border-style:solid;border-color:var(--fx-borde);background:var(--fx-panel)}
+:root[data-piel="xen"] .xo-vacio.xo-error{border-style:solid;border-color:var(--fx-rojo);background:var(--fx-rojo-s)}
+:root[data-piel="xen"] .xo-vacio.xo-error b{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xo-vacio.xo-error span{color:var(--fx-t1)}
+:root[data-piel="xen"] .xo-como{font-size:14px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xo-como summary{cursor:pointer;font-weight:600;color:var(--fx-t1);width:max-content;max-width:100%;border-radius:6px}
+:root[data-piel="xen"] .xo-como summary:focus-visible{outline:none;box-shadow:var(--fx-anillo)}
+:root[data-piel="xen"] .xo-como ul{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+/* Cargando: la forma de lo que viene (el resumen y tres tarjetas). Con movimiento reducido, quieto. */
+:root[data-piel="xen"] .xo-esq{position:relative;overflow:hidden;pointer-events:none}
+:root[data-piel="xen"] .xo-esq i{display:block;height:14px;border-radius:6px;background:var(--fx-hover)}
+:root[data-piel="xen"] .xo-resumen.xo-esq{grid-template-columns:1fr;min-height:118px}
+:root[data-piel="xen"] .xo-resumen.xo-esq i:first-child{width:40%;height:22px}
+:root[data-piel="xen"] .xo-resumen.xo-esq i:last-child{width:70%}
+:root[data-piel="xen"] .xo-h.xo-esq{min-height:220px}
+:root[data-piel="xen"] .xo-h.xo-esq i:nth-child(1){width:35%}
+:root[data-piel="xen"] .xo-h.xo-esq i:nth-child(2){width:80%;height:20px}
+:root[data-piel="xen"] .xo-h.xo-esq i:nth-child(3){width:60%;height:28px}
+:root[data-piel="xen"] .xo-esq::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--fx-panel) 60%,transparent),transparent);transform:translateX(-100%);animation:xo-brillo 1.4s ease-in-out infinite}
+@keyframes xo-brillo{to{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){:root[data-piel="xen"] .xo-esq::after{animation:none;display:none}}
+@media (max-width:900px){
+  :root[data-piel="xen"] .xo-resumen{grid-template-columns:auto minmax(0,1fr);padding:16px}
+  :root[data-piel="xen"] .xo-impacto{grid-column:1/-1;max-width:none;padding:12px 0 0;border-left:0;border-top:1px solid var(--fx-borde)}
+  /* El periodo, en una sola fila de tres: partido en dos renglones parecía dos controles distintos. */
+  :root[data-piel="xen"] #xo-dias{display:flex;flex-wrap:nowrap;width:100%}
+  :root[data-piel="xen"] #xo-dias button{flex:1 1 0;min-width:0;min-height:44px}
+}
+/* En el teléfono el ícono del resumen se come el ancho que necesita la frase: se va (es decorativo). */
+@media (max-width:600px){
+  :root[data-piel="xen"] .xo-resumen{grid-template-columns:minmax(0,1fr)}
+  :root[data-piel="xen"] .xo-resumen-ic{display:none}
+}
+/* Celular: la tabla de estancados se vuelve una tarjeta por trato, con el nombre de cada dato delante. */
+@media (max-width:700px){
+  :root[data-piel="xen"] .xo-tabla-caja{background:none;border:0;box-shadow:none;overflow:visible}
+  :root[data-piel="xen"] .xo-tabla thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  :root[data-piel="xen"] .xo-tabla,:root[data-piel="xen"] .xo-tabla tbody{display:block}
+  :root[data-piel="xen"] .xo-tabla tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 12px;margin-bottom:10px;padding:14px;background:var(--fx-panel);border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg)}
+  :root[data-piel="xen"] .xo-tabla td{display:block;padding:0;border:0;text-align:left}
+  :root[data-piel="xen"] .xo-tabla tr:hover td{background:none}
+  :root[data-piel="xen"] .xo-tabla td[data-th]::before{content:attr(data-th);display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fx-t3);margin-bottom:2px}
+  :root[data-piel="xen"] .xo-tabla td.xo-quien{grid-column:1/-1;display:flex}
+  :root[data-piel="xen"] .xo-tabla td.xo-quien::before{display:none}
+  :root[data-piel="xen"] .xo-tabla .num{text-align:left}
+  :root[data-piel="xen"] .xo-tabla td.xo-acc{grid-column:1/-1}
+  :root[data-piel="xen"] .xo-tabla td.xo-acc .btn{width:100%;min-height:44px}
+  :root[data-piel="xen"] .xo-quien .dato{max-width:none;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  :root[data-piel="xen"] .xo-h-pie .btn{width:100%;min-height:44px}
+}
 /* (fin de XEN · Optimización de ventas) */
 
 /* ===== fin de la piel de XENCRM ===== */
@@ -3242,9 +3353,12 @@ dialog.perdida input{width:100%}
     </section>
 
     <section class="view" id="view-optimizacion">
-      <div class="topbar"><h1>Optimización de ventas</h1><span class="grow"></span></div>
+      <div class="topbar"><h1>Optimización de ventas</h1><span class="grow"></span>
+        <div class="tabs" id="xo-dias" role="group" aria-label="Periodo"><button type="button" data-d="7" aria-pressed="false">7 días</button><button type="button" data-d="30" class="on" aria-pressed="true">30 días</button><button type="button" data-d="90" aria-pressed="false">90 días</button></div>
+      </div>
       <!-- XEN · Optimización de ventas: el marcado va aquí -->
-      <div class="pad" id="xo-opt"></div>
+      <!-- Lo arma pintarOptimizacion (admin.js): el resumen, los hallazgos y los tratos estancados. -->
+      <div class="pad" id="xo-opt" aria-live="polite" aria-busy="false"></div>
       <!-- (fin de XEN · Optimización de ventas) -->
     </section>
 
