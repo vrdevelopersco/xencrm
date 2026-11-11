@@ -6372,6 +6372,252 @@
   // (fin de XEN · Embudo y filtrado)
 
   // ===== XEN · KPIs y metas: lo nuevo del agente de KPIs (alAbrir('kpis', …)) =====
+  // Los objetivos de Dynamics 365 con los datos de XENCRM (src/crm/kpis.ts): cada KPI del periodo contra el anterior
+  // igual de largo, su meta de la semana o del mes del calendario, y por persona lo que se puede atribuir.
+  //
+  // 🪤 Una cifra que no se sabe no es cero. Sin citas marcadas la asistencia es «—» y la tarjeta dice por qué; sin
+  // precios, las ventas dicen «Sin precios». Un 0 % de asistencia o un «$0» se llevan a una reunión y no son verdad.
+  //
+  // 🪤 La comparación se dice con palabras y flecha, no solo con color («↓ 1,2 min más rápido»): un rojo o un verde
+  // solos no los distingue todo el mundo, y «baja» no es malo en el tiempo de respuesta.
+  //
+  // Las metas las pone quien administra XENCRM (mandaEnElModo). El servidor también lo cumple: con el candado la
+  // ruta está cerrada y por la consola solo el super-admin la cambia. Aquí solo se deja de enseñar la puerta.
+  var XP = { dias: 30, datos: null, pedido: 0, abierto: false };
+  try { var xpGuardado = Number(localStorage.getItem(LLAVE('kpisDias'))); if ([7, 30, 90].indexOf(xpGuardado) >= 0) XP.dias = xpGuardado; } catch (e) {}
+  var XP_ESTADO = {
+    cumplida: ['Cumplida', 'bien'], a_tiempo: ['A tiempo', 'bien'], atrasada: ['Atrasada', 'urge'],
+    cumple: ['Cumple', 'bien'], no_cumple: ['No cumple', 'urge'], sin_datos: ['Sin datos', 'neutro']
+  };
+  /** A qué pantalla lleva cada tarjeta, para mirar el detalle (como el «drill-down» de Dynamics). */
+  var XP_VER = {
+    nuevas: ['inbox', 'Ver la bandeja'], respuesta: ['analysis', 'Ver Analítica'], aTiempo: ['analysis', 'Ver Analítica'],
+    citas: ['calendar', 'Ver las citas'], asistencia: ['calendar', 'Ver las citas'], ganados: ['ventas', 'Ver las ventas'],
+    perdidos: ['ventas', 'Ver por qué se perdieron'], cierre: ['ventas', 'Ver las ventas'], ventas: ['ventas', 'Ver las ventas'], embudo: ['embudo', 'Ver el embudo']
+  };
+  function xpNum(n, dec) { return Number(n).toLocaleString('es-CO', { maximumFractionDigits: dec == null ? 0 : dec }); }
+  function xpMin(min) { return min < 1 ? 'menos de 1 min' : min < 60 ? xpNum(min, 1) + ' min' : duracion(min * 60000); }
+  /** Un valor en la unidad de su KPI. «—» cuando no se sabe. */
+  function xpValor(def, v, corto) {
+    if (v === null || v === undefined) return '—';
+    if (def.unidad === 'pct') return xpNum(v, 1) + ' %';
+    if (def.unidad === 'min') return xpMin(v);
+    // 🪤 Un periodo sin ventas no se dice «$0»: en plata, el cero se lee como «no vale nada». Se dice lo que pasó.
+    if (def.unidad === 'plata') return v === 0 ? 'sin ventas' : corto ? plataCorta(v) : plata(v);
+    return xpNum(v);
+  }
+  /** Contra el periodo anterior, dicho con palabras. null si no hay cifra de ahora con qué comparar. */
+  function xpComparar(def, a, b, dias) {
+    if (def.id === 'embudo') return { t: 'Foto de hoy: el embudo no tiene periodo anterior', tono: 'neutro' };
+    if (a === null || a === undefined) return null;
+    var antes = 'los ' + dias + ' días anteriores';
+    if (b === null || b === undefined) return { t: 'Sin datos de ' + antes + ' para comparar', tono: 'neutro' };
+    var dif = a - b;
+    if (Math.abs(dif) < 1e-9) return { t: 'Igual que ' + antes, tono: 'neutro' };
+    var mejora = def.mejor === 'sube' ? dif > 0 : dif < 0;
+    var abs = Math.abs(dif), cuanto, sentido;
+    if (def.unidad === 'pct') { cuanto = xpNum(abs, 1) + (abs === 1 ? ' punto' : ' puntos'); sentido = dif > 0 ? 'más' : 'menos'; }
+    else if (def.unidad === 'min') { cuanto = xpMin(abs); sentido = dif < 0 ? 'más rápido' : 'más lento'; }
+    else { cuanto = def.unidad === 'plata' ? plataCorta(abs) : xpNum(abs); sentido = dif > 0 ? 'más' : 'menos'; }
+    var rel = (def.unidad === 'n' || def.unidad === 'plata') && b > 0 ? ' (' + (dif > 0 ? '+' : '−') + xpNum((abs / b) * 100) + ' %)' : '';
+    return { t: (dif > 0 ? '↑ ' : '↓ ') + cuanto + ' ' + sentido + rel + ' que ' + antes + ' (' + xpValor(def, b, true) + ')', tono: mejora ? 'bien' : 'mal' };
+  }
+  /** Por qué no hay cifra, o el dato que la acompaña. Sale de las medidas, nunca de una suposición. */
+  function xpDetalle(def, d) {
+    var m = d.actual, acuerdo = d.acuerdoMin + ' min';
+    switch (def.id) {
+      case 'respuesta': return m.respondidas ? 'De ' + xpNum(m.respondidas) + (m.respondidas === 1 ? ' respuesta' : ' respuestas') + (d.esperandoAhora ? ' · ' + d.esperandoAhora + ' esperando ahora' : '') : 'Nadie esperó respuesta en este periodo.';
+      case 'aTiempo': return m.respondidas ? 'Dentro de ' + acuerdo + ', el acuerdo de servicio' : 'Nadie esperó respuesta en este periodo.';
+      case 'asistencia':
+        if (m.citasMarcadas) return 'De ' + m.citasMarcadas + (m.citasMarcadas === 1 ? ' cita marcada' : ' citas marcadas') + (m.citasSinMarcar ? ' · ' + m.citasSinMarcar + ' sin marcar' : '');
+        return m.citasSinMarcar ? m.citasSinMarcar + (m.citasSinMarcar === 1 ? ' cita pasó y nadie la marcó' : ' citas pasaron y nadie las marcó') + ': márcalas en Citas.' : 'Ninguna cita de este periodo ha pasado todavía.';
+      case 'cierre': return m.ganados + m.perdidos ? m.ganados + ' ganados de ' + (m.ganados + m.perdidos) + ' cerrados' : 'No se cerró ningún trato en este periodo.';
+      case 'ventas':
+        if (!m.ganados) return 'No se ganó ningún trato en este periodo.';
+        if (!m.ventasConPrecio) return m.ganados + (m.ganados === 1 ? ' ganado sin valor' : ' ganados sin valor') + ': ponlo en la ficha de cada trato.';
+        return 'De ' + m.ganados + (m.ganados === 1 ? ' trato ganado' : ' tratos ganados') + (m.ventasConPrecio < m.ganados ? ' · ' + (m.ganados - m.ventasConPrecio) + ' sin valor' : '');
+      case 'embudo':
+        if (!d.embudo.conValor) return d.embudo.sinValor ? 'Ningún trato abierto tiene valor: ponlo en su ficha o carga precios en el catálogo.' : 'No hay tratos abiertos.';
+        return d.embudo.conValor + ' con valor' + (d.embudo.sinValor ? ' · ' + d.embudo.sinValor + ' sin precio' : '');
+      default: return def.que;
+    }
+  }
+  /** La meta de una tarjeta: su barra con el ritmo, o la invitación a ponerla (solo a quien puede). */
+  function xpMeta(def, av, puede) {
+    if (!def.meta) return '';
+    if (!av) return puede ? '<button type="button" class="xp-poner" data-poner="' + def.id + '"><i class="ic" data-ic="mas"></i>Poner meta</button>' : '<p class="xp-sin-meta">Sin meta</p>';
+    var est = XP_ESTADO[av.estado] || XP_ESTADO.sin_datos;
+    var cuando = av.periodo === 'semana' ? 'esta semana' : 'este mes';
+    var chip = '<span class="xp-estado ' + est[1] + '">' + esc(est[0]) + '</span>';
+    if (av.tipo === 'acumula') {
+      var v = av.valor === null ? 0 : av.valor;
+      var lleno = Math.max(0, Math.min(100, (v / av.meta) * 100));
+      var ritmo = Math.max(0, Math.min(100, av.transcurrido * 100));
+      // 🪤 Aquí va la cifra entera, no la corta: «va $2,8 M y el ritmo pedía $2,8 M» con la etiqueta «Atrasada» al
+      // lado parecía un error, y era $2.750.000 contra $2.812.276. Lo abreviado va en la cabecera, donde no se compara.
+      var dice = av.estado === 'sin_datos' ? 'Sin datos para medirla' : 'Va ' + xpValor(def, av.valor) + ' de ' + xpValor(def, av.meta);
+      var ritmoTxt = av.estado === 'cumplida' ? 'Ya se cumplió' : av.estado === 'sin_datos' ? '' : 'El ritmo pedía ' + xpValor(def, def.unidad === 'n' ? Math.ceil(av.esperado - 1e-9) : av.esperado) + ' a hoy';
+      return '<div class="xp-meta"><div class="xp-meta-cab"><span>Meta de ' + cuando + ': <b>' + esc(xpValor(def, av.meta, true)) + '</b></span>' + chip + '</div>' +
+        '<div class="xp-pista" role="progressbar" aria-label="' + esc(def.nombre + ': ' + dice) + '" aria-valuemin="0" aria-valuemax="' + av.meta + '" aria-valuenow="' + v + '">' +
+        '<i class="' + est[1] + '" style="width:' + lleno.toFixed(1) + '%"></i><b class="xp-ritmo" style="left:' + ritmo.toFixed(1) + '%" title="Donde debería ir hoy"></b></div>' +
+        '<p class="xp-meta-pie">' + esc(dice) + (ritmoTxt ? ' · ' + esc(ritmoTxt) : '') + '</p></div>';
+    }
+    var tope = (def.mejor === 'baja' ? 'Máximo ' : 'Mínimo ') + xpValor(def, av.meta, true);
+    return '<div class="xp-meta"><div class="xp-meta-cab"><span>Meta: <b>' + esc(tope) + '</b></span>' + chip + '</div>' +
+      '<p class="xp-meta-pie">' + (av.valor === null ? 'Sin datos de ' + cuando + ' para medirla' : 'En ' + cuando + ' va ' + esc(xpValor(def, av.valor, true))) + '</p></div>';
+  }
+  function xpTarjeta(def, d, puede) {
+    var a = d.valores.actual[def.id], b = d.valores.anterior[def.id];
+    var av = (d.avance || []).filter(function (x) { return x.kpi === def.id; })[0] || null;
+    var cmp = xpComparar(def, a, b, d.dias);
+    var sinNada = a === null || a === undefined;
+    var cifra = sinNada ? (def.unidad === 'plata' && (def.id === 'embudo' ? d.embudo.sinValor : d.actual.ganados) ? 'Sin precios' : '—') : xpValor(def, a);
+    var ver = XP_VER[def.id];
+    return '<article class="xp-kpi" data-kpi="' + def.id + '" aria-labelledby="xp-t-' + def.id + '">' +
+      '<div class="xp-kpi-cab"><h3 id="xp-t-' + def.id + '">' + esc(def.nombre) + '</h3>' +
+      (ver ? '<button type="button" class="xp-ver" data-ver="' + ver[0] + '" title="' + esc(ver[1]) + '" aria-label="' + esc(ver[1]) + '"><i class="ic" data-ic="derecha"></i></button>' : '') + '</div>' +
+      '<p class="xp-cifra' + (cifra.length > 12 ? ' larga' : '') + (sinNada ? ' sin' : '') + '">' + esc(cifra) + '</p>' +
+      '<p class="xp-detalle">' + esc(xpDetalle(def, d)) + '</p>' +
+      (cmp ? '<p class="xp-cmp ' + cmp.tono + '">' + esc(cmp.t) + '</p>' : '') +
+      xpMeta(def, av, puede) + '</article>';
+  }
+  function xpTabla(d) {
+    var filas = d.porPersona || [], ag = d.agente || { respuestas: 0 };
+    if (!filas.length && !ag.respuestas) return '<div class="xp-vacio"><b>Todavía no hay nada que atribuir</b><span>Asigna cada contacto a alguien del equipo desde su ficha («Asignado a»): lo ganado y lo vendido se le cuenta a esa persona.</span></div>';
+    var celda = function (l, v, cls) { return '<td data-l="' + esc(l) + '"' + (cls ? ' class="' + cls + '"' : '') + '>' + v + '</td>'; };
+    var ventas = function (f) { return !f.ganados ? '—' : !f.ventasConPrecio ? 'Sin precios' : esc(plata(f.ventas)); };
+    var cuerpo = filas.map(function (f) {
+      return '<tr><th scope="row"><span class="xp-quien">' + avatarHtml(f.nombre, f.nombre, 'sm') + '<span>' + esc(f.nombre) + '</span></span></th>' +
+        celda('Asignados', xpNum(f.asignados), 'num') + celda('Ganados', xpNum(f.ganados), 'num') + celda('Ventas', ventas(f), 'num') +
+        celda('Citas', xpNum(f.citas), 'num') + celda('Respuestas', xpNum(f.respuestas), 'num') +
+        celda('Mediana de respuesta', f.respuestaMs === null ? '—' : esc(duracion(f.respuestaMs)), 'num') + '</tr>';
+    }).join('');
+    if (ag.respuestas) {
+      var na = '<span class="xp-na" title="Al agente de IA no se le asignan contactos">—</span>';
+      cuerpo += '<tr class="xp-agente"><th scope="row"><span class="xp-quien"><span class="xp-ia" aria-hidden="true"><i class="ic" data-ic="chispa"></i></span><span>' + esc(ag.nombre || state.agentName || 'Xen') + '<small>agente de IA</small></span></span></th>' +
+        celda('Asignados', na, 'num') + celda('Ganados', na, 'num') + celda('Ventas', na, 'num') + celda('Citas', na, 'num') +
+        celda('Respuestas', xpNum(ag.respuestas), 'num') + celda('Mediana de respuesta', ag.respuestaMs === null ? '—' : esc(duracion(ag.respuestaMs)), 'num') + '</tr>';
+    }
+    return '<div class="xp-tabla-caja"><table class="xp-tabla"><caption class="sr-only">Por persona, en los últimos ' + d.dias + ' días</caption><thead><tr><th scope="col">Persona</th><th scope="col" class="num">Asignados</th><th scope="col" class="num">Ganados</th>' +
+      '<th scope="col" class="num">Ventas</th><th scope="col" class="num">Citas</th><th scope="col" class="num">Respuestas</th><th scope="col" class="num">Mediana de respuesta</th></tr></thead><tbody>' + cuerpo + '</tbody></table></div>' +
+      '<p class="xp-nota">Asignados: tratos abiertos que tiene hoy. Ganados, ventas y citas: del periodo, de lo que tiene asignado. Respuestas: las que escribió en el periodo, con el reloj parado fuera del horario.</p>';
+  }
+  function xpPeriodo() {
+    document.querySelectorAll('#xp-kpis .xp-periodo [data-dias]').forEach(function (b) { b.setAttribute('aria-pressed', String(Number(b.getAttribute('data-dias')) === XP.dias)); });
+  }
+  function xpEsqueleto() {
+    $('xp-grid').innerHTML = [0, 1, 2, 3, 4, 5, 6, 7].map(function () { return '<div class="xp-kpi xp-esq" aria-hidden="true"><i></i><i></i><i></i></div>'; }).join('');
+    if (!XP.datos) $('xp-tabla').innerHTML = '<div class="xp-esq-tabla" aria-hidden="true"><i></i><i></i><i></i></div>';
+  }
+  function pintarKpis() {
+    var d = XP.datos, puede = mandaEnElModo();
+    if (!d) return;
+    var fecha = function (ts) { return new Date(ts).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }); };
+    $('xp-contra').textContent = 'Del ' + fecha(d.desde) + ' a hoy, contra los ' + d.dias + ' días anteriores';
+    $('xp-editar').hidden = !puede;
+    $('xp-grid').innerHTML = d.definiciones.map(function (def) { return xpTarjeta(def, d, puede); }).join('');
+    $('xp-grid').setAttribute('aria-busy', 'false');
+    $('xp-tabla').innerHTML = xpTabla(d);
+    iconos($('xp-grid')); iconos($('xp-tabla'));
+    $('xp-grid').querySelectorAll('[data-ver]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-ver')); }; });
+    $('xp-grid').querySelectorAll('[data-poner]').forEach(function (b) { b.onclick = function () { xpAbrirEditor(b.getAttribute('data-poner')); }; });
+  }
+  function cargarKpis() {
+    var mio = ++XP.pedido;
+    xpPeriodo();
+    $('xp-grid').setAttribute('aria-busy', 'true');
+    xpEsqueleto();
+    api('/kpis?dias=' + XP.dias).then(function (d) {
+      if (mio !== XP.pedido) return; // llegó tarde: ya se pidió otro periodo
+      if (!d || d.error || !d.valores) throw new Error((d && d.error) || 'El servidor no mandó los KPIs');
+      XP.datos = d;
+      pintarKpis();
+      if (XP.abierto) xpPintarEditor();
+    }).catch(function (e) {
+      if (mio !== XP.pedido || String(e && e.message) === '401') return;
+      $('xp-grid').setAttribute('aria-busy', 'false');
+      var porque = String((e && e.message) || 'Sin respuesta del servidor');
+      porque = porque.charAt(0).toUpperCase() + porque.slice(1);
+      $('xp-grid').innerHTML = '<div class="xp-error" role="alert"><b>No se pudieron cargar los KPIs</b><span>' + esc(porque) + '. Lo demás del tablero sigue funcionando.</span><button type="button" class="btn" id="xp-reintentar">Volver a intentar</button></div>';
+      $('xp-tabla').innerHTML = '';
+      $('xp-reintentar').onclick = cargarKpis;
+      $('xp-reintentar').focus();
+    });
+  }
+  // ---- el editor de metas ----
+  var XP_UNIDAD = { min: 'min como máximo', pct: '% como mínimo' };
+  function xpPintarEditor(foco) {
+    var d = XP.datos, form = $('xp-editor');
+    if (!d || !form) return;
+    var defs = d.definiciones.filter(function (k) { return k.meta; });
+    var metas = d.metas || {};
+    form.innerHTML = '<div class="xp-editor-cab"><h2 id="xp-editor-t">Metas</h2><p>Las que se suman (conversaciones, citas, ganados, ventas) se llevan por semana o por mes del calendario; las de nivel —tiempo, porcentajes, el embudo— se miden en el mes. Deja vacía la que no quieras.</p></div>' +
+      '<div class="xp-campos">' + defs.map(function (k) {
+        var m = metas[k.id], val = m ? (k.unidad === 'plata' || k.unidad === 'n' ? xpNum(m.valor) : xpNum(m.valor, 1)) : '';
+        var unidad = k.unidad === 'plata' ? (state.moneda || 'COP') : XP_UNIDAD[k.unidad] || '';
+        return '<div class="xp-campo" data-campo="' + k.id + '"><label for="xp-m-' + k.id + '">' + esc(k.nombre) + '</label>' +
+          '<div class="xp-campo-fila"><input type="text" inputmode="decimal" autocomplete="off" id="xp-m-' + k.id + '" value="' + esc(val) + '" aria-describedby="xp-m-' + k.id + '-err" placeholder="' + (k.meta === 'umbral' ? (k.mejor === 'baja' ? 'Máximo' : 'Mínimo') : 'Sin meta') + '">' +
+          (unidad ? '<span class="xp-unidad">' + esc(unidad) + '</span>' : '') +
+          (k.meta === 'acumula' ? '<select id="xp-p-' + k.id + '" aria-label="' + esc('Periodo de la meta de ' + k.nombre) + '"><option value="mes"' + (!m || m.periodo !== 'semana' ? ' selected' : '') + '>al mes</option><option value="semana"' + (m && m.periodo === 'semana' ? ' selected' : '') + '>a la semana</option></select>' : '') +
+          '</div><p class="xp-campo-err" id="xp-m-' + k.id + '-err" aria-live="polite"></p></div>';
+      }).join('') + '</div>' +
+      '<div class="xp-editor-pie"><button type="submit" class="btn primary" id="xp-guardar">Guardar metas</button><button type="button" class="btn" id="xp-cancelar">Cancelar</button><span class="xp-editor-msg" id="xp-editor-msg" role="status"></span></div>';
+    $('xp-cancelar').onclick = function () { xpCerrarEditor(true); };
+    var f = foco && $('xp-m-' + foco);
+    (f || form.querySelector('input')).focus();
+  }
+  function xpAbrirEditor(foco) {
+    if (!mandaEnElModo() || !XP.datos) return;
+    XP.abierto = true;
+    $('xp-editor').hidden = false;
+    $('xp-editar').setAttribute('aria-expanded', 'true');
+    xpPintarEditor(foco);
+    $('xp-editor').scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+  function xpCerrarEditor(devolver) {
+    XP.abierto = false;
+    $('xp-editor').hidden = true;
+    $('xp-editar').setAttribute('aria-expanded', 'false');
+    if (devolver) $('xp-editar').focus();
+  }
+  if ($('xp-editar')) {
+    $('xp-editar').onclick = function () { if (XP.abierto) xpCerrarEditor(true); else xpAbrirEditor(); };
+    $('xp-editor').addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); xpCerrarEditor(true); } });
+    // 🪤 Lo escrito no se borra si algo falla: el servidor dice cuál campo está mal, se marca ese y lo demás se queda.
+    $('xp-editor').onsubmit = function (e) {
+      e.preventDefault();
+      var form = $('xp-editor'), metas = {};
+      form.querySelectorAll('[data-campo]').forEach(function (c) {
+        var id = c.getAttribute('data-campo'), inp = $('xp-m-' + id), per = $('xp-p-' + id);
+        inp.removeAttribute('aria-invalid'); $('xp-m-' + id + '-err').textContent = '';
+        if (inp.value.trim()) metas[id] = { valor: inp.value.trim(), periodo: per ? per.value : 'mes' };
+      });
+      $('xp-guardar').disabled = true;
+      $('xp-editor-msg').textContent = 'Guardando…';
+      api('/metas', { method: 'PUT', body: { metas: metas } }).then(function (r) {
+        $('xp-guardar').disabled = false;
+        if (!r || r.error) {
+          $('xp-editor-msg').textContent = '';
+          var campo = r && r.campo && $('xp-m-' + r.campo);
+          if (campo) { campo.setAttribute('aria-invalid', 'true'); $('xp-m-' + r.campo + '-err').textContent = r.error; campo.focus(); }
+          else $('xp-editor-msg').textContent = 'No se guardó: ' + ((r && r.error) || 'sin respuesta');
+          return;
+        }
+        toast('Metas guardadas', null, { icono: 'check' });
+        xpCerrarEditor(true);
+        cargarKpis();
+      }).catch(function () { $('xp-guardar').disabled = false; $('xp-editor-msg').textContent = 'No se guardó: sin respuesta del servidor. Lo escrito sigue aquí.'; });
+    };
+  }
+  document.querySelectorAll('#xp-kpis .xp-periodo [data-dias]').forEach(function (b) {
+    b.onclick = function () {
+      XP.dias = Number(b.getAttribute('data-dias'));
+      try { localStorage.setItem(LLAVE('kpisDias'), String(XP.dias)); } catch (e) {}
+      cargarKpis();
+    };
+  });
+  if ($('xp-kpis')) iconos($('xp-kpis'));
+  alAbrir('kpis', cargarKpis);
   // (fin de XEN · KPIs y metas)
 
   // ===== XEN · Panel KAM: lo nuevo del agente de cuentas clave (alAbrir('kam', …)) =====

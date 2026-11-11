@@ -54,6 +54,7 @@ import { temasDelMaterial } from '../crm/aprender-temas.js';
 import { cuantoLeQueda, HORAS_MAXIMO, ponerPrueba, pruebaActiva, quitarPrueba } from '../crm/modo-prueba.js';
 import { comoVa, gastoDeLaDemo, olvidarTodo } from '../crm/vivo.js';
 import { olvidarPrecios, valorDe, valorDelEmbudo } from '../crm/valor.js';
+import { calcularKpis, guardarMetas, KPIS, leerMetas, limpiarMetas } from '../crm/kpis.js';
 import { enUnaFrase, historiaDe } from '../crm/historia.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
@@ -1439,6 +1440,26 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     if (!Number.isFinite(minutos) || minutos < 1 || minutos > 10080) return c.json({ error: 'pon los minutos, entre 1 y una semana' }, 400);
     setSetting('sla.minutos', Math.round(minutos));
     return c.json({ ok: true, minutos: Math.round(minutos) });
+  });
+
+  /**
+   * KPIs y metas (los objetivos de Dynamics 365): los números del periodo contra el periodo anterior igual de largo,
+   * por persona lo que se puede atribuir, y cómo van las metas en la semana o el mes del calendario. Sin modelo y sin
+   * red (crm/kpis.ts). Es del que vende: el candado lo deja leer.
+   */
+  app.get('/admin/api/kpis', (c) => c.json(calcularKpis({ dias: Number(c.req.query('dias') ?? 30) || 30, acuerdoMin: getSetting('sla.minutos', 15) })));
+
+  /**
+   * Las metas. Leerlas es de todos (cada quien sabe a qué se apunta); ponerlas es de quien administra XENCRM: con el
+   * candado esta ruta no está en la lista de lo que se puede cambiar, y por la consola solo la cambia el super-admin
+   * (consola.ts, SOLO_SUPER_CAMBIA). Todo o nada: si una meta viene mal, no se guarda ninguna.
+   */
+  app.get('/admin/api/metas', (c) => c.json({ metas: leerMetas(), definiciones: KPIS }));
+  app.put('/admin/api/metas', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { metas?: unknown };
+    const r = limpiarMetas(body.metas);
+    if ('error' in r) return c.json(r, 400);
+    return c.json({ metas: guardarMetas(r.metas), definiciones: KPIS });
   });
 
   /** De dónde salió cada conversación y en qué terminó: el embudo por campaña. */
