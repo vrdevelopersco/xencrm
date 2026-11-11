@@ -56,12 +56,12 @@ const lee: Record<string, string[]> = {
   inbox: ['contacts', 'contacts/web%3A1', 'contacts/web%3A1/duplicates'],
   clientes: ['contacts'],
   calendar: ['appointments', 'busy', 'calendar'],
-  pipeline: ['contacts', 'stats'],
+  pipeline: ['contacts', 'stats', 'embudo'],
   ventas: ['ventas'],
   seguimientos: ['seguimientos'],
   // Las pantallas de la suite (Dynamics 365). Cada agente pone aquí lo que su pantalla lee, en su renglón.
   // XEN · Embudo y filtrado
-  embudo: ['contacts', 'stats'],
+  embudo: ['contacts', 'embudo'],
   // XEN · Panel KAM
   kam: ['cuentas-clave'],
   // XEN · KPIs y metas

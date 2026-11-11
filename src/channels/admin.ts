@@ -55,6 +55,7 @@ import { cuantoLeQueda, HORAS_MAXIMO, ponerPrueba, pruebaActiva, quitarPrueba } 
 import { comoVa, gastoDeLaDemo, olvidarTodo } from '../crm/vivo.js';
 import { olvidarPrecios, valorDe, valorDelEmbudo } from '../crm/valor.js';
 import { calcularKpis, guardarMetas, KPIS, leerMetas, limpiarMetas } from '../crm/kpis.js';
+import { historiaDelEmbudo } from '../crm/embudo.js';
 import { enUnaFrase, historiaDe } from '../crm/historia.js';
 import { feedUrls } from '../crm/calendar.js';
 import { busyIntervals, busyStatus } from '../crm/busy.js';
@@ -589,6 +590,13 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     await analyzeContact(id, { full: true });
     return c.json({ contact: getContact(id), analyses: listAnalyses(id, 1) });
   });
+
+  /**
+   * El embudo (Ventas › Embudo, y las vistas «este mes» de Tratos): hasta dónde llegó cada trato, desde qué etapa se
+   * cayó si se perdió y cuándo se cerró, leído de la historia de cambios de etapa (crm/embudo.ts). Solo lectura,
+   * sin modelo ni red: el tablero lo cruza con la lista de contactos y aplica ahí los filtros de cada quien.
+   */
+  app.get('/admin/api/embudo', (c) => c.json(historiaDelEmbudo()));
 
   /** Ventas: quién compró, por cuánto y cuándo, y lo que se perdió y por qué. El cálculo vive en crm/resultados.ts. */
   app.get('/admin/api/ventas', (c) => c.json(ventasDelPeriodo(Math.min(365, Math.max(1, Number(c.req.query('days') ?? 90))))));

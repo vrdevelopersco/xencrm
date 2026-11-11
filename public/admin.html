@@ -2713,6 +2713,160 @@ dialog.perdida input{width:100%}
 /* (fin de XEN · Modelos de IA) */
 
 /* ---------- XEN · Embudo y filtrado (agente del embudo) ---------- */
+/* El filtrado de Dynamics 365 en Contactos, Tratos y Embudo: arriba las vistas (píldoras con su número), debajo
+   Filtros con su panel, lo puesto como píldoras que se quitan, Guardar vista y, según la pantalla, Tablero | Lista
+   o el periodo. El color de cada etapa sale de su rol (inicio gris, activo cielo, interés ámbar, cita índigo,
+   ganado verde, perdido rojo), el mismo de Tratos: un dato no cambia de color de una pantalla a otra. */
+:root[data-piel="xen"] .xf-barra{display:flex;flex-direction:column;gap:10px}
+:root[data-piel="xen"] .xf-barra:empty{display:none}
+:root[data-piel="xen"] #xf-pipeline{padding:4px 28px 0}
+:root[data-piel="xen"] #xf-clientes{margin-top:12px}
+:root[data-piel="xen"] .xf-vistas{display:flex;flex-wrap:wrap;gap:8px}
+:root[data-piel="xen"] .xf-vistas button{display:inline-flex;align-items:center;min-height:34px;padding:0 14px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-pill);background:var(--fx-panel);color:var(--fx-t1);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background var(--fx-t-rapido),border-color var(--fx-t-rapido)}
+:root[data-piel="xen"] .xf-vistas button:hover{background:var(--fx-panel-2);border-color:var(--fx-t4)}
+:root[data-piel="xen"] .xf-vistas button.on{background:var(--fx-suave);border-color:var(--fx-suave-borde);color:var(--fx-suave-t)}
+:root[data-piel="xen"] .xf-vistas button .cuenta{margin-left:8px;font-size:12px;font-weight:600;color:var(--fx-t3);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xf-vistas button.on .cuenta{color:var(--fx-suave-t)}
+:root[data-piel="xen"] .xf-vistas button .cuenta:empty{display:none}
+/* Las vistas que guardó cada quien: la estrella las separa de las del sistema (y lo dice con texto, no solo color). */
+:root[data-piel="xen"] .xf-vistas button.xf-guardada,:root[data-piel="xen"] #cli-filtros button.xf-guardada{border-style:dashed}
+:root[data-piel="xen"] .xf-fila2{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+:root[data-piel="xen"] .xf-fila2 .grow{flex:1 1 0}
+:root[data-piel="xen"] .xf-caja-filtros,:root[data-piel="xen"] .xf-caja-guardar{position:relative}
+:root[data-piel="xen"] .xf-btn-filtros .ic,:root[data-piel="xen"] .xf-caja-guardar>.btn .ic,:root[data-piel="xen"] .xf-seg .ic{width:16px;height:16px;flex:0 0 16px}
+:root[data-piel="xen"] .xf-btn-filtros[aria-expanded="true"]{background:var(--fx-suave);border-color:var(--fx-suave-borde);color:var(--fx-suave-t)}
+:root[data-piel="xen"] .xf-n{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:var(--fx-r-pill);background:var(--fx-acento);color:var(--fx-sobre-acento);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xf-n:empty{display:none}
+/* Lo puesto, como píldoras: el texto dice qué filtra y la × lo quita (con su nombre para un lector de pantalla). */
+:root[data-piel="xen"] .xf-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;list-style:none;margin:0;padding:0;min-width:0}
+:root[data-piel="xen"] .xf-chips:empty{display:none}
+:root[data-piel="xen"] .xf-chip{display:inline-flex;align-items:center;gap:2px;min-height:32px;max-width:100%;padding:0 4px 0 12px;border:1px solid var(--fx-suave-borde);border-radius:var(--fx-r-pill);background:var(--fx-suave);color:var(--fx-suave-t);font-size:13px;font-weight:600}
+:root[data-piel="xen"] .xf-chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+:root[data-piel="xen"] .xf-chip button{display:inline-grid;place-items:center;width:26px;height:26px;flex:0 0 26px;border:0;border-radius:999px;background:none;color:inherit;cursor:pointer}
+:root[data-piel="xen"] .xf-chip button:hover{background:color-mix(in srgb,var(--fx-suave-t) 14%,transparent)}
+:root[data-piel="xen"] .xf-chip .ic{width:14px;height:14px}
+:root[data-piel="xen"] .xf-limpiar{font-size:13px;font-weight:600;color:var(--fx-acento-t);background:none;border:0;padding:4px 6px;cursor:pointer}
+/* Tablero | Lista: un control segmentado; el elegido, blanco y levantado sobre el pozo. */
+:root[data-piel="xen"] .xf-seg{display:inline-flex;gap:2px;padding:3px;border-radius:var(--fx-r-md);background:var(--fx-hover)}
+:root[data-piel="xen"] .xf-seg button{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 12px;border:0;border-radius:8px;background:none;color:var(--fx-t2);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+:root[data-piel="xen"] .xf-seg button.on{background:var(--fx-panel);color:var(--fx-t0);box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] .xf-periodo{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xf-periodo select{width:auto;min-height:34px}
+/* El panel de Filtros y el de Guardar vista: flotan junto a su botón y se cierran con Escape o tocando fuera. */
+:root[data-piel="xen"] .xf-panel,:root[data-piel="xen"] .xf-guardar{position:absolute;top:calc(100% + 6px);z-index:60;padding:14px 16px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel);box-shadow:var(--fx-sombra-pop)}
+:root[data-piel="xen"] .xf-panel{left:0;width:min(380px,calc(100vw - 32px));max-height:min(72vh,600px);overflow:auto;display:flex;flex-direction:column;gap:14px}
+:root[data-piel="xen"] .xf-panel[hidden],:root[data-piel="xen"] .xf-guardar[hidden]{display:none}
+:root[data-piel="xen"] .xf-panel-cab b{display:block;font-size:15px;font-weight:700;color:var(--fx-t0)}
+:root[data-piel="xen"] .xf-panel-cab span{display:block;margin-top:2px;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xf-campo{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;border:0;min-width:0}
+:root[data-piel="xen"] .xf-campo>label:not(.xf-etapa),:root[data-piel="xen"] .xf-campo legend{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--fx-t3);padding:0;margin-bottom:2px}
+:root[data-piel="xen"] .xf-etapas{flex-direction:row;flex-wrap:wrap;gap:6px}
+:root[data-piel="xen"] .xf-etapas legend{width:100%}
+:root[data-piel="xen"] .xf-etapa{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-pill);font-size:13px;font-weight:600;color:var(--fx-t1);cursor:pointer}
+:root[data-piel="xen"] .xf-etapa:has(input:checked){background:var(--fx-suave);border-color:var(--fx-suave-borde);color:var(--fx-suave-t)}
+:root[data-piel="xen"] .xf-etapa:has(input:focus-visible){box-shadow:var(--fx-anillo)}
+:root[data-piel="xen"] .xf-etapa input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+:root[data-piel="xen"] .xf-valor{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+:root[data-piel="xen"] .xf-valor legend{grid-column:1/-1}
+:root[data-piel="xen"] .xf-campo.xf-valor>label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--fx-t2)}
+:root[data-piel="xen"] .xf-valor small{grid-column:1/-1;font-size:12px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xf-dato{gap:8px}
+:root[data-piel="xen"] .xf-dato input:disabled{background:var(--fx-panel-2);color:var(--fx-t3)}
+:root[data-piel="xen"] .xf-panel-pie{display:flex;justify-content:space-between;gap:8px;padding-top:12px;border-top:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .xf-guardar{right:0;width:min(300px,calc(100vw - 32px));display:flex;flex-direction:column;gap:8px}
+:root[data-piel="xen"] .xf-guardar label{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--fx-t3)}
+:root[data-piel="xen"] .xf-guardar-err{font-size:12.5px;color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xf-guardar-err:empty{display:none}
+:root[data-piel="xen"] .xf-guardar-acc{display:flex;justify-content:flex-end;gap:8px}
+:root[data-piel="xen"] .xf-borrar[hidden]{display:none}
+/* Los puntos de color de cada etapa (filtros, embudo, caídas): el de su rol. */
+:root[data-piel="xen"] .xf-etapa .punto,:root[data-piel="xen"] .xe-et .punto,:root[data-piel="xen"] .xe-caida-et .punto{display:inline-block;width:9px;height:9px;flex:0 0 9px;border-radius:999px;background:var(--fx-t3)}
+:root[data-piel="xen"] .punto[data-rol="activo"],:root[data-piel="xen"] .xe-tramo[data-rol="activo"]{--xe-c:var(--fx-cielo)}
+:root[data-piel="xen"] .punto[data-rol="interes"],:root[data-piel="xen"] .xe-tramo[data-rol="interes"]{--xe-c:var(--fx-ambar)}
+:root[data-piel="xen"] .punto[data-rol="cita"],:root[data-piel="xen"] .xe-tramo[data-rol="cita"]{--xe-c:var(--fx-indigo)}
+:root[data-piel="xen"] .punto[data-rol="ganado"],:root[data-piel="xen"] .xe-tramo[data-rol="ganado"]{--xe-c:var(--fx-verde)}
+:root[data-piel="xen"] .punto[data-rol="perdido"]{--xe-c:var(--fx-rojo)}
+:root[data-piel="xen"] .punto[data-rol]{background:var(--xe-c,var(--fx-t3))}
+/* Tratos en lista. */
+:root[data-piel="xen"] #xf-pipeline-lista{padding:16px 28px 28px}
+:root[data-piel="xen"] #xf-pipeline-lista[hidden],:root[data-piel="xen"] #board[hidden]{display:none}
+
+/* ---------- la pantalla Embudo ---------- */
+:root[data-piel="xen"] #xe-embudo,:root[data-piel="xen"] #xe-cuerpo{display:flex;flex-direction:column;gap:20px}
+:root[data-piel="xen"] .xe-cifras{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+:root[data-piel="xen"] .xe-cifra{display:flex;flex-direction:column;gap:4px;padding:16px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs);min-width:0}
+:root[data-piel="xen"] .xe-cifra .t{font-size:13.5px;font-weight:600;color:var(--fx-t2)}
+:root[data-piel="xen"] .xe-cifra .n{font-family:var(--fx-display);font-size:28px;line-height:1.15;font-weight:700;letter-spacing:-.02em;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xe-cifra .p{font-size:12.5px;color:var(--fx-t2);overflow-wrap:anywhere}
+:root[data-piel="xen"] .xe-cifra[data-k="ganados"] .n{color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xe-cifra[data-k="perdidos"] .n{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xe-fila{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:20px;align-items:start}
+:root[data-piel="xen"] .xe-caja{padding:20px;min-width:0}
+:root[data-piel="xen"] .xe-cab h2{margin:0;font-size:16px;font-weight:700;color:var(--fx-t0)}
+:root[data-piel="xen"] .xe-cab p{margin:4px 0 0;font-size:13.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xe-tramos{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column}
+/* Cada etapa es un botón: su nombre y cuántos llegaron, la barra centrada (el embudo se angosta) y lo que hay hoy. */
+:root[data-piel="xen"] .xe-tramo{display:grid;grid-template-columns:minmax(140px,190px) minmax(0,1fr) minmax(120px,170px);align-items:center;gap:14px;width:100%;padding:8px 10px;border:1px solid transparent;border-radius:var(--fx-r-lg);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background var(--fx-t-rapido),border-color var(--fx-t-rapido)}
+:root[data-piel="xen"] .xe-tramo:hover{background:var(--fx-fila);border-color:var(--fx-borde-2)}
+:root[data-piel="xen"] .xe-et{display:grid;grid-template-columns:9px minmax(0,1fr);align-items:center;column-gap:8px;min-width:0}
+:root[data-piel="xen"] .xe-et .punto{background:var(--xe-c,var(--fx-t3))}
+:root[data-piel="xen"] .xe-et b{font-size:14px;font-weight:650;color:var(--fx-t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] .xe-et small{grid-column:2;font-size:12.5px;color:var(--fx-t2);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xe-pista{display:flex;justify-content:center;align-items:center;height:30px}
+:root[data-piel="xen"] .xe-barra{display:block;height:100%;min-width:12px;border-radius:8px;background:var(--xe-c,var(--fx-t3));transition:width var(--fx-t-medio)}
+:root[data-piel="xen"] .xe-ahora{display:flex;flex-direction:column;align-items:flex-end;text-align:right;min-width:0}
+:root[data-piel="xen"] .xe-ahora b{font-size:13.5px;font-weight:650;color:var(--fx-t1);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xe-ahora small{font-size:12.5px;color:var(--fx-t2);overflow-wrap:anywhere}
+/* Entre una etapa y la siguiente: qué parte pasa, y dónde se quedan más (con texto, no solo el color). */
+:root[data-piel="xen"] .xe-paso{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 10px;margin:2px 0;padding:2px 10px;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xe-paso .ic{width:14px;height:14px;color:var(--fx-t3)}
+:root[data-piel="xen"] .xe-paso b{color:var(--fx-t1);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xe-de{color:var(--fx-t2);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xe-paso.peor b{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xe-alerta{display:inline-flex;align-items:center;min-height:22px;padding:0 9px;border-radius:var(--fx-r-pill);background:var(--fx-ambar-s);color:var(--fx-ambar-t);font-size:12px;font-weight:700}
+:root[data-piel="xen"] .xe-nota{margin:14px 0 0;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xe-caida-lista,:root[data-piel="xen"] .xe-motivos{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+:root[data-piel="xen"] .xe-caida-lista li{display:grid;grid-template-columns:minmax(0,1fr) minmax(60px,40%) 3ch;align-items:center;gap:10px;font-size:13.5px;color:var(--fx-t1)}
+:root[data-piel="xen"] .xe-caida-et{display:inline-flex;align-items:center;gap:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] .xe-caida-pista{display:block;height:10px;border-radius:999px;background:var(--fx-rojo-s)}
+:root[data-piel="xen"] .xe-caida-pista i{display:block;height:100%;min-width:6px;border-radius:999px;background:var(--fx-rojo)}
+:root[data-piel="xen"] .xe-caida-lista b,:root[data-piel="xen"] .xe-motivos b{text-align:right;font-variant-numeric:tabular-nums;color:var(--fx-t0)}
+:root[data-piel="xen"] .xe-sin-saber .xe-caida-et{color:var(--fx-t2);font-style:italic}
+:root[data-piel="xen"] .xe-sin-saber .xe-caida-pista i{background:var(--fx-t4)}
+:root[data-piel="xen"] .xe-sub{margin:18px 0 0;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fx-t3)}
+:root[data-piel="xen"] .xe-motivos{margin-top:8px;gap:6px}
+:root[data-piel="xen"] .xe-motivos li{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:var(--fx-r-md);background:var(--fx-panel-2);font-size:13.5px;color:var(--fx-t1)}
+:root[data-piel="xen"] .xe-caidas>.btn{margin-top:16px}
+:root[data-piel="xen"] .xe-vacio-mini{display:flex;flex-direction:column;gap:4px;margin-top:16px;padding:16px;border:1px dashed var(--fx-t4);border-radius:var(--fx-r-lg);font-size:13.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xe-vacio-mini b{color:var(--fx-t1)}
+:root[data-piel="xen"] .xe-acc{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+/* Cargando: la forma de lo que viene. */
+:root[data-piel="xen"] .xe-esq{display:flex;flex-direction:column;gap:20px}
+:root[data-piel="xen"] .xe-esq-cifras{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+:root[data-piel="xen"] .xe-esq-cifras i{display:block;height:96px;border-radius:var(--fx-r-xl);background:var(--fx-hover);animation:xe-brillo 1.4s ease-in-out infinite}
+:root[data-piel="xen"] .xe-esq-tramos{display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel)}
+:root[data-piel="xen"] .xe-esq-tramos i{display:block;height:30px;border-radius:8px;background:var(--fx-hover);animation:xe-brillo 1.4s ease-in-out infinite}
+@keyframes xe-brillo{0%,100%{opacity:1}50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){:root[data-piel="xen"] .xe-esq-cifras i,:root[data-piel="xen"] .xe-esq-tramos i{animation:none}:root[data-piel="xen"] .xe-barra{transition:none}}
+@media (max-width:1100px){:root[data-piel="xen"] .xe-fila{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:900px){
+  :root[data-piel="xen"] #xf-pipeline{padding:4px 20px 0}
+  :root[data-piel="xen"] #xf-pipeline-lista{padding:12px 20px 20px}
+  :root[data-piel="xen"] .xe-cifras,:root[data-piel="xen"] .xe-esq-cifras{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* En el celular las vistas se deslizan en una fila, como los grupos de Contactos. */
+  :root[data-piel="xen"] .xf-vistas{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px 2px}
+  :root[data-piel="xen"] .xf-vistas::-webkit-scrollbar{display:none}
+  :root[data-piel="xen"] .xf-vistas button{flex:0 0 auto}
+  :root[data-piel="xen"] .xf-fila2 .grow{display:none}
+}
+@media (max-width:640px){
+  /* El panel ya no cabe junto al botón: se abre a lo ancho de la pantalla, debajo de la barra de arriba. */
+  :root[data-piel="xen"] .xf-panel,:root[data-piel="xen"] .xf-guardar{position:fixed;left:12px;right:12px;top:72px;width:auto;max-height:calc(100dvh - 96px)}
+  :root[data-piel="xen"] .xe-tramo{grid-template-columns:minmax(0,1fr) auto;row-gap:8px}
+  :root[data-piel="xen"] .xe-pista{grid-column:1/-1;grid-row:2}
+  :root[data-piel="xen"] .xe-cifra .n{font-size:24px}
+}
+@media (pointer:coarse){:root[data-piel="xen"] .xf-chip button{width:32px;height:32px;flex-basis:32px}:root[data-piel="xen"] .xf-vistas button,:root[data-piel="xen"] .xf-seg button{min-height:40px}}
 /* (fin de XEN · Embudo y filtrado) */
 
 /* ---------- XEN · KPIs y metas (agente de KPIs) ---------- */
@@ -3345,6 +3499,9 @@ dialog.perdida input{width:100%}
       <div class="topbar"><h1>Prospectos</h1><span class="muted small">Arrastra una tarjeta, o usa «Mover…», para cambiar de etapa</span><span class="grow"></span><select id="pip-sede" aria-label="Qué sede mirar" hidden></select></div>
       <!-- Cuánto hay en juego y dónde: las cifras de arriba y la barra por etapa. Ver pintarCifrasEmbudo(). -->
       <div class="pip-cifras solo-completo" id="pip-cifras"></div>
+      <!-- XEN · Embudo y filtrado: las vistas, los filtros y Tablero | Lista de Tratos (xfPintarBarra('pipeline')). -->
+      <div class="xf-barra" id="xf-pipeline"></div>
+      <div class="xf-lista-caja" id="xf-pipeline-lista" hidden></div>
       <div class="board" id="board"></div>
       <div class="sr-only" id="board-status" role="status"></div>
     </section>
@@ -3522,7 +3679,9 @@ dialog.perdida input{width:100%}
         <button class="btn sm primary" id="cli-nuevo"><i class="ic" data-ic="mas"></i>Agregar contacto</button>
       </div>
       <!-- Las pestañas, cada una con su número: se pintan en renderClientes(). -->
-      <div class="cli-pestanas"><div class="filters" id="cli-filtros"></div></div>
+      <div class="cli-pestanas"><div class="filters" id="cli-filtros"></div>
+        <!-- XEN · Embudo y filtrado: los filtros encima de la vista (los grupos de arriba son las vistas). -->
+        <div class="xf-barra xf-solo-fila2" id="xf-clientes"></div></div>
       <!-- Modo fácil: el buscador y los grupos debajo del título, como en Nexora. El buscador es el mismo de la
            barra de arriba, mudado aquí (ver ponerBuscadorClientes). -->
       <div class="fx-herr solo-facil" id="fx-cli-herr">
@@ -3587,7 +3746,10 @@ dialog.perdida input{width:100%}
     <section class="view" id="view-embudo">
       <div class="topbar"><h1>Embudo</h1><span class="grow"></span></div>
       <!-- XEN · Embudo y filtrado: el marcado del embudo va aquí -->
-      <div class="pad" id="xe-embudo"></div>
+      <div class="pad" id="xe-embudo">
+        <div class="xf-barra" id="xf-embudo"></div>
+        <div id="xe-cuerpo"></div>
+      </div>
       <!-- (fin de XEN · Embudo y filtrado) -->
     </section>
 
