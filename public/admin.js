@@ -462,6 +462,8 @@
     // Cada umbral que decide algo de negocio, en un solo sitio (src/reglas.ts). Es de quien administra: el candado y la
     // consola cierran el cambio a los demás.
     { view: 'reglas', ic: 'sliders', lbl: 'Reglas y umbrales', soloAdmin: true },
+    // Las reglas de Mantenimientos y actualizaciones (Servicio): las ve quien administra, las cambia el super-admin.
+    { view: 'cfg-mantenimientos', ic: 'llave', lbl: 'Mantenimientos y actualizaciones', soloAdmin: true },
     { view: 'channels', ic: 'plug', lbl: 'Canales' },
     { view: 'knowledge', ic: 'book', lbl: 'Lo que sabe' },
     // 🪤 Solo para quien administra, y es por RUIDO, no por secreto. Quien atiende todo el día no necesita ver
@@ -604,7 +606,7 @@
   // mandó la muestra de cómo lo quería (Nexora) y las tres están en su menú: son del que vende, no del que
   // administra XENCRM. El servidor las abre igual (channels/candado.ts).
   var SOLO_COMPLETO_VISTAS = { agent: 1, trazas: 1 };
-  var VISTAS_DE_QUIEN_ADMINISTRA = { guia: 1, profile: 1, negocio: 1, agent: 1, channels: 1, knowledge: 1, trazas: 1, modelos: 1, reglas: 1 };
+  var VISTAS_DE_QUIEN_ADMINISTRA = { guia: 1, profile: 1, negocio: 1, agent: 1, channels: 1, knowledge: 1, trazas: 1, modelos: 1, reglas: 1, 'cfg-mantenimientos': 1 };
   var FILTROS_COMPLETOS = /^(human|archived|stage:)/;
   function modoMio() { try { return localStorage.getItem(LLAVE('modo')) || ''; } catch (e) { return ''; } }
   function modoDelEquipo() {
@@ -672,7 +674,7 @@
   // ---------- el panel de la sección ----------
   // 🪤 Solo aparece donde tiene algo que decir. Un panel vacío a la izquierda «para que se vea simétrico» es
   // espacio robado a lo único que importa en esta pantalla, que es la conversación.
-  var CFG_VIEWS = { guia: 1, agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1, modelos: 1, reglas: 1 };
+  var CFG_VIEWS = { guia: 1, agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1, modelos: 1, reglas: 1, 'cfg-mantenimientos': 1 };
   // 🪤 En las pantallas de configuración el panel decía lo mismo que el título de la página, dos veces en la
   // misma fila. Aquí dice el ÁREA —dónde estás— y la lista de abajo dice la pantalla: cada uno aporta algo.
   var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Clientes', clientes: 'Clientes', ventas: 'Análisis', seguimientos: 'Clientes', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración', trazas: 'Configuración', guia: 'Configuración' };
@@ -1025,6 +1027,7 @@
       tickets: ['Tickets', 'Lo que reportan los clientes, con el reloj de su SLA corriendo.'],
       sla: ['SLA', 'Si se está cumpliendo lo prometido a cada plan: respuesta, solución, actualizaciones y mantenimientos.'],
       mantenimientos: ['Mantenimientos y actualizaciones', 'Lo que se va a tocar, a quién afecta y si se avisó a tiempo.'],
+      'cfg-mantenimientos': ['Mantenimientos y actualizaciones', 'Las reglas: el aviso de cada plan, la cadencia de cada aplicación, a quién se avisa y con qué texto.'],
       modelos: ['Modelos de IA', 'Conecta los proveedores de IA y elige cuál hace cada cosa.'],
       reglas: ['Reglas y umbrales', 'Cada número que decide algo: cuándo es caliente, cuánto aguanta una cuenta clave, desde cuándo preocupa.'],
       help: ['Ayuda', 'Lo esencial del tablero en dos minutos.']
@@ -7763,6 +7766,667 @@
   // (fin de XEN · Tickets y SLA)
 
   // ===== XEN · Mantenimientos y actualizaciones: lo nuevo de su agente (alAbrir('mantenimientos', …)) =====
+  // Servicio › Mantenimientos y actualizaciones: lo que se va a tocar, a quién afecta y si se le avisó a tiempo. Lo
+  // calcula el servidor (crm/mantenimientos.ts) sin modelo: aquí se pinta, se programa y se prepara el aviso.
+  //
+  // 🪤 El aviso NUNCA sale solo. «Preparar aviso» deja el mensaje escrito en la conversación de cada cliente (como lo
+  // que XENCRM deja listo) y alguien lo lee y lo manda; cuenta como dado cuando de verdad salió. Por eso aquí se dice
+  // «Preparado: falta mandarlo» y «No salió», y no «Avisado» hasta que el mensaje llegó.
+  //
+  // 🪤 Las fechas van en la hora del NEGOCIO (la zona que manda el servidor), no en la del navegador: quien programa
+  // desde otro país vería la ventana corrida. El campo de fecha se lee y se escribe en esa zona (xuEnZona).
+  //
+  // 🪤 Lo que se escribe en el formulario NO se borra si guardar falla: queda en XU.borrador y el error va junto al
+  // campo que lo causó.
+  var XU = { datos: null, cargando: false, error: null, dias: 30, abiertos: {}, form: null, borrador: null, errorForm: null, guardando: false, cancelando: {}, preparando: {} };
+  var XU_AVISO = {
+    a_tiempo: ['A tiempo', 'check', 'verde'], tarde: ['Avisado tarde', 'reloj', 'ambar'], preparado: ['Preparado: falta mandarlo', 'enviar', 'cielo'],
+    no_salio: ['No salió: reinténtalo', 'alerta', 'rojo'], por_avisar: ['Por avisar', 'bell', 'neutro'], atrasado: ['Atrasado: avisar ya', 'alerta', 'rojo'], sin_aviso: ['Sin aviso', 'alerta', 'rojo']
+  };
+  ICONS.llave = ICONS.llave || '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>';
+  ICONS.paquete = '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>';
+
+  function xuZona() { return (XU.datos && XU.datos.zona) || undefined; }
+  function xuFmt(ts, o) { try { return new Intl.DateTimeFormat('es-CO', Object.assign({ timeZone: xuZona() }, o)).format(ts); } catch (e) { return new Date(ts).toLocaleString('es-CO', o); } }
+  function xuDia(ts) { return xuFmt(ts, { weekday: 'long', day: 'numeric', month: 'long' }); }
+  function xuHora(ts) { return xuFmt(ts, { hour: 'numeric', minute: '2-digit' }); }
+  function xuCuando(ts) { return xuFmt(ts, { weekday: 'short', day: 'numeric', month: 'short' }) + ', ' + xuHora(ts); }
+  function xuEn(ts) {
+    var d = ts - Date.now(), abs = Math.abs(d), h = Math.round(abs / 3600000), dias = Math.round(abs / 86400000);
+    var t = abs < 3600000 ? Math.max(1, Math.round(abs / 60000)) + ' min' : h < 48 ? h + ' h' : dias + ' días';
+    return d >= 0 ? 'en ' + t : 'hace ' + t;
+  }
+  /** La pared del reloj del negocio («2026-12-13T23:00») a un instante, sin importar la zona del navegador. */
+  function xuEnZona(valor) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(valor || '');
+    if (!m) return NaN;
+    var supuesto = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    var zona = xuZona();
+    if (!zona) return new Date(valor).getTime();
+    // Lo que esa zona marca en el instante supuesto; la diferencia es su desfase (dos pasadas por si cambia la hora).
+    var desfase = function (ts) {
+      var p = {};
+      new Intl.DateTimeFormat('en-US', { timeZone: zona, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(ts).forEach(function (x) { p[x.type] = x.value; });
+      return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute) - ts;
+    };
+    var ts = supuesto - desfase(supuesto);
+    return supuesto - desfase(ts);
+  }
+  /** Un instante en la pared del reloj del negocio, para el campo datetime-local. */
+  function xuAZona(ts) {
+    var p = {};
+    try { new Intl.DateTimeFormat('en-US', { timeZone: xuZona(), hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(ts).forEach(function (x) { p[x.type] = x.value; }); } catch (e) { return ''; }
+    return p.year + '-' + p.month + '-' + p.day + 'T' + (p.hour === '24' ? '00' : p.hour) + ':' + p.minute;
+  }
+  /** Programar es de quien diga la regla `mant.quienPrograma` (de fábrica, quien administra XENCRM). El servidor lo cumple igual. */
+  function xuPuedeProgramar() { return (XU.datos && XU.datos.quienPrograma === 'equipo') || mandaEnElModo(); }
+  function xuPlan(id) { var p = ((XU.datos && XU.datos.planes) || []).filter(function (x) { return x.id === id; })[0]; return p ? p.nombre : id; }
+  function xuNombreEstadoAct(id) { var e = ((XU.datos && XU.datos.estadosActualizacion) || []).filter(function (x) { return x.id === id; })[0]; return e ? e.nombre : id; }
+  function xuHoras(h) { return h % 24 === 0 && h >= 48 ? (h / 24) + ' días' : h + ' h'; }
+  function xuAvisosDePlanes() { return ((XU.datos && XU.datos.planes) || []).map(function (p) { return p.nombre + ' ' + xuHoras(p.avisoHoras); }).join(', '); }
+  function xuPill(estado, texto) {
+    var a = XU_AVISO[estado] || ['—', 'reloj', 'neutro'];
+    return '<span class="xu-pill t-' + a[2] + '"><i class="ic" data-ic="' + a[1] + '"></i>' + esc(texto || a[0]) + '</span>';
+  }
+
+  function cargarMantenimientos() {
+    if (XU.cargando) return;
+    var caja = $('xu-mant');
+    if (!caja) return;
+    XU.cargando = true;
+    caja.setAttribute('aria-busy', 'true');
+    // Cargando: la forma de lo que viene, para que nada salte al llegar.
+    if (!XU.datos) caja.innerHTML = '<div class="xu-cifras">' + [1, 2, 3, 4].map(function () { return '<div class="xu-cifra xu-esq" aria-hidden="true"><i></i><i></i></div>'; }).join('') + '</div>' +
+      '<div class="xu-lista">' + [1, 2].map(function () { return '<div class="xu-mant xu-esq" aria-hidden="true"><i></i><i></i><i></i></div>'; }).join('') + '</div>';
+    api('/mantenimientos' + (XU.diasElegido ? '?dias=' + XU.dias : '')).then(function (d) {
+      XU.cargando = false;
+      caja.removeAttribute('aria-busy');
+      if (!d || d.error) { XU.error = (d && d.error) || 'el servidor no contestó'; pintarMantenimientos(); return; }
+      XU.error = null;
+      XU.datos = d;
+      if (!XU.diasElegido) XU.dias = d.periodoDias;
+      pintarMantenimientos();
+    }).catch(function (e) {
+      XU.cargando = false;
+      caja.removeAttribute('aria-busy');
+      if (String(e && e.message) === '401') return;
+      XU.error = 'no hubo conexión con el servidor';
+      pintarMantenimientos();
+    });
+  }
+  alAbrir('mantenimientos', cargarMantenimientos);
+
+  /** El estado del aviso de un mantenimiento, dicho como se actúa. */
+  function xuAvisoDe(m) {
+    var r = m.resumen;
+    if (m.momento === 'cancelado') return '<span class="xu-pill t-neutro"><i class="ic" data-ic="cerrar"></i>Cancelado</span>';
+    if (!r.afectados) return '<span class="xu-pill t-neutro"><i class="ic" data-ic="user"></i>Sin clientes afectados</span>';
+    var faltan = r.porAvisar + r.atrasados + r.preparados + r.noSalio;
+    if (m.momento === 'proximo' && faltan) {
+      if (r.atrasados) return xuPill('atrasado', 'Avisar ya: ' + r.atrasados + (r.atrasados === 1 ? ' fuera de plazo' : ' fuera de plazo'));
+      if (r.noSalio) return xuPill('no_salio', r.noSalio === 1 ? '1 aviso no salió' : r.noSalio + ' avisos no salieron');
+      if (r.porAvisar) return xuPill('por_avisar', 'Avisar antes del ' + xuCuando(m.proximoPlazo));
+      return xuPill('preparado', r.preparados === 1 ? '1 aviso por mandar' : r.preparados + ' avisos por mandar');
+    }
+    if (r.sinAviso) return xuPill('sin_aviso', 'Sin aviso: ' + r.sinAviso + ' de ' + r.afectados);
+    if (r.tarde) return xuPill('tarde', 'Avisados ' + r.avisados + ' de ' + r.afectados + ' · ' + r.tarde + ' tarde');
+    return xuPill('a_tiempo', 'Avisados ' + r.avisados + ' de ' + r.afectados + ', a tiempo');
+  }
+
+  function xuAfectado(m, a) {
+    var detalle = a.avisado
+      ? (a.como === 'mensaje' ? 'Le llegó el aviso ' : a.como === 'preparado' ? 'Cuenta como avisado desde que se preparó, ' : 'Avisado por otro medio ') + xuCuando(a.avisado) + (a.por && a.por !== 'demostración' ? ' · ' + esc(a.por) : '')
+      : a.estado === 'preparado' ? 'Está escrito en su conversación: ábrela, léelo y mándalo'
+      : a.estado === 'no_salio' ? 'Se mandó y no le llegó: reinténtalo desde su conversación'
+      : a.estado === 'sin_aviso' ? 'El mantenimiento empezó y nunca se le avisó'
+      : a.estado === 'atrasado' ? 'Su plan pedía avisar antes del ' + xuCuando(a.plazo) + ': avísale ya'
+      : 'Su plan (' + esc(a.planNombre) + ') pide avisar antes del ' + xuCuando(a.plazo);
+    var acciones = '';
+    if (m.momento === 'proximo' || m.momento === 'en_curso') {
+      acciones += '<button type="button" class="btn sm" data-xu-chat="' + esc(a.id) + '"><i class="ic" data-ic="burbuja"></i>Abrir chat</button>';
+      if (!a.avisado && m.momento === 'proximo') acciones += '<button type="button" class="btn sm" data-xu-avisado="' + esc(a.id) + '" data-xu-m="' + m.id + '" title="Le avisaste por correo, llamada u otro medio">Ya le avisé</button>';
+    }
+    return '<li class="xu-af"><span class="xu-af-quien">' + avatarHtml(a.nombre, a.id, 'sm') + '<span class="xu-af-nom"><b>' + esc(a.nombre) + '</b>' +
+      (a.empresa ? '<small>' + esc(a.empresa) + '</small>' : '') + '</span></span>' +
+      '<span class="xu-plan">' + esc(a.planNombre) + '</span>' +
+      '<span class="xu-af-estado">' + xuPill(a.estado) + '<small>' + detalle + '</small></span>' +
+      (acciones ? '<span class="xu-af-acc">' + acciones + '</span>' : '') + '</li>';
+  }
+
+  function xuTarjeta(m) {
+    var abierto = XU.abiertos[m.id] !== undefined ? XU.abiertos[m.id] : (m.momento !== 'pasado' && m.momento !== 'cancelado' && (m.resumen.porAvisar + m.resumen.atrasados + m.resumen.noSalio) > 0);
+    var faltan = m.resumen.porAvisar + m.resumen.atrasados;
+    var puede = xuPuedeProgramar();
+    var mismoDia = xuFmt(m.inicio, { day: 'numeric', month: 'numeric' }) === xuFmt(m.fin, { day: 'numeric', month: 'numeric' });
+    var ventana = xuDia(m.inicio) + ', ' + xuHora(m.inicio) + ' – ' + (mismoDia ? '' : xuDia(m.fin) + ', ') + xuHora(m.fin);
+    var dur = m.duracionMin >= 60 ? (m.duracionMin % 60 ? (m.duracionMin / 60).toFixed(1).replace('.', ',') + ' h' : m.duracionMin / 60 + ' h') : m.duracionMin + ' min';
+    var acciones = '';
+    if (m.momento === 'proximo' && faltan) acciones += '<button type="button" class="btn sm primary" data-xu-preparar="' + m.id + '"' + (XU.preparando[m.id] ? ' disabled' : '') + '><i class="ic" data-ic="enviar"></i>' + (XU.preparando[m.id] ? 'Preparando…' : 'Preparar aviso (' + faltan + ')') + '</button>';
+    if (puede && m.momento !== 'cancelado') {
+      acciones += '<button type="button" class="btn sm" data-xu-editar="' + m.id + '"><i class="ic" data-ic="lapiz"></i>Editar</button>';
+      if (m.momento === 'en_curso' || (m.momento === 'pasado' && m.papel !== 'hecho')) acciones += '<button type="button" class="btn sm" data-xu-hecho="' + m.id + '"><i class="ic" data-ic="check"></i>Marcar hecho</button>';
+      if (m.momento === 'proximo') acciones += XU.cancelando[m.id]
+        ? '<span class="xu-confirma" role="group" aria-label="Confirmar la cancelación">¿Cancelarlo? <button type="button" class="btn sm danger" data-xu-cancelar-si="' + m.id + '">Sí, cancelar mantenimiento</button><button type="button" class="btn sm" data-xu-cancelar-no="' + m.id + '">No</button></span>'
+        : '<button type="button" class="btn sm" data-xu-cancelar="' + m.id + '">Cancelar</button>';
+    }
+    var estados = (XU.datos && XU.datos.estadosMantenimiento) || [];
+    var nombreEstado = function (papel) { var e = estados.filter(function (x) { return x.id === m.estado && x.papel === papel; })[0] || estados.filter(function (x) { return x.papel === papel; })[0]; return e ? e.nombre : papel; };
+    var momento = m.momento === 'en_curso' ? '<span class="xu-momento en-curso">' + esc(nombreEstado('en_curso')) + '</span>' : m.momento === 'proximo' ? '<span class="xu-momento">' + esc(xuEn(m.inicio)) + '</span>' : m.momento === 'cancelado' ? '<span class="xu-momento">' + esc(nombreEstado('cancelado')) + '</span>' : '<span class="xu-momento">' + (m.papel === 'hecho' ? esc(nombreEstado('hecho')) : 'Terminó, sin cerrar') + '</span>';
+    return '<article class="xu-mant m-' + m.momento + '" data-xu-id="' + m.id + '">' +
+      '<div class="xu-fecha" aria-hidden="true"><b>' + esc(xuFmt(m.inicio, { day: 'numeric' })) + '</b><span>' + esc(xuFmt(m.inicio, { month: 'short' }).replace('.', '')) + '</span><small>' + esc(xuHora(m.inicio)) + '</small></div>' +
+      '<div class="xu-cuerpo"><div class="xu-cab"><h3>' + esc(m.titulo) + '</h3>' + momento + '</div>' +
+        '<p class="xu-ventana"><i class="ic" data-ic="calendar"></i><span>' + esc(ventana) + ' <small>(' + esc(dur) + ')</small></span></p>' +
+        '<p class="xu-etiquetas">' + (m.producto ? '<span class="xu-prod"><i class="ic" data-ic="paquete"></i>' + esc(m.producto) + '</span>' : '<span class="xu-prod">Todas las aplicaciones</span>') +
+          m.planes.map(function (p) { return '<span class="xu-plan">' + esc(xuPlan(p)) + '</span>'; }).join('') + '</p>' +
+        (m.notas ? '<p class="xu-notas">' + esc(m.notas) + '</p>' : '') +
+        '<div class="xu-aviso">' + xuAvisoDe(m) +
+          (m.resumen.afectados ? '<button type="button" class="xu-ver" aria-expanded="' + Boolean(abierto) + '" data-xu-ver="' + m.id + '">' + (m.resumen.afectados === 1 ? '1 cliente afectado' : m.resumen.afectados + ' clientes afectados') + '<i class="ic" data-ic="abajo"></i></button>' : '') + '</div>' +
+        (m.resumen.afectados && abierto ? '<ul class="xu-afectados">' + m.afectados.map(function (a) { return xuAfectado(m, a); }).join('') + '</ul>' : '') +
+        (acciones ? '<div class="xu-acc">' + acciones + '</div>' : '') +
+      '</div></article>';
+  }
+
+  function xuProducto(p) {
+    var u = p.ultima;
+    var estado = p.alDia === null ? '<span class="xu-pill t-neutro"><i class="ic" data-ic="reloj"></i>Sin publicadas: no se puede medir</span>'
+      : p.alDia ? '<span class="xu-pill t-verde"><i class="ic" data-ic="check"></i>Al día</span>'
+      : '<span class="xu-pill t-rojo"><i class="ic" data-ic="alerta"></i>Atrasada: ' + p.diasDesdeLaUltima + ' días sin publicar</span>';
+    var cad = 'Cadencia: cada ' + p.cadenciaDias + (p.cadenciaDias === 1 ? ' día' : ' días') + (p.toleranciaDias ? ' (+' + p.toleranciaDias + ' de gracia)' : '');
+    return '<article class="xu-prod-c' + (p.alDia === false ? ' atrasado' : '') + '">' +
+      '<div class="xu-prod-cab"><h3>' + esc(p.producto) + '</h3>' + estado + '</div><p class="xu-cad">' + esc(cad) + '</p>' +
+      '<dl class="xu-prod-dl">' +
+        '<div><dt>Última</dt><dd>' + (u ? '<b>v' + esc(u.version) + '</b> · ' + esc(xuFmt(u.fecha, { day: 'numeric', month: 'short', year: 'numeric' })) + ' <small>(' + esc(p.diasDesdeLaUltima === 0 ? 'hoy' : 'hace ' + p.diasDesdeLaUltima + (p.diasDesdeLaUltima === 1 ? ' día' : ' días')) + ')</small>' : '<span class="xu-nada">—</span>') + '</dd></div>' +
+        '<div><dt>Próxima</dt><dd>' + (p.proxima ? '<b>v' + esc(p.proxima.version) + '</b> · ' + esc(xuFmt(p.proxima.fecha, { day: 'numeric', month: 'short' })) + ' <small>(planeada)</small>' : '<span class="xu-nada">Ninguna planeada</span>') + '</dd></div>' +
+      '</dl>' +
+      (u && u.notas ? '<p class="xu-notas">' + esc(u.notas) + '</p>' : '') +
+      (p.historial.length > 1 ? '<details class="xu-hist"><summary>Todas las versiones (' + p.historial.length + ')</summary><ul>' + p.historial.map(function (a) {
+        return '<li><b>v' + esc(a.version) + '</b><span>' + esc(xuFmt(a.fecha, { day: 'numeric', month: 'short', year: 'numeric' })) + '</span><span class="xu-hist-e">' + esc(xuNombreEstadoAct(a.estado)) + '</span>' + (a.notas ? '<small>' + esc(a.notas) + '</small>' : '') + '</li>';
+      }).join('') + '</ul></details>' : '') +
+      '</article>';
+  }
+
+  function xuFormulario() {
+    var f = XU.form, b = XU.borrador || {}, e = XU.errorForm || {};
+    var err = function (campo) { return e.campo === campo ? '<span class="xu-err" id="xu-err-' + campo + '" role="alert">' + esc(e.error) + '</span>' : ''; };
+    var desc = function (campo) { return e.campo === campo ? ' aria-invalid="true" aria-describedby="xu-err-' + campo + '"' : ''; };
+    var catalogo = (XU.datos && XU.datos.catalogo) || [];
+    var lista = '<datalist id="xu-catalogo">' + catalogo.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>';
+    var cab = function (t, sub) { return '<div class="xu-form-cab"><h2 id="xu-form-t">' + esc(t) + '</h2>' + (sub ? '<p>' + esc(sub) + '</p>' : '') + '</div>'; };
+    var pie = '<div class="xu-form-pie">' + (e.error && !e.campo ? '<span class="xu-err" role="alert">' + esc(e.error) + '</span>' : '') +
+      '<button type="button" class="btn" id="xu-form-no">Cancelar</button><button type="submit" class="btn primary"' + (XU.guardando ? ' disabled' : '') + '>' + (XU.guardando ? 'Guardando…' : 'Guardar') + '</button></div>';
+    if (f.tipo === 'act') {
+      return '<form class="xu-form" id="xu-form" aria-labelledby="xu-form-t" novalidate>' + cab(f.id ? 'Editar actualización' : 'Registrar una actualización', 'Cada aplicación tiene su cadencia; con esto se sabe si va al día.') + lista +
+        '<div class="xu-campos">' +
+          '<label class="xu-c"><span>Versión</span><input type="text" name="version" maxlength="30" placeholder="7.4" value="' + esc(b.version || '') + '"' + desc('version') + '>' + err('version') + '</label>' +
+          '<label class="xu-c xu-c-ancho"><span>Aplicación</span><input type="text" name="producto" list="xu-catalogo" maxlength="80" placeholder="XENTRIS POS" value="' + esc(b.producto || '') + '"' + desc('producto') + '>' + err('producto') + '</label>' +
+          '<label class="xu-c"><span>Fecha</span><input type="date" name="fecha" value="' + esc(b.fecha || '') + '"' + desc('fecha') + '>' + err('fecha') + '</label>' +
+          '<label class="xu-c"><span>Estado</span><select name="estado">' + ((XU.datos && XU.datos.estadosActualizacion) || []).map(function (x) { return '<option value="' + esc(x.id) + '"' + (b.estado === x.id ? ' selected' : '') + '>' + esc(x.nombre) + '</option>'; }).join('') + '</select></label>' +
+          '<label class="xu-c xu-c-todo"><span>Qué trae <small>(opcional)</small></span><textarea name="notas" rows="2" maxlength="600">' + esc(b.notas || '') + '</textarea></label>' +
+        '</div>' + pie + '</form>';
+    }
+    var todosLosPlanes = (XU.datos && XU.datos.planes) || [];
+    var planes = b.planes || todosLosPlanes.map(function (p) { return p.id; });
+    return '<form class="xu-form" id="xu-form" aria-labelledby="xu-form-t" novalidate>' + cab(f.id ? 'Editar mantenimiento' : 'Programar un mantenimiento', 'La hora es la del negocio. Cada plan pide su aviso: ' + xuAvisosDePlanes() + '.') + lista +
+      '<div class="xu-campos">' +
+        '<label class="xu-c xu-c-todo"><span>Qué se va a hacer</span><input type="text" name="titulo" maxlength="120" placeholder="Migración de la base de XENTRIS POS" value="' + esc(b.titulo || '') + '"' + desc('titulo') + '>' + err('titulo') + '</label>' +
+        '<label class="xu-c xu-c-ancho"><span>Aplicación <small>(vacío: todas)</small></span><input type="text" name="producto" list="xu-catalogo" maxlength="80" value="' + esc(b.producto || '') + '"></label>' +
+        '<label class="xu-c"><span>Empieza</span><input type="datetime-local" name="inicio" value="' + esc(b.inicio || '') + '"' + desc('inicio') + '>' + err('inicio') + '</label>' +
+        '<label class="xu-c"><span>Dura (minutos)</span><input type="number" name="duracionMin" min="5" max="4320" step="5" inputmode="numeric" value="' + esc(b.duracionMin || '') + '"' + desc('duracionMin') + '>' + err('duracionMin') + '</label>' +
+        '<fieldset class="xu-c xu-c-todo xu-planes"' + desc('planes') + '><legend>Planes afectados</legend>' + todosLosPlanes.map(function (p) {
+          return '<label class="xu-check"><input type="checkbox" name="planes" value="' + esc(p.id) + '"' + (planes.indexOf(p.id) >= 0 ? ' checked' : '') + '><span>' + esc(p.nombre) + ' <small>aviso ' + esc(xuHoras(p.avisoHoras)) + '</small></span></label>';
+        }).join('') + err('planes') + '</fieldset>' +
+        '<label class="xu-c xu-c-todo"><span>Notas <small>(opcional)</small></span><textarea name="notas" rows="2" maxlength="600">' + esc(b.notas || '') + '</textarea></label>' +
+      '</div>' + pie + '</form>';
+  }
+
+  function pintarMantenimientos() {
+    var caja = $('xu-mant');
+    if (!caja) return;
+    // Lo que se estaba escribiendo en el formulario se guarda antes de repintar.
+    var form = $('xu-form');
+    if (form && XU.form) XU.borrador = xuLeerFormulario(form);
+    if (XU.error && !XU.datos) {
+      caja.innerHTML = '<div class="xu-error" role="alert"><b>No se pudieron cargar los mantenimientos</b><span>' + esc(XU.error) + '. Lo programado sigue guardado.</span>' +
+        '<button class="btn sm" type="button" id="xu-reintentar">Volver a intentar</button></div>';
+      $('xu-reintentar').onclick = function () { XU.error = null; cargarMantenimientos(); };
+      return;
+    }
+    var d = XU.datos;
+    if (!d) return;
+    var c = d.cifras, puede = xuPuedeProgramar();
+    var cifras = [
+      { t: 'Próximos mantenimientos', n: String(c.proximos), p: c.proximos ? (d.proximos[0] ? 'el primero ' + xuEn(d.proximos[0].inicio) : '') : 'nada programado', ic: 'llave', tono: 'acento' },
+      { t: 'Clientes por avisar', n: String(c.porAvisar), p: c.porAvisar ? 'con el aviso pendiente o sin mandar' : (c.proximos ? 'todos avisados' : 'nadie por avisar'), ic: 'bell', tono: c.porAvisar ? 'ambar' : 'neutro' },
+      { t: 'Avisos a tiempo', n: c.mantenimientosEnPeriodo ? c.avisosATiempo + ' de ' + c.mantenimientosEnPeriodo : '—', p: c.mantenimientosEnPeriodo ? 'mantenimientos de los últimos ' + d.periodoDias + ' días' : 'ningún mantenimiento en ' + d.periodoDias + ' días', ic: 'check', tono: c.mantenimientosEnPeriodo && c.avisosATiempo < c.mantenimientosEnPeriodo ? 'rojo' : 'verde', flojo: !c.mantenimientosEnPeriodo },
+      { t: 'Actualizaciones atrasadas', n: c.productosMedidos ? String(c.productosAtrasados) : '—', p: c.productosMedidos ? (c.productosAtrasados ? 'pasaron su cadencia sin publicar' : 'todas al día con su cadencia') : 'sin actualizaciones registradas', ic: 'paquete', tono: c.productosAtrasados ? 'rojo' : 'verde', flojo: !c.productosMedidos }
+    ];
+    var html = '<div class="xu-cifras">' + cifras.map(function (x) {
+      return '<div class="xu-cifra t-' + x.tono + '"><span class="xu-cifra-cab"><span>' + esc(x.t) + '</span><span class="xu-cifra-ic"><i class="ic" data-ic="' + x.ic + '"></i></span></span>' +
+        '<b class="xu-n' + (x.flojo ? ' flojo' : '') + '">' + esc(x.n) + '</b><small>' + esc(x.p) + '</small></div>';
+    }).join('') + '</div>';
+    html += '<div class="xu-herr"><label class="xu-periodo"><span>Cumplimiento de</span><select id="xu-dias" aria-label="Periodo del cumplimiento">' +
+      [[30, 'los últimos 30 días'], [90, 'los últimos 90 días'], [365, 'el último año']].map(function (o) { return '<option value="' + o[0] + '"' + (XU.dias === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>' +
+      '<span class="grow"></span>' +
+      (puede ? '<button type="button" class="btn" id="xu-nueva-act"><i class="ic" data-ic="paquete"></i>Registrar actualización</button><button type="button" class="btn primary" id="xu-nuevo"><i class="ic" data-ic="mas"></i>Programar mantenimiento</button>' : '<span class="xu-solo-ver">Programar es de quien administra XENCRM; avisar a los clientes, de todos.</span>') +
+      (mandaEnElModo() ? '<button type="button" class="btn" id="xu-a-config" title="Configuración › Mantenimientos y actualizaciones"><i class="ic" data-ic="sliders"></i>Reglas</button>' : '') + '</div>';
+    if (XU.form) html += xuFormulario();
+
+    var nada = !d.proximos.length && !d.pasados.length;
+    html += '<section class="xu-sec" aria-labelledby="xu-t-prox"><h2 id="xu-t-prox">Próximos mantenimientos</h2>';
+    if (nada) {
+      html += '<div class="xu-vacio"><span class="xu-vacio-ic"><i class="ic" data-ic="llave"></i></span><div><h3>Nada programado todavía</h3>' +
+        '<p>Un mantenimiento es una ventana en la que una aplicación puede no estar disponible. Prográmalo aquí y XENCRM te dice a qué clientes toca, según su plan y su aplicación, y hasta cuándo hay que avisarles (' + esc(xuAvisosDePlanes()) + ').</p>' +
+        (puede ? '<button type="button" class="btn primary" id="xu-nuevo-vacio"><i class="ic" data-ic="mas"></i>Programar el primero</button>' : '') + '</div></div>';
+    } else if (!d.proximos.length) {
+      html += '<p class="xu-nada-aqui">No hay mantenimientos por venir. Los que ya pasaron están abajo.</p>';
+    } else {
+      html += '<div class="xu-lista">' + d.proximos.map(xuTarjeta).join('') + '</div>';
+    }
+    html += '</section>';
+    if (d.pasados.length) html += '<section class="xu-sec" aria-labelledby="xu-t-pas"><h2 id="xu-t-pas">Pasados</h2><div class="xu-lista xu-pasados">' + d.pasados.map(xuTarjeta).join('') + '</div></section>';
+
+    html += '<section class="xu-sec" aria-labelledby="xu-t-act"><h2 id="xu-t-act">Actualizaciones</h2><p class="xu-sec-sub">Cada aplicación tiene su cadencia: si pasa sin una publicada, va atrasada.</p>';
+    html += d.productos.length ? '<div class="xu-prods">' + d.productos.map(xuProducto).join('') + '</div>'
+      : '<div class="xu-vacio"><span class="xu-vacio-ic"><i class="ic" data-ic="paquete"></i></span><div><h3>Sin actualizaciones registradas</h3><p>Registra cada versión que publiques: así se ve si cada aplicación va al día con la actualización mensual que promete el SLA.</p>' +
+        (puede ? '<button type="button" class="btn" id="xu-nueva-act-vacio"><i class="ic" data-ic="paquete"></i>Registrar la primera</button>' : '') + '</div></div>';
+    html += '</section>';
+    caja.innerHTML = html;
+    iconos(caja);
+    xuEnganchar(caja);
+  }
+
+  function xuLeerFormulario(form) {
+    var b = {};
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!el.name) return;
+      if (el.name === 'planes') { b.planes = b.planes || []; if (el.checked) b.planes.push(el.value); return; }
+      b[el.name] = el.value;
+    });
+    return b;
+  }
+  function xuAbrirFormulario(tipo, id) {
+    var b = {};
+    if (tipo === 'mant' && id) {
+      var m = XU.datos.proximos.concat(XU.datos.pasados).filter(function (x) { return x.id === id; })[0];
+      if (m) b = { titulo: m.titulo, producto: m.producto, inicio: xuAZona(m.inicio), duracionMin: String(m.duracionMin), planes: m.planes.slice(), notas: m.notas };
+    } else if (tipo === 'mant') {
+      // Por omisión: el próximo sábado a las 11:00 p. m. del negocio, dos horas, todos los planes.
+      var t = new Date(Date.now() + 86400000 * ((6 - new Date().getDay() + 7) % 7 || 7));
+      b = { inicio: xuAZona(t.getTime()).slice(0, 11) + '23:00', duracionMin: '120', planes: ((XU.datos && XU.datos.planes) || []).map(function (p) { return p.id; }) };
+    } else {
+      var pub = ((XU.datos && XU.datos.estadosActualizacion) || []).filter(function (x) { return x.papel === 'publicada'; })[0];
+      b = { fecha: xuAZona(Date.now()).slice(0, 10), estado: pub ? pub.id : '' };
+    }
+    XU.form = { tipo: tipo, id: id || null };
+    XU.borrador = b;
+    XU.errorForm = null;
+    pintarMantenimientos();
+    var primero = $('xu-form') && $('xu-form').querySelector('input');
+    if (primero) primero.focus();
+  }
+  function xuCerrarFormulario(volverA) {
+    XU.form = null; XU.borrador = null; XU.errorForm = null; XU.guardando = false;
+    pintarMantenimientos();
+    if (volverA && $(volverA)) $(volverA).focus();
+  }
+  function xuGuardar(form) {
+    var b = xuLeerFormulario(form), f = XU.form;
+    XU.borrador = b;
+    var cuerpo, ruta;
+    if (f.tipo === 'act') {
+      var fecha = b.fecha ? xuEnZona(b.fecha + 'T12:00') : NaN;
+      cuerpo = { version: b.version, producto: b.producto, fecha: isNaN(fecha) ? '' : fecha, estado: b.estado, notas: b.notas };
+      ruta = f.id ? '/actualizaciones/' + f.id : '/actualizaciones';
+    } else {
+      var inicio = xuEnZona(b.inicio);
+      cuerpo = { titulo: b.titulo, producto: b.producto, inicio: isNaN(inicio) ? '' : inicio, duracionMin: b.duracionMin, planes: b.planes || [], notas: b.notas };
+      ruta = f.id ? '/mantenimientos/' + f.id : '/mantenimientos';
+    }
+    XU.guardando = true; XU.errorForm = null;
+    pintarMantenimientos();
+    api(ruta, { method: f.id ? 'PATCH' : 'POST', body: cuerpo }).then(function (r) {
+      XU.guardando = false;
+      if (!r || r.error) {
+        XU.errorForm = { error: (r && r.error) || 'no se pudo guardar', campo: (r && r.campo) || '' };
+        pintarMantenimientos();
+        var mal = r && r.campo && $('xu-form') && $('xu-form').querySelector('[name="' + r.campo + '"]');
+        if (mal) mal.focus();
+        return;
+      }
+      toast(f.tipo === 'act' ? 'Actualización guardada' : (f.id ? 'Mantenimiento guardado' : 'Mantenimiento programado: revisa a quién hay que avisar'), null, { icono: 'check' });
+      XU.form = null; XU.borrador = null;
+      cargarMantenimientos();
+    }).catch(function () {
+      XU.guardando = false;
+      XU.errorForm = { error: 'no hubo conexión: lo escrito sigue aquí, vuelve a intentarlo', campo: '' };
+      pintarMantenimientos();
+    });
+  }
+  function xuCambiarEstado(id, papel, okTexto) {
+    var e = ((XU.datos && XU.datos.estadosMantenimiento) || []).filter(function (x) { return x.papel === papel; })[0];
+    api('/mantenimientos/' + id, { method: 'PATCH', body: { estado: e ? e.id : papel } }).then(function (r) {
+      if (!r || r.error) { toast('No se pudo: ' + ((r && r.error) || 'sin respuesta')); return; }
+      delete XU.cancelando[id];
+      toast(okTexto, null, { icono: 'check' });
+      cargarMantenimientos();
+    });
+  }
+
+  function xuEnganchar(caja) {
+    var q = function (sel) { return caja.querySelectorAll(sel); };
+    if ($('xu-dias')) $('xu-dias').onchange = function () { XU.dias = Number(this.value) || 30; XU.diasElegido = true; cargarMantenimientos(); };
+    if ($('xu-a-config')) $('xu-a-config').onclick = function () { go('cfg-mantenimientos'); };
+    ['xu-nuevo', 'xu-nuevo-vacio'].forEach(function (id) { if ($(id)) $(id).onclick = function () { xuAbrirFormulario('mant'); }; });
+    ['xu-nueva-act', 'xu-nueva-act-vacio'].forEach(function (id) { if ($(id)) $(id).onclick = function () { xuAbrirFormulario('act'); }; });
+    var form = $('xu-form');
+    if (form) {
+      form.onsubmit = function (e) { e.preventDefault(); if (!XU.guardando) xuGuardar(form); };
+      $('xu-form-no').onclick = function () { xuCerrarFormulario(XU.form && XU.form.tipo === 'act' ? 'xu-nueva-act' : 'xu-nuevo'); };
+      form.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); xuCerrarFormulario(XU.form && XU.form.tipo === 'act' ? 'xu-nueva-act' : 'xu-nuevo'); } });
+    }
+    q('[data-xu-ver]').forEach(function (b) {
+      b.onclick = function () {
+        var id = Number(b.getAttribute('data-xu-ver'));
+        XU.abiertos[id] = b.getAttribute('aria-expanded') !== 'true';
+        pintarMantenimientos();
+        var otra = $('xu-mant').querySelector('[data-xu-ver="' + id + '"]');
+        if (otra) otra.focus();
+      };
+    });
+    q('[data-xu-preparar]').forEach(function (b) {
+      b.onclick = function () {
+        var id = Number(b.getAttribute('data-xu-preparar'));
+        XU.preparando[id] = true;
+        pintarMantenimientos();
+        api('/mantenimientos/' + id + '/avisos/preparar', { method: 'POST', body: {} }).then(function (r) {
+          delete XU.preparando[id];
+          if (!r || r.error) { toast('No se pudo preparar el aviso: ' + ((r && r.error) || 'sin respuesta')); pintarMantenimientos(); return; }
+          XU.abiertos[id] = true;
+          var n = r.preparados.length;
+          toast(n ? (n === 1 ? 'Aviso listo en 1 conversación: ábrela, léelo y mándalo' : 'Aviso listo en ' + n + ' conversaciones: ábrelas, léelo y mándalo') : 'Nadie por avisar: ' + ((r.omitidos[0] && r.omitidos[0].porque) || 'ya estaban avisados'), null, { icono: n ? 'check' : undefined });
+          cargarMantenimientos();
+        });
+      };
+    });
+    q('[data-xu-avisado]').forEach(function (b) {
+      b.onclick = function () {
+        var id = Number(b.getAttribute('data-xu-m')), quien = b.getAttribute('data-xu-avisado');
+        b.disabled = true;
+        api('/mantenimientos/' + id + '/avisos/' + encodeURIComponent(quien) + '/avisado', { method: 'POST', body: {} }).then(function (r) {
+          if (!r || r.error) { b.disabled = false; toast('No se pudo: ' + ((r && r.error) || 'sin respuesta')); return; }
+          toast('Anotado: se le avisó por otro medio', null, { icono: 'check' });
+          cargarMantenimientos();
+        });
+      };
+    });
+    q('[data-xu-chat]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-xu-chat')); }; });
+    q('[data-xu-editar]').forEach(function (b) { b.onclick = function () { xuAbrirFormulario('mant', Number(b.getAttribute('data-xu-editar'))); }; });
+    q('[data-xu-hecho]').forEach(function (b) { b.onclick = function () { xuCambiarEstado(Number(b.getAttribute('data-xu-hecho')), 'hecho', 'Marcado como hecho'); }; });
+    q('[data-xu-cancelar]').forEach(function (b) {
+      b.onclick = function () {
+        var id = Number(b.getAttribute('data-xu-cancelar'));
+        XU.cancelando[id] = true; pintarMantenimientos();
+        var si = $('xu-mant').querySelector('[data-xu-cancelar-no="' + id + '"]'); if (si) si.focus();
+      };
+    });
+    q('[data-xu-cancelar-no]').forEach(function (b) {
+      b.onclick = function () {
+        var id = Number(b.getAttribute('data-xu-cancelar-no'));
+        delete XU.cancelando[id]; pintarMantenimientos();
+        var v = $('xu-mant').querySelector('[data-xu-cancelar="' + id + '"]'); if (v) v.focus();
+      };
+    });
+    q('[data-xu-cancelar-si]').forEach(function (b) { b.onclick = function () { xuCambiarEstado(Number(b.getAttribute('data-xu-cancelar-si')), 'cancelado', 'Mantenimiento cancelado'); }; });
+  }
+
+  // ---------- Configuración › Mantenimientos y actualizaciones: las reglas ----------
+  // TODO lo que decide cómo se cuenta: el aviso de cada plan, la cadencia de cada aplicación, quién recibe avisos, la
+  // plantilla del aviso, los estados, quién programa. Cada regla dice de dónde sale su valor (fábrica, el archivo del
+  // cliente o este tablero) y se puede devolver con un clic. Las ve quien administra; las cambia el super-admin (la
+  // consola cierra el guardado a los demás, y aquí se dice antes de que alguien escriba de balde).
+  //
+  // 🪤 Se guarda TODO o nada: si una regla no sirve, el servidor dice cuál y no guarda ninguna; lo escrito se queda
+  // (XC.borrador) con el error junto a esa regla.
+  TITULOS['cfg-mantenimientos'] = 'Configuración';
+  var XC = { datos: null, cargando: false, error: null, borrador: {}, volver: {}, errorCampo: null, guardando: false, previa: null, previaT: 0 };
+  var XC_SECCIONES = [
+    { t: 'Planes y aviso mínimo', d: 'Con cuánto tiempo hay que avisarle un mantenimiento a cada plan.', de: function (id) { return id === 'mant.planes' || id.indexOf('mant.avisoHoras.') === 0; } },
+    { t: 'Actualizaciones', d: 'Cada cuánto debe salir una versión de cada aplicación, y cuándo se dice que va atrasada.', de: function (id) { return id === 'mant.productos' || id === 'mant.toleranciaDias' || id.indexOf('mant.cadenciaDias') === 0; } },
+    { t: 'Quién recibe los avisos', d: 'Qué contactos cuentan como clientes afectados por un mantenimiento.', de: function (id) { return id.indexOf('mant.afectados.') === 0; } },
+    { t: 'El aviso', d: 'El texto que se deja listo en cada conversación y cuándo cuenta como dado.', de: function (id) { return id.indexOf('mant.aviso.') === 0; } },
+    { t: 'Estados', d: 'Cómo se dice cada estado en pantalla.', de: function (id) { return id.indexOf('mant.estadoMant.') === 0 || id.indexOf('mant.estadoAct.') === 0; } },
+    { t: 'Permisos y periodo', d: 'Quién programa, y qué periodo mira el cumplimiento.', de: function (id) { return id === 'mant.quienPrograma' || id === 'mant.periodoDias'; } }
+  ];
+  var XC_ORIGEN = { fabrica: 'De fábrica', archivo: 'Del archivo del cliente', tablero: 'Cambiado aquí' };
+
+  function xcPuedeCambiar() { return mandaEnElModo(); }
+  function xcAttr(id) { return String(id).replace(/["\\]/g, '\\$&'); }
+  function xcValorTexto(r, v) {
+    if (v === null || v === undefined) return '';
+    if (r.tipo === 'lista' && Array.isArray(v)) return v.join('\n');
+    return String(v);
+  }
+  /** Lo que muestra el campo: lo escrito si hay borrador; si no, lo que manda hoy. */
+  function xcActual(r) {
+    if (Object.prototype.hasOwnProperty.call(XC.borrador, r.id)) return XC.borrador[r.id];
+    if (XC.volver[r.id]) return r.origen === 'tablero' ? (r.delArchivo !== undefined && r.delArchivo !== null ? r.delArchivo : r.defecto) : r.valor;
+    return r.valor;
+  }
+  function xcCambio(r) {
+    if (XC.volver[r.id]) return true;
+    if (!Object.prototype.hasOwnProperty.call(XC.borrador, r.id)) return false;
+    var b = XC.borrador[r.id], v = r.valor;
+    if (r.tipo === 'lista') return (Array.isArray(b) ? b : String(b).split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean)).join('\n') !== (Array.isArray(v) ? v : []).join('\n');
+    if (r.tipo === 'si-no') return Boolean(b) !== Boolean(v);
+    return String(b) !== xcValorTexto(r, v);
+  }
+
+  function cargarCfgMantenimientos() {
+    if (XC.cargando) return;
+    var caja = $('xu-cfg');
+    if (!caja) return;
+    XC.cargando = true;
+    caja.setAttribute('aria-busy', 'true');
+    if (!XC.datos) caja.innerHTML = '<div class="xc-sec xu-esq" aria-hidden="true"><i></i><i></i><i></i></div><div class="xc-sec xu-esq" aria-hidden="true"><i></i><i></i></div>';
+    api('/mantenimientos/config').then(function (d) {
+      XC.cargando = false;
+      caja.removeAttribute('aria-busy');
+      if (!d || d.error) { XC.error = (d && d.error) || 'el servidor no contestó'; pintarCfgMantenimientos(); return; }
+      XC.error = null; XC.datos = d;
+      pintarCfgMantenimientos();
+      xcVistaPrevia();
+    }).catch(function (e) {
+      XC.cargando = false;
+      caja.removeAttribute('aria-busy');
+      if (String(e && e.message) === '401') return;
+      XC.error = 'no hubo conexión con el servidor';
+      pintarCfgMantenimientos();
+    });
+  }
+  alAbrir('cfg-mantenimientos', cargarCfgMantenimientos);
+
+  function xcCampo(r, puede) {
+    var v = xcActual(r), dis = puede ? '' : ' disabled', idc = 'xc-' + r.id.replace(/[^a-zA-Z0-9]+/g, '-');
+    var mal = XC.errorCampo && XC.errorCampo.campo === r.id;
+    var aria = ' aria-describedby="' + idc + '-ayuda' + (mal ? ' ' + idc + '-err' : '') + '"' + (mal ? ' aria-invalid="true"' : '');
+    var bloqueado = r.id === 'mant.planes' && XC.datos.planesDelSla;
+    if (bloqueado) dis = ' disabled';
+    var control;
+    if (r.tipo === 'numero') {
+      control = '<span class="xc-num"><input type="number" id="' + idc + '" data-xc="' + esc(r.id) + '"' + (r.min !== undefined ? ' min="' + r.min + '"' : '') + (r.max !== undefined ? ' max="' + r.max + '"' : '') + ' step="1" inputmode="numeric" value="' + esc(xcValorTexto(r, v)) + '"' +
+        (r.defecto === null ? ' placeholder="la general"' : '') + dis + aria + '>' + (r.unidad ? '<span>' + esc(r.unidad) + '</span>' : '') + '</span>' +
+        (r.unidad === 'horas' && Number(v) >= 24 ? '<small class="xc-equiv">= ' + esc(String(Math.round(Number(v) / 24 * 10) / 10).replace('.', ',')) + ' días</small>' : '');
+    } else if (r.tipo === 'texto' && r.id === 'mant.aviso.plantilla') {
+      var vars = (XC.datos.variables || []).map(function (x) { return '<button type="button" class="xc-var" data-xc-var="' + esc(x.nombre) + '" title="' + esc(x.que) + '"' + dis + '>{' + esc(x.nombre) + '}</button>'; }).join('');
+      control = '<textarea id="' + idc + '" data-xc="' + esc(r.id) + '" rows="5" maxlength="' + (r.max || 1000) + '"' + dis + aria + '>' + esc(xcValorTexto(r, v)) + '</textarea>' +
+        '<div class="xc-vars" role="group" aria-label="Variables para el texto">' + vars + '</div>' +
+        '<div class="xc-previa" aria-live="polite"><span class="xc-previa-t">Vista previa' + (XC.previa && XC.previa.con ? ' · con ' + esc(XC.previa.con) : '') + '</span>' +
+          '<p>' + (XC.previa ? (XC.previa.error ? '<span class="xu-err">' + esc(XC.previa.error) + '</span>' : esc(XC.previa.texto)) : '<span class="xu-nada">Escribiendo…</span>') + '</p></div>';
+    } else if (r.tipo === 'texto') {
+      control = '<input type="text" id="' + idc + '" data-xc="' + esc(r.id) + '" maxlength="' + (r.max || 200) + '" value="' + esc(xcValorTexto(r, v)) + '"' + dis + aria + '>';
+    } else if (r.tipo === 'si-no') {
+      control = '<label class="xc-switch"><input type="checkbox" id="' + idc + '" data-xc="' + esc(r.id) + '"' + (v ? ' checked' : '') + dis + aria + '><span>' + (v ? 'Sí' : 'No') + '</span></label>';
+    } else if (r.tipo === 'opciones' && r.opciones.length <= 3) {
+      control = '<div class="xc-radios" role="radiogroup" aria-labelledby="' + idc + '-l">' + r.opciones.map(function (o, i) {
+        return '<label class="xc-radio"><input type="radio" name="' + idc + '" data-xc="' + esc(r.id) + '" value="' + esc(o.valor) + '"' + (String(v) === o.valor ? ' checked' : '') + dis + (i === 0 ? aria : '') + '><span>' + esc(o.etiqueta) + '</span></label>';
+      }).join('') + '</div>';
+    } else if (r.tipo === 'opciones') {
+      control = '<select id="' + idc + '" data-xc="' + esc(r.id) + '"' + dis + aria + '>' + r.opciones.map(function (o) { return '<option value="' + esc(o.valor) + '"' + (String(v) === o.valor ? ' selected' : '') + '>' + esc(o.etiqueta) + '</option>'; }).join('') + '</select>';
+    } else if (r.tipo === 'lista' && r.opciones) {
+      var marcados = Array.isArray(v) ? v : String(v || '').split(/\r?\n/);
+      control = '<div class="xc-checks" role="group" aria-labelledby="' + idc + '-l">' + r.opciones.map(function (o) {
+        return '<label class="xu-check"><input type="checkbox" data-xc="' + esc(r.id) + '" data-xc-lista="1" value="' + esc(o.valor) + '"' + (marcados.indexOf(o.valor) >= 0 ? ' checked' : '') + dis + '><span>' + esc(o.etiqueta) + '</span></label>';
+      }).join('') + '</div>';
+    } else {
+      control = '<textarea id="' + idc + '" data-xc="' + esc(r.id) + '" rows="' + Math.min(8, Math.max(3, (Array.isArray(v) ? v.length : 3) + 1)) + '"' + dis + aria + ' placeholder="Uno por renglón">' + esc(xcValorTexto(r, v)) + '</textarea>';
+    }
+    var origen = XC.volver[r.id] ? 'Vuelve a ' + (r.delArchivo !== undefined && r.delArchivo !== null ? 'lo del archivo' : 'lo de fábrica') + ' al guardar' : XC_ORIGEN[r.origen];
+    var volver = puede && !bloqueado && r.origen === 'tablero' && !XC.volver[r.id]
+      ? '<button type="button" class="xc-volver" data-xc-volver="' + esc(r.id) + '">Volver a ' + (r.delArchivo !== undefined && r.delArchivo !== null ? 'lo del archivo' : 'lo de fábrica') + '</button>' : '';
+    return '<div class="xc-campo' + (xcCambio(r) ? ' cambiado' : '') + (mal ? ' mal' : '') + '" data-xc-campo="' + esc(r.id) + '">' +
+      '<div class="xc-cab"><label id="' + idc + '-l"' + (/^(numero|texto|opciones)$/.test(r.tipo) && !(r.tipo === 'opciones' && r.opciones.length <= 3) ? ' for="' + idc + '"' : '') + '>' + esc(r.etiqueta) + '</label>' +
+        '<span class="xc-origen o-' + (XC.volver[r.id] ? 'volver' : r.origen) + '">' + esc(origen) + '</span>' + volver + '</div>' +
+      control +
+      '<small class="xc-ayuda" id="' + idc + '-ayuda">' + esc(r.ayuda) + '</small>' +
+      (mal ? '<span class="xu-err" id="' + idc + '-err" role="alert">' + esc(XC.errorCampo.error) + '</span>' : '') + '</div>';
+  }
+
+  function pintarCfgMantenimientos() {
+    var caja = $('xu-cfg');
+    if (!caja) return;
+    if (XC.error && !XC.datos) {
+      caja.innerHTML = '<div class="xu-error" role="alert"><b>No se pudieron cargar las reglas</b><span>' + esc(XC.error) + '. Las reglas guardadas siguen igual.</span><button class="btn sm" type="button" id="xc-reintentar">Volver a intentar</button></div>';
+      $('xc-reintentar').onclick = function () { XC.error = null; cargarCfgMantenimientos(); };
+      return;
+    }
+    if (!XC.datos) return;
+    var foco = document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('data-xc');
+    var puede = xcPuedeCambiar();
+    var reglas = XC.datos.reglas || [];
+    var cambios = reglas.filter(xcCambio).length;
+    var html = '<div class="xc-intro">' +
+      '<p>Tres capas, y manda la última que tenga valor: <b>de fábrica</b> (lo que promete un plan de soporte típico), <b>el archivo del cliente</b> (<code>servicio.mantenimientos</code> en xencrm.config.json) y <b>lo que se cambia aquí</b>. «Volver a…» quita lo de aquí.</p>' +
+      (puede ? '' : '<p class="xc-solo-ver" role="note"><i class="ic" data-ic="alerta"></i>Estas reglas las cambia quien administra XENCRM. Aquí las ves tal como cuentan hoy.</p>') +
+      '<button type="button" class="btn sm" id="xc-ir-mant"><i class="ic" data-ic="llave"></i>Ver Mantenimientos y actualizaciones</button></div>';
+    html += XC_SECCIONES.map(function (sec, i) {
+      var suyas = reglas.filter(function (r) { return sec.de(r.id); });
+      if (!suyas.length) return '';
+      return '<section class="xc-sec" aria-labelledby="xc-s' + i + '"><div class="xc-sec-cab"><h2 id="xc-s' + i + '">' + esc(sec.t) + '</h2><p>' + esc(sec.d) + '</p></div>' +
+        '<div class="xc-campos">' + suyas.map(function (r) { return xcCampo(r, puede); }).join('') + '</div></section>';
+    }).join('');
+    if (puede) html += '<div class="xc-pie' + (cambios ? ' con-cambios' : '') + '" role="region" aria-label="Guardar las reglas">' +
+      '<span>' + (XC.errorCampo && !XC.errorCampo.campo ? '<span class="xu-err" role="alert">' + esc(XC.errorCampo.error) + '</span>' : cambios ? (cambios === 1 ? '1 regla cambiada sin guardar' : cambios + ' reglas cambiadas sin guardar') : 'Sin cambios') + '</span>' +
+      '<button type="button" class="btn" id="xc-descartar"' + (cambios ? '' : ' disabled') + '>Descartar</button>' +
+      '<button type="button" class="btn primary" id="xc-guardar"' + (cambios && !XC.guardando ? '' : ' disabled') + '>' + (XC.guardando ? 'Guardando…' : 'Guardar cambios') + '</button></div>';
+    caja.innerHTML = html;
+    iconos(caja);
+    xcEnganchar(caja);
+    if (foco) { var f = caja.querySelector('[data-xc="' + xcAttr(foco) + '"]'); if (f) { f.focus(); if (f.setSelectionRange && typeof f.value === 'string' && f.type !== 'number' && f.type !== 'checkbox' && f.type !== 'radio') try { f.setSelectionRange(f.value.length, f.value.length); } catch (e) {} } }
+  }
+
+  function xcLeer(caja, id) {
+    var els = caja.querySelectorAll('[data-xc="' + xcAttr(id) + '"]');
+    if (!els.length) return undefined;
+    var el = els[0];
+    if (el.getAttribute('data-xc-lista')) return Array.prototype.filter.call(els, function (x) { return x.checked; }).map(function (x) { return x.value; });
+    if (el.type === 'radio') { var on = Array.prototype.filter.call(els, function (x) { return x.checked; })[0]; return on ? on.value : ''; }
+    if (el.type === 'checkbox') return el.checked;
+    return el.value;
+  }
+  function xcVistaPrevia() {
+    var r = ((XC.datos && XC.datos.reglas) || []).filter(function (x) { return x.id === 'mant.aviso.plantilla'; })[0];
+    if (!r) return;
+    var plantilla = String(xcActual(r) || '');
+    var mia = ++XC.previaT;
+    var desconocidas = (plantilla.match(/\{([^{}]*)\}/g) || []).map(function (m) { return m.slice(1, -1); }).filter(function (n) { return !(XC.datos.variables || []).some(function (x) { return x.nombre === n; }); });
+    if (desconocidas.length) { XC.previa = { error: 'No existe la variable {' + desconocidas[0] + '}: usa las de los botones.' }; xcPintarPrevia(); return; }
+    api('/mantenimientos/config/vista-previa', { method: 'POST', body: { plantilla: plantilla } }).then(function (p) {
+      if (mia !== XC.previaT) return; // llegó una más nueva
+      XC.previa = !p || p.error ? { error: (p && p.error) || 'sin vista previa' } : p;
+      xcPintarPrevia();
+    });
+  }
+  /** Solo la vista previa, sin repintar todo (para no quitarle el cursor a quien escribe). */
+  function xcPintarPrevia() {
+    var caja = $('xu-cfg'), pv = caja && caja.querySelector('.xc-previa');
+    if (!pv) return;
+    pv.innerHTML = '<span class="xc-previa-t">Vista previa' + (XC.previa && XC.previa.con ? ' · con ' + esc(XC.previa.con) : '') + '</span><p>' +
+      (XC.previa ? (XC.previa.error ? '<span class="xu-err">' + esc(XC.previa.error) + '</span>' : esc(XC.previa.texto)) : '') + '</p>';
+  }
+  var xcPreviaTimer = 0;
+  function xcEnganchar(caja) {
+    if ($('xc-ir-mant')) $('xc-ir-mant').onclick = function () { go('mantenimientos'); };
+    caja.querySelectorAll('[data-xc]').forEach(function (el) {
+      var id = el.getAttribute('data-xc');
+      var cambiar = function () {
+        XC.borrador[id] = xcLeer(caja, id);
+        delete XC.volver[id];
+        if (XC.errorCampo && XC.errorCampo.campo === id) XC.errorCampo = null;
+        // El pie y la marca de «cambiado» sin repintar los campos (el cursor sigue donde estaba).
+        var r = XC.datos.reglas.filter(function (x) { return x.id === id; })[0];
+        var campo = caja.querySelector('[data-xc-campo="' + xcAttr(id) + '"]');
+        if (campo && r) campo.classList.toggle('cambiado', xcCambio(r));
+        xcPintarPie(caja);
+        if (id === 'mant.aviso.plantilla') { clearTimeout(xcPreviaTimer); xcPreviaTimer = setTimeout(xcVistaPrevia, 350); }
+        if (el.type === 'checkbox' && !el.getAttribute('data-xc-lista')) { var s = el.parentNode.querySelector('span'); if (s) s.textContent = el.checked ? 'Sí' : 'No'; }
+      };
+      el.addEventListener('input', cambiar);
+      el.addEventListener('change', cambiar);
+    });
+    caja.querySelectorAll('[data-xc-var]').forEach(function (b) {
+      b.onclick = function () {
+        var t = caja.querySelector('[data-xc="mant.aviso.plantilla"]');
+        if (!t) return;
+        var ins = '{' + b.getAttribute('data-xc-var') + '}', i = t.selectionStart || t.value.length, j = t.selectionEnd || i;
+        t.value = t.value.slice(0, i) + ins + t.value.slice(j);
+        t.focus(); t.setSelectionRange(i + ins.length, i + ins.length);
+        t.dispatchEvent(new Event('input'));
+      };
+    });
+    caja.querySelectorAll('[data-xc-volver]').forEach(function (b) {
+      b.onclick = function () { var id = b.getAttribute('data-xc-volver'); XC.volver[id] = true; delete XC.borrador[id]; pintarCfgMantenimientos(); if (id === 'mant.aviso.plantilla') xcVistaPrevia(); };
+    });
+    if ($('xc-descartar')) $('xc-descartar').onclick = function () { XC.borrador = {}; XC.volver = {}; XC.errorCampo = null; pintarCfgMantenimientos(); xcVistaPrevia(); };
+    if ($('xc-guardar')) $('xc-guardar').onclick = xcGuardar;
+  }
+  function xcPintarPie(caja) {
+    var pie = caja.querySelector('.xc-pie');
+    if (!pie) return;
+    var n = XC.datos.reglas.filter(xcCambio).length;
+    pie.classList.toggle('con-cambios', n > 0);
+    pie.querySelector('span').textContent = n ? (n === 1 ? '1 regla cambiada sin guardar' : n + ' reglas cambiadas sin guardar') : 'Sin cambios';
+    $('xc-descartar').disabled = !n;
+    $('xc-guardar').disabled = !n || XC.guardando;
+  }
+  function xcGuardar() {
+    var valores = {};
+    XC.datos.reglas.forEach(function (r) {
+      if (XC.volver[r.id]) valores[r.id] = null;
+      else if (xcCambio(r)) valores[r.id] = XC.borrador[r.id];
+    });
+    if (!Object.keys(valores).length) return;
+    XC.guardando = true; XC.errorCampo = null;
+    pintarCfgMantenimientos();
+    api('/mantenimientos/config', { method: 'PUT', body: { valores: valores } }).then(function (r) {
+      XC.guardando = false;
+      if (!r || r.error) {
+        XC.errorCampo = { error: (r && r.error) || 'no se pudo guardar', campo: (r && r.campo) || '' };
+        pintarCfgMantenimientos();
+        var mal = r && r.campo && $('xu-cfg').querySelector('[data-xc="' + xcAttr(r.campo) + '"]');
+        if (mal) mal.focus();
+        return;
+      }
+      XC.datos = r; XC.borrador = {}; XC.volver = {};
+      XU.datos = null; // Mantenimientos se vuelve a pedir con las reglas nuevas
+      pintarCfgMantenimientos();
+      xcVistaPrevia();
+      toast('Reglas guardadas: ya cuentan así', null, { icono: 'check' });
+    }).catch(function () {
+      XC.guardando = false;
+      XC.errorCampo = { error: 'no hubo conexión: lo escrito sigue aquí, vuelve a intentarlo', campo: '' };
+      pintarCfgMantenimientos();
+    });
+  }
   // (fin de XEN · Mantenimientos y actualizaciones)
 
   // ===== XEN · Modelos de IA: lo nuevo del agente de Modelos =====

@@ -15,15 +15,30 @@
    "estado": "programado"
   },
   {
+   "titulo": "Parche de seguridad de XENTRIS Field",
+   "producto": "XENTRIS Field",
+   "inicioEnHoras": 70,
+   "duracionMin": 60,
+   "avisoHorasAntes": null,
+   "planes": [
+    "Pro",
+    "Enterprise"
+   ],
+   "estado": "programado",
+   "notas": "Corrige la falla de sincronización de la 4.12."
+  },
+  {
    "titulo": "Ventana mensual de Clínica Vida",
    "producto": "Desarrollo a la medida",
    "inicioEnHoras": 768,
+   "hora": "23:00",
    "duracionMin": 180,
    "avisoHorasAntes": 168,
    "planes": [
     "Enterprise"
    ],
-   "estado": "programado"
+   "estado": "programado",
+   "notas": "La ventana que pidió Sofía para avisar a los médicos: de 11 p. m. a 2 a. m."
   },
   {
    "titulo": "Cambio de servidores de XENTRIS Field",

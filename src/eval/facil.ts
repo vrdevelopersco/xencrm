@@ -72,7 +72,7 @@ const lee: Record<string, string[]> = {
   tickets: ['contacts'],
   sla: ['stats'],
   // XEN · Mantenimientos y actualizaciones
-  mantenimientos: ['contacts'],
+  mantenimientos: ['mantenimientos', 'mantenimientos/cumplimiento'],
   // (fin de las pantallas de la suite)
 };
 for (const v of [...vistas, 'tickets', 'sla', 'mantenimientos']) {

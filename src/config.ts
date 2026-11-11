@@ -353,6 +353,56 @@ export const BusinessConfigSchema = z.object({
    * Lo que no vale para su regla se ignora con un aviso en esa pantalla, no tumba el arranque.
    */
   reglas: z.record(z.string(), z.unknown()).default({}),
+  /**
+   * Servicio (lo que se le debe a quien ya es cliente). Cada pantalla trae su subclave; lo que no se dice aquí sale
+   * de la fábrica, y lo que se cambia desde el tablero manda sobre esto (ver crm/mantenimientos-reglas.ts).
+   * 🪤 Suelto (loose): las subclaves de otras pantallas (servicio.sla) se conservan aunque este esquema no las nombre.
+   */
+  servicio: z
+    .looseObject({
+      /** Mantenimientos y actualizaciones (crm/mantenimientos-reglas.ts). Todo opcional: lo que falte, de fábrica. */
+      mantenimientos: z
+        .object({
+          /** Los planes de soporte (si no los da servicio.sla), cada uno con su aviso mínimo en horas. */
+          planes: z.array(z.object({ nombre: z.string().trim().min(1).max(40), avisoHoras: z.number().min(0).max(24 * 60).optional() })).optional(),
+          /** El aviso mínimo por nombre de plan, en horas ({"Pro": 72}). Para planes que vienen del SLA. */
+          avisoHoras: z.record(z.string(), z.number().min(0).max(24 * 60)).optional(),
+          /** Cada cuánto debe salir una actualización, en días, y los días de gracia antes de llamarla atrasada. */
+          cadenciaDias: z.number().min(1).max(730).optional(),
+          toleranciaDias: z.number().min(0).max(365).optional(),
+          /** Una cadencia distinta por aplicación ({"XENTRIS Stock": 45}). */
+          cadenciaPorProducto: z.record(z.string(), z.number().min(1).max(730)).optional(),
+          /** Las aplicaciones (de fábrica: las del catálogo sin los planes de soporte). */
+          productos: z.array(z.string().trim().min(1).max(80)).optional(),
+          /** Los estados de un mantenimiento: su id, cómo se dice y qué papel cumple. */
+          estadosMantenimiento: z
+            .array(z.object({ id: z.string().regex(/^[a-z0-9_]+$/), nombre: z.string().trim().min(1).max(40), papel: z.enum(['programado', 'en_curso', 'hecho', 'cancelado']) }))
+            .optional(),
+          /** Los estados de una actualización. */
+          estadosActualizacion: z.array(z.object({ id: z.string().regex(/^[a-z0-9_]+$/), nombre: z.string().trim().min(1).max(40), papel: z.enum(['publicada', 'planeada']) })).optional(),
+          /** Quiénes quedan afectados por un mantenimiento. */
+          afectados: z
+            .object({
+              roles: z.array(z.enum(['inicio', 'activo', 'interes', 'cita', 'ganado', 'perdido'])).optional(),
+              etapas: z.array(z.string()).optional(),
+              campoPlan: z.string().optional(),
+              campoProducto: z.string().optional(),
+              comparacion: z.enum(['palabras', 'contiene', 'exacta']).optional(),
+              palabrasGenericas: z.array(z.string()).optional(),
+              sinProductoTocaATodos: z.boolean().optional(),
+              incluirArchivados: z.boolean().optional(),
+            })
+            .optional(),
+          /** El aviso: su plantilla (con {variables}) y si cuenta al salir o al prepararse. */
+          aviso: z.object({ plantilla: z.string().trim().min(10).max(1000).optional(), cuentaAl: z.enum(['salir', 'preparar']).optional() }).optional(),
+          /** Quién programa mantenimientos y publica actualizaciones: quien administra o todo el equipo. */
+          quienPrograma: z.enum(['administra', 'equipo']).optional(),
+          /** Cuántos días mira el cumplimiento cuando no se pide otro periodo. */
+          periodoDias: z.number().min(1).max(365).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
 });
 export type BusinessConfig = z.infer<typeof BusinessConfigSchema>;
 
