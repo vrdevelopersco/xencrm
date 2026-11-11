@@ -9,6 +9,23 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-11-11
 
+### Renombre completo: también lo de adentro dice XENCRM · `cc2bc9a`
+El primer renombre dejó a propósito los nombres internos (variables, archivos, galleta, cabeceras) para no romper
+datos ni despliegues. El usuario lo corrigió: «reemplaza todo a xencrm, ya que es una evolución del mismo». Ahora
+todo dice XENCRM: `XENCRM_*`, `xencrm.config.json`, `data/xencrm.db`, `xencrm_consola`, `x-xencrm-*`, `xencrm.*` en el
+navegador, pm2 `xencrm-<cliente>`, MCP `ask_xencrm`, el widget, y el asistente de fábrica, Xen. 1111 apariciones en
+183 archivos, con reglas en orden (lo pegado a un identificador queda en minúscula, la prosa en XENCRM, el asistente
+en Xen) y protegido lo que nombra algo de afuera (AIVA-CRYPTO, el repositorio, la carpeta de producción).
+- **Lo que git no sigue** se migra con `herramientas/migrar-a-xencrm.mjs`: dice qué haría y con `--aplicar` lo hace,
+  con respaldo `*.antes-de-xencrm` de cada archivo de texto. Es idempotente. Se probó primero en una copia de mentira,
+  que encontró un fallo (las variables del lanzador de pm2 van dentro de un objeto, no al comienzo de la línea).
+- 🪤 **Las copias de los clientes apuntaban a aiva**: `clientes/*/.env` tenía `DB_PATH` y `WHATSAPP_AUTH_DIR` en
+  `~/proyectos/aiva/…`. Arrancar la consola desde aquí habría escrito en las bases de aiva. Ahora apuntan a las copias
+  de esta carpeta, y la carpeta de aiva no se tocó.
+- **Lo que el navegador guardaba** (`aiva.admin.…`, `aiva.consola.…`) se muda solo a `xencrm.…` la primera vez que se
+  abre el tablero, la consola o el monitor: se comprobó entrando con las llaves viejas.
+- Comprobado: batería completa 2794 bien, 0 fallas; `tsc` limpio; el tablero en Chrome sin errores.
+
 ### XENCRM: la siguiente generación, con la piel del modo fácil para todos · `43e7d87` … `b220ed4`
 El usuario pidió cambiar la interfaz entera por la del modo fácil, con SendPulse (contactos, ficha, bandeja
 omnicanal), ZapFast (bandeja tipo WhatsApp) y Dynamics 365 (IA) de inspiración, renombrar el proyecto a XENCRM y,
