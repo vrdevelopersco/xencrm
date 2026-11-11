@@ -89,6 +89,27 @@ import { cabecerasDeSiempre, paginaConCsp, soloDesdeAqui } from '../cabeceras.js
 import { contextoDelPaso, proximoPaso } from '../crm/proximo.js';
 import { guardarFijados, leerFijados, reemplazarEnFijados } from '../crm/fijados.js';
 import { esCuentaClave, marcarCuentaClave, notaDeCuenta, panelKam } from '../crm/cuentas-clave.js';
+import {
+  cambiarActualizacion,
+  cambiarMantenimiento,
+  crearActualizacion,
+  crearMantenimiento,
+  cumplimiento as cumplimientoDeMantenimientos,
+  marcarAvisado,
+  panelMantenimientos,
+  prepararAvisos,
+  vistaPreviaDelAviso,
+  type DatosAct,
+  type DatosMant,
+} from '../crm/mantenimientos.js';
+import {
+  guardarReglas,
+  periodoDias as periodoDeMantenimientos,
+  planesDelSla,
+  programarEsDelEquipo,
+  reglasConValor,
+  VARIABLES_AVISO,
+} from '../crm/mantenimientos-reglas.js';
 import { sentimiento } from '../crm/sentimiento.js';
 
 /**
@@ -264,6 +285,72 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     } catch (err) {
       return c.json({ error: (err as Error).message }, 400);
     }
+  });
+
+  // Mantenimientos y actualizaciones (Servicio): lo que se va a tocar, a quién afecta y si se le avisó a tiempo.
+  // Ver crm/mantenimientos.ts y sus reglas (crm/mantenimientos-reglas.ts). El aviso nunca sale solo: «preparar» lo
+  // deja como propuesta en cada conversación. Preparar y marcar avisado es del día a día (el candado los deja);
+  // programar y publicar, de quien diga la regla `mant.quienPrograma` (de fábrica, quien administra).
+  const diasDe = (q: string | undefined) => (q === undefined ? periodoDeMantenimientos() : Math.min(365, Math.max(1, Number(q) || periodoDeMantenimientos())));
+  /** Programar es de quien administra (el super-admin o el token a secas) salvo que la regla lo abra al equipo. */
+  const frenoDeProgramar = (c: { req: { header(n: string): string | undefined } }): string | null => {
+    const rol = c.req.header('x-xencrm-rol');
+    return !rol || rol === 'super' || programarEsDelEquipo() ? null : 'programar mantenimientos y publicar actualizaciones es de quien administra XENCRM';
+  };
+  app.get('/admin/api/mantenimientos', (c) => c.json(panelMantenimientos(diasDe(c.req.query('dias')))));
+  /** El cumplimiento del periodo, con la forma exacta que lee la pantalla SLA. */
+  app.get('/admin/api/mantenimientos/cumplimiento', (c) => c.json(cumplimientoDeMantenimientos(diasDe(c.req.query('dias')))));
+  /** La configuración (Configuración › Mantenimientos y actualizaciones): cada regla con su valor y de dónde sale. */
+  app.get('/admin/api/mantenimientos/config', (c) => c.json({ reglas: reglasConValor(), variables: VARIABLES_AVISO, planesDelSla: Boolean(planesDelSla()) }));
+  /** Guardar reglas: todo o nada; null en una la devuelve al archivo o a la fábrica. Solo quien administra (consola). */
+  app.put('/admin/api/mantenimientos/config', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { valores?: Record<string, unknown> };
+    const r = guardarReglas(body.valores ?? {});
+    return 'error' in r ? c.json(r, 400) : c.json({ reglas: r.ok, variables: VARIABLES_AVISO, planesDelSla: Boolean(planesDelSla()) });
+  });
+  /** La vista previa de una plantilla del aviso, sin guardarla. */
+  app.post('/admin/api/mantenimientos/config/vista-previa', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { plantilla?: unknown };
+    const plantilla = String(body.plantilla ?? '').trim();
+    if (!plantilla) return c.json({ error: 'la plantilla está vacía' }, 400);
+    return c.json(vistaPreviaDelAviso(plantilla));
+  });
+  app.post('/admin/api/mantenimientos', async (c) => {
+    const freno = frenoDeProgramar(c);
+    if (freno) return c.json({ error: freno }, 403);
+    const r = crearMantenimiento((await c.req.json().catch(() => ({}))) as DatosMant, quienHace(c));
+    return 'error' in r ? c.json(r, 400) : c.json(r.ok, 201);
+  });
+  app.patch('/admin/api/mantenimientos/:id', async (c) => {
+    const freno = frenoDeProgramar(c);
+    if (freno) return c.json({ error: freno }, 403);
+    const r = cambiarMantenimiento(Number(c.req.param('id')), (await c.req.json().catch(() => ({}))) as DatosMant, quienHace(c));
+    if (!r) return c.json({ error: 'ese mantenimiento no existe' }, 404);
+    return 'error' in r ? c.json(r, 400) : c.json(r.ok);
+  });
+  app.post('/admin/api/mantenimientos/:id/avisos/preparar', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { ids?: unknown };
+    const soloIds = Array.isArray(body.ids) ? body.ids.map(String) : undefined;
+    const r = prepararAvisos(Number(c.req.param('id')), { soloIds, por: quienHace(c) });
+    return r ? c.json(r) : c.json({ error: 'ese mantenimiento no existe' }, 404);
+  });
+  app.post('/admin/api/mantenimientos/:id/avisos/:userId/avisado', async (c) => {
+    const r = marcarAvisado(Number(c.req.param('id')), c.req.param('userId'), quienHace(c));
+    if (!r) return c.json({ error: 'ese mantenimiento no existe' }, 404);
+    return 'error' in r ? c.json(r, 400) : c.json({ ok: true });
+  });
+  app.post('/admin/api/actualizaciones', async (c) => {
+    const freno = frenoDeProgramar(c);
+    if (freno) return c.json({ error: freno }, 403);
+    const r = crearActualizacion((await c.req.json().catch(() => ({}))) as DatosAct, quienHace(c));
+    return 'error' in r ? c.json(r, 400) : c.json(r.ok, 201);
+  });
+  app.patch('/admin/api/actualizaciones/:id', async (c) => {
+    const freno = frenoDeProgramar(c);
+    if (freno) return c.json({ error: freno }, 403);
+    const r = cambiarActualizacion(Number(c.req.param('id')), (await c.req.json().catch(() => ({}))) as DatosAct, quienHace(c));
+    if (!r) return c.json({ error: 'esa actualización no existe' }, 404);
+    return 'error' in r ? c.json(r, 400) : c.json(r.ok);
   });
 
   // Dar de alta a alguien a mano: el que llegó por el local, por una llamada o con una tarjeta. Lo delicado

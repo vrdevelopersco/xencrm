@@ -14,6 +14,7 @@
  * puede LEER va al revés —todo menos lo avanzado—, porque el tablero lee mucho al arrancar y cerrar de más lo
  * dejaría en blanco.
  */
+import { programarEsDelEquipo } from '../crm/mantenimientos-reglas.js';
 
 /** Lo del día a día que alguien con el candado sí puede cambiar. Rutas sin `/admin/api/` delante. */
 const PUEDE_CAMBIAR: Array<[string, RegExp]> = [
@@ -32,6 +33,22 @@ const PUEDE_CAMBIAR: Array<[string, RegExp]> = [
   // Lo que XENCRM le pregunta al equipo en Hoy, y lo que propone contestar cuando la conversación la lleva alguien.
   ['POST', /^verifications\/[^/]+\/(answer|dismiss)$/],
   ['POST', /^propuestas\/[^/]+\/(enviar|descartar)$/],
+  // Avisar de un mantenimiento a los clientes afectados (dejar el aviso listo en su conversación, o decir que se avisó
+  // por otro medio) es atender. Programarlo, cambiarlo o publicar una actualización es operación: queda para quien
+  // administra, como lo demás que no está en esta lista (crm/mantenimientos.ts).
+  ['POST', /^mantenimientos\/[^/]+\/avisos\/preparar$/],
+  ['POST', /^mantenimientos\/[^/]+\/avisos\/[^/]+\/avisado$/],
+];
+
+/**
+ * Programar mantenimientos y publicar actualizaciones: de quien administra, salvo que la regla `mant.quienPrograma`
+ * (crm/mantenimientos-reglas.ts) lo abra a todo el equipo. Entonces el candado también lo deja.
+ */
+const PROGRAMAR: Array<[string, RegExp]> = [
+  ['POST', /^mantenimientos$/],
+  ['PATCH', /^mantenimientos\/[^/]+$/],
+  ['POST', /^actualizaciones$/],
+  ['PATCH', /^actualizaciones\/[^/]+$/],
 ];
 
 /**
@@ -60,5 +77,6 @@ export function frenoDelCandado(ruta: string, metodo: string, rol: string | unde
   if (/^tablero\/modo$/.test(ruta) && !LEER.has(m)) return 'el modo del tablero lo cambia quien administra XENCRM';
   if (modo !== 'facil') return null;
   if (LEER.has(m)) return NO_PUEDE_LEER.test(ruta) ? 'en el modo fácil eso lo ve quien administra XENCRM' : null;
+  if (PROGRAMAR.some(([mm, re]) => mm === m && re.test(ruta)) && programarEsDelEquipo()) return null;
   return PUEDE_CAMBIAR.some(([mm, re]) => mm === m && re.test(ruta)) ? null : 'en el modo fácil eso lo cambia quien administra XENCRM';
 }
