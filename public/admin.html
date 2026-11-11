@@ -1460,6 +1460,59 @@ dialog.perdida input{width:100%}
 .nav-fx .fx-item.active .ic{color:var(--fx-acento-t)}
 .nav-fx .fx-item .fx-n{margin-left:auto;min-width:20px;height:20px;display:inline-grid;place-items:center;border-radius:var(--fx-r-pill);background:var(--fx-acento);color:var(--fx-sobre-acento);font-size:11px;font-weight:700;padding:0 6px;font-variant-numeric:tabular-nums}
 .nav-fx .fx-item .fx-n:empty{display:none}
+/* ---------- el mapa del sitio (Dynamics 365): recientes, fijados, áreas y el menú contraído ---------- */
+:root[data-piel="xen"] .mapa-area[hidden]{display:none}
+:root[data-piel="xen"] .mapa-plegable[hidden]{display:none}
+:root[data-piel="xen"] .mapa-plegable{margin-bottom:2px}
+:root[data-piel="xen"] .mapa-plegable .mapa-chev{margin-left:auto;width:14px!important;height:14px!important;flex:0 0 14px!important;transition:transform var(--fx-t-rapido)}
+:root[data-piel="xen"] .mapa-pliegue[aria-expanded="true"] .mapa-chev{transform:rotate(90deg)}
+:root[data-piel="xen"] .mapa-sub{list-style:none;margin:2px 0 6px;padding:0 0 0 18px;display:flex;flex-direction:column;gap:1px}
+:root[data-piel="xen"] .mapa-sub[hidden]{display:none}
+:root[data-piel="xen"] .mapa-persona{display:flex;align-items:center;gap:8px;width:100%;height:32px;padding:0 8px;border:0;border-radius:var(--fx-r-md);background:none;color:var(--fx-t2);font:inherit;font-size:13.5px;text-align:left;cursor:pointer}
+:root[data-piel="xen"] .mapa-persona:hover{background:var(--fx-hover);color:var(--fx-t0)}
+:root[data-piel="xen"] .mapa-persona .fx-lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+:root[data-piel="xen"] .mapa-ini{display:inline-grid;place-items:center;width:22px;height:22px;flex:0 0 22px;border-radius:999px;background:var(--fx-suave);color:var(--fx-suave-t);font-size:9.5px;font-weight:700}
+:root[data-piel="xen"] .mapa-nada{margin:12px 10px;font-size:13px;color:var(--fx-t2)}
+:root[data-piel="xen"] .fx-ico.mapa-contraer{margin-left:auto;width:32px;height:32px;flex:0 0 32px;color:var(--fx-t2)}
+/* El cambio de área, abajo: dice dónde estás y abre las áreas de la suite. */
+:root[data-piel="xen"] .area-caja{position:relative;margin:8px 10px 0;flex:0 0 auto}
+:root[data-piel="xen"] .area-btn{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 10px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel);color:var(--fx-t1);font:inherit;text-align:left;cursor:pointer;transition:background var(--fx-t-rapido),border-color var(--fx-t-rapido)}
+:root[data-piel="xen"] .area-btn:hover,:root[data-piel="xen"] .area-btn[aria-expanded="true"]{background:var(--fx-hover);border-color:var(--fx-t4)}
+:root[data-piel="xen"] .area-btn .ic{width:18px;height:18px;flex:0 0 18px;color:var(--fx-acento-t)}
+:root[data-piel="xen"] .area-btn .fx-lbl{display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.2}
+:root[data-piel="xen"] .area-btn small{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--fx-t3)}
+:root[data-piel="xen"] .area-btn b{font-size:14px;font-weight:650;color:var(--fx-t0)}
+:root[data-piel="xen"] .area-btn .fx-flecha{color:var(--fx-t3);width:16px;height:16px;flex:0 0 16px}
+:root[data-piel="xen"] .area-pop{position:absolute;left:0;right:0;bottom:calc(100% + 6px);padding:6px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel);box-shadow:var(--fx-sombra-pop);z-index:80;min-width:232px}
+:root[data-piel="xen"] .area-pop[hidden]{display:none}
+:root[data-piel="xen"] .area-pop button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:0;border-radius:8px;background:none;color:var(--fx-t1);font:inherit;text-align:left;cursor:pointer}
+:root[data-piel="xen"] .area-pop button:hover,:root[data-piel="xen"] .area-pop button:focus-visible{background:var(--fx-hover)}
+:root[data-piel="xen"] .area-pop button[aria-checked="true"]{background:var(--fx-suave);color:var(--fx-suave-t)}
+:root[data-piel="xen"] .area-pop .ic{width:18px;height:18px;flex:0 0 18px;color:var(--fx-acento-t)}
+:root[data-piel="xen"] .area-pop b{display:block;font-size:14px;font-weight:650}
+:root[data-piel="xen"] .area-pop small{display:block;font-size:12px;color:var(--fx-t2)}
+/* Contraído: solo íconos (con su nombre en el title), la marca sin nombre y los grupos como una raya. Solo en
+   escritorio: en el celular el menú es un cajón que se abre entero. */
+@media (min-width:901px){
+  :root[data-piel="xen"] .app[data-mapa="corto"]{grid-template-columns:68px var(--subnav,0px) 1fr}
+  :root[data-piel="xen"] .app[data-mapa="corto"] .fx-marca{padding:0;justify-content:center;height:64px}
+  :root[data-piel="xen"] .app[data-mapa="corto"] .fx-biz,:root[data-piel="xen"] .app[data-mapa="corto"] .fx-lbl,:root[data-piel="xen"] .app[data-mapa="corto"] .fx-quien,:root[data-piel="xen"] .app[data-mapa="corto"] #foot-user .fx-flecha,:root[data-piel="xen"] .app[data-mapa="corto"] .area-btn .fx-flecha,:root[data-piel="xen"] .app[data-mapa="corto"] .mapa-sub,:root[data-piel="xen"] .app[data-mapa="corto"] .mapa-chev{display:none!important}
+  :root[data-piel="xen"] .app[data-mapa="corto"] .fx-logo{display:none}
+  :root[data-piel="xen"] .app[data-mapa="corto"] .fx-ico.mapa-contraer{margin:0}
+  :root[data-piel="xen"] .app[data-mapa="corto"] .nav-fx{padding:10px 8px}
+  :root[data-piel="xen"] .app[data-mapa="corto"] .nav-fx .fx-grupo{height:1px;padding:0;margin:8px 6px;background:var(--fx-borde);font-size:0;overflow:hidden}
+  :root[data-piel="xen"] .app[data-mapa="corto"] .nav-fx .fx-item{justify-content:center;padding:0}
+  :root[data-piel="xen"] .app[data-mapa="corto"] .nav-fx .fx-item .fx-n{position:absolute;top:2px;right:2px;min-width:16px;height:16px;font-size:10px;padding:0 4px}
+  :root[data-piel="xen"] .app[data-mapa="corto"] .area-caja{margin:8px 8px 0}
+  :root[data-piel="xen"] .app[data-mapa="corto"] .area-btn{justify-content:center;padding:6px}
+  :root[data-piel="xen"] .app[data-mapa="corto"] .area-pop{right:auto;left:calc(100% + 8px);bottom:0}
+  :root[data-piel="xen"] .app[data-mapa="corto"] #cfg-btn{justify-content:center;margin:8px 8px 0;padding:0}
+  :root[data-piel="xen"] .app[data-mapa="corto"] #cfg-btn>span,:root[data-piel="xen"] .app[data-mapa="corto"] #cfg-btn .lbl,:root[data-piel="xen"] .app[data-mapa="corto"] #cfg-btn::after{display:none}
+  :root[data-piel="xen"] .app[data-mapa="corto"] #foot-user{justify-content:center;margin:4px 8px 8px;padding:6px}
+  :root[data-piel="xen"]:has(.app[data-mapa="corto"]) dialog.perfil.ficha{left:68px}
+}
+@media (max-width:900px){:root[data-piel="xen"] .fx-ico.mapa-contraer{display:none}}
+@media (prefers-reduced-motion:reduce){:root[data-piel="xen"] .mapa-plegable .mapa-chev{transition:none}}
 /* El pie del menú: la configuración y quién eres. */
 :root[data-piel="xen"] .rail>.spacer{display:none}
 :root[data-piel="xen"] .rail>.sep{display:block;width:auto;height:1px;background:var(--fx-borde);margin:0}
@@ -2659,6 +2712,18 @@ dialog.perdida input{width:100%}
 @media (max-width:760px){:root[data-piel="xen"] #view-modelos .xm{padding:4px 20px 28px}:root[data-piel="xen"] #view-modelos .xm-rol{grid-template-columns:minmax(0,1fr);gap:10px}}
 /* (fin de XEN · Modelos de IA) */
 
+/* ---------- XEN · Embudo y filtrado (agente del embudo) ---------- */
+/* (fin de XEN · Embudo y filtrado) */
+
+/* ---------- XEN · KPIs y metas (agente de KPIs) ---------- */
+/* (fin de XEN · KPIs y metas) */
+
+/* ---------- XEN · Panel KAM (agente de cuentas clave) ---------- */
+/* (fin de XEN · Panel KAM) */
+
+/* ---------- XEN · Optimización de ventas (agente de optimización) ---------- */
+/* (fin de XEN · Optimización de ventas) */
+
 /* ===== fin de la piel de XENCRM ===== */
 </style>
 </head>
@@ -2682,6 +2747,7 @@ dialog.perdida input{width:100%}
     <div class="fx-marca solo-facil">
       <span class="fx-logo" id="fx-logo" aria-hidden="true">A</span>
       <span class="fx-biz"><b id="fx-biz">Tu negocio</b><small><span class="fx-marca-x">XEN</span>CRM</small></span>
+      <button class="fx-ico mapa-contraer" id="mapa-contraer" type="button" aria-pressed="false" aria-label="Contraer el menú"><i class="ic" data-ic="menu"></i></button>
       <button class="fx-ico fx-cerrar-menu" id="fx-cerrar-menu" aria-label="Cerrar el menú"><i class="ic" data-ic="cerrar"></i></button>
     </div>
     <nav class="nav-fx solo-facil" id="nav-fx" aria-label="Secciones"></nav>
@@ -2702,7 +2768,12 @@ dialog.perdida input{width:100%}
     <div class="spacer"></div>
     <div class="sep"></div>
     <button class="rb bell" id="bell-btn" data-tip="Notificaciones" aria-label="Notificaciones"><i class="ic" data-ic="bell"></i><span class="badge" id="badge-notif"></span></button>
-    <button class="rb" id="cfg-btn" data-tip="Configuración" aria-label="Configuración" aria-expanded="false" aria-controls="cfg-pop"><i class="ic" data-ic="sliders"></i></button>
+    <!-- El cambio de área, como en Dynamics 365: Ventas (el día a día) o Configuración (su propio mapa). -->
+    <div class="area-caja solo-facil">
+      <button class="area-btn" id="area-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="area-pop"></button>
+      <div class="area-pop" id="area-pop" role="menu" aria-label="Cambiar de área" hidden></div>
+    </div>
+    <button class="rb" id="cfg-btn" data-tip="Ajustes" aria-label="Ajustes" aria-expanded="false" aria-controls="cfg-pop"><i class="ic" data-ic="sliders"></i></button>
     <button class="rb" id="nav-more" data-tip="Más" aria-label="Más" aria-expanded="false" aria-controls="more-sheet" hidden><i class="ic" data-ic="grid"></i></button>
     <button class="avatar-btn perfil-btn" id="foot-user" title="Con qué nombre respondes"><span id="foot-ini">A</span><span class="fx-quien solo-facil"><b id="fx-nombre">sin nombre</b><small>Usuario activo</small></span><i class="ic fx-flecha solo-facil" data-ic="abajo"></i></button>
     <span hidden id="foot-nombre">asesor</span>
@@ -3147,6 +3218,35 @@ dialog.perdida input{width:100%}
       <div id="pal-res" role="listbox"></div>
       <div class="pal-pie"><kbd>↑</kbd><kbd>↓</kbd> moverse · <kbd>Enter</kbd> abrir · <kbd>Esc</kbd> cerrar</div>
     </dialog>
+
+    <!-- ===== XEN · las pantallas de la suite (Dynamics 365): cada una la llena su agente ===== -->
+    <section class="view" id="view-embudo">
+      <div class="topbar"><h1>Embudo</h1><span class="grow"></span></div>
+      <!-- XEN · Embudo y filtrado: el marcado del embudo va aquí -->
+      <div class="pad" id="xe-embudo"></div>
+      <!-- (fin de XEN · Embudo y filtrado) -->
+    </section>
+
+    <section class="view" id="view-kam">
+      <div class="topbar"><h1>Cuentas clave</h1><span class="grow"></span></div>
+      <!-- XEN · Panel KAM: el marcado va aquí -->
+      <div class="pad" id="xk-kam"></div>
+      <!-- (fin de XEN · Panel KAM) -->
+    </section>
+
+    <section class="view" id="view-kpis">
+      <div class="topbar"><h1>KPIs y metas</h1><span class="grow"></span></div>
+      <!-- XEN · KPIs y metas: el marcado va aquí -->
+      <div class="pad" id="xp-kpis"></div>
+      <!-- (fin de XEN · KPIs y metas) -->
+    </section>
+
+    <section class="view" id="view-optimizacion">
+      <div class="topbar"><h1>Optimización de ventas</h1><span class="grow"></span></div>
+      <!-- XEN · Optimización de ventas: el marcado va aquí -->
+      <div class="pad" id="xo-opt"></div>
+      <!-- (fin de XEN · Optimización de ventas) -->
+    </section>
 
     <section class="view" id="view-ventas">
       <div class="topbar"><h1>Ventas</h1><span class="grow"></span>

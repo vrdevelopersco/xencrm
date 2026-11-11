@@ -733,28 +733,175 @@
     try { localStorage.setItem(LLAVE('areas'), JSON.stringify(ultimaDelArea)); } catch (e) {}
   }
 
-  // ---------- el menú del modo fácil ----------
-  // 🪤 Es el de Nexora, la muestra que mandó DUNOR: dos grupos y cada pantalla con su puerta, sin pestañas
-  // adentro. Las mismas pantallas del completo —ninguna nueva—: lo que cambia es cómo se llega a ellas.
-  // XENCRM habla como un CRM de mensajería (SendPulse): la bandeja es la «Bandeja omnicanal» —todos los canales en
-  // un solo sitio— y cada persona en su etapa es un «trato». Mismas pantallas y mismas rutas; cambian el orden y
-  // los nombres (ver el glosario en docs/xencrm.md).
+  // ---------- el mapa del sitio, como el de Dynamics 365 ----------
+  // XENCRM se ordena como una suite de CRM (Dynamics 365 Sales): arriba lo reciente y lo fijado, y debajo las
+  // pantallas en cuatro grupos —Mi trabajo, Clientes, Ventas, Rendimiento—. Abajo, el cambio de ÁREA: «Ventas» es el
+  // día a día y «Configuración» trae su propio mapa (lo que antes solo vivía en el engranaje). Cada pantalla tiene
+  // su puerta, sin pestañas adentro, y el vocabulario es el de un CRM de mensajería (docs/xencrm.md).
+  //
+  // 🪤 Las dos áreas se arman UNA vez y se alternan con [hidden]: si se volvieran a pintar, los contadores del menú
+  // (Bandeja, Citas) quedarían en blanco hasta el próximo aviso. Solo la de Configuración se rehace al abrirla,
+  // porque lo que se ve allí depende de quién entró (soloAdmin, soloSuper, el candado) y no lleva contadores.
+  ICONS.estrella = '<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z"/>';
+  ICONS.rayo = '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>';
+  ICONS.fijado = '<path d="M9 4h6l-1 6 3 3H7l3-3z"/><path d="M12 13v8"/>';
+  ICONS.reciente = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>';
+  ICONS.menu = '<path d="M4 6h16M4 12h16M4 18h16"/>';
+  ICONS.areas = '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/>';
   var MENU_FACIL = [
-    { grupo: 'Principal', items: [{ view: 'today', lbl: 'Inicio', ic: 'inicio' }, { view: 'inbox', lbl: 'Bandeja omnicanal', ic: 'inbox', n: 'fx-n-inbox' }, { view: 'analysis', lbl: 'Analítica', ic: 'analitica' }] },
-    { grupo: 'CRM', items: [{ view: 'clientes', lbl: 'Contactos', ic: 'contacto' }, { view: 'pipeline', lbl: 'Tratos', ic: 'kanban' }, { view: 'calendar', lbl: 'Citas', ic: 'citas', n: 'fx-n-citas' }, { view: 'ventas', lbl: 'Ventas', ic: 'dolar' }, { view: 'seguimientos', lbl: 'Seguimientos', ic: 'reloj' }] }
+    { grupo: 'Mi trabajo', items: [{ view: 'today', lbl: 'Inicio', ic: 'inicio' }, { view: 'inbox', lbl: 'Bandeja omnicanal', ic: 'inbox', n: 'fx-n-inbox' }, { view: 'seguimientos', lbl: 'Lista de trabajo', ic: 'volver' }, { view: 'calendar', lbl: 'Citas', ic: 'citas', n: 'fx-n-citas' }] },
+    { grupo: 'Clientes', items: [{ view: 'clientes', lbl: 'Contactos', ic: 'contacto' }, { view: 'kam', lbl: 'Cuentas clave', ic: 'estrella' }] },
+    { grupo: 'Ventas', items: [{ view: 'embudo', lbl: 'Embudo', ic: 'embudo' }, { view: 'pipeline', lbl: 'Tratos', ic: 'kanban' }, { view: 'ventas', lbl: 'Ventas', ic: 'dolar' }] },
+    { grupo: 'Rendimiento', items: [{ view: 'kpis', lbl: 'KPIs y metas', ic: 'objetivo' }, { view: 'optimizacion', lbl: 'Optimización de ventas', ic: 'rayo' }, { view: 'analysis', lbl: 'Analítica', ic: 'analitica' }] }
   ];
-  (function armarMenuFacil() {
+  /** Las áreas de la suite. Configuración no lleva lista fija: sale de CFG_CLIENTE según quién entró. */
+  var AREAS_SUITE = [{ id: 'ventas', lbl: 'Ventas', ic: 'kanban', dice: 'Contactos, tratos y rendimiento' }, { id: 'config', lbl: 'Configuración', ic: 'sliders', dice: 'El negocio, el asistente y los canales' }];
+  /** En qué área vive cada pantalla: lo que no es de configuración, es de Ventas. */
+  function areaDeVista(view) { return CFG_VIEWS[view] ? 'config' : 'ventas'; }
+  state.area = 'ventas';
+  // 🪤 Va aquí arriba y no junto a pintarRecientes: armarMenuFacil() corre en cuanto se define, y una `var` de más
+  // abajo todavía valdría undefined (el arranque se caía entero).
+  var mapaAbierto = { recientes: false, fijados: true };
+  function itemMapa(x) {
+    return '<li><button class="fx-item" data-view="' + x.view + '" title="' + esc(x.lbl) + '"><i class="ic" data-ic="' + x.ic + '"></i><span class="fx-lbl">' + esc(x.lbl) + '</span>' +
+      (x.n ? '<span class="fx-n" id="' + x.n + '"></span>' : '') + '</button></li>';
+  }
+  function armarMenuFacil() {
     var nav = $('nav-fx');
     if (!nav) return;
-    nav.innerHTML = MENU_FACIL.map(function (g) {
-      return '<div class="fx-grupo">' + esc(g.grupo) + '</div><ul>' + g.items.map(function (x) {
-        return '<li><button class="fx-item" data-view="' + x.view + '"><i class="ic" data-ic="' + x.ic + '"></i><span>' + esc(x.lbl) + '</span>' +
-          (x.n ? '<span class="fx-n" id="' + x.n + '"></span>' : '') + '</button></li>';
-      }).join('') + '</ul>';
-    }).join('');
+    nav.innerHTML =
+      '<div class="mapa-area" data-area="ventas">' +
+        // Recientes y Fijados: lo que uno estaba mirando, a un clic. Se pliegan como en Dynamics.
+        '<div class="mapa-plegable" id="mapa-recientes"></div><div class="mapa-plegable" id="mapa-fijados"></div>' +
+        MENU_FACIL.map(function (g) { return '<div class="fx-grupo">' + esc(g.grupo) + '</div><ul>' + g.items.map(itemMapa).join('') + '</ul>'; }).join('') +
+      '</div>' +
+      '<div class="mapa-area" data-area="config" hidden></div>';
     iconos(nav);
     nav.querySelectorAll('[data-view]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-view')); }; });
+    pintarRecientes();
+  }
+  armarMenuFacil();
+  /** El mapa de Configuración: los mismos destinos del engranaje, con sus mismos filtros (quién entró, el candado). */
+  function armarMapaConfig() {
+    var caja = document.querySelector('#nav-fx [data-area="config"]');
+    if (!caja) return;
+    var vis = CFG_CLIENTE.concat([{ view: 'help', ic: 'help', lbl: 'Ayuda' }]).filter(visiblePara).filter(function (d) { return d.view; });
+    var grupos = [
+      { grupo: 'El negocio', vistas: { guia: 1, profile: 1, negocio: 1 } },
+      { grupo: 'El asistente y la IA', vistas: { agent: 1, modelos: 1, knowledge: 1 } },
+      { grupo: 'Canales', vistas: { channels: 1 } },
+      { grupo: 'Sistema', vistas: { trazas: 1, help: 1 } }
+    ];
+    var usadas = {};
+    var html = grupos.map(function (g) {
+      var items = vis.filter(function (d) { return g.vistas[d.view]; });
+      items.forEach(function (d) { usadas[d.view] = 1; });
+      return items.length ? '<div class="fx-grupo">' + esc(g.grupo) + '</div><ul>' + items.map(function (d) { return itemMapa({ view: d.view, lbl: d.lbl, ic: d.ic }); }).join('') + '</ul>' : '';
+    }).join('');
+    var otras = vis.filter(function (d) { return !usadas[d.view]; });
+    if (otras.length) html += '<div class="fx-grupo">Más</div><ul>' + otras.map(function (d) { return itemMapa({ view: d.view, lbl: d.lbl, ic: d.ic }); }).join('') + '</ul>';
+    caja.innerHTML = html || '<p class="mapa-nada">Lo de configuración lo maneja quien administra XENCRM.</p>';
+    iconos(caja);
+    caja.querySelectorAll('[data-view]').forEach(function (b) {
+      b.onclick = function () { go(b.getAttribute('data-view')); };
+      b.classList.toggle('active', b.getAttribute('data-view') === state.view);
+    });
+  }
+  /** Cambiar de área: se alternan los mapas; el de Configuración se rehace con lo que hoy puede ver quien entró. */
+  function ponerArea(id) {
+    state.area = id;
+    var nav = $('nav-fx');
+    if (!nav) return;
+    if (id === 'config') armarMapaConfig();
+    nav.querySelectorAll('.mapa-area').forEach(function (a) { a.hidden = a.getAttribute('data-area') !== id; });
+    var ar = AREAS_SUITE.filter(function (x) { return x.id === id; })[0] || AREAS_SUITE[0];
+    if ($('area-btn')) {
+      $('area-btn').innerHTML = '<i class="ic" data-ic="' + ar.ic + '"></i><span class="fx-lbl"><small>Área</small><b>' + esc(ar.lbl) + '</b></span><i class="ic fx-flecha" data-ic="abajo"></i>';
+      $('area-btn').title = 'Área: ' + ar.lbl + '. Cambiar de área';
+      iconos($('area-btn'));
+    }
+  }
+  (function armarCambioDeArea() {
+    var b = $('area-btn'), pop = $('area-pop');
+    if (!b || !pop) return;
+    pop.innerHTML = AREAS_SUITE.map(function (a) {
+      return '<button type="button" role="menuitemradio" data-area="' + a.id + '"><i class="ic" data-ic="' + a.ic + '"></i><span><b>' + esc(a.lbl) + '</b><small>' + esc(a.dice) + '</small></span></button>';
+    }).join('');
+    iconos(pop);
+    function cerrar(devolver) { pop.hidden = true; b.setAttribute('aria-expanded', 'false'); if (devolver) b.focus(); }
+    b.onclick = function (e) {
+      e.stopPropagation();
+      var abrir = pop.hidden;
+      pop.hidden = !abrir;
+      b.setAttribute('aria-expanded', String(abrir));
+      pop.querySelectorAll('[data-area]').forEach(function (x) { x.setAttribute('aria-checked', String(x.getAttribute('data-area') === state.area)); });
+      if (abrir) { var on = pop.querySelector('[aria-checked="true"]') || pop.querySelector('button'); if (on) on.focus(); }
+    };
+    pop.querySelectorAll('[data-area]').forEach(function (x) {
+      x.onclick = function () {
+        var id = x.getAttribute('data-area');
+        cerrar(false);
+        ponerArea(id);
+        // Al entrar a un área se abre su primera pantalla, como en Dynamics; volver a Ventas lleva a Inicio.
+        var primera = document.querySelector('#nav-fx [data-area="' + id + '"] [data-view]');
+        if (primera && areaDeVista(state.view) !== id) go(primera.getAttribute('data-view'));
+      };
+    });
+    document.addEventListener('click', function (e) { if (!pop.hidden && !pop.contains(e.target) && e.target !== b) cerrar(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !pop.hidden) cerrar(true); });
+    ponerArea('ventas');
   })();
+  // El menú contraído: solo íconos (con su nombre en el title), como el ≡ de Dynamics. Es comodidad de cada quien.
+  (function armarContraer() {
+    var b = $('mapa-contraer');
+    if (!b) return;
+    // 🪤 Su ícono (≡) se define aquí arriba, después de la primera pasada de iconos(): sin esto el botón salía vacío.
+    iconos(b);
+    function poner(corto) {
+      document.querySelector('.app').setAttribute('data-mapa', corto ? 'corto' : 'largo');
+      b.setAttribute('aria-pressed', String(corto));
+      b.setAttribute('aria-label', corto ? 'Mostrar el menú completo' : 'Contraer el menú');
+      b.title = b.getAttribute('aria-label');
+    }
+    var corto = false;
+    try { corto = localStorage.getItem(LLAVE('mapa')) === 'corto'; } catch (e) {}
+    poner(corto);
+    b.onclick = function () {
+      corto = !corto;
+      poner(corto);
+      try { localStorage.setItem(LLAVE('mapa'), corto ? 'corto' : 'largo'); } catch (e) {}
+    };
+  })();
+  // Recientes: las últimas fichas y conversaciones abiertas, de quien mira (en su navegador). Fijados: los de siempre.
+  function recientes() { try { return JSON.parse(localStorage.getItem(LLAVE('recientes')) || '[]') || []; } catch (e) { return []; } }
+  function recordarReciente(c) {
+    if (!c || !c.id) return;
+    var l = recientes().filter(function (x) { return x.id !== c.id; });
+    l.unshift({ id: c.id, nombre: nameOf(c) });
+    try { localStorage.setItem(LLAVE('recientes'), JSON.stringify(l.slice(0, 6))); } catch (e) {}
+    pintarRecientes();
+  }
+  function pintarRecientes() {
+    [['mapa-recientes', 'recientes', 'Recientes', 'reciente', recientes()], ['mapa-fijados', 'fijados', 'Fijados', 'fijado', typeof fijados === 'function' ? fijados() : []]].forEach(function (m) {
+      var caja = $(m[0]);
+      if (!caja) return;
+      var lista = m[4] || [], abierto = mapaAbierto[m[1]];
+      if (!lista.length) { caja.innerHTML = ''; caja.hidden = true; return; }
+      caja.hidden = false;
+      caja.innerHTML = '<button class="fx-item mapa-pliegue" type="button" aria-expanded="' + abierto + '" title="' + m[2] + '"><i class="ic" data-ic="' + m[3] + '"></i><span class="fx-lbl">' + m[2] + '</span><i class="ic mapa-chev" data-ic="derecha"></i></button>' +
+        '<ul class="mapa-sub"' + (abierto ? '' : ' hidden') + '>' + lista.map(function (x) {
+          return '<li><button type="button" class="mapa-persona" data-persona="' + esc(x.id) + '" title="' + esc(x.nombre) + '"><span class="mapa-ini" aria-hidden="true">' + esc(inicialesDe(x.nombre)) + '</span><span class="fx-lbl">' + esc(x.nombre) + '</span></button></li>';
+        }).join('') + '</ul>';
+      iconos(caja);
+      caja.querySelector('.mapa-pliegue').onclick = function () { mapaAbierto[m[1]] = !mapaAbierto[m[1]]; pintarRecientes(); };
+      caja.querySelectorAll('[data-persona]').forEach(function (b) { b.onclick = function () { abrirPerfil(b.getAttribute('data-persona'), lista.map(function (x) { return x.id; })); }; });
+    });
+  }
+  /**
+   * Cada pantalla nueva se carga sola al abrirse: alAbrir('kpis', cargarKpis). go() avisa con el evento
+   * «xen:vista» al terminar, así una pantalla nueva no necesita tocar go().
+   */
+  function alAbrir(view, fn) { document.addEventListener('xen:vista', function (e) { if (e.detail && e.detail.view === view) fn(e.detail); }); }
   // Celular: el menú se abre desde la barra de arriba y se cierra al elegir, al tocar fuera o con Escape.
   function menuFacil(abrir) {
     var app = document.querySelector('.app');
@@ -835,7 +982,11 @@
       calendar: ['Citas', 'La agenda de ' + biz + ': haz clic en un hueco libre para agendar.'],
       pipeline: ['Tratos', 'Cada contacto en su etapa del embudo: arrastra la tarjeta o usa «Mover…».'],
       ventas: ['Ventas', 'Lo que se vendió y lo que se perdió, con el porqué.'],
-      seguimientos: ['Seguimientos', 'A quién hay que escribirle y por qué.'],
+      seguimientos: ['Lista de trabajo', 'A quién escribirle hoy y por qué: el siguiente paso de cada trato, en orden.'],
+      embudo: ['Embudo', 'Cuántos tratos hay en cada etapa, cuánto valen y dónde se quedan.'],
+      kam: ['Cuentas clave', 'Los clientes que más importan: quién los lleva, cómo están y qué sigue.'],
+      kpis: ['KPIs y metas', 'Cómo va el negocio contra sus metas, y cada quien del equipo.'],
+      optimizacion: ['Optimización de ventas', 'Dónde se pierden ventas y qué hacer distinto, con los datos de verdad.'],
       modelos: ['Modelos de IA', 'Conecta los proveedores de IA y elige cuál hace cada cosa.'],
       help: ['Ayuda', 'Lo esencial del tablero en dos minutos.']
     }[view];
@@ -880,6 +1031,9 @@
       b.classList.toggle('active', on);
       if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     });
+    // En Dynamics, abrir una pantalla de otra área cambia de área: así lo elegido siempre se ve marcado en el menú.
+    if (areaDeVista(view) !== state.area) ponerArea(areaDeVista(view));
+    else if (state.area === 'config') armarMapaConfig();
     cabeceraFacil(view);
     menuFacil(false);
     document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('active', v.id === 'view-' + view); });
@@ -900,6 +1054,7 @@
     if (view === 'trazas') cargarTrazas(state.tzDias || 7);
     if (view === 'ventas') cargarVentas(state.venDias || 90);
     if (view === 'seguimientos') cargarSeguimientos();
+    try { document.dispatchEvent(new CustomEvent('xen:vista', { detail: { view: view } })); } catch (e) { /* un navegador sin CustomEvent: las pantallas nuevas no cargan solas */ }
   }
 
   // ---------- bandeja ----------
@@ -1039,6 +1194,7 @@
     $('inbox').setAttribute('data-pane', 'chat');
     return api('/contacts/' + encodeURIComponent(id)).then(function (d) {
       state.detail = d; renderChat(); renderDetails();
+      recordarReciente(d.contact);
       anunciarme(id, d.presentes || []);
       // ¿Otra ficha de la misma persona? Se guarda para que el panel no la pierda al volver a pintarse.
       api('/contacts/' + encodeURIComponent(id) + '/duplicates').then(function (l) { state.dups = { id: id, list: l }; renderDuplicates(l); });
@@ -4170,6 +4326,7 @@
   // Se recalcula cuando algo cambia, pero no a cada evento: una conversación viva manda varios por minuto.
   function cuentasLuego() { clearTimeout(cuentasTimer); cuentasTimer = setTimeout(cargarCuentas, 4000); }
   function pintarListas() {
+    pintarRecientes();
     var el = $('rail-listas');
     if (!el) return;
     var n = state.cuentas || {};
@@ -4214,6 +4371,7 @@
       if (d.error) { $('pf-cuerpo').innerHTML = '<div class="empty">' + esc(d.error) + '</div>'; return; }
       PF = d;
       pintarPerfil(d);
+      recordarReciente(d.contact);
     });
   }
   function moverFicha(paso) {
@@ -6209,6 +6367,18 @@
     if (e.target.closest && e.target.closest('[data-xa-mini]')) { xaPestana('sentimiento', true); }
   });
   // (fin de XEN · Analítica y sentimiento)
+
+  // ===== XEN · Embudo y filtrado: lo nuevo del agente del embudo (se carga con alAbrir('embudo', …)) =====
+  // (fin de XEN · Embudo y filtrado)
+
+  // ===== XEN · KPIs y metas: lo nuevo del agente de KPIs (alAbrir('kpis', …)) =====
+  // (fin de XEN · KPIs y metas)
+
+  // ===== XEN · Panel KAM: lo nuevo del agente de cuentas clave (alAbrir('kam', …)) =====
+  // (fin de XEN · Panel KAM)
+
+  // ===== XEN · Optimización de ventas: lo nuevo del agente de optimización (alAbrir('optimizacion', …)) =====
+  // (fin de XEN · Optimización de ventas)
 
   // ===== XEN · Modelos de IA: lo nuevo del agente de Modelos =====
   // Configuración › Modelos de IA: conectar los proveedores (src/proveedores.ts) y decir cuál hace cada rol

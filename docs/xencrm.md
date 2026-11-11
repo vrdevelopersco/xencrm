@@ -49,12 +49,33 @@ palabra para cada cosa, la misma en el menú, el título, el botón y el aviso:
 | Llegó por | **Origen** | |
 | Lo que contó | **Datos del contacto** (cada uno es un campo) | |
 | Estados del filtro | **Todos los estados** ▾ (Sin leer, Prospectos, Con una persona, Archivados) | |
+| Seguimientos | **Lista de trabajo** | Lo que hay que hacer hoy, en orden (el «acelerador» de Dynamics) |
+| Clientes importantes | **Cuentas clave** (KAM: *key account management*) | |
+| Pipeline como gráfica | **Embudo** | Tratos es el tablero; Embudo, cuánto pasa de una etapa a la otra |
 | Última vez | **Última actividad** | |
 
 Se tutea siempre. Sentence case en títulos y botones. Los verbos dicen lo que pasa («Pausar automatización», no
 «Tomar control»).
 
-## Tokens
+## El mapa: una suite de CRM, como Dynamics 365 (2026-11-11)
+
+El menú se ordena como el de Dynamics 365 Sales. Arriba, **Recientes** (las últimas fichas y conversaciones que uno
+abrió, en su navegador) y **Fijados** (los de siempre, por persona); debajo, cuatro grupos; abajo, el **cambio de
+área**. El ≡ lo contrae a íconos (cada quien, en su navegador).
+
+| Área | Grupo | Pantallas |
+|---|---|---|
+| Ventas | Mi trabajo | Inicio · Bandeja omnicanal · **Lista de trabajo** (antes Seguimientos) · Citas |
+| | Clientes | Contactos · **Cuentas clave** (panel KAM) |
+| | Ventas | **Embudo** · Tratos · Ventas |
+| | Rendimiento | **KPIs y metas** · **Optimización de ventas** · Analítica |
+| Configuración | El negocio · El asistente y la IA · Canales · Sistema | Lo del engranaje, con los mismos filtros (quién entró, el candado) |
+
+- Abrir una pantalla de otra área cambia de área, para que lo elegido siempre se vea marcado.
+- Las dos áreas se arman una vez y se alternan con `[hidden]`: repintarlas dejaba en blanco los contadores.
+- El engranaje del pie pasa a llamarse **Ajustes** (tema, sonido, modo, tu nombre): «Configuración» es el área.
+- Cada pantalla nueva se carga sola con `alAbrir(vista, fn)`: `go()` avisa con el evento `xen:vista` al terminar.
+
 
 Todos en el bloque de la piel, con su versión oscura. Ninguna pieza lleva un color suelto.
 

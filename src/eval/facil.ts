@@ -35,11 +35,11 @@ const funcion = (nombre: string): string => {
 };
 
 console.log('— El menú es el de la muestra');
-const menu = js.slice(js.indexOf('var MENU_FACIL = ['), js.indexOf('(function armarMenuFacil()'));
+const menu = js.slice(js.indexOf('var MENU_FACIL = ['), js.indexOf('function areaDeVista('));
 const grupos = [...menu.matchAll(/grupo: '([^']+)', items: \[([^\]]*)\]/g)].map((g) => ({ grupo: g[1], items: [...g[2]!.matchAll(/view: '([a-z]+)', lbl: '([^']+)'/g)].map((m) => [m[1], m[2]]) }));
-check('dos grupos, como Nexora: Principal y CRM', grupos.map((g) => g.grupo).join(',') === 'Principal,CRM', JSON.stringify(grupos));
-check('Principal: Inicio, Bandeja omnicanal, Analítica (el vocabulario de un CRM de mensajería)', grupos[0]?.items.map((x) => x[1]).join(',') === 'Inicio,Bandeja omnicanal,Analítica');
-check('CRM: Contactos, Tratos, Citas, Ventas, Seguimientos', grupos[1]?.items.map((x) => x[1]).join(',') === 'Contactos,Tratos,Citas,Ventas,Seguimientos');
+check('el mapa de Dynamics 365: Mi trabajo, Clientes, Ventas, Rendimiento', grupos.map((g) => g.grupo).join(',') === 'Mi trabajo,Clientes,Ventas,Rendimiento', grupos.map((g) => g.grupo).join(','));
+check('Mi trabajo: Inicio, Bandeja omnicanal, Lista de trabajo, Citas', grupos[0]?.items.map((x) => x[1]).join(',') === 'Inicio,Bandeja omnicanal,Lista de trabajo,Citas');
+check('Clientes: Contactos y Cuentas clave · Ventas: Embudo, Tratos, Ventas · Rendimiento: KPIs y metas, Optimización de ventas, Analítica', grupos[1]?.items.map((x) => x[1]).join(',') === 'Contactos,Cuentas clave' && grupos[2]?.items.map((x) => x[1]).join(',') === 'Embudo,Tratos,Ventas' && grupos[3]?.items.map((x) => x[1]).join(',') === 'KPIs y metas,Optimización de ventas,Analítica');
 const vistas = grupos.flatMap((g) => g.items.map((x) => x[0]!));
 check('🪤 cada puerta lleva a una pantalla que existe (ninguna nueva: son las de siempre)', vistas.every((v) => html.includes(`id="view-${v}"`)), vistas.join(','));
 const cerradas = /var VISTAS_DE_QUIEN_ADMINISTRA = \{([^}]*)\}/.exec(js)?.[1] ?? '';
@@ -59,6 +59,16 @@ const lee: Record<string, string[]> = {
   pipeline: ['contacts', 'stats'],
   ventas: ['ventas'],
   seguimientos: ['seguimientos'],
+  // Las pantallas de la suite (Dynamics 365). Cada agente pone aquí lo que su pantalla lee, en su renglón.
+  // XEN · Embudo y filtrado
+  embudo: ['contacts', 'stats'],
+  // XEN · Panel KAM
+  kam: ['contacts'],
+  // XEN · KPIs y metas
+  kpis: ['stats', 'series'],
+  // XEN · Optimización de ventas
+  optimizacion: ['stats'],
+  // (fin de las pantallas de la suite)
 };
 for (const v of vistas) {
   for (const rol of ['admin', 'asesor']) {
