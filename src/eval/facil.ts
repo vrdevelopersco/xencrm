@@ -52,7 +52,7 @@ console.log('— Y cada puerta abre, también con el candado');
 // Lo que lee cada pantalla del menú. Si una se queda sin datos con el candado, se ve vacía y nadie sabe por qué.
 const lee: Record<string, string[]> = {
   today: ['today', 'series', 'stats', 'notifications', 'contacts'],
-  analysis: ['stats', 'series', 'tiempos', 'origenes'],
+  analysis: ['stats', 'series', 'tiempos', 'origenes', 'sentimiento'],
   inbox: ['contacts', 'contacts/web%3A1', 'contacts/web%3A1/duplicates'],
   clientes: ['contacts'],
   calendar: ['appointments', 'busy', 'calendar'],
@@ -70,7 +70,7 @@ const app = new Hono();
 mountAdmin(app as never);
 const T = { 'x-admin-token': process.env.ADMIN_TOKEN!, 'content-type': 'application/json' };
 await app.request('/admin/api/tablero/modo', { method: 'PUT', headers: { ...T, 'x-aiva-rol': 'super' }, body: JSON.stringify({ modo: 'facil' }) });
-for (const ruta of ['/ventas', '/seguimientos', '/series?dias=7', '/tiempos', '/origenes']) {
+for (const ruta of ['/ventas', '/seguimientos', '/series?dias=7', '/tiempos', '/origenes', '/sentimiento']) {
   check(`el servidor la abre de verdad: ${ruta} con el candado`, (await app.request(`/admin/api${ruta}`, { headers: { ...T, 'x-aiva-rol': 'asesor' } })).status === 200);
 }
 check('🪤 y lo que cuesta aiva sigue cerrado', (await app.request('/admin/api/usage', { headers: { ...T, 'x-aiva-rol': 'asesor' } })).status === 403);
