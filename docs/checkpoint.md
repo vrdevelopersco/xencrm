@@ -19,12 +19,22 @@ renombre a XENCRM de la consola, la portada, el README y los textos. Batería de
 **La suite (segunda ronda)**: el menú se ordena como Dynamics 365 (Mi trabajo · Clientes · Ventas · Rendimiento, con
 el cambio de área a Configuración) y hay cuatro pantallas nuevas: Embudo (con el filtrado y las vistas guardadas en
 Contactos y Tratos), KPIs y metas, Cuentas clave (KAM) y Optimización de ventas. Detalle en `xencrm.md` › «La suite».
-Batería: 3069 bien, 0 fallas.
+Batería de entonces: 3069 bien, 0 fallas.
+
+**Servicio y XENTRIS (tercera ronda)**: el ejemplo de XENCRM es **XENTRIS LLC**, una firma de software
+(`examples/xentris`, la configuración de la raíz); DUNOR solo queda como historia y, con datos de ficción, como el
+fixture de las pruebas («Atelier Demo», `src/eval/fixtures/boutique/`). Hay un área nueva, **Servicio** (Tickets, SLA,
+Mantenimientos y actualizaciones), y **todo es configurable** en tres capas (fábrica → `xencrm.config.json` →
+tablero): Reglas y umbrales (64 reglas), SLA y tickets, Mantenimientos y actualizaciones, y el vocabulario de la
+interfaz (`interfaz`: «demo», «turno»…). Detalle en `xencrm.md` › «Servicio y el ejemplo de XENTRIS LLC».
+**Batería: 3433 bien, 0 fallas.**
 
 **Cómo verlo en local, sin tocar nada real**: una base aparte y sin llaves —
 `DB_PATH=<carpeta temporal>/demo.db PORT=3711 ADMIN_TOKEN=<inventado> OPENAI_API_KEY= ANTHROPIC_API_KEY=
 WHATSAPP_ENABLED=false XENCRM_ENV_FILE=<archivo vacío> npx tsx src/seed.ts` y luego `npx tsx src/index.ts` con lo
-mismo; el tablero en `http://127.0.0.1:3711/admin` con ese token.
+mismo; el tablero en `http://127.0.0.1:3711/admin` con ese token. Sin `XENCRM_CONFIG`, carga el ejemplo de
+XENTRIS. 🪤 Las pruebas fijan su propio `XENCRM_CONFIG`; correr una suite suelta con `npx tsx src/eval/x.ts` usa la
+raíz y puede fallar: usar `pnpm test:x`.
 
 **Para mirar.**
 
@@ -38,8 +48,10 @@ mismo; el tablero en `http://127.0.0.1:3711/admin` con ese token.
   de llaves `~/aiva-credenciales` (las herramientas ahora buscan `~/xencrm-credenciales`, que no existe) y el dominio
   de producción (el ZIP ahora arma `xencrm.hrctechnologies.com`, que no existe todavía). Decide el usuario: crear el
   repositorio y el dominio de XENCRM.
-- Lo abierto de la interfaz está en `xencrm.md` › «Lo que queda abierto» (el «⋯» de la ficha, el aviso de nota
-  duplicado en la bandeja, el tema oscuro de consola y portada).
+- Lo abierto de la interfaz está en `xencrm.md` › «Lo que queda abierto»: el Copiloto todavía sin los tickets en
+  riesgo, los avisos de mantenimiento al unir fichas, pronombres de «cita» en algunas respuestas al cliente, cuatro
+  plazos por llevar a Reglas, el «⋯» de la ficha, el aviso de nota duplicado en la bandeja y el tema oscuro de la
+  consola y la portada.
 - Sentimiento por voz: falta el modelo que escuche el audio. La pantalla no muestra cifras hasta entonces.
 - `docs/firebase.txt` (sin seguir en git) tiene claves en texto plano: sacarlo de la carpeta.
 - De aiva siguen valiendo, para cuando XENCRM tenga clientes: el respaldo con Claude sin llave en producción, Google

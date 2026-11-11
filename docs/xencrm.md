@@ -8,12 +8,14 @@ este documento cambia, lo dice.
 
 ## El brief
 
-- **Sujeto**: el tablero donde el equipo de un negocio (DUNOR, una boutique con cita previa, es el primero) atiende
+- **Sujeto**: el tablero donde el equipo de un negocio (el ejemplo es XENTRIS LLC, una firma de software) atiende
   lo que llega por WhatsApp y por el chat del sitio, donde XEN —el agente de IA— contesta primero. Cada persona es un
-  contacto con su trato (etapa, valor, próximo paso) y sus citas.
-- **Audiencia**: asesores de venta y quien administra. En el computador de la tienda casi siempre, y en el celular
-  cuando están fuera. Con prisa: entre un cliente y otro.
-- **El trabajo**: que nadie se quede esperando y que ningún trato se enfríe sin que alguien lo vea.
+  contacto con su trato (etapa, valor, próximo paso), sus citas (o demos: la palabra la pone el negocio) y, si ya es
+  cliente, sus tickets.
+- **Audiencia**: asesores de venta, soporte y quien administra. En el computador de la oficina casi siempre, y en el celular
+  cuando están fuera. Con prisa: entre un cliente y otro. Y el equipo de soporte, que vive en Servicio.
+- **El trabajo**: que nadie se quede esperando, que ningún trato se enfríe sin que alguien lo vea y que lo prometido
+  a cada cliente (su SLA) se cumpla.
 
 ## Una sola piel
 
@@ -188,6 +190,42 @@ Lo que comparten las pantallas de Servicio (el contrato):
   notas, estado (publicada·planeada) }] }`. Lo siembra `crm/servicio-demo.ts`.
 
 
+### Cómo quedó Servicio y la configuración
+
+**Todo configurable.** El usuario lo pidió así: «todo debe ser configurable; la configuración hazla tan extensa como
+sea posible, no dejando nada por fuera». Toda regla de negocio se resuelve en **tres capas**, y manda la última que
+tenga valor: la **fábrica** (en el código) → el **archivo del cliente** (`xencrm.config.json`) → el **tablero**
+(Configuración, solo quien administra; en settings). Cada pantalla de configuración dice de qué capa sale cada valor
+y tiene «Volver al de fábrica»; guardar es todo o nada y lo escrito no se borra si algo no vale.
+
+| Dónde | Qué se configura |
+|---|---|
+| Configuración › **Reglas y umbrales** (`src/reglas.ts`, `reglas.<id>`, sección `reglas` del archivo) | 64 reglas: los cortes y los 16 pesos del puntaje, el silencio, seguimientos, cuentas clave (los 21 y 45 días), los 16 mínimos de Optimización, el embudo, Inicio, el acuerdo de respuesta, contactos, fijados, presencia, respuestas rápidas. Y la lista de lo que se configura en otro sitio, con su enlace |
+| Configuración › **SLA y tickets** (`crm/tickets.ts`, `servicio.sla`) | Planes (con alias), «sin plan», prioridades, tipos, estados (cuáles cierran y cuáles pausan), objetivos de primera respuesta y solución por plan × prioridad en reloj hábil o 24/7, el horario de soporte, «En riesgo» (75 %), la regla de primera respuesta, los campos de plan y producto, y quién crea, mueve y cambia las políticas |
+| Configuración › **Mantenimientos y actualizaciones** (`crm/mantenimientos-reglas.ts`, `servicio.mantenimientos`) | Aviso mínimo por plan (48 h · 72 h · 7 días), cadencia de actualizaciones (31 días, y por aplicación), días de gracia, aplicaciones, estados, quién cuenta como afectado y cómo se compara la aplicación, la plantilla del aviso (12 variables, con vista previa), si el aviso cuenta al salir o al prepararse, y quién programa. Los planes son los vigentes del SLA (las tres capas) |
+| `xencrm.config.json` › **`interfaz`** (`src/vocabulario.ts`) | Cómo se llama lo que se agenda (cita, demo, turno… y su género: «el turno agendado»), la bienvenida, los ejemplos de los campos y la portada. Unos 70 textos del tablero y 20 del servidor salen de aquí |
+| Lo que ya existía | El negocio, Perfil, El asistente, Modelos de IA, Lo que sabe, Canales, las metas de KPIs, el embudo (`crm.stages`), los datos captados (`crm.fields`), la agenda (`appointments`) |
+
+**Servicio**, pantalla por pantalla:
+
+- **Tickets**: cada uno con el estado del SLA en palabra e ícono (Incumplido · En riesgo · A tiempo · En pausa ·
+  Cumplido · Sin SLA) y el reloj en una frase («Responder antes de las 3:40 p. m. · en 2 h»); vistas Mis tickets,
+  Sin asignar, En riesgo, Incumplidos, Terminados; «Crear ticket» desde la Bandeja y la ficha, que muestra sus tickets.
+  El reloj hábil solo corre en el horario de soporte; «Esperando al cliente» pausa la solución (no la primera
+  respuesta); la primera respuesta es lo primero de: un mensaje de una persona del equipo (el agente de IA no
+  cuenta), «Marcar como respondido» o el cierre. Tabla `tickets`; se borran, unen y anonimizan con la ficha.
+- **SLA**: cumplimiento a 7 · 30 · 90 días con su base («4 de 5 tickets»), por plan y prioridad, medianas contra el
+  objetivo, lo que está en riesgo, y el resumen de mantenimientos y actualizaciones.
+- **Mantenimientos y actualizaciones**: ventanas con sus clientes afectados (ganados con el plan y la aplicación), el
+  estado del aviso de cada uno, y la cadencia por aplicación. **Ningún aviso sale solo**: «Preparar aviso» deja el
+  texto como propuesta en cada conversación y cuenta cuando de verdad salió (o con «Ya le avisé»).
+
+**El ejemplo** tiene 23 contactos por todo el embudo, planes en los ganados, 10 tickets en 8 clientes, 3 demos,
+mantenimientos y actualizaciones. **Las pruebas ya no dependen del ejemplo**: corren con su propio fixture
+(`src/eval/fixtures/boutique/`, «Atelier Demo», el antiguo contenido de DUNOR con datos de ficción), fijado con
+`XENCRM_CONFIG` en cada guion de `package.json`. Batería completa: 3433 bien, 0 fallas.
+
+## La suite (2026-11-11, segunda ronda)
 
 Sobre el mapa de Dynamics, cuatro pantallas nuevas, hechas en paralelo y unidas en `xencrm`. Todas se calculan en el
 servidor sobre lo guardado, **sin modelo y sin red**, y lo que no se sabe se dice («—», «Sin precios», «poca
@@ -209,10 +247,19 @@ evidencia»), nunca un cero inventado.
 - Pruebas nuevas: `test:embudo`, `test:kpis`, `test:kam`, `test:optimizacion`. Batería completa: 3069 bien, 0 fallas.
 
 ### Lo que queda abierto
+- Servicio: el Copiloto de Inicio todavía no propone los tickets en riesgo (su cifra es la suma de los recuadros de
+  Hoy; hay que rehacerla para sumarlos).
+- Tickets: en reloj hábil, el tiempo gastado deja de contarse a los 62 días (el vencimiento sí se decide bien).
+- Mantenimientos: preparar un aviso reemplaza la propuesta que hubiera en esa conversación (hay una sola por
+  conversación); los avisos de una ficha no se mudan al unir fichas.
+- Vocabulario: algunas respuestas al cliente conservan el pronombre de «cita» («yo la cancelo») con un nombre
+  masculino; la consola, `onboard` y las plantillas de `clientes/` siguen diciendo «cita».
+- Reglas: quedan por revisar la hora de los recordatorios (8:00 del día antes), `modo-prueba` (12 h), `entrantes`
+  (7 días) y `retener` (45 días).
 
 - La ficha como página no tiene «⋯»: el menú contextual de siempre cae debajo del diálogo.
-- Cuentas clave no se actualiza en vivo (se recarga al abrirla y tras cada acción); sus umbrales de 21 y 45 días están
-  fijos; quitar y volver a marcar reinicia el «desde».
+- Cuentas clave no se actualiza en vivo (se recarga al abrirla y tras cada acción); quitar y volver a marcar reinicia
+  el «desde». (Sus umbrales ya son reglas.)
 - KPIs: la asistencia cuenta solo citas pasadas y marcadas (las sin marcar se dicen aparte).
 - Optimización: la regla de horario cuenta por horas enteras.
 - El aviso de nota del panel (`chat-nota`) sigue además de la pestaña «Nota interna»: las pruebas de borradores lo

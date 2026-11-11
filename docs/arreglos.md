@@ -9,6 +9,27 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-11-11
 
+### Servicio con SLA, todo configurable y el ejemplo XENTRIS LLC · `0e9ccb2` … `2d7c011`
+El usuario: «para XENCRM reemplaza DUNOR (del ejemplo) por XENTRIS LLC y que la temática no sea una boutique sino una
+firma de software (venta de aplicaciones, cumplimiento de SLAs: updates, mantenimientos, tickets)», y a mitad de
+camino: «todo debe ser configurable; la configuración hazla tan extensa como sea posible, no dejando nada por fuera».
+- **Cimientos** (`0e9ccb2`): el área Servicio en el mapa (Tickets, SLA, Mantenimientos y actualizaciones), el
+  borrador de XENTRIS y los enganches de la semilla para tickets y servicio, con su contrato en `xencrm.md`.
+- **Cuatro agentes en paralelo**: el registro de reglas (`448b37c`, 64 reglas), Mantenimientos y actualizaciones
+  (`0a95b11`), el ejemplo XENTRIS (`1275d2a`, con el vocabulario de la agenda configurable) y Tickets y SLA
+  (`19ade06`). Al requisito de «todo configurable» se les avisó con mensajes a los que ya trabajaban.
+- 🪤 **Las pruebas leían el ejemplo de la raíz**: con otro negocio en la raíz, la batería se caía al empezar
+  («recap completo» esperaba la prenda de la boutique). Ahora corren con su propio fixture («Atelier Demo», el
+  contenido de DUNOR con datos de ficción) fijado con `XENCRM_CONFIG`.
+- **Al integrar**: los choques de reglas (números) contra vocabulario (palabras) en el puntaje y Cuentas clave se
+  resolvieron quedándose con los dos; las etiquetas de varias reglas todavía decían «cita» (lo atrapó
+  `test:ejemplo`); las dos secciones `servicio` del esquema se unieron en una; Mantenimientos leía los planes del SLA
+  solo del archivo y ahora lee los vigentes (las tres capas), para que «Pro» sea el mismo en las dos pantallas.
+- 🪤 Un descuido mío en la guía: al insertar la sección de Servicio se perdió el título de la segunda ronda (el
+  reemplazo no volvía a poner el ancla). Restituido.
+- Comprobado: batería completa 3433 bien, 0 fallas; `tsc` limpio; todas las pantallas en Chrome como administrador,
+  a 1440 y a 390 en claro, sin errores de JavaScript ni desborde. Capturas en `capturas/xencrm-next-evolution/`.
+
 ### La suite, como Dynamics 365: mapa, embudo, filtrado, KPIs, cuentas clave y optimización · `0e8d3fc` … `e7e9f22`
 El usuario: «Organiza el menú como Dynamics 365. Embudo, filtrado, suite completa CRM, optimización de ventas, KPIs,
 panel KAM… XenCRM quiero que precisamente evolucione».
