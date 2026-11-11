@@ -49,14 +49,18 @@ check('cada fila lleva su avatar con la insignia del canal, y el canal también 
 check('los no leídos van en píldora, dichos también en palabras', /class="unread"[^\n]*sin leer/.test(rr));
 check('las marcas que dicen algo van en su propio renglón (no se cortan)', /'<div class="fx-marcas">' \+ marcas/.test(rr));
 check('con el teclado también se abre (Tab llega, Enter abre)', /r\.tabIndex = 0/.test(rr) && /e\.key === 'Enter' \|\| e\.key === ' '/.test(rr));
-const tono = new Function(`${funcion('tonoXen')}; return tonoXen;`)() as (n: string) => number;
-const nombres = ['Julián Torres', 'Camilo Restrepo', 'Ana', '', 'Visitante del sitio · 44fa', 'Ñoño Pérez'];
-check('el tono del avatar es el mismo siempre para el mismo nombre, y uno de los seis', nombres.every((n) => tono(n) === tono(n) && tono(n) >= 1 && tono(n) <= 6), nombres.map(tono).join(','));
+const [tono, tonoContactos] = new Function(`${funcion('tonoAvatar')}; ${funcion('tonoXen')}; return [tonoXen, tonoAvatar];`)() as [(n: string) => number, (n: string) => string];
+const ids = ['wa:573112223344@s.whatsapp.net', 'web:44fa379b', 'wa:seed-573001234567@s.whatsapp.net', '', 'web:ñoño'];
+check('el tono del avatar es el mismo siempre para la misma persona, y uno de los seis', ids.every((n) => tono(n) === tono(n) && tono(n) >= 1 && tono(n) <= 6), ids.map(tono).join(','));
+check('🪤 y es el mismo que le da Contactos: la persona no cambia de color al pasar de la bandeja a su ficha', ids.every((n) => `a${tono(n)}` === tonoContactos(n)));
+check('se saca del id, no del nombre (corregir el nombre no le cambia el color)', /avatarXen\(c, clase\)[\s\S]{0,200}?tonoXen\(c\.id\)/.test(js) && !/tonoXen\(nameOf/.test(js));
 
 console.log('— Los avatares se leen (contraste medido)');
 const lum = (h: string) => { const c = [0, 2, 4].map((i) => parseInt(h.slice(1 + i, 3 + i), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!; };
 const ratio = (a: string, b: string) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
-const bloqueAncla = html.slice(html.indexOf('/* ---------- XEN · Bandeja omnicanal'), html.indexOf('/* (fin de XEN · Bandeja omnicanal) */'));
+// Los seis tonos son uno solo para todo XENCRM y viven con Contactos (la bandeja los usa igual).
+const bloqueAncla = html.slice(html.indexOf('/* ---------- XEN · Contactos, ficha y tratos'), html.indexOf('/* (fin de XEN · Contactos, ficha y tratos) */'));
+check('🪤 los tonos de avatar se definen una sola vez (dos definiciones con valores distintos: gana la última sin avisar)', (html.match(/--fx-av-1-s:/g) ?? []).length === 2);
 const claro = /:root\[data-piel="xen"\]\{([^}]*)\}/.exec(bloqueAncla)?.[1] ?? '';
 const oscuro = /:root\[data-piel="xen"\]\[data-theme=dark\]\{([^}]*)\}/.exec(bloqueAncla)?.[1] ?? '';
 const tok = (css: string, k: string) => new RegExp(`--${k}:(#[0-9a-f]{6})`).exec(css)?.[1] ?? '';

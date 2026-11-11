@@ -1927,42 +1927,85 @@ dialog.perdida input{width:100%}
 :root[data-piel="xen"] .details .volver-chat{display:none}
 @media (max-width:900px){:root[data-piel="xen"] .details .volver-chat{display:inline-flex;align-self:flex-start}}
 
-/* ---------- Contactos: buscador y grupos debajo del título, la tabla en una tarjeta ---------- */
-:root[data-piel="xen"] .cli-pestanas{display:none}
-.fx-herr{display:flex;flex-wrap:wrap;gap:12px;padding:28px 28px 0}
-.fx-herr #cli-q{flex:1 1 256px;min-width:0;padding-left:36px;background:var(--fx-panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 12px center/16px 16px}
-.fx-herr .fx-filtro{flex:0 0 auto}
-:root[data-piel="xen"] .fx-herr .fx-filtro select{width:200px}
-:root[data-piel="xen"] #view-clientes .pad{padding:16px 28px 28px}
-:root[data-piel="xen"] .cli-tabla{background:var(--fx-panel);border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);overflow:hidden}
-:root[data-piel="xen"] .cli-tabla th{padding:12px 16px;font-size:12px;font-weight:500;letter-spacing:.025em;color:var(--fx-t2);background:var(--fx-panel);border-bottom:1px solid var(--fx-borde)}
-:root[data-piel="xen"] .cli-tabla td{padding:12px 16px;border-bottom:1px solid var(--fx-borde-2);font-size:14px}
-:root[data-piel="xen"] .cli-tabla tbody tr:last-child td{border-bottom:0}
-:root[data-piel="xen"] .cli-tabla tfoot td{border-top:1px solid var(--fx-borde);border-bottom:0;color:var(--fx-t2);font-size:13px}
-:root[data-piel="xen"] .cli-tabla tr:hover td{background:var(--fx-fila)}
-:root[data-piel="xen"] .cli-tabla .quien{font-weight:500;color:var(--fx-t1)}
+/* ---------- Contactos (SendPulse): las acciones bajo el título, el buscador, los grupos y cada contacto como una fila-tarjeta ---------- */
+/* La fila de acciones va debajo del título y a la izquierda, con la principal primero (como «Add contact»). */
+:root[data-piel="xen"] #view-clientes>.topbar .fx-cab{flex:1 1 100%}
+:root[data-piel="xen"] #view-clientes>.topbar>.grow{display:none}
+:root[data-piel="xen"] #view-clientes>.topbar #cli-nuevo{order:1}
+:root[data-piel="xen"] #view-clientes>.topbar #cli-csv{order:2}
+:root[data-piel="xen"] #view-clientes>.topbar .btn{min-height:38px;padding:0 16px;font-size:14px}
+:root[data-piel="xen"] #view-clientes>.topbar .btn .ic{width:16px;height:16px;flex:0 0 16px}
+/* El buscador arriba y los grupos debajo, en ese orden aunque en la página vengan al revés. */
+:root[data-piel="xen"] #view-clientes.active>.fx-herr{order:1}
+:root[data-piel="xen"] #view-clientes.active>.cli-pestanas{order:2}
+:root[data-piel="xen"] #view-clientes.active>.pad{order:3}
+.fx-herr{display:flex;flex-wrap:wrap;gap:12px;padding:0 28px}
+.fx-herr #cli-q{flex:0 1 480px;min-width:0;min-height:40px;padding-left:40px;background:var(--fx-panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235c7177' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 14px center/16px 16px}
+/* Los grupos van como píldoras con su número (las de siempre, #cli-filtros): el desplegable del fácil sobra. */
+:root[data-piel="xen"] #fx-cli-herr .fx-filtro{display:none}
+:root[data-piel="xen"] .cli-pestanas{display:block;padding:12px 28px 0}
+:root[data-piel="xen"] #cli-filtros{gap:8px}
+:root[data-piel="xen"] #cli-filtros button{display:inline-flex;align-items:center;min-height:34px;padding:0 14px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-pill);background:var(--fx-panel);color:var(--fx-t1);font-size:13.5px;font-weight:600;box-shadow:none}
+:root[data-piel="xen"] #cli-filtros button:hover{background:var(--fx-panel-2);border-color:var(--fx-t4)}
+:root[data-piel="xen"] #cli-filtros button.on{background:var(--fx-suave);border-color:var(--fx-suave-borde);color:var(--fx-suave-t)}
+:root[data-piel="xen"] #cli-filtros button .cuenta{margin-left:8px;font-size:12px;font-weight:600;color:var(--fx-t3)}
+:root[data-piel="xen"] #cli-filtros button.on .cuenta{color:var(--fx-suave-t)}
+:root[data-piel="xen"] #view-clientes .pad{padding:8px 28px 28px}
+/* La tabla: filas separadas 6 px, cada una una tarjeta blanca sobre la bruma. */
+:root[data-piel="xen"] .cli-tabla{border-collapse:separate;border-spacing:0 6px;background:none;border:0;border-radius:0;overflow:visible}
+:root[data-piel="xen"] .cli-tabla th{padding:4px 16px 0;font-size:12px;font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--fx-t3);background:none;border:0;white-space:nowrap}
+:root[data-piel="xen"] .cli-tabla th .orden{color:var(--fx-t2);font-weight:600}
+:root[data-piel="xen"] .cli-tabla th .orden:hover,:root[data-piel="xen"] .cli-tabla th .orden.on{color:var(--fx-acento-t)}
+:root[data-piel="xen"] .cli-tabla tbody td{padding:14px 16px;background:var(--fx-panel);border-top:1px solid var(--fx-borde);border-bottom:1px solid var(--fx-borde);font-size:14px;vertical-align:middle;transition:background var(--fx-t-rapido),border-color var(--fx-t-rapido)}
+:root[data-piel="xen"] .cli-tabla tbody td:first-child{border-left:1px solid var(--fx-borde);border-radius:var(--fx-r-lg) 0 0 var(--fx-r-lg)}
+:root[data-piel="xen"] .cli-tabla tbody td:last-child{border-right:1px solid var(--fx-borde);border-radius:0 var(--fx-r-lg) var(--fx-r-lg) 0}
+:root[data-piel="xen"] .cli-tabla tbody tr{cursor:pointer}
+:root[data-piel="xen"] .cli-tabla tbody tr:hover td{background:var(--fx-panel-2);border-color:var(--fx-t4)}
+/* Con el teclado, la fila entera dice dónde está el foco (el botón del nombre lleva su propio anillo). */
+:root[data-piel="xen"] .cli-tabla tbody tr:focus-within td{border-color:var(--fx-acento)}
+:root[data-piel="xen"] .cli-tabla tfoot td{padding:8px 16px;border:0;background:none;color:var(--fx-t2);font-size:13px}
+:root[data-piel="xen"] .cli-tabla tfoot b{color:var(--fx-t0)}
+:root[data-piel="xen"] .cli-tabla .dato{font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .cli-tabla .quien{display:block;max-width:100%;font-size:14.5px;font-weight:700;color:var(--fx-t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 :root[data-piel="xen"] .cli-tabla .quien:hover{color:var(--fx-acento-t);text-decoration:none}
-:root[data-piel="xen"] .cli-tabla .dato{font-size:12px;color:var(--fx-t2)}
-@media (max-width:900px){.fx-herr{padding:20px 20px 0}:root[data-piel="xen"] #view-clientes .pad{padding:12px 20px 20px}:root[data-piel="xen"] .cli-tabla{background:none;border:0;border-radius:0;overflow:visible}:root[data-piel="xen"] .cli-tabla tr{border-radius:var(--fx-r-xl);border-color:var(--fx-borde);box-shadow:var(--fx-sombra-xs)}}
+:root[data-piel="xen"] .cli-tabla .num{font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .cli-tabla .fijo{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .cli-resumen{color:var(--fx-t2);font-size:13px;margin:0 0 2px}
+@media (max-width:900px){.fx-herr{padding:0 20px}:root[data-piel="xen"] .cli-pestanas{padding:12px 20px 0}:root[data-piel="xen"] #view-clientes .pad{padding:8px 20px 20px}}
 
-/* ---------- La ficha completa: una página, como la «Cliente 360» de Nexora ---------- */
-:root[data-piel="xen"] dialog.perfil.ficha{position:fixed;inset:64px 0 0 256px;width:auto;height:auto;max-width:none;max-height:none;margin:0;border:0;border-radius:0;background:var(--fx-fondo);box-shadow:none}
+/* ---------- La ficha completa: una página con la cabecera de un trato de SendPulse ---------- */
+:root[data-piel="xen"] dialog.perfil.ficha{position:fixed;inset:64px 0 0 248px;width:auto;height:auto;max-width:none;max-height:none;margin:0;border:0;border-radius:0;background:var(--fx-fondo);box-shadow:none}
 :root[data-piel="xen"] dialog.perfil.ficha::backdrop{background:transparent}
-:root[data-piel="xen"] .ficha .perfil-cab{padding:20px 28px;gap:16px;background:var(--fx-panel);border-bottom:1px solid var(--fx-borde)}
-:root[data-piel="xen"] .ficha .perfil-cab .ficha-ini{width:56px;height:56px;flex:0 0 56px;font-size:16px;font-weight:600;background:var(--fx-suave);color:var(--fx-suave-t)}
-:root[data-piel="xen"] .ficha .perfil-cab b#pf-nombre{font-size:24px;line-height:1.25;font-weight:600;letter-spacing:-.025em;color:var(--fx-t0)}
-:root[data-piel="xen"] .ficha .perfil-cab #pf-sub{font-size:14px;color:var(--fx-t2)}
-:root[data-piel="xen"] .ficha .perfil-cab #pf-chat{background:var(--fx-acento);border-color:var(--fx-acento);color:var(--fx-sobre-acento)}
-:root[data-piel="xen"] .ficha .perfil-cab #pf-chat:hover{background:var(--fx-acento-2)}
+:root[data-piel="xen"] .ficha .perfil-cab{align-items:flex-start;padding:24px 28px 20px;gap:16px;background:var(--fx-panel);border-bottom:1px solid var(--fx-borde)}
+:root[data-piel="xen"] .ficha .perfil-cab .ficha-ini{width:64px;height:64px;flex:0 0 64px;border-radius:999px;font-size:20px;font-weight:700}
+:root[data-piel="xen"] .ficha .perfil-cab .ficha-titulo{flex:1 1 320px;min-width:0}
+:root[data-piel="xen"] .ficha .perfil-cab b#pf-nombre{font-size:26px;line-height:1.2;font-weight:700;letter-spacing:-.02em;color:var(--fx-t0);overflow-wrap:anywhere}
+:root[data-piel="xen"] .ficha .perfil-cab #pf-sub{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:4px;font-size:13.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .ficha .perfil-cab>.grow{display:none}
+:root[data-piel="xen"] .ficha .perfil-cab .btn{min-height:36px}
+:root[data-piel="xen"] .ficha .perfil-cab #pf-chat .ic{width:16px;height:16px;flex:0 0 16px}
 :root[data-piel="xen"] .ficha .perfil-cuerpo{overflow:auto;padding:0}
-:root[data-piel="xen"] .ficha-cols{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px;padding:28px;height:auto;align-items:start}
-:root[data-piel="xen"] .ficha-main,:root[data-piel="xen"] .ficha-lado{background:var(--fx-panel);border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);padding:20px;overflow:visible;box-shadow:var(--fx-sombra-sm)}
-:root[data-piel="xen"] .ficha-lado{border-left:1px solid var(--fx-borde)}
-:root[data-piel="xen"] .ficha-lado h4{font-size:12px;font-weight:500;letter-spacing:.025em;color:var(--fx-t2)}
-:root[data-piel="xen"] .ficha .ficha-quiere{margin:0;border:1px solid var(--fx-suave-borde);border-radius:var(--fx-r-lg);background:color-mix(in srgb,var(--fx-suave) 60%,transparent);padding:12px;font-size:14px;line-height:22px;color:#172554}
-:root[data-piel="xen"][data-theme=dark] .ficha .ficha-quiere{color:var(--fx-suave-t)}
-:root[data-piel="xen"] .ficha-tabs button.on{color:var(--fx-acento-t);border-color:var(--fx-acento)}
-@media (max-width:900px){:root[data-piel="xen"] dialog.perfil.ficha{inset:0}:root[data-piel="xen"] .ficha .perfil-cab{padding:16px 20px}:root[data-piel="xen"] .ficha-cols{grid-template-columns:1fr;padding:20px}}
+:root[data-piel="xen"] .ficha-cols{grid-template-columns:minmax(0,1fr) 360px;gap:20px;padding:24px 28px 28px;height:auto;align-items:start}
+:root[data-piel="xen"] .ficha-main,:root[data-piel="xen"] .ficha-lado{background:var(--fx-panel);border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);overflow:visible;box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] .ficha-main{padding:20px 24px 24px;gap:16px}
+:root[data-piel="xen"] .ficha-lado{padding:20px 22px 22px}
+:root[data-piel="xen"] .ficha-lado h4{margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fx-t3)}
+:root[data-piel="xen"] .ficha-lado h4:not(:first-child){margin-top:20px;padding-top:18px;border-top:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .ficha-lado .det{grid-template-columns:minmax(104px,auto) minmax(0,1fr);gap:12px 16px;font-size:14px;align-items:baseline}
+:root[data-piel="xen"] .ficha-lado .det dt{color:var(--fx-t2);white-space:normal}
+:root[data-piel="xen"] .ficha-lado .det dd{color:var(--fx-t0);font-weight:500}
+:root[data-piel="xen"] .ficha-lado .det a{color:var(--fx-acento-t);font-weight:600;text-decoration:none}
+:root[data-piel="xen"] .ficha-lado .det a:hover{text-decoration:underline}
+:root[data-piel="xen"] .ficha .ficha-quiere{margin:6px 0 0;padding:0;border:0;background:none;font-size:14.5px;line-height:1.55;color:var(--fx-t1)}
+:root[data-piel="xen"] .ficha-tabs{gap:4px;border-bottom:1px solid var(--fx-borde)}
+:root[data-piel="xen"] .ficha-tabs button{padding:10px 12px;border-bottom:2px solid transparent;border-radius:0;font-weight:600;color:var(--fx-t2)}
+:root[data-piel="xen"] .ficha-tabs button:hover{color:var(--fx-t0)}
+:root[data-piel="xen"] .ficha-tabs button.on{color:var(--fx-t0);border-bottom-color:var(--fx-acento)}
+:root[data-piel="xen"] .ficha-tabs .cuenta{min-width:20px;padding:0 6px;border-radius:var(--fx-r-pill);background:var(--fx-hover);font-size:11.5px;font-weight:700;color:var(--fx-t2);text-align:center}
+:root[data-piel="xen"] .ficha-tabs button.on .cuenta{background:var(--fx-suave);color:var(--fx-suave-t)}
+:root[data-piel="xen"] .ficha .corregir{margin-top:20px;padding-top:16px;border-top:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .ficha .corregir summary{font-size:13.5px;font-weight:700;color:var(--fx-acento-t)}
+@media (max-width:900px){:root[data-piel="xen"] dialog.perfil.ficha{inset:0}:root[data-piel="xen"] .ficha .perfil-cab{padding:16px 20px;gap:12px}:root[data-piel="xen"] .ficha .perfil-cab .ficha-ini{width:48px;height:48px;flex-basis:48px;font-size:16px}:root[data-piel="xen"] .ficha .perfil-cab b#pf-nombre{font-size:22px}:root[data-piel="xen"] .ficha-cols{grid-template-columns:minmax(0,1fr);padding:16px}:root[data-piel="xen"] .ficha-main{padding:16px}:root[data-piel="xen"] .ficha-lado{padding:16px}}
 
 /* ---------- lo de todas las pantallas de datos: márgenes de Nexora, tablas en tarjeta, cifras en tarjetas ---------- */
 :root[data-piel="xen"] .view .pad{padding:28px;gap:20px}
@@ -1993,42 +2036,99 @@ dialog.perdida input{width:100%}
 :root[data-piel="xen"] .tabs button.on{background:var(--fx-acento);border-color:var(--fx-acento);color:var(--fx-sobre-acento)}
 :root[data-piel="xen"] #ven-perdidas .panel{padding:20px}
 
-/* ---------- Citas: los controles en su tarjeta y la semana en otra ---------- */
-.fx-cal-herr{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:28px 28px 0;padding:12px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs)}
+/* ---------- Citas: los controles en su tarjeta, la semana en otra, y cada cita en índigo (su color de dato) ---------- */
+.fx-cal-herr{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:0 28px;padding:10px 12px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs)}
 .fx-cal-izq,.fx-cal-der{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 :root[data-piel="xen"] .fx-cal-izq .btn{min-height:36px;min-width:36px;padding:0 10px}
-:root[data-piel="xen"] #cal-label{font-size:14px;font-weight:600;color:var(--fx-t1)}
-:root[data-piel="xen"] #cal-seg{display:flex;gap:6px;padding:0;border:0;background:none;box-shadow:none}
-:root[data-piel="xen"] .cal{padding:20px 28px 28px;gap:20px;grid-template-columns:minmax(0,1fr) 320px}
+:root[data-piel="xen"] #cal-label{font-size:15px;font-weight:700;color:var(--fx-t0);margin-left:4px}
+:root[data-piel="xen"] #cal-seg{display:flex;gap:2px;padding:3px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-md);background:var(--fx-panel-2);box-shadow:none}
+:root[data-piel="xen"] #cal-seg button{min-height:32px;border:0;border-radius:8px;background:none;box-shadow:none;color:var(--fx-t2);font-weight:600}
+:root[data-piel="xen"] #cal-seg button:hover{background:var(--fx-panel);color:var(--fx-t0)}
+:root[data-piel="xen"] #cal-seg button.on{background:var(--fx-panel);color:var(--fx-t0);box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] .cal{padding:16px 28px 28px;gap:20px;grid-template-columns:minmax(0,1fr) 320px}
 :root[data-piel="xen"] .grid-wrap{border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs)}
 :root[data-piel="xen"] .cal-head{background:var(--fx-panel);border-bottom:1px solid var(--fx-borde)}
 :root[data-piel="xen"] .cal-head .d{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--fx-t2);text-transform:none}
-:root[data-piel="xen"] .cal-head .d b{font-size:16px;font-weight:600}
+:root[data-piel="xen"] .cal-head .d b{font-size:16px;font-weight:700;color:var(--fx-t0)}
 :root[data-piel="xen"] .cal-head .d.today b{background:var(--fx-acento);color:var(--fx-sobre-acento)}
-:root[data-piel="xen"] .cal-ev,:root[data-piel="xen"] .cal-ev.completada,:root[data-piel="xen"] .cal-ev.no_asistio{background:var(--fx-suave);border:0;border-radius:6px;box-shadow:none;color:#1e3a8a;padding:4px 6px}
+:root[data-piel="xen"] .cal-col.today{background-color:color-mix(in srgb,var(--fx-acento) 5%,transparent)}
+:root[data-piel="xen"] .cal-ev,:root[data-piel="xen"] .cal-ev.completada,:root[data-piel="xen"] .cal-ev.no_asistio{--tag:var(--fx-indigo);background:var(--fx-indigo-s);color:var(--fx-indigo-t);border:0;border-left:3px solid var(--tag);border-radius:8px;box-shadow:none;padding:4px 6px 4px 8px}
 :root[data-piel="xen"] .cal-ev::before{display:none}
 :root[data-piel="xen"] .cal-ev:hover{transform:none;box-shadow:var(--fx-sombra-sm)}
-:root[data-piel="xen"] .cal-ev b{font-weight:600}
-:root[data-piel="xen"] .cal-ev span{color:var(--fx-acento-t);font-size:11px}
-:root[data-piel="xen"] .cal-ev.completada{background:var(--fx-verde-s);color:var(--fx-verde-t)}
-:root[data-piel="xen"] .cal-ev.no_asistio{background:var(--fx-rojo-s);color:var(--fx-rojo-t)}
-:root[data-piel="xen"][data-theme=dark] .cal-ev{color:var(--fx-suave-t)}
-:root[data-piel="xen"] .cal>.panel{padding:20px;gap:10px;align-self:start}
-:root[data-piel="xen"] .cal>.panel>b{font-size:16px;font-weight:600}
-@media (max-width:900px){.fx-cal-herr{margin:20px 20px 0}.fx-cal-der{flex:1 1 100%}:root[data-piel="xen"] #cal-seg{flex-wrap:nowrap;width:100%;display:flex}:root[data-piel="xen"] #cal-seg button{flex:1 1 0;min-width:0}:root[data-piel="xen"] .cal{padding:16px 20px 20px;grid-template-columns:1fr}}
+:root[data-piel="xen"] .cal-ev b{font-weight:700}
+:root[data-piel="xen"] .cal-ev span{color:inherit;font-size:11px}
+:root[data-piel="xen"] .cal-ev.completada{--tag:var(--fx-verde);background:var(--fx-verde-s);color:var(--fx-verde-t)}
+:root[data-piel="xen"] .cal-ev.no_asistio{--tag:var(--fx-rojo);background:var(--fx-rojo-s);color:var(--fx-rojo-t)}
+/* Cancelada: plana, punteada y tachada, pero con su texto (quitarle todo el tacto se lee como roto). */
+:root[data-piel="xen"] .cal-ev.cancelada{background:var(--fx-panel);color:var(--fx-t3);border:1px dashed var(--fx-t4);border-left-width:1px;text-decoration:line-through}
+:root[data-piel="xen"] .cal-pop{background:var(--fx-panel);border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);box-shadow:var(--fx-sombra-pop)}
+:root[data-piel="xen"] .mes .dia{border-color:var(--fx-borde);border-radius:var(--fx-r-md);background:var(--fx-panel)}
+/* 🪤 Siete columnas iguales: con 1fr a secas, el día con una cita se ensanchaba y empujaba a los demás. */
+:root[data-piel="xen"] .mes,:root[data-piel="xen"] .mes-cab{grid-template-columns:repeat(7,minmax(0,1fr))}
+/* Los días de otro mes y los cerrados se distinguen (la regla de arriba los igualaba a todos en blanco). */
+:root[data-piel="xen"] .mes .dia.otro{background:var(--fx-panel-2);border-color:transparent}
+:root[data-piel="xen"] .mes .dia.otro .n{color:var(--fx-t3)}
+:root[data-piel="xen"] .mes .dia.cerrado{background:repeating-linear-gradient(45deg,var(--fx-panel),var(--fx-panel) 5px,var(--fx-hover) 5px,var(--fx-hover) 10px)}
+:root[data-piel="xen"] .mes .cita{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] .mes .dia.hoy{border-color:var(--fx-acento);box-shadow:0 0 0 1px var(--fx-acento)}
+:root[data-piel="xen"] .mes .dia.hoy .n{color:var(--fx-acento-t)}
+:root[data-piel="xen"] .mes .cita{background:var(--fx-indigo-s);color:var(--fx-indigo-t);font-weight:600}
+:root[data-piel="xen"] .mes .cita:hover{background:color-mix(in srgb,var(--fx-indigo) 22%,var(--fx-indigo-s))}
+:root[data-piel="xen"] .mes .cita.completada{background:var(--fx-verde-s);color:var(--fx-verde-t)}
+:root[data-piel="xen"] .mes .cita.no_asistio{background:var(--fx-rojo-s);color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .mes .cita.cancelada{background:var(--fx-panel-2);color:var(--fx-t3)}
+:root[data-piel="xen"] #cal-list .day h3{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fx-t3)}
+:root[data-piel="xen"] #cal-list .appt{border:1px solid var(--fx-borde);border-left:3px solid var(--fx-indigo);border-radius:var(--fx-r-lg);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] #cal-list .appt.completada{border-left-color:var(--fx-verde)}
+:root[data-piel="xen"] #cal-list .appt.no_asistio{border-left-color:var(--fx-rojo)}
+:root[data-piel="xen"] #cal-list .appt.cancelada{border-left:1px dashed var(--fx-t4)}
+:root[data-piel="xen"] #cal-list .appt .t{color:var(--fx-indigo-t)}
+:root[data-piel="xen"] .cal>.panel{padding:20px;gap:12px;align-self:start}
+:root[data-piel="xen"] .cal>.panel>b{font-size:16px;font-weight:700;color:var(--fx-t0)}
+@media (max-width:900px){.fx-cal-herr{margin:0 20px}.fx-cal-der{flex:1 1 100%}:root[data-piel="xen"] #cal-seg{flex-wrap:nowrap;width:100%;display:flex}:root[data-piel="xen"] #cal-seg button{flex:1 1 0;min-width:0}:root[data-piel="xen"] .cal{padding:16px 20px 20px;grid-template-columns:1fr}}
 
-/* ---------- Pipeline: columnas grises y tarjetas blancas ---------- */
-:root[data-piel="xen"] .board{padding:28px;gap:12px;scroll-padding-inline:28px}
-:root[data-piel="xen"] .col{width:288px;flex:0 0 288px;background:color-mix(in srgb,var(--fx-hover) 80%,transparent);border:0;border-radius:var(--fx-r-xl);box-shadow:none;padding:12px}
-:root[data-piel="xen"] .col h3{padding:0 0 12px;border:0;font-size:14px;font-weight:600;color:var(--fx-t1);justify-content:flex-start;gap:6px}
-:root[data-piel="xen"] .col h3 .cuenta{background:none;color:var(--fx-t3);min-width:0;height:auto;padding:0;margin-left:0;font-size:14px;font-weight:600}
+/* ---------- Tratos: cada columna con el color de su etapa (franja arriba, punto Y nombre), tarjetas blancas ---------- */
+:root[data-piel="xen"] #view-pipeline .pip-cifras{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:0 28px}
+:root[data-piel="xen"] #view-pipeline .pip-cifras .pc{padding:14px 16px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs);min-width:0}
+:root[data-piel="xen"] #view-pipeline .pip-cifras .t{font-size:13px;font-weight:600;color:var(--fx-t2)}
+:root[data-piel="xen"] #view-pipeline .pip-cifras .n{font-family:var(--fx-display);font-size:22px;font-weight:700;color:var(--fx-t0)}
+:root[data-piel="xen"] #view-pipeline .pip-cifras .n.flojo{font-family:var(--fx-letra);font-size:15px;color:var(--fx-t2)}
+:root[data-piel="xen"] #view-pipeline .pip-cifras .p{color:var(--fx-t2)}
+:root[data-piel="xen"] #view-pipeline .pc-barra{height:6px;margin-top:4px}
+:root[data-piel="xen"] .pc-barra i[data-rol=activo]{--tone:var(--fx-cielo)}
+:root[data-piel="xen"] .pc-barra i[data-rol=interes]{--tone:var(--fx-ambar)}
+:root[data-piel="xen"] .pc-barra i[data-rol=cita]{--tone:var(--fx-indigo)}
+:root[data-piel="xen"] .board{padding:20px 28px 28px;gap:14px;scroll-padding-inline:28px}
+:root[data-piel="xen"] .col{--tone:var(--fx-t3);--tone-s:var(--fx-hover);--tone-t:var(--fx-t2);width:296px;flex:0 0 296px;background:var(--fx-panel-2);border:1px solid var(--fx-borde-2);border-top:3px solid var(--tone);border-radius:var(--fx-r-xl);box-shadow:none;padding:12px 10px 10px}
+:root[data-piel="xen"] .col[data-rol=activo]{--tone:var(--fx-cielo);--tone-s:var(--fx-cielo-s);--tone-t:var(--fx-cielo-t)}
+:root[data-piel="xen"] .col[data-rol=interes]{--tone:var(--fx-ambar);--tone-s:var(--fx-ambar-s);--tone-t:var(--fx-ambar-t)}
+:root[data-piel="xen"] .col[data-rol=cita]{--tone:var(--fx-indigo);--tone-s:var(--fx-indigo-s);--tone-t:var(--fx-indigo-t)}
+:root[data-piel="xen"] .col[data-rol=ganado]{--tone:var(--fx-verde);--tone-s:var(--fx-verde-s);--tone-t:var(--fx-verde-t)}
+:root[data-piel="xen"] .col[data-rol=perdido]{--tone:var(--fx-rojo);--tone-s:var(--fx-rojo-s);--tone-t:var(--fx-rojo-t)}
+:root[data-piel="xen"] .board>.col.vacia{flex:0 0 200px;min-width:200px;width:200px}
+:root[data-piel="xen"] .col h3{display:flex;align-items:center;gap:8px;padding:0 4px 12px;border:0;font-size:14px;font-weight:700;color:var(--fx-t0);justify-content:flex-start}
+:root[data-piel="xen"] .col h3 .nom::before{content:"";display:inline-block;width:8px;height:8px;margin-right:8px;border-radius:50%;background:var(--tone);vertical-align:1px}
+:root[data-piel="xen"] .col h3 .cuenta{display:inline-grid;place-items:center;min-width:22px;height:20px;padding:0 7px;margin:0;border:0;border-radius:var(--fx-r-pill);background:var(--tone-s);color:var(--tone-t);font-size:12px;font-weight:700}
+:root[data-piel="xen"] .col h3 .suma{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--fx-t2)}
 :root[data-piel="xen"] .col .cards{background:none;padding:0;gap:8px}
-:root[data-piel="xen"] .card{border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel);box-shadow:var(--fx-sombra-sm)}
+:root[data-piel="xen"] .col.vacia .cards::after{content:"Sin tratos en esta etapa";display:block;padding:20px 10px;border:1px dashed var(--fx-t4);border-radius:var(--fx-r-lg);font-size:12.5px;color:var(--fx-t3);text-align:center}
+:root[data-piel="xen"] .col.over{background:color-mix(in srgb,var(--tone) 8%,var(--fx-panel-2));border-color:var(--tone);outline:none}
+:root[data-piel="xen"] .col.over .cards{box-shadow:none;background:none}
+:root[data-piel="xen"] .card{border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs);transition:border-color var(--fx-t-rapido),box-shadow var(--fx-t-rapido),transform var(--fx-t-rapido)}
+:root[data-piel="xen"] .card:hover{border-color:var(--fx-t4);box-shadow:var(--fx-sombra-sm);transform:translateY(-1px)}
 :root[data-piel="xen"] .card::before{display:none}
 :root[data-piel="xen"] .card .body{background:var(--fx-panel);padding:12px}
-:root[data-piel="xen"] .card .card-open{font-size:14px;font-weight:600}
-:root[data-piel="xen"] .card-move{border-radius:6px;border:1px solid var(--fx-borde);color:var(--fx-t1);min-height:32px;font-size:12px}
-@media (max-width:900px){:root[data-piel="xen"] .board{padding:20px}}
+:root[data-piel="xen"] .card .t{gap:8px;justify-content:flex-start}
+:root[data-piel="xen"] .card .t .grow{flex:1 1 auto;min-width:0}
+:root[data-piel="xen"] .card .card-open{font-size:14px;font-weight:700;color:var(--fx-t0)}
+:root[data-piel="xen"] .card .t .cuando{font-size:11.5px;color:var(--fx-t3)}
+:root[data-piel="xen"] .card .s{font-size:12.5px;line-height:1.5;color:var(--fx-t2);margin-top:6px}
+:root[data-piel="xen"] .card .paso.t-cita,:root[data-piel="xen"] .cli-tabla .paso.t-cita,:root[data-piel="xen"] .ficha .paso.t-cita{color:var(--fx-indigo-t)}
+:root[data-piel="xen"] .card .paso.urgente,:root[data-piel="xen"] .cli-tabla .paso.urgente,:root[data-piel="xen"] .ficha .paso.urgente{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .card-move{border-radius:8px;border:1px solid var(--fx-borde);color:var(--fx-t1);background:var(--fx-panel);min-height:32px;font-size:12px}
+:root[data-piel="xen"] .card.dragging{background:none;border:1px dashed var(--tone);box-shadow:none;transform:none}
+@media (prefers-reduced-motion:reduce){:root[data-piel="xen"] .card,:root[data-piel="xen"] .card:hover{transition:none;transform:none}}
+@media (max-width:900px){:root[data-piel="xen"] .board{padding:16px 20px 20px}:root[data-piel="xen"] #view-pipeline .pip-cifras{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 20px}:root[data-piel="xen"] .board>.col,:root[data-piel="xen"] .board>.col.vacia{flex:0 0 82vw;min-width:82vw;width:82vw}}
 :root[data-piel="xen"] .perfil-cab .grow{flex:1}
 :root[data-piel="xen"] dialog.perfil{border-radius:var(--fx-r-xl);box-shadow:var(--fx-sombra-pop)}
 :root[data-piel="xen"] dialog.perfil::backdrop{background:rgb(10 34 39/.45)}
@@ -2123,18 +2223,129 @@ dialog.perdida input{width:100%}
    verde «ganado»). Iniciales medidas: ≥ 6.05:1 en claro y ≥ 7.9:1 en oscuro. Y el color de cada canal en su
    insignia (dibujo blanco encima: WhatsApp 4.3:1, sitio 7.3:1; para un ícono basta 3:1). */
 :root[data-piel="xen"]{
-  --fx-av-1-s:#dcebe7;--fx-av-1-t:#24544c;--fx-av-2-s:#f1e6d3;--fx-av-2-t:#6b4a1c;--fx-av-3-s:#f6dfe8;--fx-av-3-t:#8a2c55;
-  --fx-av-4-s:#e5ecd2;--fx-av-4-t:#4b5a17;--fx-av-5-s:#dde6ef;--fx-av-5-t:#2f4a66;--fx-av-6-s:#f3e0d8;--fx-av-6-t:#8a3b1c;
+  /* Los seis tonos de avatar (--fx-av-*) son los de Contactos, más abajo: uno solo para todo XENCRM. */
   --fx-canal-wa:#128c4a;--fx-canal-web:#3f5a66;--fx-canal-otro:#5c7177;
-}
-:root[data-piel="xen"][data-theme=dark]{
-  --fx-av-1-s:#1d3a35;--fx-av-1-t:#a8dccf;--fx-av-2-s:#3a3020;--fx-av-2-t:#e9cf9f;--fx-av-3-s:#3d2230;--fx-av-3-t:#f0b3cc;
-  --fx-av-4-s:#2f3618;--fx-av-4-t:#cbdc95;--fx-av-5-s:#1e2c3b;--fx-av-5-t:#a9c4e2;--fx-av-6-s:#3d2519;--fx-av-6-t:#f1b99c;
 }
 @media (prefers-reduced-motion:reduce){:root[data-piel="xen"] #rows .row,:root[data-piel="xen"] .fx-asig button{transition:none}}
 /* (fin de XEN · Bandeja omnicanal) */
 
 /* ---------- XEN · Contactos, ficha y tratos (complementos nuevos del agente de Contactos) ---------- */
+/* Los avatares: seis tonos propios, apagados, con su tinta medida (≥ 6.5:1 en claro y ≥ 8.6:1 en oscuro). No son los
+   colores de dato: un avatar decora, no dice nada (ver tonoAvatar en admin.js). Las etiquetas de «Datos» usan los
+   mismos seis, por campo. */
+:root[data-piel="xen"]{--fx-av-1-s:#d5efe8;--fx-av-1-t:#0a5249;--fx-av-2-s:#dbeaf7;--fx-av-2-t:#0b4f7a;--fx-av-3-s:#e3e5fb;--fx-av-3-t:#3730a3;
+  --fx-av-4-s:#f8e9cc;--fx-av-4-t:#7a4206;--fx-av-5-s:#e3eed2;--fx-av-5-t:#3f5a12;--fx-av-6-s:#f7e1e6;--fx-av-6-t:#8c1d3b}
+:root[data-piel="xen"][data-theme=dark]{--fx-av-1-s:#133a35;--fx-av-1-t:#9ee6d6;--fx-av-2-s:#13304a;--fx-av-2-t:#a8d4f5;--fx-av-3-s:#232650;--fx-av-3-t:#c3c8ff;
+  --fx-av-4-s:#3d2e12;--fx-av-4-t:#f6d08a;--fx-av-5-s:#26341a;--fx-av-5-t:#c6e39a;--fx-av-6-s:#3e1a24;--fx-av-6-t:#f6b3c4}
+.fx-ct-av{display:inline-grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:.02em;background:var(--fx-av-1-s);color:var(--fx-av-1-t);user-select:none}
+.fx-ct-av.sm{width:24px;height:24px;flex:0 0 24px;font-size:10px}
+.fx-ct-av.vacio{background:var(--fx-hover);color:var(--fx-t3)}
+.fx-ct-av .ic{width:14px;height:14px}
+.fx-ct-av.a2,.fx-ct-tag.a2{background:var(--fx-av-2-s);color:var(--fx-av-2-t)}
+.fx-ct-av.a3,.fx-ct-tag.a3{background:var(--fx-av-3-s);color:var(--fx-av-3-t)}
+.fx-ct-av.a4,.fx-ct-tag.a4{background:var(--fx-av-4-s);color:var(--fx-av-4-t)}
+.fx-ct-av.a5,.fx-ct-tag.a5{background:var(--fx-av-5-s);color:var(--fx-av-5-t)}
+.fx-ct-av.a6,.fx-ct-tag.a6{background:var(--fx-av-6-s);color:var(--fx-av-6-t)}
+/* La celda del contacto: avatar, nombre y cómo ubicarlo. */
+.fx-ct-persona{display:flex;align-items:center;gap:12px;min-width:0}
+.fx-ct-nom{min-width:0;flex:1}
+.fx-ct-linea1{display:flex;align-items:center;gap:6px;min-width:0}
+:root[data-piel="xen"] .fx-ct-quien .dato{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;margin-top:2px}
+.fx-ct-canal{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.fx-ct-canal i{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:var(--fx-t3)}
+.fx-ct-canal.c-whatsapp i,.fx-ct-canal.c-meta i{background:var(--fx-verde)}
+.fx-ct-canal.c-web i{background:var(--fx-cielo)}
+/* El último trato: la etapa, lo que toca hacer (abre el chat) y lo que busca. */
+.fx-ct-trato{min-width:200px;max-width:320px}
+.fx-ct-trato1{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.fx-ct-paso{margin-top:6px;min-width:0}
+:root[data-piel="xen"] .cli-tabla th .orden.fx-ct-ord2{margin-left:6px;font-weight:500}
+.fx-ct-ir{display:inline;max-width:100%;padding:0;border:0;background:none;font:inherit;text-align:left;cursor:pointer;border-radius:4px}
+.fx-ct-ir .paso{text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:3px}
+.fx-ct-ir:hover .paso{text-decoration-color:currentColor}
+:root[data-piel="xen"] .fx-ct-trato .quiere{max-width:34ch;margin-top:2px;font-size:12.5px;color:var(--fx-t2)}
+/* Los datos como etiquetas pastel cortas: dos y «+n». */
+.fx-ct-datos{max-width:240px}
+.fx-ct-tags{display:flex;flex-wrap:nowrap;gap:6px;min-width:0}
+.fx-ct-tag{display:inline-block;flex:0 1 auto;min-width:0;max-width:17ch;padding:3px 9px;border-radius:8px;font-size:12px;font-weight:600;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--fx-av-1-s);color:var(--fx-av-1-t)}
+.fx-ct-tag.mas{flex:0 0 auto;background:var(--fx-hover);color:var(--fx-t2)}
+.fx-ct-sin{color:var(--fx-t3)}
+/* 🪤 `.ic` es gris de fábrica (los íconos del menú): dentro de un botón tiene que ser del color de su letra, o sobre
+   el acento el dibujo desaparece. */
+:root[data-piel="xen"] #view-clientes>.topbar .btn .ic,:root[data-piel="xen"] .ficha .perfil-cab .btn .ic,:root[data-piel="xen"] .fx-ct-vacio .btn .ic{color:currentColor}
+/* Los anchos: el nombre y el asignado no se parten; el trato y los datos ceden. */
+:root[data-piel="xen"] .cli-tabla td.fx-ct-quien{min-width:230px}
+:root[data-piel="xen"] .cli-tabla td.fx-ct-asignado{white-space:nowrap;min-width:132px}
+:root[data-piel="xen"] .cli-tabla td.fx-ct-quien .dato{flex-wrap:nowrap;white-space:nowrap}
+:root[data-piel="xen"] .cli-tabla td.num.dato{white-space:nowrap}
+.fx-ct-quienes{display:inline-flex;align-items:center;gap:8px;max-width:100%;font-weight:600;color:var(--fx-t1)}
+.fx-ct-quienes .nom{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 🪤 Con un nombre de setenta letras la columna se comía la tabla y la última salía cortada: el nombre tiene tope y
+   se corta con puntos suspensivos (completo en la ficha). */
+.fx-ct-nom{max-width:300px}
+:root[data-piel="xen"] .cli-resumen.fx-ct-parcial{display:flex;align-items:center;gap:8px;margin:4px 0 6px;padding:10px 14px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-md);background:var(--fx-panel);color:var(--fx-t1);font-size:13.5px}
+/* Cargando: la forma de las filas, quieta (sin animación: no distrae y respeta el movimiento reducido). */
+.fx-ct-esq{display:flex;flex-direction:column;gap:6px;padding-top:28px}
+.fx-ct-esq-fila{display:grid;grid-template-columns:40px 1.4fr 1.4fr 1fr;align-items:center;gap:16px;padding:14px 16px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel)}
+.fx-ct-esq-fila span{display:flex;flex-direction:column;gap:8px;min-width:0}
+.fx-ct-esq-fila i{display:block;height:10px;border-radius:6px;background:var(--fx-hover)}
+.fx-ct-esq-fila i.av{width:40px;height:40px;border-radius:999px}
+/* Vacío, sin resultados o con error: qué pasa y qué hacer, con un botón. */
+.fx-ct-vacio{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:12px;padding:48px 24px;border:1px dashed var(--fx-t4);border-radius:var(--fx-r-xl);background:var(--fx-panel);text-align:center}
+.fx-ct-vacio-ic{display:grid;place-items:center;width:48px;height:48px;margin-bottom:6px;border-radius:999px;background:var(--fx-suave);color:var(--fx-acento-t)}
+.fx-ct-vacio-ic .ic{width:22px;height:22px}
+.fx-ct-vacio.error .fx-ct-vacio-ic{background:var(--fx-rojo-s);color:var(--fx-rojo-t)}
+:root[data-piel="xen"] #cli-filtros button .cuenta:empty{display:none}
+.fx-ct-vacio b{font-size:16px;color:var(--fx-t0)}
+.fx-ct-vacio p{margin:0 0 8px;max-width:52ch;font-size:14px;line-height:1.55;color:var(--fx-t2)}
+/* La cabecera de la ficha: el lápiz junto al nombre, y la etapa y el asignado como píldoras que se cambian ahí. */
+.fx-ct-nombre{display:flex;align-items:center;gap:6px;min-width:0}
+.fx-ct-lapiz{display:inline-grid;place-items:center;width:32px;height:32px;flex:0 0 32px;border:0;border-radius:8px;background:none;color:var(--fx-t3);cursor:pointer}
+.fx-ct-lapiz:hover{background:var(--fx-hover);color:var(--fx-t0)}
+.fx-ct-lapiz .ic{width:16px;height:16px}
+.fx-ct-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:14px}
+.fx-ct-etapa{--tone-s:var(--fx-cielo-s);--tone-t:var(--fx-cielo-t);position:relative;display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:var(--fx-r-pill);background:var(--tone-s);color:var(--tone-t);font-size:13.5px;font-weight:700}
+.fx-ct-etapa.stage-inicio{--tone-s:var(--fx-hover);--tone-t:var(--fx-t2)}
+.fx-ct-etapa.stage-interes{--tone-s:var(--fx-ambar-s);--tone-t:var(--fx-ambar-t)}
+.fx-ct-etapa.stage-cita{--tone-s:var(--fx-indigo-s);--tone-t:var(--fx-indigo-t)}
+.fx-ct-etapa.stage-ganado{--tone-s:var(--fx-verde-s);--tone-t:var(--fx-verde-t)}
+.fx-ct-etapa.stage-perdido{--tone-s:var(--fx-rojo-s);--tone-t:var(--fx-rojo-t)}
+.fx-ct-etapa .punto{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:currentColor}
+.fx-ct-etapa::after,.fx-ct-asig::after{content:"";width:7px;height:7px;margin-left:-14px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg);pointer-events:none}
+:root[data-piel="xen"] .fx-ct-etapa select,:root[data-piel="xen"] .fx-ct-asig select{-webkit-appearance:none;appearance:none;width:auto;min-height:0;height:32px;padding:0 22px 0 0;border:0;background:transparent;box-shadow:none;color:inherit;font:inherit;font-weight:inherit;cursor:pointer}
+:root[data-piel="xen"] .fx-ct-etapa select:focus-visible,:root[data-piel="xen"] .fx-ct-asig select:focus-visible{box-shadow:none}
+.fx-ct-etapa:focus-within,.fx-ct-asig:focus-within{box-shadow:var(--fx-anillo)}
+.fx-ct-asig{position:relative;display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px 0 12px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-pill);background:var(--fx-panel);color:var(--fx-t1);font-size:13.5px;font-weight:600}
+.fx-ct-asig-l{font-size:12px;font-weight:600;color:var(--fx-t3)}
+/* Lo que busca: lo dijo la IA, así que va con su violeta. */
+.fx-ct-busca{padding:14px 16px;border:1px solid var(--fx-ia-borde);border-radius:var(--fx-r-lg);background:var(--fx-ia-s)}
+.fx-ct-busca-t{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fx-ia-t)}
+.fx-ct-busca-t .ic{width:14px;height:14px}
+/* En el celular cada contacto es una tarjeta apilada: quién arriba, su trato y sus datos, y abajo asignado, valor y
+   cuándo, con su rótulo. Sin desborde a 390 px. */
+@media (max-width:760px){
+  :root[data-piel="xen"] .cli-tabla{border-spacing:0}
+  :root[data-piel="xen"] .cli-tabla tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;margin-bottom:8px;padding:14px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs)}
+  :root[data-piel="xen"] .cli-tabla tbody td{display:block;width:auto;padding:0;border:0!important;border-radius:0!important;background:none!important}
+  :root[data-piel="xen"] .cli-tabla tbody td.fx-ct-quien,:root[data-piel="xen"] .cli-tabla tbody td.fx-ct-trato,:root[data-piel="xen"] .cli-tabla tbody td.fx-ct-datos,:root[data-piel="xen"] .cli-tabla tbody td.fx-ct-asignado{grid-column:1/-1;max-width:none;min-width:0}
+  :root[data-piel="xen"] .cli-tabla tbody td[data-rot]::before{display:block;margin-bottom:2px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fx-t3)}
+  /* 🪤 Después del rótulo general, no antes: con la misma especificidad gana la última (trampa de diseno-tablero.md). */
+  :root[data-piel="xen"] .cli-tabla tbody td.fx-ct-quien::before{display:none}
+  /* La ficha: «Cerrar» arriba a la derecha, junto al avatar, en vez de quedar solo en una línea. */
+  :root[data-piel="xen"] .ficha .perfil-cab{position:relative}
+  :root[data-piel="xen"] .ficha .perfil-cab #pf-cerrar{position:absolute;top:16px;right:20px}
+  :root[data-piel="xen"] .cli-tabla tbody td.num{text-align:left}
+  :root[data-piel="xen"] .cli-tabla tbody tr:hover td{background:none}
+  :root[data-piel="xen"] .cli-tabla tfoot tr{padding:4px 2px}
+  .fx-ct-trato .quiere{max-width:none}
+  .fx-ct-esq-fila{grid-template-columns:40px minmax(0,1fr)}
+  .fx-ct-esq-fila span~span{display:none}
+  /* Los grupos, en una sola fila que se desliza: partidos en tres renglones empujaban la lista media pantalla. */
+  :root[data-piel="xen"] #cli-filtros{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px 2px}
+  :root[data-piel="xen"] #cli-filtros::-webkit-scrollbar{display:none}
+  :root[data-piel="xen"] #cli-filtros button{flex:0 0 auto}
+  .fx-ct-nom{max-width:none}
+}
 /* (fin de XEN · Contactos, ficha y tratos) */
 
 /* ---------- XEN · Analítica y sentimiento (agente de Analítica) ---------- */
@@ -2873,8 +3084,9 @@ dialog.perdida input{width:100%}
         <h1>Clientes</h1>
         <span class="grow"></span>
         <input type="search" id="cli-q" placeholder="Buscar por nombre, teléfono o lo que dijo…">
-        <button class="btn sm solo-completo" id="cli-csv">Bajar en Excel</button>
-        <button class="btn sm primary" id="cli-nuevo">Nuevo contacto</button>
+        <!-- XENCRM: la fila de acciones de SendPulse, debajo del título. Solo lo que existe: agregar y exportar. -->
+        <button class="btn sm solo-completo" id="cli-csv" title="Bajar la lista en un archivo que abre Excel"><i class="ic" data-ic="descargar"></i>Exportar a Excel</button>
+        <button class="btn sm primary" id="cli-nuevo"><i class="ic" data-ic="mas"></i>Agregar contacto</button>
       </div>
       <!-- Las pestañas, cada una con su número: se pintan en renderClientes(). -->
       <div class="cli-pestanas"><div class="filters" id="cli-filtros"></div></div>
@@ -2890,7 +3102,9 @@ dialog.perdida input{width:100%}
     <dialog id="dlg-perfil" class="perfil ficha" aria-labelledby="pf-nombre">
       <div class="perfil-cab">
         <span class="ficha-ini" id="pf-ini" aria-hidden="true"></span>
-        <div class="ficha-titulo"><b id="pf-nombre">…</b><div class="small muted" id="pf-sub"></div></div>
+        <!-- XENCRM: la cabecera de un trato de SendPulse. El nombre con su lápiz (abre «Corregir datos»), debajo cómo
+             llegó, y la etapa y a quién está asignado, que se cambian aquí mismo (los pinta pintarPerfil en #pf-ctl). -->
+        <div class="ficha-titulo"><div class="fx-ct-nombre"><b id="pf-nombre">…</b><button type="button" class="fx-ct-lapiz" id="pf-editar" aria-label="Corregir datos" title="Corregir datos"><i class="ic" data-ic="lapiz"></i></button></div><div class="small muted" id="pf-sub"></div><div class="fx-ct-ctl" id="pf-ctl"></div></div>
         <span class="grow"></span>
         <!-- «3 de 23»: pasar a la siguiente de la lista desde la que se abrió, sin volver a ella. -->
         <div class="ficha-nav" id="pf-nav" hidden>
@@ -2899,7 +3113,7 @@ dialog.perdida input{width:100%}
           <button class="btn sm" id="pf-sig" aria-label="Ficha siguiente">›</button>
         </div>
         <button class="btn sm" id="pf-fijar" aria-pressed="false">☆ Fijar</button>
-        <button class="btn sm" id="pf-chat">Ver conversación</button>
+        <button class="btn sm primary" id="pf-chat"><i class="ic" data-ic="burbuja"></i>Abrir chat</button>
         <button class="btn sm" id="pf-cerrar">Cerrar</button>
       </div>
       <div class="perfil-cuerpo" id="pf-cuerpo"></div>

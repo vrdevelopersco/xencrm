@@ -2133,7 +2133,8 @@
         var sede = variasSedes() && c.data && c.data.sede ? '<span class="chip">' + esc(nombreSede(c.data.sede)) + '</span>' : '';
         var texto = c.recap || c.summary || '';
         return '<div class="card" draggable="true" data-id="' + esc(c.id) + '"><div class="body">' +
-          '<div class="t"><button type="button" class="card-open" title="Abrir la conversación">' + esc(nameOf(c)) + '</button>' +
+          // XENCRM: el avatar con su color, el mismo que en Contactos y en la ficha: así se reconoce de una pantalla a otra.
+          '<div class="t">' + avatarHtml(nameOf(c), c.id, 'sm') + '<button type="button" class="card-open" title="Abrir la conversación">' + esc(nameOf(c)) + '</button>' +
             (c.unread ? '<span class="unread" title="' + c.unread + ' sin leer">' + c.unread + '</span>' : '') +
             '<span class="grow"></span><span class="cuando">' + esc(c.lastMessageAt ? rel(c.lastMessageAt) : '') + '</span></div>' +
           (texto ? '<div class="s">' + esc(texto) + '</div>' : '') +
@@ -3972,7 +3973,21 @@
 
   function loadClientes() {
     var params = cli.q ? '?q=' + encodeURIComponent(cli.q) + '&limit=500' : '?limit=500';
-    return api('/contacts' + params).then(function (list) { cli.lista = list; renderClientes(); });
+    // XENCRM: mientras llega la lista se ve su forma (esqueleto), no «Nadie por aquí»: eso decía que no había
+    // nadie cuando lo que pasaba es que todavía no se sabía. Y si falla, se dice con una salida, no se revienta.
+    cli.cargando = true; cli.error = '';
+    if (!cli.lista.length) renderClientes();
+    return api('/contacts' + params).then(function (list) {
+      cli.cargando = false;
+      if (!Array.isArray(list)) {
+        var porQue = (list && list.error) || 'sin respuesta del servidor';
+        // 🪤 Si ya había una lista a la vista, se queda: una recarga que falla (llegan varias por minuto con los
+        // eventos en vivo) no puede dejar la pantalla en blanco. Se avisa y ya.
+        if (cli.lista.length) { toast('No se pudo actualizar la lista: ' + porQue); return; }
+        cli.error = porQue; renderClientes(); return;
+      }
+      cli.lista = list; renderClientes();
+    });
   }
 
   // Las pestañas de arriba, cada una con su número. «Míos» solo existe si quien mira tiene nombre.
@@ -4001,8 +4016,10 @@
     var grupos = GRUPOS_CLI.filter(function (g) { return !g.hay || g.hay(); });
     if (!grupos.some(function (g) { return g.g === cli.grupo; })) cli.grupo = 'todos';
     var g = grupos.find(function (x) { return x.g === cli.grupo; });
+    // Mientras carga la primera vez, los grupos van sin número: «0» diría que no hay nadie, y no se sabe todavía.
+    var sinCuenta = (cli.cargando || cli.error) && !cli.lista.length;
     $('cli-filtros').innerHTML = grupos.map(function (x) {
-      var n = cli.lista.filter(x.es).length;
+      var n = sinCuenta ? '' : cli.lista.filter(x.es).length;
       return '<button data-g="' + x.g + '" class="' + (x.g === cli.grupo ? 'on' : '') + '" aria-pressed="' + (x.g === cli.grupo) + '">' + esc(x.t) + '<span class="cuenta">' + n + '</span></button>';
     }).join('');
     Array.prototype.forEach.call($('cli-filtros').querySelectorAll('button'), function (b) {
@@ -4017,45 +4034,65 @@
     var list = cli.lista.filter(g.es).sort(function (a, b) { return al * ORDEN_CLI[orden](a, b); });
     cli.ids = list.map(function (c) { return c.id; });
 
+    // Los estados que no son «hay datos»: cargando, falló, nadie en absoluto, nadie con esa búsqueda o ese grupo.
+    if (cli.error) { $('cli-tabla').innerHTML = estadoClientes('error'); enganchaEstadoClientes(); return; }
     if (!list.length) {
-      $('cli-tabla').innerHTML = (cli.q ? '<div class="cli-resumen">Buscando «' + esc(cli.q) + '»</div>' : '') + '<div class="empty">Nadie por aquí con ese filtro.</div>';
+      $('cli-tabla').innerHTML = cli.cargando ? estadoClientes('cargando') : estadoClientes(cli.q ? 'busqueda' : !cli.lista.length ? 'nadie' : 'grupo', g);
+      enganchaEstadoClientes();
       return;
     }
     var suma = 0, sinPrecio = 0;
     list.forEach(function (c) { if (c.valor) suma += c.valor; else sinPrecio++; });
     // La cabecera se ordena con un clic; el que manda lleva su flecha y `aria-sort`, que es lo que lee un lector.
-    var th = function (k, t, clase) {
+    var ordBtn = function (k, t, clase) {
       var on = orden === k;
-      return '<th class="' + (clase || '') + '"' + (on ? ' aria-sort="' + (al === 1 ? 'descending' : 'ascending') + '"' : '') + '><button class="orden' + (on ? ' on' : '') + '" data-orden="' + k + '">' + t + (on ? (al === 1 ? ' ↓' : ' ↑') : '') + '</button></th>';
+      return '<button class="orden' + (on ? ' on' : '') + (clase ? ' ' + clase : '') + '" data-orden="' + k + '">' + t + (on ? (al === 1 ? ' ↓' : ' ↑') : '') + '</button>';
     };
+    var aria = function (on) { return on ? ' aria-sort="' + (al === 1 ? 'descending' : 'ascending') + '"' : ''; };
+    var th = function (k, t, clase) { return '<th class="' + (clase || '') + '"' + aria(orden === k) + '>' + ordBtn(k, t) + '</th>'; };
+    // XENCRM (SendPulse): cada contacto es una fila-tarjeta. Quién es y cómo ubicarlo; su último trato (la etapa y
+    // lo que toca hacer); lo que contó, como etiquetas; a quién está asignado; cuánto vale y cuándo fue lo último.
+    // «La lleva» (quién contesta ahora) no tiene columna propia: va debajo de «Asignado a», que es su pariente.
+    // 🪤 La lista llega con tope (los 500 con actividad más reciente: crm/contacts.ts). Si se llenó, se dice ARRIBA:
+    // al pie, después de 500 filas, nadie lo lee y parecería que ese es todo el directorio.
+    var parcial = cli.lista.length >= 500;
     $('cli-tabla').innerHTML = (cli.q ? '<div class="cli-resumen">Buscando «' + esc(cli.q) + '»</div>' : '') +
+      (parcial ? '<div class="cli-resumen fx-ct-parcial" role="note">Se muestran los 500 contactos con actividad más reciente. Para encontrar a alguien más, búscalo por su nombre o su número.</div>' : '') +
       '<table class="cli-tabla"><thead><tr>' +
-        th('nombre', 'Quién') + '<th>Etapa</th>' + th('puntaje', 'Puntaje', 'num solo-completo') + th('valor', 'Valor', 'num') + th('paso', 'Próximo paso') + '<th>A cargo</th><th class="solo-completo">La lleva</th>' + th('vez', 'Última vez', 'num') +
+        // El puntaje ya no tiene columna (no cabía junto a lo demás): va en el último trato, y se ordena desde ahí.
+        th('nombre', 'Contacto') + '<th' + aria(orden === 'paso' || orden === 'puntaje') + '>' + ordBtn('paso', 'Último trato') + ordBtn('puntaje', '· puntaje', 'solo-completo fx-ct-ord2') + '</th>' +
+        '<th>Datos</th><th>Asignado a</th>' + th('valor', 'Valor', 'num') + th('vez', 'Última actividad', 'num') +
       '</tr></thead><tbody>' +
       list.map(function (c) {
-        var v = verdict(c);
-        return '<tr>' +
-          '<td data-rot="Quién"><button class="quien" data-id="' + esc(c.id) + '">' + esc(nameOf(c)) + '</button>' +
-            (esCaliente(c) ? ' <span class="fuego" title="Caliente: puntaje de 60 para arriba">🔥</span>' : '') +
-            (estaFijado(c.id) ? ' <span class="fijo" title="Fijado">★</span>' : '') +
-            // Sin teléfono (llegó por Instagram, por ejemplo), lo que sí se tenga para ubicarlo: su @ o su correo.
-            '<div class="dato">' + esc([c.phone || (c.data && c.data.instagram ? '@' + c.data.instagram : '') || (c.data && c.data.correo) || '', channelIcon(c.channel), variasSedes() && c.data && c.data.sede ? nombreSede(c.data.sede) : ''].filter(Boolean).join(' · ')) + '</div></td>' +
-          '<td data-rot="Etapa">' + pastillaEtapa(c.stage) + '</td>' +
-          // El puntaje nunca solo: va con su veredicto en palabras, que es la regla de siempre.
-          '<td data-rot="Puntaje" class="num solo-completo">' + (c.score == null ? '—' : c.score) + '<div class="dato">' + esc(v && v.label ? v.label : '') + '</div></td>' +
-          '<td data-rot="Valor" class="num">' + valorHtml(c) + '</td>' +
-          '<td data-rot="Próximo paso" class="proximo">' + pasoHtml(c.proximo) +
+        var l = llevaDe(c);
+        // Sin teléfono (llegó por Instagram, por ejemplo), lo que sí se tenga para ubicarlo: su @ o su correo.
+        var ubicar = c.phone || (c.data && c.data.instagram ? '@' + c.data.instagram : '') || (c.data && c.data.correo) || '';
+        return '<tr data-id="' + esc(c.id) + '">' +
+          '<td data-rot="Contacto" class="fx-ct-quien"><div class="fx-ct-persona">' + avatarHtml(nameOf(c), c.id) + '<div class="fx-ct-nom">' +
+            '<div class="fx-ct-linea1"><button class="quien" data-id="' + esc(c.id) + '">' + esc(nameOf(c)) + '</button>' +
+            (esCaliente(c) ? '<span class="fuego" title="Caliente: puntaje de 60 para arriba" aria-label="Caliente">🔥</span>' : '') +
+            (estaFijado(c.id) ? '<span class="fijo" title="Fijado" aria-label="Fijado">★</span>' : '') + '</div>' +
+            '<div class="dato">' + (ubicar ? '<span class="fx-ct-ubicar">' + esc(ubicar) + '</span>' : '') + canalHtml(c.channel) +
+              (variasSedes() && c.data && c.data.sede ? '<span>' + esc(nombreSede(c.data.sede)) + '</span>' : '') + '</div>' +
+          '</div></div></td>' +
+          // El puntaje nunca solo: con su temperatura en palabras («89 · caliente»), y solo en el completo.
+          '<td data-rot="Último trato" class="fx-ct-trato proximo"><div class="fx-ct-trato1">' + pastillaEtapa(c.stage) +
+            (c.score == null ? '' : '<span class="solo-completo">' + scoreChip(c) + '</span>') + '</div><div class="fx-ct-paso">' +
+            // El paso es un enlace al chat, como el nombre del trato en SendPulse: «Contestar» se hace allá.
+            (c.proximo && c.proximo.texto ? '<button type="button" class="fx-ct-ir" data-chat="' + esc(c.id) + '" title="Abrir el chat">' + pasoHtml(c.proximo) + '</button>' : pasoHtml(c.proximo)) + '</div>' +
             (c.summary || c.recap ? '<div class="quiere" title="' + esc(c.summary || c.recap) + '">' + esc(c.summary || c.recap) + '</div>' : '') + '</td>' +
-          '<td data-rot="A cargo">' + (c.responsable ? '<span class="lleva persona"><span class="ini" aria-hidden="true">' + esc(inicialesDe(c.responsable)) + '</span><span class="nom">' + esc(c.responsable) + '</span></span>' : '<span class="muted">—</span>') + '</td>' +
-          '<td data-rot="La lleva" class="solo-completo">' + llevaHtml(c) + '</td>' +
-          '<td data-rot="Última vez" class="num dato">' + esc(rel(c.lastMessageAt)) + '</td>' +
+          '<td data-rot="Datos" class="fx-ct-datos">' + datosHtml(c) + '</td>' +
+          '<td data-rot="Asignado a" class="fx-ct-asignado">' + (c.responsable ? '<span class="fx-ct-quienes">' + avatarHtml(c.responsable, c.responsable, 'sm') + '<span class="nom">' + esc(c.responsable) + '</span></span>' : '<span class="fx-ct-sin">Sin asignar</span>') +
+            '<div class="dato solo-completo">' + esc((c.humanMode ? 'La lleva ' : 'Responde ') + l.nombre) + '</div></td>' +
+          '<td data-rot="Valor" class="num">' + valorHtml(c) + '</td>' +
+          '<td data-rot="Última actividad" class="num dato" title="' + esc(c.lastMessageAt ? new Date(c.lastMessageAt).toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' }) : '') + '">' + esc(c.lastMessageAt ? rel(c.lastMessageAt) : '—') + '</td>' +
         '</tr>';
       }).join('') + '</tbody>' +
       // Al pie, cuántos y cuánto suman. Lo que no tiene precio se dice al lado: una suma baja por falta de precios
       // y un mes malo son dos problemas muy distintos.
-      '<tfoot><tr><td colspan="2">' + list.length + (list.length === 1 ? ' persona' : ' personas') + '</td>' +
-        '<td class="solo-completo"></td><td class="num">' + (suma ? '<span class="dato">Suma</span> <b>' + esc(plata(suma)) + '</b>' : '') + '</td>' +
-        '<td colspan="2" class="dato">' + (sinPrecio && suma ? sinPrecio + ' sin precio' : '') + '</td><td class="solo-completo"></td><td></td></tr></tfoot></table>';
+      '<tfoot><tr><td colspan="3">' + list.length + (list.length === 1 ? ' contacto' : ' contactos') + (parcial ? ' (de los 500 más recientes)' : '') + '</td>' +
+        '<td class="dato">' + (sinPrecio && suma ? sinPrecio + ' sin precio' : '') + '</td>' +
+        '<td class="num">' + (suma ? '<span class="dato">Suma</span> <b>' + esc(plata(suma)) + '</b>' : '') + '</td><td></td></tr></tfoot></table>';
     enganchaClientes();
   }
 
@@ -4083,6 +4120,14 @@
       // quién es; lo que uno quiere al buscar a alguien es verlo de un vistazo, y el chat a un botón.
       // Con la lista en el orden en que se ve, para pasar a la siguiente sin volver aquí.
       b.onclick = function () { abrirPerfil(b.dataset.id, cli.ids); };
+    });
+    // XENCRM: la fila entera es la tarjeta del contacto, como en SendPulse. Con el teclado se llega por el nombre,
+    // que es el botón; el clic en el resto de la fila es solo comodidad del ratón.
+    Array.prototype.forEach.call($('cli-tabla').querySelectorAll('tbody tr[data-id]'), function (tr) {
+      tr.onclick = function (e) { if (e.target.closest('button, a, select, input')) return; abrirPerfil(tr.dataset.id, cli.ids); };
+    });
+    Array.prototype.forEach.call($('cli-tabla').querySelectorAll('[data-chat]'), function (b) {
+      b.onclick = function () { go('inbox'); openContact(b.dataset.chat); };
     });
     Array.prototype.forEach.call($('cli-tabla').querySelectorAll('[data-orden]'), function (b) {
       b.onclick = function () {
@@ -4148,6 +4193,7 @@
     $('pf-nombre').textContent = '…';
     $('pf-sub').textContent = '';
     $('pf-ini').textContent = '';
+    $('pf-ctl').innerHTML = '';
     $('pf-nav').hidden = true;
     $('pf-cuerpo').innerHTML = '<div class="small muted">Cargando…</div>';
     if (!$('dlg-perfil').open) $('dlg-perfil').showModal();
@@ -4185,8 +4231,10 @@
   function pintarPerfil(d) {
     var c = d.contact, h = d.historia || {}, v = d.valor || {};
     $('pf-nombre').textContent = nameOf(c);
-    $('pf-ini').textContent = c.name ? inicialesDe(c.name) : '';
-    $('pf-sub').textContent = [channelIcon(c.channel), c.phone || '', h.frase || ''].filter(Boolean).join(' · ');
+    $('pf-ini').textContent = inicialesDe(nameOf(c));
+    $('pf-ini').className = 'ficha-ini fx-ct-av ' + tonoAvatar(c.id);
+    // XENCRM: debajo del nombre, de dónde llegó y desde cuándo (lo de SendPulse: «25 sep · Chatbot»).
+    $('pf-sub').innerHTML = canalHtml(c.channel) + (c.phone ? '<span>' + esc(c.phone) + '</span>' : '') + (h.frase ? '<span>' + esc(h.frase) + '</span>' : '');
     if (PF_LISTA) {
       var i = PF_LISTA.indexOf(c.id);
       $('pf-nav').hidden = false;
@@ -4200,36 +4248,54 @@
     var notas = (d.events || []).filter(function (e) { return e.type === 'nota' && e.payload && e.payload.texto; });
     var citas = d.appointments || [];
     var data = c.data || {};
-    var ocultos = Object.assign({ booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1, pospuesto_desde: 1, valor: 1, sede: 1, motivo_perdida: 1 }, DE_CONTACTO);
-    var capturados = Object.keys(data).filter(function (k) { return !ocultos[k] && data[k] !== '' && data[k] != null && typeof data[k] !== 'object'; });
+    var capturados = datosCapturados(c);
     var fila = function (k, html, clase) { return '<dt' + (clase ? ' class="' + clase + '"' : '') + '>' + esc(k) + '</dt><dd' + (clase ? ' class="' + clase + '"' : '') + '>' + html + '</dd>'; };
+    var fecha = function (ts) { return ts ? new Date(ts).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'; };
+    var proxima = citas.filter(function (a) { return a.status === 'confirmada' && a.startsAt >= Date.now(); }).sort(function (a, b) { return a.startsAt - b.startsAt; })[0];
+    var deContacto = contactoHtml(c, fila);
+
+    // La etapa y a quién está asignado van en la cabecera, como en un trato de SendPulse: es lo que más se toca y
+    // se cambia aquí mismo. Un solo control para cada cosa (no se repiten abajo): dos serían dos estados.
+    var r = rol(c.stage) || 'activo';
+    $('pf-ctl').innerHTML =
+      '<label class="fx-ct-etapa stage-' + esc(r) + '"><span class="sr-only">Etapa</span><i class="punto" aria-hidden="true"></i>' +
+        '<select id="pf-etapa" aria-label="Etapa">' + (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '"' + (e.id === c.stage ? ' selected' : '') + '>' + esc(e.label) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="fx-ct-asig"><span class="fx-ct-asig-l">Asignado a</span>' + (c.responsable ? avatarHtml(c.responsable, c.responsable, 'sm') : '<span class="fx-ct-av sm vacio" aria-hidden="true"><i class="ic" data-ic="user"></i></span>') +
+        responsableHtml(c, 'pf-resp') + '</label>' +
+      motivoHtml(c, 'pf-motivo');
+    iconos($('pf-ctl'));
 
     $('pf-cuerpo').innerHTML =
       '<div class="ficha-cols"><div class="ficha-main">' +
         // 🪤 Lo primero, lo accionable: si se le fue una venta, eso manda sobre cualquier otro dato de la ficha.
         (h.amago ? '<div class="pf-amago">⚠ Se le fue una venta: tuvo cita y no acabó en compra, y no tiene otra agendada.</div>' : '') +
-        (c.summary ? '<p class="ficha-quiere">' + esc(c.summary) + '</p>' : '') +
-        '<div class="ficha-tabs" role="tablist" aria-label="Qué ver de esta persona">' +
+        // Lo que busca lo resume el análisis: va con el violeta de la IA, y así se sabe que no lo escribió nadie.
+        (c.summary ? '<div class="fx-ct-busca"><span class="fx-ct-busca-t"><i class="ic" data-ic="chispa"></i>Lo que busca</span><p class="ficha-quiere">' + esc(c.summary) + '</p></div>' : '') +
+        '<div class="ficha-tabs" role="tablist" aria-label="Qué ver de este contacto">' +
           [['historia', 'Historia', null], ['citas', 'Citas', citas.length], ['notas', 'Notas', notas.length + (c.notes ? 1 : 0)]].map(function (t) {
             return '<button role="tab" data-tab="' + t[0] + '" aria-selected="' + (PF_TAB === t[0]) + '" class="' + (PF_TAB === t[0] ? 'on' : '') + '">' + t[1] + (t[2] ? '<span class="cuenta">' + t[2] + '</span>' : '') + '</button>';
           }).join('') +
         '</div><div id="pf-tab" role="tabpanel"></div>' +
-      '</div><aside class="ficha-lado"><h4>Detalles</h4><dl class="det">' +
-        fila('Etapa', '<select id="pf-etapa" aria-label="Etapa">' + (state.stages || []).map(function (e) { return '<option value="' + esc(e.id) + '"' + (e.id === c.stage ? ' selected' : '') + '>' + esc(e.label) + '</option>'; }).join('') + '</select>' + motivoHtml(c, 'pf-motivo')) +
-        fila('Puntaje', esc((c.score == null ? '—' : c.score) + (ver && ver.label ? ' · ' + ver.label : '')), 'solo-completo') +
-        fila('Valor', v.valor ? esc(plata(v.valor)) + ' <span class="muted small">' + esc(v.origen === 'a mano' ? 'a mano' : 'del catálogo') + '</span>' : '<span class="muted">sin precio</span>') +
-        fila('A cargo', responsableHtml(c, 'pf-resp')) +
-        fila('La lleva', llevaHtml(c), 'solo-completo') +
+      '</div><aside class="ficha-lado"><h4>Sobre el contacto</h4><dl class="det">' +
         fila('Próximo paso', pasoHtml(c.proximo)) +
-        fila('Volvió', esc(h.volvio ? h.volvio + (h.volvio === 1 ? ' vez' : ' veces') : 'no ha vuelto'), 'solo-completo') +
-        fila('Última vez', esc(c.lastMessageAt ? 'hace ' + rel(c.lastMessageAt) : '—')) +
-        fila('Desde', esc(h.desde ? new Date(h.desde).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'), 'solo-completo') +
-        (d.origen && d.origen.fuente ? fila('Llegó por', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : '')), 'solo-completo') : '') +
+        fila('Valor', v.valor ? esc(plata(v.valor)) + ' <span class="muted small">' + esc(v.origen === 'a mano' ? 'a mano' : 'del catálogo') + '</span>' : '<span class="muted">sin precio</span>') +
+        fila('Puntaje', esc((c.score == null ? '—' : c.score) + (ver && ver.label ? ' · ' + ver.label : '')), 'solo-completo') +
+        fila('La lleva', llevaHtml(c), 'solo-completo') +
+        (proxima ? fila('Próxima cita', '<span class="paso t-cita">' + esc(proxima.label || new Date(proxima.startsAt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })) + '</span>') : '') +
+        (d.origen && d.origen.fuente ? fila('Origen', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : '')), 'solo-completo') : '') +
         (variasSedes() && data.sede ? fila('Sede', esc(nombreSede(data.sede))) : '') +
-        contactoHtml(c, fila) +
+        fila('Agregado el', esc(fecha(h.desde)), 'solo-completo') +
+        fila('Última actividad', esc(c.lastMessageAt ? 'hace ' + rel(c.lastMessageAt) : '—')) +
+        fila('Volvió', esc(h.volvio ? h.volvio + (h.volvio === 1 ? ' vez' : ' veces') : 'no ha vuelto'), 'solo-completo') +
       '</dl>' +
-      (capturados.length ? '<h4>Lo que contó</h4><dl class="det">' + capturados.map(function (k) { return fila(etiquetaDato(k), esc(data[k])); }).join('') + '</dl>' : '') +
-      '<details class="corregir"><summary>Corregir datos</summary><div class="pf-campos">' +
+      // Cómo contactarlo: el teléfono y lo que haya (correo, Instagram…), cada uno como algo que se toca.
+      '<h4>Contacto</h4><dl class="det fx-ct-contacto">' +
+        (c.phone ? fila('Teléfono', '<a href="tel:' + esc(c.phone.replace(/[^\d+]/g, '')) + '">' + esc(c.phone) + '</a>') : '') +
+        deContacto +
+        (!c.phone && !deContacto ? fila('Contacto', '<span class="muted">Solo por el chat. Agrégalo con el lápiz.</span>') : '') +
+      '</dl>' +
+      (capturados.length ? '<h4>Datos del contacto</h4><dl class="det">' + capturados.map(function (k) { return fila(etiquetaDato(k), esc(data[k])); }).join('') + '</dl>' : '') +
+      '<details class="corregir" id="pf-corregir"><summary>Corregir datos</summary><div class="pf-campos">' +
         '<div class="ancho"><label for="pf-f-nombre">Nombre</label><input id="pf-f-nombre" value="' + esc(c.name || '') + '"></div>' +
         '<div class="ancho"><label for="pf-f-tel">Teléfono</label><input id="pf-f-tel" value="' + esc(c.phone || '') + '"></div>' +
         camposFichaHtml(c, 'pf-x-') +
@@ -4240,6 +4306,14 @@
       '</div><div class="fila" style="gap:8px;margin-top:10px"><button class="btn primary sm" id="pf-guardar">Guardar</button>' +
       '<span class="grow"></span><span class="small" id="pf-msg" role="status"></span></div></details>' +
       '</aside></div>';
+    iconos($('pf-cuerpo'));
+    // El lápiz de la cabecera abre «Corregir datos» y pone el cursor en el nombre.
+    $('pf-editar').onclick = function () {
+      var det = $('pf-corregir'); if (!det) return;
+      det.open = true;
+      det.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      $('pf-f-nombre').focus({ preventScroll: true });
+    };
 
     pintarPestana();
     Array.prototype.forEach.call($('pf-cuerpo').querySelectorAll('[data-tab]'), function (b) {
@@ -5577,14 +5651,13 @@
    * El tono del avatar, el mismo siempre para el mismo nombre. Seis tonos propios (--fx-av-*), aparte de los de
    * las etapas: un avatar rojo se leería «perdido». Medidos: ≥ 6:1 en claro y ≥ 7.9:1 en oscuro.
    */
-  function tonoXen(nombre) {
-    var h = 0, t = String(nombre || '');
-    for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
-    return 1 + (h % 6);
-  }
+  // 🪤 Un solo color por persona en todo XENCRM: la bandeja y Contactos lo sacaban cada uno a su manera (una del
+  // nombre, la otra del id) y la misma persona salía de dos colores. Ahora los dos salen de tonoAvatar con su id,
+  // que no cambia si alguien corrige el nombre.
+  function tonoXen(clave) { return Number(tonoAvatar(clave).slice(1)); }
   function avatarXen(c, clase) {
     var canal = canalDeXen(c.channel);
-    return '<span class="fx-av ' + (clase || '') + ' av-' + tonoXen(nameOf(c)) + '" aria-hidden="true"><span class="fx-av-ini">' + esc(inicialesDe(nameOf(c))) + '</span>' +
+    return '<span class="fx-av ' + (clase || '') + ' av-' + tonoXen(c.id) + '" aria-hidden="true"><span class="fx-av-ini">' + esc(inicialesDe(nameOf(c))) + '</span>' +
       '<i class="fx-canal-ins fx-canal-' + canal.k + '">' + svgXen(canal.ic) + '</i></span>';
   }
   function sinAsignarComoOpcion(sel) { var o = sel && sel.querySelector('option[value=""]'); if (o) o.textContent = 'Sin asignar'; }
@@ -5592,7 +5665,7 @@
   /** La cabecera de la conversación: quién es, quién responde, a quién está asignada y pausar o reanudar. */
   function pintarCabeceraXen(d) {
     var c = d.contact, agente = state.agentName || 'Aiva', canal = canalDeXen(c.channel), ini = $('fx-chat-ini');
-    ini.className = 'fx-av fx-av-chat solo-facil av-' + tonoXen(nameOf(c));
+    ini.className = 'fx-av fx-av-chat solo-facil av-' + tonoXen(c.id);
     ini.innerHTML = '<span class="fx-av-ini">' + esc(inicialesDe(nameOf(c))) + '</span><i class="fx-canal-ins fx-canal-' + canal.k + '">' + svgXen(canal.ic) + '</i>';
     $('fx-chat-nombre').textContent = nameOf(c);
     var estado = c.humanMode
@@ -5692,6 +5765,88 @@
   // (fin de XEN · Bandeja omnicanal)
 
   // ===== XEN · Contactos, ficha y tratos: lo nuevo del agente de Contactos =====
+  // Los dibujos que faltaban (Lucide, como los demás). Lo que ya estaba en la página se repinta aquí: el primer
+  // iconos() corre antes de que existan.
+  ICONS.descargar = '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>';
+  ICONS.lapiz = '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>';
+  ['cli-csv', 'cli-nuevo', 'pf-editar', 'pf-chat'].forEach(function (id) { if ($(id)) iconos($(id)); });
+
+  /**
+   * El color del avatar de una persona: estable (sale de su id, no del orden de la lista) y uno de seis tonos
+   * propios de los avatares (--fx-av-*). 🪤 No son los colores de dato: un avatar verde no puede leerse como
+   * «vendido» ni uno rojo como «perdido». Decora, no dice nada.
+   */
+  function tonoAvatar(clave) {
+    var n = 0, t = String(clave || '');
+    for (var i = 0; i < t.length; i++) n = (n * 31 + t.charCodeAt(i)) % 100003;
+    return 'a' + (n % 6 + 1);
+  }
+  function avatarHtml(nombre, clave, extra) {
+    return '<span class="fx-ct-av ' + tonoAvatar(clave || nombre) + (extra ? ' ' + extra : '') + '" aria-hidden="true">' + esc(inicialesDe(nombre)) + '</span>';
+  }
+  /** El canal con un punto de su color y su nombre en palabras (sin el emoji, que cada sistema pinta distinto). */
+  function canalHtml(ch) {
+    var nombre = canalSolo(ch);
+    return nombre ? '<span class="fx-ct-canal c-' + esc(ch || '') + '"><i aria-hidden="true"></i>' + esc(nombre) + '</span>' : '';
+  }
+  /**
+   * Lo que el análisis o el equipo captó de una persona (servicio, ocasión, fecha…), sin lo interno ni lo de
+   * contacto. Lo usan la tabla (como etiquetas) y la ficha (como lista): el mismo filtro en los dos sitios.
+   */
+  function datosCapturados(c) {
+    // 🪤 La lista va DENTRO: una `var` de esta parte del archivo vale undefined si alguien la usa antes de que el
+    // arranque llegue hasta aquí (la trampa que ya cortó el arranque una vez, ver mudarParaElFacil).
+    var DATOS_INTERNOS = { booking: 1, interes: 1, urgencia: 1, pospuesto_hasta: 1, pospuesto_desde: 1, valor: 1, sede: 1, motivo_perdida: 1 };
+    var data = c.data || {};
+    return Object.keys(data).filter(function (k) { return !DATOS_INTERNOS[k] && !DE_CONTACTO[k] && data[k] !== '' && data[k] != null && typeof data[k] !== 'object'; });
+  }
+  /**
+   * Las etiquetas de la columna «Datos», como las de SendPulse: pastel, cortas y a lo sumo dos, con «+n» para el
+   * resto. El tono va por el CAMPO (servicio siempre del mismo color), no por el valor. Primero las etiquetas que
+   * haya puesto el equipo (tags), después lo captado.
+   */
+  function datosHtml(c) {
+    var data = c.data || {};
+    var todas = (c.tags || []).filter(Boolean).map(function (t) { return { k: 'etiqueta', t: String(t), rotulo: 'Etiqueta' }; })
+      .concat(datosCapturados(c).map(function (k) { return { k: k, t: String(data[k]), rotulo: etiquetaDato(k) }; }));
+    if (!todas.length) return '<span class="fx-ct-sin">—</span>';
+    var vis = todas.slice(0, 2), resto = todas.slice(2);
+    return '<span class="fx-ct-tags">' + vis.map(function (x) {
+      return '<span class="fx-ct-tag ' + tonoAvatar(x.k) + '" title="' + esc(x.rotulo + ': ' + x.t) + '"><span class="sr-only">' + esc(x.rotulo) + ': </span>' + esc(x.t) + '</span>';
+    }).join('') + (resto.length ? '<span class="fx-ct-tag mas" title="' + esc(resto.map(function (x) { return x.rotulo + ': ' + x.t; }).join(' · ')) + '">+' + resto.length +
+      '<span class="sr-only"> más: ' + esc(resto.map(function (x) { return x.rotulo + ': ' + x.t; }).join(', ')) + '</span></span>' : '') + '</span>';
+  }
+  /**
+   * Lo que se ve en Contactos cuando no hay filas que pintar. Cada caso dice qué pasa y qué hacer: un «Sin
+   * resultados» a secas no deja saber si es la búsqueda, el grupo o que de verdad no hay nadie.
+   */
+  function estadoClientes(tipo, g) {
+    if (tipo === 'cargando') {
+      var fila = '<div class="fx-ct-esq-fila"><i class="av"></i><span><i style="width:42%"></i><i style="width:26%"></i></span><span><i style="width:58%"></i><i style="width:40%"></i></span><span><i style="width:50%"></i></span></div>';
+      return '<div class="fx-ct-esq" aria-busy="true" aria-label="Cargando los contactos">' + fila + fila + fila + fila + fila + '</div>';
+    }
+    var caso = {
+      error: ['alerta', 'No se pudieron cargar los contactos', 'El servidor dijo: ' + cli.error + '. Vuelve a intentarlo en un momento.', 'reintentar', 'Volver a intentar'],
+      nadie: ['contacto', 'Todavía no hay contactos', 'Llegan solos cuando alguien escribe por WhatsApp o por el chat del sitio. Si alguien llegó por el local o por una llamada, agrégalo a mano.', 'agregar', 'Agregar contacto'],
+      busqueda: ['buscar', 'Nadie coincide con «' + cli.q + '»', 'Se busca por nombre, teléfono y lo que la persona escribió. Prueba con menos letras o con el número.', 'limpiar', 'Borrar la búsqueda'],
+      grupo: ['embudo', 'Nadie en «' + (g ? g.t.replace(/^[^\wÀ-ÿ]+\s*/, '') : '') + '» por ahora', 'Cuando alguien cumpla con este grupo, aparece aquí solo.', 'todos', 'Ver todos los contactos']
+    }[tipo];
+    return '<div class="fx-ct-vacio' + (tipo === 'error' ? ' error' : '') + '" role="' + (tipo === 'error' ? 'alert' : 'status') + '"><span class="fx-ct-vacio-ic"><i class="ic" data-ic="' + caso[0] + '"></i></span><b>' + esc(caso[1]) + '</b><p>' + esc(caso[2]) + '</p>' +
+      '<button class="btn sm' + (caso[3] === 'agregar' ? ' primary' : '') + '" type="button" data-estado="' + caso[3] + '">' + esc(caso[4]) + '</button></div>';
+  }
+  function enganchaEstadoClientes() {
+    var el = $('cli-tabla');
+    iconos(el);
+    var b = el.querySelector('[data-estado]');
+    if (!b) return;
+    b.onclick = function () {
+      var que = b.getAttribute('data-estado');
+      if (que === 'reintentar') loadClientes();
+      else if (que === 'agregar') $('cli-nuevo').click();
+      else if (que === 'limpiar') { $('cli-q').value = ''; cli.q = ''; loadClientes(); $('cli-q').focus(); }
+      else if (que === 'todos') { cli.grupo = 'todos'; renderClientes(); }
+    };
+  }
   // (fin de XEN · Contactos, ficha y tratos)
 
   // ===== XEN · Analítica y sentimiento: lo nuevo del agente de Analítica =====
