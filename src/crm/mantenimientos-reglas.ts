@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { getSetting, setSetting } from './settings.js';
+import { configSla } from './tickets.js';
 import { V } from '../vocabulario.js';
 
 export type TipoRegla = 'numero' | 'texto' | 'si-no' | 'opciones' | 'lista';
@@ -127,9 +128,12 @@ const archivo = (): Partial<Archivo> => (business.servicio?.mantenimientos ?? {}
  * `nombre` (o `id`). Se lee con cuidado porque esa sección es de otra pantalla y puede crecer.
  */
 export function planesDelSla(): string[] | null {
-  const sla = (business.servicio as Record<string, unknown> | undefined)?.sla as { planes?: unknown } | undefined;
-  if (!sla || !Array.isArray(sla.planes) || !sla.planes.length) return null;
-  const nombres = sla.planes
+  // 🪤 Los planes VIGENTES del SLA (fábrica → archivo → tablero, crm/tickets.ts › configSla), no solo los del archivo:
+  // si alguien agrega un plan en Configuración › SLA y tickets, aquí también existe, y «Pro» es el mismo en las dos.
+  let planes: unknown = (business.servicio as Record<string, unknown> | undefined)?.sla as unknown;
+  try { planes = configSla().planes; } catch { planes = (planes as { planes?: unknown } | undefined)?.planes; }
+  if (!Array.isArray(planes) || !planes.length) return null;
+  const nombres = planes
     .map((p) => (typeof p === 'string' ? p : p && typeof p === 'object' ? String((p as { nombre?: unknown; id?: unknown }).nombre ?? (p as { id?: unknown }).id ?? '') : ''))
     .map((s) => s.trim())
     .filter(Boolean);

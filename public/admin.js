@@ -496,6 +496,8 @@
     { view: 'reglas', ic: 'sliders', lbl: 'Reglas y umbrales', soloAdmin: true },
     // Las reglas de Mantenimientos y actualizaciones (Servicio): las ve quien administra, las cambia el super-admin.
     { view: 'cfg-mantenimientos', ic: 'llave', lbl: 'Mantenimientos y actualizaciones', soloAdmin: true },
+    // XEN · Tickets y SLA: planes, prioridades, tipos, estados, objetivos y reglas del SLA (crm/tickets.ts).
+    { view: 'cfg-sla', ic: 'ticket', lbl: 'SLA y tickets', soloAdmin: true },
     { view: 'channels', ic: 'plug', lbl: 'Canales' },
     { view: 'knowledge', ic: 'book', lbl: 'Lo que sabe' },
     // 🪤 Solo para quien administra, y es por RUIDO, no por secreto. Quien atiende todo el día no necesita ver
@@ -638,7 +640,7 @@
   // mandó la muestra de cómo lo quería (Nexora) y las tres están en su menú: son del que vende, no del que
   // administra XENCRM. El servidor las abre igual (channels/candado.ts).
   var SOLO_COMPLETO_VISTAS = { agent: 1, trazas: 1 };
-  var VISTAS_DE_QUIEN_ADMINISTRA = { guia: 1, profile: 1, negocio: 1, agent: 1, channels: 1, knowledge: 1, trazas: 1, modelos: 1, reglas: 1, 'cfg-mantenimientos': 1 };
+  var VISTAS_DE_QUIEN_ADMINISTRA = { guia: 1, profile: 1, negocio: 1, agent: 1, channels: 1, knowledge: 1, trazas: 1, modelos: 1, reglas: 1, 'cfg-mantenimientos': 1, 'cfg-sla': 1 };
   var FILTROS_COMPLETOS = /^(human|archived|stage:)/;
   function modoMio() { try { return localStorage.getItem(LLAVE('modo')) || ''; } catch (e) { return ''; } }
   function modoDelEquipo() {
@@ -706,7 +708,7 @@
   // ---------- el panel de la sección ----------
   // 🪤 Solo aparece donde tiene algo que decir. Un panel vacío a la izquierda «para que se vea simétrico» es
   // espacio robado a lo único que importa en esta pantalla, que es la conversación.
-  var CFG_VIEWS = { guia: 1, agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1, modelos: 1, reglas: 1, 'cfg-mantenimientos': 1 };
+  var CFG_VIEWS = { guia: 1, agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1, modelos: 1, reglas: 1, 'cfg-mantenimientos': 1, 'cfg-sla': 1 };
   // 🪤 En las pantallas de configuración el panel decía lo mismo que el título de la página, dos veces en la
   // misma fila. Aquí dice el ÁREA —dónde estás— y la lista de abajo dice la pantalla: cada uno aporta algo.
   var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Clientes', clientes: 'Clientes', ventas: 'Análisis', seguimientos: 'Clientes', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración', trazas: 'Configuración', guia: 'Configuración' };
@@ -856,6 +858,7 @@
       { grupo: 'El negocio', vistas: { guia: 1, profile: 1, negocio: 1 } },
       { grupo: 'El asistente y la IA', vistas: { agent: 1, modelos: 1, knowledge: 1 } },
       { grupo: 'Canales', vistas: { channels: 1 } },
+      { grupo: 'Servicio', vistas: { 'cfg-sla': 1, 'cfg-mantenimientos': 1 } },
       { grupo: 'Sistema', vistas: { reglas: 1, trazas: 1, help: 1 } }
     ];
     var usadas = {};
@@ -1062,6 +1065,7 @@
       'cfg-mantenimientos': ['Mantenimientos y actualizaciones', 'Las reglas: el aviso de cada plan, la cadencia de cada aplicación, a quién se avisa y con qué texto.'],
       modelos: ['Modelos de IA', 'Conecta los proveedores de IA y elige cuál hace cada cosa.'],
       reglas: ['Reglas y umbrales', 'Cada número que decide algo: cuándo es caliente, cuánto aguanta una cuenta clave, desde cuándo preocupa.'],
+      'cfg-sla': ['SLA y tickets', 'Los planes, las prioridades, los estados y los tiempos que se le prometen a cada cliente.'],
       help: ['Ayuda', 'Lo esencial del tablero en dos minutos.']
     }[view];
     var barra = document.querySelector('#view-' + view + ' > .topbar');
@@ -4581,6 +4585,7 @@
       '<span class="grow"></span><span class="small" id="pf-msg" role="status"></span></div></details>' +
       '</aside></div>';
     iconos($('pf-cuerpo'));
+    xtEnLaFicha(d); // XEN · Tickets y SLA: sus tickets y «Crear ticket», en la columna de la derecha
     // El lápiz de la cabecera abre «Corregir datos» y pone el cursor en el nombre.
     $('pf-editar').onclick = function () {
       var det = $('pf-corregir'); if (!det) return;
@@ -4721,6 +4726,7 @@
         case 'archivada': t = p.by ? quien(p.by) + ' la archivó' : 'Se archivó'; break;
         case 'desarchivada': t = p.by ? quien(p.by) + ' la devolvió a las listas' : 'Volvió a las listas'; break;
         case 'cuenta_clave': t = quien(p.by) + (p.on ? ' la marcó como cuenta clave' : ' le quitó la marca de cuenta clave'); break;
+        case 'ticket': t = fraseDeTicket(p, quien); if (!t) return; break;
         case 'contacts_merged': t = (p.by ? quien(p.by) + ' la unió' : 'Se unió') + ' con otra ficha de la misma persona'; break;
         case 'cross_channel': t = 'Escribió también por otro canal'; break;
         default: return;
@@ -7800,6 +7806,821 @@
   // (fin de XEN · Optimización de ventas)
 
   // ===== XEN · Tickets y SLA: lo nuevo del agente de Tickets y SLA (alAbrir('tickets', …), alAbrir('sla', …)) =====
+  // Servicio › Tickets, Servicio › SLA y Configuración › SLA y tickets, como los casos y los SLA de Dynamics 365
+  // Customer Service. El servidor (crm/tickets.ts) calcula el reloj de cada ticket con el plan del cliente y la
+  // configuración; aquí solo se pinta, se filtra y se cambia.
+  //
+  // 🪤 Nada del negocio va fijo aquí: los nombres de los planes, las prioridades (y su tono), los tipos, los estados
+  // (cuáles cierran, cuáles pausan) y quién puede qué llegan del servidor en `config`. Un negocio que llame «Urgente»
+  // a lo crítico, o que tenga un plan «Oro», se ve con sus palabras sin tocar una línea de esto.
+  //
+  // 🪤 El estado del SLA va SIEMPRE con su palabra y su ícono (Incumplido · En riesgo · A tiempo · En pausa · Sin
+  // SLA), y el reloj dice qué hay que hacer y para cuándo («Responder antes de las 3:40 p. m. · en 2 h»).
+  //
+  // 🪤 Los diálogos (el ticket y el ticket nuevo) se crean en el <body> y no dentro de una pantalla: se abren desde la
+  // Bandeja y desde la ficha, y un <dialog> dentro de una pantalla escondida no se puede mostrar.
+  ICONS.ticket = ICONS.ticket || '<path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/>';
+  ICONS.subir = ICONS.subir || '<path d="M12 19V5M5 12l7-7 7 7"/>';
+  ICONS.bajar = ICONS.bajar || '<path d="M12 5v14M19 12l-7 7-7-7"/>';
+  ICONS.caja = ICONS.caja || '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>';
+  TITULOS['cfg-sla'] = 'Configuración';
+  var XT = { datos: null, cfg: null, puede: { crear: true, mover: true }, cargando: false, error: null, vista: 'abiertos', prioridad: '', plan: '', asignado: '', q: '', contactos: null };
+  var XT_SLA = { incumplido: ['Incumplido', 'alerta'], en_riesgo: ['En riesgo', 'reloj'], a_tiempo: ['A tiempo', 'check'], en_pausa: ['En pausa', 'pausa'], cumplido: ['Cumplido', 'check'] };
+  var XT_VISTAS = [['abiertos', 'Abiertos'], ['mios', 'Mis tickets'], ['sin_asignar', 'Sin asignar'], ['riesgo', 'En riesgo'], ['incumplidos', 'Incumplidos'], ['terminados', 'Terminados']];
+  try { XT.vista = localStorage.getItem(LLAVE('tickets.vista')) || 'abiertos'; } catch (e) {}
+
+  /** El nombre de algo de la configuración (plan, prioridad, tipo, estado) por su id; si ya no existe, el id. */
+  function xtNombre(lista, id) { var x = ((XT.cfg && XT.cfg[lista]) || []).filter(function (y) { return y.id === id; })[0]; return x ? x.nombre : String(id || ''); }
+  function xtTono(id) { var x = ((XT.cfg && XT.cfg.prioridades) || []).filter(function (y) { return y.id === id; })[0]; return x ? x.tono : 'neutro'; }
+  /** «20 min», «2 h 30 min», «3 días». Redondeado a lo que se entiende de un vistazo. */
+  function xtDuracion(ms) {
+    var m = Math.max(0, Math.round(ms / 60000));
+    if (m < 60) return m + ' min';
+    var hh = Math.floor(m / 60), r = m % 60;
+    if (hh < 24) return hh + ' h' + (r && hh < 6 ? ' ' + r + ' min' : '');
+    var d = Math.round(hh / 24);
+    return d + (d === 1 ? ' día' : ' días');
+  }
+  /** «3:40 p. m.», «mañana, 8:30 a. m.», «jue 13 nov, 8:30 a. m.». */
+  function xtHora(ts) {
+    var d = new Date(ts), hoy = new Date(), manana = new Date(); manana.setDate(hoy.getDate() + 1);
+    var hora = d.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' });
+    if (d.toDateString() === hoy.toDateString()) return hora;
+    if (d.toDateString() === manana.toDateString()) return 'mañana, ' + hora;
+    return d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' }) + ', ' + hora;
+  }
+  var xtAntes = function (ts) { var x = xtHora(ts); return (/^\d/.test(x) ? 'las ' : '') + x; };
+  /** Un objetivo en palabras: «4 h hábiles», «3 días hábiles», «1 h · 24/7». */
+  function xtObjetivo(min, reloj, jornada) {
+    var habil = reloj !== 'corrido';
+    var t = habil && jornada && min >= jornada && min % jornada === 0 ? (min / jornada) + (min / jornada === 1 ? ' día hábil' : ' días hábiles')
+      : min % 60 === 0 ? (min / 60) + ' h' + (habil ? ' hábiles' : '')
+        : min + ' min' + (habil ? ' hábiles' : '');
+    return habil ? t : t + ' · 24/7';
+  }
+  function xtChipPlan(plan) { return plan ? '<span class="xt-plan">' + esc(xtNombre('planes', plan)) + '</span>' : '<span class="xt-plan sin">Sin plan</span>'; }
+  function xtChipPrio(p) { return '<span class="xt-prio t-' + esc(xtTono(p)) + '"><i aria-hidden="true"></i>' + esc(xtNombre('prioridades', p)) + '</span>'; }
+  function xtChipEstado(t) { return '<span class="xt-estado' + (t.terminado ? ' fin' : t.enPausa ? ' pausa' : '') + '">' + esc(xtNombre('estados', t.estado)) + '</span>'; }
+
+  /**
+   * El reloj de un ticket en una frase: qué hay que hacer y para cuándo. Devuelve { estado, html }.
+   * 🪤 Con el objetivo que corre AHORA: la primera respuesta mientras no haya, y después la solución.
+   */
+  function xtReloj(t, ahora) {
+    if (!t.sla) return { estado: 'sin', html: '<span class="xt-reloj s-sin"><i class="ic" data-ic="escudo"></i><b>Sin SLA</b><span>el cliente no tiene plan de soporte</span></span>' };
+    var s = t.sla, est = s.estado, par = XT_SLA[est] || ['', 'reloj'], txt;
+    if (t.terminado) {
+      txt = xtNombre('estados', t.estado) + (est === 'cumplido' ? ' a tiempo' : ' fuera de tiempo') + (t.resuelto ? ' · ' + xtHora(t.resuelto) : '');
+    } else {
+      var cual = s.activo || 'solucion', o = s[cual], verbo = cual === 'respuesta' ? 'Responder' : 'Resolver';
+      if (cual === 'solucion' && o.estado === 'en_pausa') txt = xtNombre('estados', t.estado) + ': el reloj de la solución está parado';
+      else if (o.vence && ahora > o.vence) txt = (cual === 'respuesta' ? 'La primera respuesta' : 'La solución') + ' venció hace ' + xtDuracion(ahora - o.vence);
+      else if (o.vence) txt = verbo + ' antes de ' + xtAntes(o.vence) + ' · en ' + xtDuracion(o.vence - ahora);
+      else txt = verbo;
+      if (est === 'incumplido' && cual === 'solucion' && s.respuesta.estado === 'incumplido' && o.estado !== 'incumplido') txt = 'La primera respuesta llegó tarde · ' + txt.charAt(0).toLowerCase() + txt.slice(1);
+    }
+    return { estado: est, html: '<span class="xt-reloj s-' + est + '"><i class="ic" data-ic="' + par[1] + '"></i><b>' + esc(par[0]) + '</b><span>' + esc(txt) + '</span></span>' };
+  }
+  /** Lo que dice la historia de la ficha de un cambio de ticket. La usa historiaHtml. */
+  function fraseDeTicket(p, quien) {
+    var cod = 'el ticket TK-' + String(p.ticket || '').padStart(4, '0');
+    switch (p.accion) {
+      case 'creado': return quien(p.by) + ' abrió ' + cod + (p.a ? ': ' + p.a : '');
+      case 'estado': return quien(p.by) + ' pasó ' + cod + ' a ' + xtNombre('estados', p.a);
+      case 'prioridad': return quien(p.by) + ' le cambió la prioridad a ' + cod + ': ' + xtNombre('prioridades', p.a);
+      case 'asignado': return p.a ? quien(p.by) + ' le asignó ' + cod + ' a ' + p.a : quien(p.by) + ' dejó ' + cod + ' sin asignar';
+      case 'respondido': return quien(p.by) + ' marcó la primera respuesta de ' + cod;
+      default: return null;
+    }
+  }
+
+  function xtFiltrados() {
+    var d = XT.datos;
+    if (!d) return [];
+    var q = XT.q.trim().toLowerCase();
+    return d.tickets.filter(function (t) {
+      switch (XT.vista) {
+        case 'terminados': if (!t.terminado) return false; break;
+        case 'mios': if (t.terminado || !mismoNombre(t.asignado, state.name)) return false; break;
+        case 'sin_asignar': if (t.terminado || t.asignado) return false; break;
+        case 'riesgo': if (t.terminado || !t.sla || t.sla.estado !== 'en_riesgo') return false; break;
+        case 'incumplidos': if (!t.sla || t.sla.estado !== 'incumplido') return false; break;
+        default: if (t.terminado) return false;
+      }
+      if (XT.prioridad && t.prioridad !== XT.prioridad) return false;
+      if (XT.plan === '__sin' ? t.plan : XT.plan && t.plan !== XT.plan) return false;
+      if (XT.asignado === '__nadie' ? t.asignado : XT.asignado && !mismoNombre(t.asignado, XT.asignado)) return false;
+      if (q && (t.asunto + ' ' + t.codigo + ' ' + (t.contacto.nombre || '') + ' ' + (t.producto || '')).toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+  }
+
+  function cargarTickets() {
+    if (XT.cargando) return;
+    var caja = $('xt-tickets');
+    if (!caja) return;
+    XT.cargando = true;
+    caja.setAttribute('aria-busy', 'true');
+    if (!XT.datos) caja.innerHTML = '<div class="xt-cifras">' + [1, 2, 3, 4].map(function () { return '<div class="xt-cifra xt-esq" aria-hidden="true"><i></i><i></i></div>'; }).join('') + '</div>' +
+      '<ul class="xt-lista">' + [1, 2, 3, 4].map(function () { return '<li class="xt-fila xt-esq" aria-hidden="true"><i></i><i></i></li>'; }).join('') + '</ul>';
+    api('/tickets?dias=90').then(function (d) {
+      XT.cargando = false;
+      caja.removeAttribute('aria-busy');
+      if (!d || d.error || !d.tickets) { XT.error = (d && d.error) || 'el servidor no contestó'; pintarTickets(); return; }
+      XT.error = null;
+      XT.datos = d;
+      XT.cfg = d.config;
+      XT.puede = d.puede || XT.puede;
+      pintarTickets();
+    }).catch(function (e) {
+      XT.cargando = false;
+      caja.removeAttribute('aria-busy');
+      if (String(e && e.message) === '401') return;
+      XT.error = 'no hubo conexión con el servidor';
+      pintarTickets();
+    });
+  }
+  alAbrir('tickets', cargarTickets);
+  // El reloj corre: mientras se mira, cada minuto se vuelve a pedir (el servidor calcula el SLA a la hora de ahora).
+  setInterval(function () {
+    if (document.hidden) return;
+    if (state.view === 'tickets' && XT.datos) cargarTickets();
+    if (state.view === 'sla' && XS.datos) cargarSla(true);
+  }, 60000);
+
+  function xtFilaHtml(t, ahora) {
+    var r = xtReloj(t, ahora);
+    return '<li class="xt-fila s-' + r.estado + '" data-xt-fila="' + t.id + '">' +
+      '<div class="xt-f-cab"><button type="button" class="xt-abrir" data-xt-id="' + t.id + '"><span class="xt-cod">' + esc(t.codigo) + '</span><b>' + esc(t.asunto || 'Ticket sin asunto') + '</b></button>' +
+      xtChipPrio(t.prioridad) + '</div>' +
+      '<div class="xt-f-quien">' + avatarHtml(t.contacto.nombre || t.contacto.telefono || '?', t.contacto.id, 'sm') +
+        '<span class="xt-nom">' + esc(t.contacto.nombre || t.contacto.telefono || 'Sin nombre') + '</span>' + xtChipPlan(t.plan) +
+        (t.producto ? '<span class="xt-prod"><i class="ic" data-ic="caja" aria-hidden="true"></i><span class="sr-only">Producto: </span>' + esc(t.producto) + '</span>' : '') + '</div>' +
+      '<div class="xt-f-pie">' + r.html + '<span class="xt-f-der">' + xtChipEstado(t) +
+        '<span class="xt-asig">' + (t.asignado ? avatarHtml(t.asignado, t.asignado, 'sm') + '<span>' + esc(t.asignado) + '</span>' : '<span class="xt-asig-sin">Sin asignar</span>') + '</span></span></div>' +
+    '</li>';
+  }
+
+  function pintarTickets() {
+    var caja = $('xt-tickets');
+    if (!caja) return;
+    if (XT.error && !XT.datos) {
+      caja.innerHTML = '<div class="xt-error" role="alert"><b>No se pudieron cargar los tickets</b><span>' + esc(XT.error) + '. Los tickets siguen guardados.</span><button class="btn sm" type="button" id="xt-reintentar">Volver a intentar</button></div>';
+      $('xt-reintentar').onclick = function () { XT.error = null; cargarTickets(); };
+      return;
+    }
+    var d = XT.datos;
+    if (!d) return;
+    var ahora = d.ahora || Date.now();
+    var abiertos = d.tickets.filter(function (t) { return !t.terminado; });
+    var cuenta = function (f) { return abiertos.filter(f).length; };
+    var cifras = [
+      { v: 'abiertos', t: 'Abiertos', n: abiertos.length, p: abiertos.length ? 'esperan algo del equipo' : 'nada pendiente', ic: 'ticket', tono: 'acento' },
+      { v: 'riesgo', t: 'En riesgo', n: cuenta(function (t) { return t.sla && t.sla.estado === 'en_riesgo'; }), p: XT.cfg ? 'gastaron el ' + XT.cfg.riesgoPct + ' % de su tiempo' : '', ic: 'reloj', tono: 'ambar' },
+      { v: 'incumplidos', t: 'Incumplidos', n: cuenta(function (t) { return t.sla && t.sla.estado === 'incumplido'; }), p: 'abiertos y ya pasados', ic: 'alerta', tono: 'rojo' },
+      { v: 'sin_asignar', t: 'Sin asignar', n: cuenta(function (t) { return !t.asignado; }), p: 'nadie los tiene', ic: 'user', tono: 'neutro' }
+    ];
+    var html = '<div class="xt-acciones">' + (XT.puede.crear
+      ? '<button class="btn primary" type="button" id="xt-nuevo"><i class="ic" data-ic="mas"></i>Nuevo ticket</button>'
+      : '<p class="xt-nada">En este negocio los tickets los abre quien administra.</p>') +
+      (mandaEnElModo() ? '<button class="btn" type="button" id="xt-a-config"><i class="ic" data-ic="sliders"></i>Configurar SLA y tickets</button>' : '') + '</div>' +
+      '<div class="xt-cifras">' + cifras.map(function (x) {
+        return '<button type="button" class="xt-cifra t-' + (x.n ? x.tono : 'neutro') + '" data-xt-vista="' + x.v + '" aria-pressed="' + (XT.vista === x.v) + '">' +
+          '<span class="xt-cifra-cab"><span>' + esc(x.t) + '</span><i class="ic" data-ic="' + x.ic + '"></i></span><b>' + x.n + '</b><small>' + esc(x.p) + '</small></button>';
+      }).join('') + '</div>';
+    if (!d.tickets.length) {
+      html += '<section class="xt-vacio"><span class="xt-vacio-ic"><i class="ic" data-ic="ticket"></i></span><div><h2>Un ticket es algo que un cliente reportó y que se le debe resolver</h2>' +
+        '<p>Cada ticket corre con el reloj del plan de soporte del cliente (' + esc(((XT.cfg && XT.cfg.planes) || []).map(function (p) { return p.nombre; }).join(', ')) + '): XENCRM avisa cuando está en riesgo y cuando se pasó.</p>' +
+        '<p>Ábrelo con <b>Nuevo ticket</b>, o desde la conversación y la ficha del cliente con <b>Crear ticket</b>.</p></div></section>';
+      caja.innerHTML = html;
+      xtEnganchar(caja);
+      return;
+    }
+    var personas = [];
+    d.tickets.forEach(function (t) { if (t.asignado && !personas.some(function (n) { return mismoNombre(n, t.asignado); })) personas.push(t.asignado); });
+    var sel = function (id, lbl, val, ops) {
+      return '<label class="xt-f"><span>' + esc(lbl) + '</span><select id="' + id + '">' + ops.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === val ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></label>';
+    };
+    html += '<div class="xt-herr">' +
+      '<div class="xt-vistas" role="group" aria-label="Qué tickets ver">' + XT_VISTAS.map(function (v) {
+        var n = v[0] === 'abiertos' ? abiertos.length : v[0] === 'terminados' ? d.tickets.length - abiertos.length : null;
+        return '<button type="button" data-xt-vista="' + v[0] + '" aria-pressed="' + (XT.vista === v[0]) + '">' + esc(v[1]) + (n !== null ? '<span class="xt-n">' + n + '</span>' : '') + '</button>';
+      }).join('') + '</div>' +
+      '<div class="xt-filtros"><label class="xt-buscar"><span class="sr-only">Buscar tickets</span><input type="search" id="xt-q" placeholder="Buscar por asunto, cliente o código" value="' + esc(XT.q) + '"></label>' +
+        sel('xt-f-prio', 'Prioridad', XT.prioridad, [['', 'Todas']].concat(XT.cfg.prioridades.map(function (p) { return [p.id, p.nombre]; }))) +
+        sel('xt-f-plan', 'Plan', XT.plan, [['', 'Todos']].concat(XT.cfg.planes.map(function (p) { return [p.id, p.nombre]; })).concat([['__sin', 'Sin plan']])) +
+        sel('xt-f-asig', 'Asignado a', XT.asignado, [['', 'Todos']].concat(personas.map(function (n) { return [n, n + (mismoNombre(n, state.name) ? ' (tú)' : '')]; })).concat([['__nadie', 'Sin asignar']])) +
+      '</div></div>';
+    var lista = xtFiltrados();
+    html += lista.length
+      ? '<ul class="xt-lista" aria-label="Tickets">' + lista.map(function (t) { return xtFilaHtml(t, ahora); }).join('') + '</ul>'
+      : '<div class="xt-sin"><b>Ningún ticket con este filtro</b><span>Hay ' + abiertos.length + (abiertos.length === 1 ? ' abierto' : ' abiertos') + ' en total.</span><button class="btn sm" type="button" id="xt-limpiar">Ver los abiertos</button></div>';
+    caja.innerHTML = html;
+    xtEnganchar(caja);
+  }
+
+  function xtEnganchar(caja) {
+    iconos(caja);
+    if ($('xt-nuevo')) $('xt-nuevo').onclick = function () { abrirTicketNuevo(null); };
+    if ($('xt-a-config')) $('xt-a-config').onclick = function () { go('cfg-sla'); };
+    caja.querySelectorAll('[data-xt-vista]').forEach(function (b) {
+      b.onclick = function () { XT.vista = b.getAttribute('data-xt-vista'); try { localStorage.setItem(LLAVE('tickets.vista'), XT.vista); } catch (e) {} pintarTickets(); };
+    });
+    var cambia = function (id, k) { if ($(id)) $(id).onchange = function () { XT[k] = $(id).value; pintarTickets(); }; };
+    cambia('xt-f-prio', 'prioridad'); cambia('xt-f-plan', 'plan'); cambia('xt-f-asig', 'asignado');
+    var qT;
+    if ($('xt-q')) $('xt-q').oninput = function () {
+      clearTimeout(qT);
+      qT = setTimeout(function () { XT.q = $('xt-q').value; var pos = $('xt-q').selectionStart; pintarTickets(); $('xt-q').focus(); try { $('xt-q').setSelectionRange(pos, pos); } catch (e) {} }, 200);
+    };
+    if ($('xt-limpiar')) $('xt-limpiar').onclick = function () { XT.vista = 'abiertos'; XT.prioridad = XT.plan = XT.asignado = XT.q = ''; pintarTickets(); };
+    caja.querySelectorAll('[data-xt-fila]').forEach(function (li) {
+      li.onclick = function (e) { if (e.target.closest('button') && !e.target.closest('.xt-abrir')) return; abrirTicket(Number(li.getAttribute('data-xt-fila'))); };
+    });
+  }
+
+  // ---------- El ticket abierto ----------
+  var XT_DLG = null;
+  function xtDialogo(id, clase) {
+    var d = document.getElementById(id);
+    if (d) return d;
+    d = document.createElement('dialog');
+    d.id = id;
+    d.className = 'perfil xt-dlg ' + (clase || '');
+    d.setAttribute('aria-labelledby', id + '-t');
+    document.body.appendChild(d);
+    d.addEventListener('click', function (e) { if (e.target === d) d.close(); });
+    return d;
+  }
+  /** Antes de abrir un ticket hace falta la configuración (los nombres): si todavía no llegó, se pide. */
+  function xtConConfig(fn) {
+    if (XT.cfg) { fn(); return; }
+    api('/tickets?dias=1').then(function (d) { if (d && d.config) { XT.cfg = d.config; XT.puede = d.puede || XT.puede; } fn(); }).catch(function () { fn(); });
+  }
+  function abrirTicket(id) {
+    var dlg = xtDialogo('xt-dlg-ticket');
+    XT_DLG = id;
+    dlg.innerHTML = '<div class="xt-dlg-cuerpo"><p class="xt-dlg-cargando" id="xt-dlg-ticket-t">Cargando el ticket…</p></div>';
+    if (!dlg.open) dlg.showModal();
+    xtConConfig(function () {
+      api('/tickets/' + id).then(function (t) {
+        if (XT_DLG !== id) return;
+        if (!t || t.error) { dlg.innerHTML = '<div class="xt-dlg-cuerpo"><div class="xt-error" role="alert"><b id="xt-dlg-ticket-t">No se pudo abrir el ticket</b><span>' + esc((t && t.error) || 'el servidor no contestó') + '</span><button class="btn sm" type="button" data-cerrar="xt-dlg-ticket">Cerrar</button></div></div>'; return; }
+        pintarTicket(t);
+      }).catch(function () { /* el 401 ya lo muestra la pantalla de entrada */ });
+    });
+  }
+  function xtMedidor(nombre, o, ahora, jornada, extra) {
+    var par = XT_SLA[o.estado] || ['', 'reloj'];
+    var pct = Math.max(0, Math.min(100, Math.round(o.consumido * 100)));
+    var linea = o.hecho
+      ? (o.estado === 'cumplido' ? 'Cumplido' : 'Fuera de tiempo') + ' · ' + xtHora(o.hecho)
+      : o.estado === 'en_pausa' ? 'En pausa: el tiempo del cliente no cuenta'
+        : o.vence ? (ahora > o.vence ? 'Venció hace ' + xtDuracion(ahora - o.vence) : 'Vence ' + (/^\d/.test(xtHora(o.vence)) ? 'a las ' : '') + xtHora(o.vence) + ' · en ' + xtDuracion(o.vence - ahora)) : '';
+    return '<div class="xt-medidor s-' + o.estado + '"><div class="xt-med-cab"><b>' + esc(nombre) + '</b><span class="xt-med-obj">Objetivo: ' + esc(xtObjetivo(o.objetivoMin, o.reloj, jornada)) + '</span></div>' +
+      '<div class="xt-barra" role="img" aria-label="' + esc(nombre + ': ' + pct + ' % del tiempo gastado') + '"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="xt-med-pie"><span class="xt-med-est"><i class="ic" data-ic="' + par[1] + '"></i>' + esc(par[0]) + '</span><span>' + esc(linea) + '</span></div>' + (extra || '') + '</div>';
+  }
+  function xtFraseHistoria(h) {
+    var quien = h.por === 'bot' ? (state.agentName || 'Xen') : h.por === 'equipo' || h.por === 'admin' ? 'El equipo' : h.por;
+    switch (h.accion) {
+      case 'creado': return quien + ' abrió el ticket';
+      case 'estado': return quien + ' lo pasó de ' + xtNombre('estados', h.de) + ' a ' + xtNombre('estados', h.a);
+      case 'prioridad': return quien + ' cambió la prioridad de ' + xtNombre('prioridades', h.de) + ' a ' + xtNombre('prioridades', h.a);
+      case 'asignado': return h.a ? quien + ' se lo asignó a ' + h.a : quien + ' lo dejó sin asignar';
+      case 'respondido': return quien + ' marcó la primera respuesta';
+      case 'asunto': return quien + ' corrigió el asunto';
+      case 'tipo': return quien + ' lo cambió a ' + xtNombre('tipos', h.a);
+      case 'producto': return quien + ' cambió el producto' + (h.a ? ' a ' + h.a : '');
+      default: return null;
+    }
+  }
+  function pintarTicket(t) {
+    var dlg = xtDialogo('xt-dlg-ticket'), ahora = Date.now(), cfg = XT.cfg || { estados: [], prioridades: [], tipos: [], primeraRespuesta: {} }, jornada = cfg.jornadaMin || 600;
+    var gente = genteDelEquipo({ responsable: t.asignado });
+    var mover = XT.puede.mover;
+    var opts = function (lista, val) { return lista.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === val ? ' selected' : '') + '>' + esc(x.nombre) + '</option>'; }).join('') + (lista.some(function (x) { return x.id === val; }) ? '' : '<option value="' + esc(val) + '" selected>' + esc(val) + '</option>'); };
+    var dis = mover ? '' : ' disabled';
+    var resp = t.respondido
+      ? '<p class="xt-resp"><i class="ic" data-ic="check"></i>Primera respuesta ' + xtHora(t.respondido) + (t.respondidoPor ? ' · ' + esc(t.respondidoPor) : '') +
+        ' <small>(' + esc(t.respondidoComo === 'equipo' ? 'el equipo contestó en la conversación' : t.respondidoComo === 'al_resolver' ? 'contó al cerrarlo' : 'marcada a mano') + ')</small></p>'
+      : '<p class="xt-resp falta"><i class="ic" data-ic="reloj"></i>Todavía sin primera respuesta.' + (cfg.primeraRespuesta.delEquipo ? ' Cuenta sola cuando alguien del equipo le contesta en la conversación.' : '') + '</p>' +
+        (cfg.primeraRespuesta.aMano && mover ? '<button class="btn sm" type="button" id="xt-respondido">Marcar como respondido</button>' : '');
+    var historia = (t.historia || []).map(function (h) { var f = xtFraseHistoria(h); return f ? '<li><span>' + esc(f) + '</span><time>' + esc(xtHora(h.ts)) + '</time></li>' : ''; }).join('');
+    var pausa = cfg.estados.filter(function (e) { return e.pausa; }).map(function (e) { return '«' + e.nombre + '»'; }).join(' o ');
+    dlg.innerHTML = '<div class="xt-dlg-cab"><div><span class="xt-cod">' + esc(t.codigo) + ' · ' + esc(xtNombre('tipos', t.tipo)) + (t.producto ? ' · ' + esc(t.producto) : '') + '</span>' +
+        '<h2 id="xt-dlg-ticket-t">' + esc(t.asunto || 'Ticket sin asunto') + '</h2>' +
+        '<div class="xt-dlg-quien">' + avatarHtml(t.contacto.nombre || '?', t.contacto.id, 'sm') + '<b>' + esc(t.contacto.nombre || t.contacto.telefono || 'Sin nombre') + '</b>' + xtChipPlan(t.plan) + '</div></div>' +
+        '<button class="fx-ico" type="button" data-cerrar="xt-dlg-ticket" aria-label="Cerrar"><i class="ic" data-ic="cerrar"></i></button></div>' +
+      '<div class="xt-dlg-cuerpo">' +
+        '<div class="xt-ctl">' +
+          '<label><span>Estado</span><select id="xt-c-estado"' + dis + '>' + opts(cfg.estados, t.estado) + '</select></label>' +
+          '<label><span>Prioridad</span><select id="xt-c-prio"' + dis + '>' + opts(cfg.prioridades, t.prioridad) + '</select></label>' +
+          '<label><span>Asignado a</span><select id="xt-c-asig"' + dis + '><option value="">Sin asignar</option>' + gente.map(function (n) { return '<option value="' + esc(n) + '"' + (mismoNombre(n, t.asignado) ? ' selected' : '') + '>' + esc(n) + (mismoNombre(n, state.name) ? ' (tú)' : '') + '</option>'; }).join('') + '</select></label>' +
+        '</div>' +
+        (mover ? '' : '<p class="xt-nada">En este negocio los tickets los mueve quien administra.</p>') +
+        '<p class="xt-msg" id="xt-c-msg" role="status" aria-live="polite"></p>' +
+        (t.sla
+          ? '<div class="xt-medidores">' + xtMedidor('Primera respuesta', t.sla.respuesta, ahora, jornada) + xtMedidor('Solución', t.sla.solucion, ahora, jornada, pausa ? '<p class="xt-med-nota">Mientras está en ' + esc(pausa) + ', lo que tarde el cliente no cuenta.</p>' : '') + '</div>'
+          : '<p class="xt-sin-sla"><i class="ic" data-ic="escudo"></i>Sin SLA: este cliente no tiene plan de soporte. Ponlo en su ficha (Datos del contacto) para que el ticket corra con su reloj.</p>') +
+        resp +
+        '<div class="xt-dlg-acc"><button class="btn sm primary" type="button" id="xt-a-chat"><i class="ic" data-ic="burbuja"></i>Abrir la conversación</button><button class="btn sm" type="button" id="xt-a-ficha">Ver la ficha</button></div>' +
+        '<h3>Historia</h3>' + (historia ? '<ul class="xt-historia">' + historia + '</ul>' : '<p class="xt-nada">Sin cambios todavía.</p>') +
+      '</div>';
+    iconos(dlg);
+    var cambiar = function (cambios, sel) {
+      var msg = $('xt-c-msg');
+      msg.textContent = 'Guardando…';
+      api('/tickets/' + t.id, { method: 'PATCH', body: cambios }).then(function (r) {
+        if (!r || r.error) { msg.textContent = 'No se pudo: ' + ((r && r.error) || 'sin respuesta'); if (sel) sel.focus(); return; }
+        toast(r.codigo + ': guardado', null, { icono: 'check' });
+        abrirTicket(t.id);
+        if (XT.datos) cargarTickets();
+        if (XS.datos) cargarSla(true);
+        xtRefrescarFicha(t.contacto.id);
+      });
+    };
+    $('xt-c-estado').onchange = function () { cambiar({ estado: this.value }, this); };
+    $('xt-c-prio').onchange = function () { cambiar({ prioridad: this.value }, this); };
+    $('xt-c-asig').onchange = function () { cambiar({ asignado: this.value || null }, this); };
+    if ($('xt-respondido')) $('xt-respondido').onclick = function () { cambiar({ respondido: true }, this); };
+    $('xt-a-chat').onclick = function () { dlg.close(); if ($('dlg-perfil') && $('dlg-perfil').open) $('dlg-perfil').close(); go('inbox'); openContact(t.contacto.id); };
+    $('xt-a-ficha').onclick = function () { dlg.close(); abrirPerfil(t.contacto.id); };
+  }
+
+  // ---------- El ticket nuevo ----------
+  function abrirTicketNuevo(contactoId, alCrear) {
+    var dlg = xtDialogo('xt-dlg-nuevo', 'xt-dlg-chico');
+    dlg.innerHTML = '<div class="xt-dlg-cuerpo"><p class="xt-dlg-cargando" id="xt-dlg-nuevo-t">Cargando los clientes…</p></div>';
+    if (!dlg.open) dlg.showModal();
+    xtConConfig(function () {
+      var cfg = XT.cfg;
+      if (!cfg) { dlg.innerHTML = '<div class="xt-dlg-cuerpo"><div class="xt-error" role="alert"><b id="xt-dlg-nuevo-t">No se pudo preparar el ticket</b><span>No llegó la configuración del SLA.</span><button class="btn sm" type="button" data-cerrar="xt-dlg-nuevo">Cerrar</button></div></div>'; return; }
+      if (!XT.puede.crear) { dlg.innerHTML = '<div class="xt-dlg-cuerpo"><div class="xt-error" role="alert"><b id="xt-dlg-nuevo-t">No puedes abrir tickets</b><span>En este negocio los abre quien administra.</span><button class="btn sm" type="button" data-cerrar="xt-dlg-nuevo">Cerrar</button></div></div>'; return; }
+      var borrador = { contacto: contactoId || '', asunto: '', tipo: cfg.tipoDeFabrica, prioridad: cfg.prioridadDeFabrica, producto: null, asignado: '' };
+      var pintar = function (contactos, error) {
+        var c = contactos.filter(function (x) { return x.id === borrador.contacto; })[0];
+        var datos = (c && c.data) || {};
+        if (borrador.producto === null) borrador.producto = datos[cfg.campoProducto] ? String(datos[cfg.campoProducto]) : '';
+        var plan = datos[cfg.campoPlan];
+        var gente = genteDelEquipo({ responsable: (c && c.responsable) || null });
+        var opts = function (lista, val) { return lista.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === val ? ' selected' : '') + '>' + esc(x.nombre) + '</option>'; }).join(''); };
+        dlg.innerHTML = '<form class="xt-form" id="xt-form" novalidate><div class="xt-dlg-cab"><h2 id="xt-dlg-nuevo-t">Nuevo ticket</h2><button class="fx-ico" type="button" data-cerrar="xt-dlg-nuevo" aria-label="Cerrar"><i class="ic" data-ic="cerrar"></i></button></div>' +
+          '<div class="xt-dlg-cuerpo">' +
+            '<label class="xt-campo"><span>Cliente</span><select id="xt-n-contacto" required><option value="">Elige el cliente</option>' + contactos.map(function (x) {
+              var pl = x.data && x.data[cfg.campoPlan];
+              return '<option value="' + esc(x.id) + '"' + (x.id === borrador.contacto ? ' selected' : '') + '>' + esc(nameOf(x)) + (pl ? ' · ' + esc(pl) : '') + '</option>';
+            }).join('') + '</select></label>' +
+            (c ? '<p class="xt-plan-de">' + (plan ? 'Plan de soporte: <b>' + esc(plan) + '</b>. El ticket corre con su reloj.' : cfg.sinPlan ? 'Sin plan en su ficha: se mide como <b>' + esc(xtNombre('planes', cfg.sinPlan)) + '</b>.' : 'Este cliente no tiene plan de soporte: el ticket se atiende igual, sin SLA.') + '</p>' : '') +
+            '<label class="xt-campo"><span>Asunto</span><input type="text" id="xt-n-asunto" maxlength="140" required placeholder="Qué pasa, en una línea" value="' + esc(borrador.asunto) + '"></label>' +
+            '<div class="xt-fila2"><label class="xt-campo"><span>Tipo</span><select id="xt-n-tipo">' + opts(cfg.tipos, borrador.tipo) + '</select></label>' +
+            '<label class="xt-campo"><span>Prioridad</span><select id="xt-n-prio">' + opts(cfg.prioridades, borrador.prioridad) + '</select></label></div>' +
+            '<div class="xt-fila2"><label class="xt-campo"><span>Producto</span><input type="text" id="xt-n-prod" maxlength="60" value="' + esc(borrador.producto || '') + '"></label>' +
+            '<label class="xt-campo"><span>Asignado a</span><select id="xt-n-asig"><option value="">Sin asignar</option>' + gente.map(function (n) { return '<option value="' + esc(n) + '"' + (mismoNombre(n, borrador.asignado) ? ' selected' : '') + '>' + esc(n) + (mismoNombre(n, state.name) ? ' (tú)' : '') + '</option>'; }).join('') + '</select></label></div>' +
+            '<p class="xt-msg error" id="xt-n-msg" role="alert">' + esc(error || '') + '</p>' +
+          '</div><div class="xt-dlg-pie"><button class="btn" type="button" data-cerrar="xt-dlg-nuevo">Cancelar</button><button class="btn primary" type="submit" id="xt-n-ok">Abrir ticket</button></div></form>';
+        iconos(dlg);
+        var guardarBorrador = function () {
+          borrador.contacto = $('xt-n-contacto').value; borrador.asunto = $('xt-n-asunto').value; borrador.tipo = $('xt-n-tipo').value;
+          borrador.prioridad = $('xt-n-prio').value; borrador.producto = $('xt-n-prod').value; borrador.asignado = $('xt-n-asig').value;
+        };
+        $('xt-n-contacto').onchange = function () { guardarBorrador(); borrador.producto = null; pintar(contactos); $('xt-n-asunto').focus(); };
+        $('xt-form').onsubmit = function (e) {
+          e.preventDefault();
+          guardarBorrador();
+          // 🪤 Si algo falla, lo escrito se queda: el formulario se vuelve a pintar con el borrador y el porqué.
+          if (!borrador.contacto) { pintar(contactos, 'Elige a qué cliente es el ticket.'); $('xt-n-contacto').focus(); return; }
+          if (borrador.asunto.trim().length < 3) { pintar(contactos, 'El asunto dice qué pasa: escribe al menos tres letras.'); $('xt-n-asunto').focus(); return; }
+          $('xt-n-ok').disabled = true;
+          api('/tickets', { method: 'POST', body: { contacto: borrador.contacto, asunto: borrador.asunto, tipo: borrador.tipo, prioridad: borrador.prioridad, producto: borrador.producto, asignado: borrador.asignado || null } }).then(function (r) {
+            if (!r || r.error) { pintar(contactos, 'No se pudo abrir: ' + ((r && r.error) || 'el servidor no contestó')); return; }
+            dlg.close();
+            toast(r.codigo + ' abierto' + (r.sla ? '' : ' (sin SLA: el cliente no tiene plan)'), null, { icono: 'check' });
+            if (XT.datos || state.view === 'tickets') cargarTickets();
+            if (XS.datos) cargarSla(true);
+            xtRefrescarFicha(r.contacto.id);
+            if (alCrear) alCrear(r);
+          }).catch(function () { pintar(contactos, 'No hubo conexión con el servidor: el ticket no se abrió.'); });
+        };
+        if (borrador.contacto) $('xt-n-asunto').focus(); else $('xt-n-contacto').focus();
+      };
+      var conContactos = function (l) {
+        var lista = (Array.isArray(l) ? l : []).slice().sort(function (a, b) { return nameOf(a).localeCompare(nameOf(b), 'es'); });
+        XT.contactos = lista;
+        pintar(lista);
+      };
+      api('/contacts?limit=1000').then(conContactos).catch(function () { pintar(XT.contactos || [], 'No se pudieron cargar los clientes.'); });
+    });
+  }
+
+  // ---------- En la ficha y en la Bandeja ----------
+  /** La sección «Tickets» de la ficha: los de esta persona y «Crear ticket». La llama pintarPerfil. */
+  function xtEnLaFicha(d) {
+    var lado = $('pf-cuerpo') && $('pf-cuerpo').querySelector('.ficha-lado');
+    if (!lado || !d || !d.contact) return;
+    var id = d.contact.id;
+    var sec = document.createElement('section');
+    sec.className = 'xt-pf';
+    sec.setAttribute('data-xt-pf', id);
+    sec.innerHTML = '<div class="xt-pf-cab"><h4>Tickets</h4><button class="btn sm" type="button" data-xt-pf-nuevo><i class="ic" data-ic="mas"></i>Crear ticket</button></div><div class="xt-pf-cuerpo"><p class="xt-nada">Cargando…</p></div>';
+    // Va después de «Sobre el contacto» (el primer bloque de la columna), antes de cómo contactarlo.
+    var segundo = lado.querySelectorAll('h4')[1];
+    if (segundo) lado.insertBefore(sec, segundo); else lado.appendChild(sec);
+    iconos(sec);
+    sec.querySelector('[data-xt-pf-nuevo]').onclick = function () { abrirTicketNuevo(id); };
+    api('/tickets?contacto=' + encodeURIComponent(id)).then(function (r) {
+      if (!document.body.contains(sec) || !r || !r.tickets) return;
+      if (r.config && !XT.cfg) { XT.cfg = r.config; XT.puede = r.puede || XT.puede; }
+      if (r.puede && !r.puede.crear) sec.querySelector('[data-xt-pf-nuevo]').hidden = true;
+      var ts = r.tickets, ahora = r.ahora || Date.now();
+      sec.querySelector('.xt-pf-cuerpo').innerHTML = ts.length
+        ? '<ul class="xt-pf-l">' + ts.slice(0, 6).map(function (t) {
+            return '<li><button type="button" class="xt-pf-t" data-xt-id="' + t.id + '"><span class="xt-cod">' + esc(t.codigo) + '</span><b>' + esc(t.asunto || 'Ticket sin asunto') + '</b></button>' +
+              '<div class="xt-pf-m">' + xtChipPrio(t.prioridad) + xtChipEstado(t) + '</div>' + xtReloj(t, ahora).html + '</li>';
+          }).join('') + '</ul>' + (ts.length > 6 ? '<p class="xt-nada">Y ' + (ts.length - 6) + ' más en Servicio › Tickets.</p>' : '')
+        : '<p class="xt-nada">Sin tickets. Si reporta algo, ábrelo aquí y correrá con el SLA de su plan.</p>';
+      iconos(sec);
+      sec.querySelectorAll('[data-xt-id]').forEach(function (b) { b.onclick = function () { abrirTicket(Number(b.getAttribute('data-xt-id'))); }; });
+    }).catch(function () {});
+  }
+  /** Después de crear o cambiar un ticket, la ficha abierta de esa persona lo muestra. */
+  function xtRefrescarFicha(contactoId) {
+    if (!$('dlg-perfil') || !$('dlg-perfil').open || !PF || !PF.contact || PF.contact.id !== contactoId) return;
+    var viejo = $('pf-cuerpo').querySelector('[data-xt-pf]');
+    if (viejo) viejo.remove();
+    xtEnLaFicha(PF);
+  }
+  // «Crear ticket» en la cabecera de la conversación: con la persona ya puesta.
+  if ($('xt-crear-chat')) { iconos($('xt-crear-chat')); $('xt-crear-chat').onclick = function () { if (state.detail && state.detail.contact) abrirTicketNuevo(state.detail.contact.id); }; }
+
+  // ---------- SLA ----------
+  var XS = { datos: null, conf: null, dias: 30, cargando: false, error: null, mant: null };
+  try { XS.dias = Number(localStorage.getItem(LLAVE('sla.dias'))) || 30; } catch (e) {}
+  function cargarSla(callado) {
+    if (XS.cargando) return;
+    var caja = $('xs-sla');
+    if (!caja) return;
+    XS.cargando = true;
+    caja.setAttribute('aria-busy', 'true');
+    if (!XS.datos && !callado) caja.innerHTML = '<div class="xt-cifras">' + [1, 2, 3, 4].map(function () { return '<div class="xt-cifra xt-esq" aria-hidden="true"><i></i><i></i></div>'; }).join('') + '</div><div class="xs-tabla xt-esq" aria-hidden="true"><i></i><i></i><i></i></div>';
+    Promise.all([api('/sla?dias=' + XS.dias), api('/sla/config')]).then(function (r) {
+      XS.cargando = false;
+      caja.removeAttribute('aria-busy');
+      if (!r[0] || r[0].error || !r[1] || r[1].error) { XS.error = (r[0] && r[0].error) || (r[1] && r[1].error) || 'el servidor no contestó'; pintarSla(); return; }
+      XS.error = null;
+      XS.datos = r[0];
+      XS.conf = r[1];
+      XT.cfg = r[0].config;
+      pintarSla();
+    }).catch(function (e) {
+      XS.cargando = false;
+      caja.removeAttribute('aria-busy');
+      if (String(e && e.message) === '401') return;
+      XS.error = 'no hubo conexión con el servidor';
+      pintarSla();
+    });
+    // Mantenimientos y actualizaciones: los da otra pantalla. Si no hay ruta o falla, la sección lo dice y ya.
+    api('/mantenimientos/cumplimiento?dias=' + XS.dias).then(function (m) { XS.mant = m && !m.error && m.mantenimientos ? m : false; if (XS.datos) pintarSla(); }).catch(function () { XS.mant = false; if (XS.datos) pintarSla(); });
+  }
+  alAbrir('sla', function () { cargarSla(false); });
+
+  var xsPct = function (c) { return c.de ? Math.round((c.a / c.de) * 100) : null; };
+  function xsConteo(c) {
+    var p = xsPct(c);
+    if (p === null) return '<span class="xs-nada">Sin casos decididos</span>';
+    return '<span class="xs-pct ' + (p >= 90 ? 'bien' : p >= 75 ? 'medio' : 'mal') + '"><b>' + p + ' %</b><small>' + c.a + ' de ' + c.de + '</small></span>' +
+      '<span class="xs-mini" aria-hidden="true"><i style="width:' + p + '%"></i></span>';
+  }
+  function pintarSla() {
+    var caja = $('xs-sla');
+    if (!caja) return;
+    if (XS.error && !XS.datos) {
+      caja.innerHTML = '<div class="xt-error" role="alert"><b>No se pudo calcular el SLA</b><span>' + esc(XS.error) + '.</span><button class="btn sm" type="button" id="xs-reintentar">Volver a intentar</button></div>';
+      $('xs-reintentar').onclick = function () { XS.error = null; cargarSla(false); };
+      return;
+    }
+    var d = XS.datos, conf = XS.conf;
+    if (!d || !conf) return;
+    var jornada = conf.jornadaMin;
+    var pR = xsPct(d.respuesta), pS = xsPct(d.solucion);
+    var riesgo = d.ahora.filter(function (t) { return t.sla.estado === 'en_riesgo'; }).length, incumplidos = d.ahora.length - riesgo;
+    var tonoPct = function (p) { return p === null ? 'neutro' : p >= 90 ? 'verde' : p >= 75 ? 'ambar' : 'rojo'; };
+    var html = '<div class="xs-herr"><span class="xs-periodo">Tickets abiertos en los últimos ' + d.dias + ' días</span><div class="xt-vistas" role="group" aria-label="Periodo">' +
+      [7, 30, 90].map(function (n) { return '<button type="button" data-xs-dias="' + n + '" aria-pressed="' + (XS.dias === n) + '">' + n + ' días</button>'; }).join('') + '</div></div>';
+    html += '<div class="xt-cifras">' +
+      '<div class="xt-cifra t-' + tonoPct(pR) + '"><span class="xt-cifra-cab"><span>Primera respuesta a tiempo</span><i class="ic" data-ic="burbuja"></i></span><b>' + (pR === null ? '—' : pR + ' %') + '</b><small>' + (d.respuesta.de ? d.respuesta.a + ' de ' + d.respuesta.de + (d.respuesta.de === 1 ? ' ticket' : ' tickets') : 'ninguno decidido todavía') + (d.corriendo.respuesta ? ' · ' + d.corriendo.respuesta + ' corriendo' : '') + '</small></div>' +
+      '<div class="xt-cifra t-' + tonoPct(pS) + '"><span class="xt-cifra-cab"><span>Solución a tiempo</span><i class="ic" data-ic="check"></i></span><b>' + (pS === null ? '—' : pS + ' %') + '</b><small>' + (d.solucion.de ? d.solucion.a + ' de ' + d.solucion.de + (d.solucion.de === 1 ? ' ticket' : ' tickets') : 'ninguno decidido todavía') + (d.corriendo.solucion ? ' · ' + d.corriendo.solucion + ' corriendo' : '') + '</small></div>' +
+      '<div class="xt-cifra t-' + (incumplidos ? 'rojo' : riesgo ? 'ambar' : 'neutro') + '"><span class="xt-cifra-cab"><span>Ahora</span><i class="ic" data-ic="alerta"></i></span><b>' + d.ahora.length + '</b><small>' + (d.ahora.length ? incumplidos + (incumplidos === 1 ? ' incumplido · ' : ' incumplidos · ') + riesgo + ' en riesgo' : 'nada en riesgo de ' + d.abiertos + (d.abiertos === 1 ? ' abierto' : ' abiertos')) + '</small></div>' +
+      '<div class="xt-cifra t-neutro"><span class="xt-cifra-cab"><span>Sin SLA</span><i class="ic" data-ic="escudo"></i></span><b>' + d.sinPlan + '</b><small>' + (d.sinPlan ? (d.sinPlan === 1 ? 'ticket de un cliente sin plan: no cuenta' : 'tickets de clientes sin plan: no cuentan') : 'todos con plan') + '</small></div>' +
+    '</div>';
+    if (!d.tickets) html += '<section class="xt-vacio"><span class="xt-vacio-ic"><i class="ic" data-ic="escudo"></i></span><div><h2>Sin tickets en estos ' + d.dias + ' días</h2><p>El cumplimiento sale de los tickets: cuántos se respondieron y se resolvieron dentro del tiempo del plan de cada cliente. Ábrelos en Servicio › Tickets.</p></div></section>';
+    if (d.ahora.length) html += '<section class="xs-sec"><h2>Lo que hay que mirar ya</h2><p class="xs-sub">Abiertos que se pasaron o gastaron el ' + conf.config.riesgoPct + ' % de su tiempo.</p><ul class="xt-lista">' + d.ahora.map(function (t) { return xtFilaHtml(t, Date.now()); }).join('') + '</ul></section>';
+    var tabla = function (titulo, sub, filas, col0) {
+      var vivas = filas.filter(function (f) { return f.tickets; });
+      return '<section class="xs-sec"><h2>' + esc(titulo) + '</h2><p class="xs-sub">' + esc(sub) + '</p>' + (vivas.length
+        ? '<div class="xs-tabla"><table><thead><tr><th scope="col">' + esc(col0) + '</th><th scope="col" class="num">Tickets</th><th scope="col">Primera respuesta a tiempo</th><th scope="col">Solución a tiempo</th></tr></thead><tbody>' +
+          vivas.map(function (f) { return '<tr><th scope="row">' + f.cab + '</th><td class="num" data-rot="Tickets">' + f.tickets + '</td><td data-rot="Primera respuesta">' + xsConteo(f.respuesta) + '</td><td data-rot="Solución">' + xsConteo(f.solucion) + '</td></tr>'; }).join('') +
+          '</tbody></table></div>'
+        : '<p class="xt-nada">Sin tickets con plan en el periodo.</p>') + '</section>';
+    };
+    html += '<div class="xs-dos">' +
+      tabla('Por plan', 'Lo prometido a cada plan, contra lo que pasó.', d.porPlan.map(function (x) { return { cab: xtChipPlan(x.plan), tickets: x.tickets, respuesta: x.respuesta, solucion: x.solucion }; }), 'Plan') +
+      tabla('Por prioridad', 'De la más grave a la más leve.', d.porPrioridad.map(function (x) { return { cab: xtChipPrio(x.prioridad), tickets: x.tickets, respuesta: x.respuesta, solucion: x.solucion }; }), 'Prioridad') +
+    '</div>';
+    if (d.tiempos.length) {
+      var vs = function (ms, objMin) {
+        if (ms === null) return '<span class="xs-nada">—</span>';
+        var ok = ms <= objMin * 60000;
+        return '<span class="xs-vs ' + (ok ? 'bien' : 'mal') + '"><b>' + esc(xtDuracion(ms)) + '</b><small>' + (ok ? 'dentro' : 'pasado') + '</small></span>';
+      };
+      html += '<section class="xs-sec"><h2>Tiempos contra el objetivo</h2><p class="xs-sub">La mediana de lo que tardó el equipo, medida en el reloj de cada objetivo (hábil o 24/7) y sin las pausas.</p>' +
+        '<div class="xs-tabla"><table><thead><tr><th scope="col">Plan · prioridad</th><th scope="col" class="num">Tickets</th><th scope="col">Primera respuesta</th><th scope="col">Objetivo</th><th scope="col">Solución</th><th scope="col">Objetivo</th></tr></thead><tbody>' +
+        d.tiempos.map(function (x) {
+          return '<tr><th scope="row">' + xtChipPlan(x.plan) + ' ' + xtChipPrio(x.prioridad) + '</th><td class="num" data-rot="Tickets">' + x.tickets + '</td><td data-rot="Primera respuesta">' + vs(x.respuestaMs, x.objetivoRespuestaMin) + '</td><td data-rot="Objetivo" class="xs-obj">' + esc(xtObjetivo(x.objetivoRespuestaMin, x.reloj, jornada)) + '</td>' +
+            '<td data-rot="Solución">' + vs(x.solucionMs, x.objetivoSolucionMin) + '</td><td data-rot="Objetivo" class="xs-obj">' + esc(xtObjetivo(x.objetivoSolucionMin, x.reloj, jornada)) + '</td></tr>';
+        }).join('') + '</tbody></table></div></section>';
+    }
+    var m = XS.mant;
+    html += '<section class="xs-sec"><h2>Mantenimientos y actualizaciones</h2>' + (m
+      ? '<div class="xs-mant"><div><b>' + m.mantenimientos.avisadosATiempo + ' de ' + m.mantenimientos.total + '</b><span>mantenimientos avisados con el tiempo del plan</span></div>' +
+          '<div><b>' + m.mantenimientos.sinAviso + '</b><span>sin aviso</span></div>' +
+          '<div><b>' + m.mantenimientos.proximos + '</b><span>próximos</span></div>' +
+          '<div><b>' + m.actualizaciones.publicadasEnPeriodo + '</b><span>actualizaciones publicadas en ' + (m.periodoDias || XS.dias) + ' días</span></div></div>' +
+          (m.actualizaciones.productosAtrasados && m.actualizaciones.productosAtrasados.length
+            ? '<p class="xs-atraso"><i class="ic" data-ic="alerta"></i>Atrasados con su actualización: ' + m.actualizaciones.productosAtrasados.map(function (p) { return '<b>' + esc(p.producto) + '</b> (hace ' + p.diasDesdeLaUltima + ' días)'; }).join(', ') + '.</p>' : '') +
+          '<button class="btn sm" type="button" id="xs-ver-mant">Ver Mantenimientos y actualizaciones</button>'
+      : '<p class="xt-nada">' + (m === null ? 'Cargando…' : 'Sin datos de mantenimientos todavía.') + '</p>') + '</section>';
+    // Las políticas, en lectura: se cambian en Configuración › SLA y tickets.
+    var cfg = conf.config;
+    html += '<section class="xs-sec xs-pol"><div class="xs-pol-cab"><div><h2>Políticas de SLA</h2><p class="xs-sub">Lo que se le promete a cada plan. Soporte ' + xcDias(cfg.horario.dias) + ', de ' + esc(cfg.horario.desde) + ' a ' + esc(cfg.horario.hasta) + ' (el reloj hábil solo corre ahí).</p></div>' +
+      (conf.puedeEditar ? '<button class="btn sm" type="button" id="xs-a-config"><i class="ic" data-ic="sliders"></i>Cambiar en Configuración</button>' : '') + '</div>' +
+      '<div class="xs-tabla"><table><thead><tr><th scope="col">Plan</th>' + cfg.prioridades.map(function (p) { return '<th scope="col">' + xtChipPrio(p.id) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      cfg.planes.map(function (pl) {
+        return '<tr><th scope="row">' + xtChipPlan(pl.id) + '</th>' + cfg.prioridades.map(function (p) {
+          var o = cfg.objetivos[pl.id][p.id];
+          return '<td data-rot="' + esc(p.nombre) + '"><span class="xs-pol-c"><span>Responder: <b>' + esc(xtObjetivo(o.respuestaMin, o.reloj, jornada)) + '</b></span><span>Resolver: <b>' + esc(xtObjetivo(o.solucionMin, o.reloj, jornada)) + '</b></span></span></td>';
+        }).join('') + '</tr>';
+      }).join('') + '</tbody></table></div>' + (conf.puedeEditar ? '' : '<p class="xs-sub">Las políticas las cambia quien administra.</p>') + '</section>';
+    caja.innerHTML = html;
+    iconos(caja);
+    caja.querySelectorAll('[data-xs-dias]').forEach(function (b) {
+      b.onclick = function () { XS.dias = Number(b.getAttribute('data-xs-dias')); try { localStorage.setItem(LLAVE('sla.dias'), String(XS.dias)); } catch (e) {} XS.mant = null; cargarSla(true); };
+    });
+    caja.querySelectorAll('[data-xt-fila]').forEach(function (li) { li.onclick = function () { abrirTicket(Number(li.getAttribute('data-xt-fila'))); }; });
+    if ($('xs-ver-mant')) $('xs-ver-mant').onclick = function () { go('mantenimientos'); };
+    if ($('xs-a-config')) $('xs-a-config').onclick = function () { go('cfg-sla'); };
+  }
+
+  // ---------- Configuración › SLA y tickets ----------
+  // Todo lo del SLA, editable aquí por quien tenga permiso (`permisos.politicas`): planes, prioridades, tipos,
+  // estados, el horario, los objetivos y las reglas sueltas. Encima de lo de fábrica y de lo del archivo del cliente
+  // (xencrm.config.json › servicio.sla): lo que se guarda aquí manda, y «Volver a lo del archivo» lo borra.
+  //
+  // 🪤 Lo escrito no se pierde: el borrador vive en XC y cada repintado lo lee antes; si el servidor dice que algo
+  // está mal, se marca ese campo (aria-invalid) y lo demás se queda como estaba.
+  var XC_DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  var XC_TONOS = [['rojo', 'Rojo'], ['ambar', 'Ámbar'], ['cielo', 'Azul cielo'], ['indigo', 'Índigo'], ['verde', 'Verde'], ['neutro', 'Gris']];
+  var XC = { conf: null, b: null, reglas: null, error: null, campo: null, cargando: false, guardando: false, olvidando: false, nuevo: 0 };
+  function xcDias(dias) { return dias.map(function (d) { return XC_DIAS[d].slice(0, 3); }).join(', '); }
+  function cargarCfgSla() {
+    var caja = $('xc-cfg');
+    if (!caja || XC.cargando) return;
+    XC.cargando = true;
+    if (!XC.conf) caja.innerHTML = '<div class="xs-tabla xt-esq" aria-hidden="true"><i></i><i></i><i></i></div>';
+    api('/sla/config').then(function (r) {
+      XC.cargando = false;
+      if (!r || r.error || !r.config) { caja.innerHTML = '<div class="xt-error" role="alert"><b>No se pudo cargar la configuración del SLA</b><span>' + esc((r && r.error) || 'el servidor no contestó') + '</span><button class="btn sm" type="button" id="xc-reintentar">Volver a intentar</button></div>'; $('xc-reintentar').onclick = cargarCfgSla; return; }
+      xcTomar(r);
+      pintarCfgSla();
+    }).catch(function (e) {
+      XC.cargando = false;
+      if (String(e && e.message) === '401') return;
+      caja.innerHTML = '<div class="xt-error" role="alert"><b>No hubo conexión con el servidor</b><span>La configuración sigue guardada.</span><button class="btn sm" type="button" id="xc-reintentar">Volver a intentar</button></div>';
+      $('xc-reintentar').onclick = cargarCfgSla;
+    });
+  }
+  alAbrir('cfg-sla', cargarCfgSla);
+  /** De lo que manda en el servidor, un borrador para editar (los tiempos, como se escriben: «4 h», «3 d»). */
+  function xcTomar(r) {
+    XC.conf = r;
+    var c = r.config, j = r.jornadaMin;
+    XC.b = {
+      planes: c.planes.map(function (p) { return { id: p.id, nombre: p.nombre, alias: (p.alias || []).join(', ') }; }),
+      prioridades: c.prioridades.map(function (p) { return { id: p.id, nombre: p.nombre, tono: p.tono }; }),
+      tipos: c.tipos.map(function (t) { return { id: t.id, nombre: t.nombre }; }),
+      estados: c.estados.map(function (e) { return { id: e.id, nombre: e.nombre, cierra: e.cierra, pausa: e.pausa }; }),
+      objetivos: {}
+    };
+    c.planes.forEach(function (pl) { XC.b.objetivos[pl.id] = {}; c.prioridades.forEach(function (p) { var o = c.objetivos[pl.id][p.id]; XC.b.objetivos[pl.id][p.id] = { r: xcTexto(o.respuestaMin, o.reloj, j), s: xcTexto(o.solucionMin, o.reloj, j), reloj: o.reloj }; }); });
+    XC.reglas = {};
+    r.reglas.forEach(function (g) { var v = g.ruta.reduce(function (x, k) { return x == null ? x : x[k]; }, c); XC.reglas[g.id] = v; });
+    XC.error = null; XC.campo = null;
+  }
+  /** «4 h», «3 d», «45 min», «1,5 h» → minutos. Un día es una jornada de soporte si el reloj es hábil, 24 h si no. */
+  function xcMinutos(txt, reloj, jornada) {
+    var m = /^\s*(\d+(?:[.,]\d+)?)\s*(min|minutos?|m|h|horas?|d|d[ií]as?)?\s*$/i.exec(String(txt || ''));
+    if (!m) return NaN;
+    var n = Number(m[1].replace(',', '.')), u = (m[2] || 'h').toLowerCase();
+    if (/^m/.test(u)) return Math.round(n);
+    if (/^d/.test(u)) return Math.round(n * (reloj === 'corrido' ? 1440 : jornada));
+    return Math.round(n * 60);
+  }
+  function xcTexto(min, reloj, jornada) {
+    if (reloj !== 'corrido' && jornada && min >= jornada && min % jornada === 0) return (min / jornada) + ' d';
+    if (reloj === 'corrido' && min >= 1440 && min % 1440 === 0) return (min / 1440) + ' d';
+    if (min % 60 === 0) return (min / 60) + ' h';
+    return min + ' min';
+  }
+  /** Lee lo que hay en pantalla al borrador (antes de repintar o guardar). */
+  function xcLeer() {
+    var caja = $('xc-cfg'), b = XC.b;
+    if (!caja || !b) return;
+    caja.querySelectorAll('[data-xc-l]').forEach(function (x) {
+      var lista = x.getAttribute('data-xc-l'), i = Number(x.getAttribute('data-xc-i')), k = x.getAttribute('data-xc-k');
+      if (!b[lista] || !b[lista][i]) return;
+      b[lista][i][k] = x.type === 'checkbox' ? x.checked : x.value;
+    });
+    caja.querySelectorAll('[data-xc-o]').forEach(function (x) {
+      var p = x.getAttribute('data-xc-o').split('|');
+      if (b.objetivos[p[0]] && b.objetivos[p[0]][p[1]]) b.objetivos[p[0]][p[1]][p[2]] = x.value;
+    });
+    caja.querySelectorAll('[data-xc-r]').forEach(function (x) {
+      var id = x.getAttribute('data-xc-r');
+      if (x.type === 'checkbox' && x.getAttribute('data-xc-v') !== null) {
+        // Lista (los días): una casilla por opción.
+        var todas = caja.querySelectorAll('[data-xc-r="' + id + '"]');
+        XC.reglas[id] = Array.prototype.filter.call(todas, function (c) { return c.checked; }).map(function (c) { return Number(c.getAttribute('data-xc-v')); });
+      } else if (x.type === 'checkbox') XC.reglas[id] = x.checked;
+      else XC.reglas[id] = x.value;
+    });
+  }
+  function xcInvalido(campo) { return XC.campo && (XC.campo === campo || XC.campo.indexOf(campo + '.') === 0) ? ' aria-invalid="true"' : ''; }
+  function xcCapa(clave) {
+    var c = XC.conf.capas[clave];
+    return c === 'tablero' ? '<span class="xc-capa t">Cambiado aquí</span>' : c === 'archivo' ? '<span class="xc-capa a">Del archivo del cliente</span>' : '<span class="xc-capa f">De fábrica</span>';
+  }
+  /** Una lista editable (planes, prioridades, tipos, estados): nombre y lo suyo, mover, quitar y agregar. */
+  function xcLista(lista, titulo, ayuda, columnas, puede, min) {
+    var b = XC.b[lista];
+    return '<section class="xs-sec xc-sec" id="xc-' + lista + '"><div class="xc-cab"><h2>' + esc(titulo) + '</h2>' + xcCapa(lista) + '</div><p class="xs-sub">' + ayuda + '</p>' +
+      '<ul class="xc-lista"' + xcInvalido(lista) + '>' + b.map(function (x, i) {
+        return '<li class="xc-item">' +
+          '<label class="xt-campo xc-nombre"><span class="sr-only">Nombre</span><input type="text" maxlength="40" data-xc-l="' + lista + '" data-xc-i="' + i + '" data-xc-k="nombre" value="' + esc(x.nombre) + '"' + (puede ? '' : ' disabled') + xcInvalido(lista + '.' + i) + '></label>' +
+          columnas.map(function (col) { return col(x, i); }).join('') +
+          (puede ? '<span class="xc-mover"><button class="fx-ico" type="button" data-xc-arriba="' + lista + '|' + i + '" aria-label="Subir ' + esc(x.nombre) + '"' + (i ? '' : ' disabled') + '><i class="ic" data-ic="subir"></i></button>' +
+            '<button class="fx-ico" type="button" data-xc-abajo="' + lista + '|' + i + '" aria-label="Bajar ' + esc(x.nombre) + '"' + (i < b.length - 1 ? '' : ' disabled') + '><i class="ic" data-ic="bajar"></i></button>' +
+            '<button class="fx-ico xc-quitar" type="button" data-xc-quita="' + lista + '|' + i + '" aria-label="Quitar ' + esc(x.nombre) + '"' + (b.length > min ? '' : ' disabled') + '><i class="ic" data-ic="cerrar"></i></button></span>' : '') +
+        '</li>';
+      }).join('') + '</ul>' + (puede ? '<button class="btn sm" type="button" data-xc-agrega="' + lista + '"><i class="ic" data-ic="mas"></i>Agregar</button>' : '') + '</section>';
+  }
+  function xcRegla(id, puede) {
+    var g = XC.conf.reglas.filter(function (x) { return x.id === id; })[0];
+    if (!g) return '';
+    var v = XC.reglas[id], dis = puede ? '' : ' disabled', inv = xcInvalido(id);
+    var control;
+    if (g.tipo === 'si-no') control = '<label class="xc-si"><input type="checkbox" data-xc-r="' + id + '"' + (v ? ' checked' : '') + dis + inv + '><span>' + esc(g.etiqueta) + '</span></label>';
+    else if (g.tipo === 'opciones') control = '<label class="xt-campo"><span>' + esc(g.etiqueta) + '</span><select data-xc-r="' + id + '"' + dis + inv + '>' + g.opciones.map(function (o) { return '<option value="' + esc(o.valor) + '"' + (String(v) === o.valor ? ' selected' : '') + '>' + esc(o.etiqueta) + '</option>'; }).join('') + '</select></label>';
+    else if (g.tipo === 'lista') control = '<fieldset class="xc-dias"' + inv + '><legend>' + esc(g.etiqueta) + '</legend>' + [1, 2, 3, 4, 5, 6, 0].map(function (d) { return '<label class="xs-dia"><input type="checkbox" data-xc-r="' + id + '" data-xc-v="' + d + '"' + ((v || []).indexOf(d) >= 0 ? ' checked' : '') + dis + '>' + XC_DIAS[d].slice(0, 3) + '</label>'; }).join('') + '</fieldset>';
+    else control = '<label class="xt-campo"><span>' + esc(g.etiqueta) + (g.unidad ? ' (' + esc(g.unidad) + ')' : '') + '</span><input type="text"' + (g.tipo === 'numero' ? ' inputmode="decimal"' : '') + ' data-xc-r="' + id + '" value="' + esc(v == null ? '' : v) + '"' + dis + inv + '></label>';
+    return '<div class="xc-regla">' + control + '<p class="xc-ayuda">' + esc(g.ayuda) + ' ' + xcCapa(id) + '</p></div>';
+  }
+  function pintarCfgSla() {
+    var caja = $('xc-cfg');
+    if (!caja || !XC.conf || !XC.b) return;
+    var conf = XC.conf, puede = conf.puedeEditar, b = XC.b, jornada = conf.jornadaMin;
+    var html = '<div class="xc-intro"><p>Todo lo del SLA de este negocio: los planes que se venden, las prioridades, los tipos y los estados de un ticket, los tiempos que se le prometen a cada plan y las reglas con que se miden. ' +
+      (conf.tieneArchivo ? 'Este cliente trae su SLA en su archivo de configuración; lo que cambies aquí manda sobre él.' : 'Lo que no se cambia aquí es lo de fábrica.') + '</p>' +
+      (puede ? '' : '<p class="xt-nada">Lo ves en lectura: esta configuración la cambia quien administra.</p>') + '</div>';
+    html += xcLista('planes', 'Planes de soporte', 'Los que se le venden a los clientes. El plan de cada uno se lee del dato <b>' + esc(XC.reglas['sla.campoPlan'] || XC.conf.config.campoPlan) + '</b> de su ficha, por su nombre o por otras formas de escribirlo.', [
+      function (x, i) { return '<label class="xt-campo xc-alias"><span class="sr-only">Otras formas de escribirlo</span><input type="text" placeholder="Otras formas de escribirlo, separadas por coma" data-xc-l="planes" data-xc-i="' + i + '" data-xc-k="alias" value="' + esc(x.alias) + '"' + (puede ? '' : ' disabled') + '></label>'; }
+    ], puede, 1);
+    html += xcLista('prioridades', 'Prioridades', 'De la más grave a la más leve: así se ordenan los tickets y las tablas.', [
+      function (x, i) { return '<label class="xt-campo xc-tono"><span class="sr-only">Color</span><select data-xc-l="prioridades" data-xc-i="' + i + '" data-xc-k="tono"' + (puede ? '' : ' disabled') + '>' + XC_TONOS.map(function (t) { return '<option value="' + t[0] + '"' + (t[0] === x.tono ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select></label>' + '<span class="xt-prio t-' + esc(x.tono) + '" aria-hidden="true"><i></i>' + esc(x.nombre) + '</span>'; }
+    ], puede, 1);
+    html += xcLista('tipos', 'Tipos de ticket', 'Qué clase de cosa es: un incidente, una solicitud…', [], puede, 1);
+    html += xcLista('estados', 'Estados', 'En orden. Un ticket nuevo empieza en el primero que ni cierra ni pausa. «Cierra» lo da por resuelto; «pausa» para el reloj de la solución mientras se espera al cliente.', [
+      function (x, i) { return '<label class="xc-si"><input type="checkbox" data-xc-l="estados" data-xc-i="' + i + '" data-xc-k="cierra"' + (x.cierra ? ' checked' : '') + (puede ? '' : ' disabled') + '><span>Cierra</span></label>'; },
+      function (x, i) { return '<label class="xc-si"><input type="checkbox" data-xc-l="estados" data-xc-i="' + i + '" data-xc-k="pausa"' + (x.pausa ? ' checked' : '') + (puede ? '' : ' disabled') + '><span>Pausa el reloj</span></label>'; }
+    ], puede, 2);
+    // Los tiempos de cada plan × prioridad.
+    html += '<section class="xs-sec xc-sec" id="xc-objetivos"><div class="xc-cab"><h2>Tiempos por plan y prioridad</h2>' + xcCapa('objetivos') + '</div>' +
+      '<p class="xs-sub">Escribe como <b>45 min</b>, <b>4 h</b> o <b>3 d</b>. Un día hábil es una jornada de soporte (hoy, ' + Math.round(jornada / 60 * 10) / 10 + ' h); en 24/7, un día son 24 horas.</p>' +
+      '<div class="xs-tabla"><table class="xs-edit"><thead><tr><th scope="col">Plan · prioridad</th><th scope="col">Primera respuesta</th><th scope="col">Solución</th><th scope="col">Reloj</th></tr></thead><tbody>' +
+      b.planes.map(function (pl) {
+        return b.prioridades.map(function (p) {
+          var o = b.objetivos[pl.id] && b.objetivos[pl.id][p.id];
+          if (!o) { b.objetivos[pl.id] = b.objetivos[pl.id] || {}; o = b.objetivos[pl.id][p.id] = { r: '8 h', s: '5 d', reloj: 'habil' }; }
+          var k = 'objetivos.' + pl.id + '.' + p.id, dis = puede ? '' : ' disabled';
+          return '<tr><th scope="row"><span class="xt-plan">' + esc(pl.nombre || 'Plan sin nombre') + '</span> <span class="xt-prio t-' + esc(p.tono) + '"><i aria-hidden="true"></i>' + esc(p.nombre || 'Sin nombre') + '</span></th>' +
+            '<td data-rot="Primera respuesta"><input type="text" aria-label="' + esc(pl.nombre + ' ' + p.nombre + ': primera respuesta') + '" data-xc-o="' + pl.id + '|' + p.id + '|r" value="' + esc(o.r) + '"' + dis + xcInvalido(k + '.respuestaMin') + xcInvalido(k) + '></td>' +
+            '<td data-rot="Solución"><input type="text" aria-label="' + esc(pl.nombre + ' ' + p.nombre + ': solución') + '" data-xc-o="' + pl.id + '|' + p.id + '|s" value="' + esc(o.s) + '"' + dis + xcInvalido(k + '.solucionMin') + '></td>' +
+            '<td data-rot="Reloj"><select aria-label="' + esc(pl.nombre + ' ' + p.nombre + ': reloj') + '" data-xc-o="' + pl.id + '|' + p.id + '|reloj"' + dis + '><option value="habil"' + (o.reloj !== 'corrido' ? ' selected' : '') + '>Hábil</option><option value="corrido"' + (o.reloj === 'corrido' ? ' selected' : '') + '>24/7</option></select></td></tr>';
+        }).join('');
+      }).join('') + '</tbody></table></div></section>';
+    // Las reglas sueltas, por grupo.
+    html += '<section class="xs-sec xc-sec" id="xc-reglas"><div class="xc-cab"><h2>Reglas</h2></div><p class="xs-sub">El horario de soporte, cuándo un ticket está en riesgo, qué cuenta como primera respuesta, de dónde se leen el plan y el producto, y quién puede qué.</p>' +
+      '<div class="xc-grupo"><h3>Horario y medición</h3>' + ['sla.horario.dias', 'sla.horario.desde', 'sla.horario.hasta', 'sla.riesgoPct', 'sla.sinPlan'].map(function (id) { return xcRegla(id, puede); }).join('') + '</div>' +
+      '<div class="xc-grupo"><h3>Primera respuesta</h3><p class="xc-ayuda">Cuenta lo primero que pase de lo que esté encendido.</p>' + ['sla.primeraRespuesta.delEquipo', 'sla.primeraRespuesta.aMano', 'sla.primeraRespuesta.alResolver'].map(function (id) { return xcRegla(id, puede); }).join('') + '</div>' +
+      '<div class="xc-grupo"><h3>Un ticket nuevo</h3>' + ['sla.prioridadDeFabrica', 'sla.tipoDeFabrica', 'sla.campoPlan', 'sla.campoProducto'].map(function (id) { return xcRegla(id, puede); }).join('') + '</div>' +
+      '<div class="xc-grupo"><h3>Quién puede qué</h3>' + ['sla.permisos.crear', 'sla.permisos.mover', 'sla.permisos.politicas'].map(function (id) { return xcRegla(id, puede); }).join('') + '</div></section>';
+    if (puede) html += '<div class="xc-pie"><p class="xt-msg error" id="xc-msg" role="alert">' + esc(XC.error || '') + '</p>' +
+      (XC.olvidando
+        ? '<span class="xc-seguro">¿Borrar todo lo cambiado aquí y volver a ' + (conf.tieneArchivo ? 'lo del archivo del cliente' : 'lo de fábrica') + '? <button class="btn sm danger" type="button" id="xc-olvidar-si">Sí, volver</button><button class="btn sm" type="button" id="xc-olvidar-no">No</button></span>'
+        : '<button class="btn" type="button" id="xc-olvidar">Volver a ' + (conf.tieneArchivo ? 'lo del archivo' : 'lo de fábrica') + '</button>') +
+      '<button class="btn" type="button" id="xc-cancelar">Descartar cambios</button><button class="btn primary" type="button" id="xc-guardar"' + (XC.guardando ? ' disabled' : '') + '>Guardar</button></div>';
+    caja.innerHTML = html;
+    iconos(caja);
+    xcEnganchar(caja);
+  }
+  function xcEnganchar(caja) {
+    var repintar = function () { xcLeer(); pintarCfgSla(); };
+    caja.querySelectorAll('[data-xc-arriba],[data-xc-abajo]').forEach(function (bt) {
+      bt.onclick = function () {
+        xcLeer();
+        var p = (bt.getAttribute('data-xc-arriba') || bt.getAttribute('data-xc-abajo')).split('|'), l = XC.b[p[0]], i = Number(p[1]), j = bt.hasAttribute('data-xc-arriba') ? i - 1 : i + 1;
+        if (j < 0 || j >= l.length) return;
+        var t = l[i]; l[i] = l[j]; l[j] = t;
+        pintarCfgSla();
+        var otro = caja.querySelector('[data-xc-' + (bt.hasAttribute('data-xc-arriba') ? 'arriba' : 'abajo') + '="' + p[0] + '|' + j + '"]');
+        if (otro && !otro.disabled) otro.focus();
+      };
+    });
+    caja.querySelectorAll('[data-xc-quita]').forEach(function (bt) {
+      bt.onclick = function () { xcLeer(); var p = bt.getAttribute('data-xc-quita').split('|'); XC.b[p[0]].splice(Number(p[1]), 1); pintarCfgSla(); };
+    });
+    caja.querySelectorAll('[data-xc-agrega]').forEach(function (bt) {
+      bt.onclick = function () {
+        xcLeer();
+        var l = bt.getAttribute('data-xc-agrega'), lista = XC.b[l], base = { planes: 'plan', prioridades: 'prioridad', tipos: 'tipo', estados: 'estado' }[l];
+        // Un id estable y nuevo: el nombre se escribe después y no lo cambia (los tiempos cuelgan del id).
+        var id; do { XC.nuevo++; id = base + '_' + XC.nuevo; } while (lista.some(function (x) { return x.id === id; }));
+        var nuevo = { id: id, nombre: '' };
+        if (l === 'planes') nuevo.alias = '';
+        if (l === 'prioridades') nuevo.tono = 'neutro';
+        if (l === 'estados') { nuevo.cierra = false; nuevo.pausa = false; }
+        lista.push(nuevo);
+        pintarCfgSla();
+        var inp = caja.querySelector('[data-xc-l="' + l + '"][data-xc-i="' + (lista.length - 1) + '"][data-xc-k="nombre"]');
+        if (inp) inp.focus();
+      };
+    });
+    // Un cambio de color se ve enseguida (sin perder lo demás). El nombre no repinta al salir del campo: quitaría el
+    // foco a quien va con el teclado; la tabla de tiempos lo toma en el próximo repintado.
+    caja.querySelectorAll('[data-xc-k="tono"]').forEach(function (x) { x.addEventListener('change', function () { repintar(); var y = caja.querySelector('[data-xc-l="' + x.getAttribute('data-xc-l') + '"][data-xc-i="' + x.getAttribute('data-xc-i') + '"][data-xc-k="tono"]'); if (y) y.focus(); }); });
+    if ($('xc-cancelar')) $('xc-cancelar').onclick = function () { cargarCfgSla(); };
+    if ($('xc-olvidar')) $('xc-olvidar').onclick = function () { xcLeer(); XC.olvidando = true; pintarCfgSla(); if ($('xc-olvidar-no')) $('xc-olvidar-no').focus(); };
+    if ($('xc-olvidar-no')) $('xc-olvidar-no').onclick = function () { XC.olvidando = false; pintarCfgSla(); if ($('xc-olvidar')) $('xc-olvidar').focus(); };
+    if ($('xc-olvidar-si')) $('xc-olvidar-si').onclick = function () {
+      api('/sla/config', { method: 'DELETE' }).then(function (r) {
+        XC.olvidando = false;
+        if (!r || r.error) { XC.error = 'No se pudo: ' + ((r && r.error) || 'sin respuesta'); pintarCfgSla(); return; }
+        xcTomar(r); pintarCfgSla(); xtTrasCambiarConfig();
+        toast('Volvió a ' + (r.tieneArchivo ? 'lo del archivo del cliente' : 'lo de fábrica'), null, { icono: 'check' });
+      });
+    };
+    if ($('xc-guardar')) $('xc-guardar').onclick = xcGuardar;
+  }
+  function xcGuardar() {
+    xcLeer();
+    var b = XC.b, conf = XC.conf;
+    // La jornada con que se cuentan los «días»: la del horario que se está guardando.
+    var hm = function (s) { var x = /^(\d{1,2}):(\d{2})$/.exec(String(s || '')); return x ? Number(x[1]) * 60 + Number(x[2]) : NaN; };
+    var jornada = hm(XC.reglas['sla.horario.hasta']) - hm(XC.reglas['sla.horario.desde']);
+    if (!(jornada > 0)) jornada = conf.jornadaMin;
+    var malo = null, objetivos = {};
+    b.planes.forEach(function (pl) {
+      objetivos[pl.id] = {};
+      b.prioridades.forEach(function (p) {
+        var o = b.objetivos[pl.id][p.id], r = xcMinutos(o.r, o.reloj, jornada), s = xcMinutos(o.s, o.reloj, jornada), k = 'objetivos.' + pl.id + '.' + p.id;
+        if (!malo && !(r > 0)) malo = { error: (pl.nombre || 'Plan') + ' · ' + (p.nombre || 'prioridad') + ': la primera respuesta va como 45 min, 4 h o 3 d', campo: k + '.respuestaMin' };
+        if (!malo && !(s > 0)) malo = { error: (pl.nombre || 'Plan') + ' · ' + (p.nombre || 'prioridad') + ': la solución va como 45 min, 4 h o 3 d', campo: k + '.solucionMin' };
+        objetivos[pl.id][p.id] = { respuestaMin: r, solucionMin: s, reloj: o.reloj };
+      });
+    });
+    if (malo) { XC.error = malo.error; XC.campo = malo.campo; pintarCfgSla(); xcEnfocar(); return; }
+    var estructura = {
+      planes: b.planes.map(function (x) { return { id: x.id, nombre: x.nombre.trim(), alias: String(x.alias || '').split(',').map(function (a) { return a.trim(); }).filter(Boolean) }; }),
+      prioridades: b.prioridades.map(function (x) { return { id: x.id, nombre: x.nombre.trim(), tono: x.tono }; }),
+      tipos: b.tipos.map(function (x) { return { id: x.id, nombre: x.nombre.trim() }; }),
+      estados: b.estados.map(function (x) { return { id: x.id, nombre: x.nombre.trim(), cierra: Boolean(x.cierra), pausa: Boolean(x.pausa) }; }),
+      objetivos: objetivos
+    };
+    // Solo las reglas que cambiaron: las demás siguen saliendo de su capa (fábrica o archivo).
+    var antes = {}, reglas = {};
+    conf.reglas.forEach(function (g) { antes[g.id] = g.ruta.reduce(function (x, k) { return x == null ? x : x[k]; }, conf.config); });
+    Object.keys(XC.reglas).forEach(function (id) { if (JSON.stringify(XC.reglas[id]) !== JSON.stringify(antes[id])) reglas[id] = XC.reglas[id]; });
+    XC.guardando = true;
+    $('xc-guardar').disabled = true;
+    api('/sla/config', { method: 'PUT', body: { estructura: estructura, reglas: reglas } }).then(function (r) {
+      XC.guardando = false;
+      if (!r || r.error) { XC.error = 'No se guardó: ' + ((r && r.error) || 'el servidor no contestó'); XC.campo = (r && r.campo) || null; pintarCfgSla(); xcEnfocar(); return; }
+      xcTomar(r); pintarCfgSla(); xtTrasCambiarConfig();
+      toast('SLA y tickets guardados: los tickets se miden así desde ya', null, { icono: 'check' });
+    }).catch(function () { XC.guardando = false; XC.error = 'No hubo conexión con el servidor: nada se guardó.'; pintarCfgSla(); });
+  }
+  function xcEnfocar() { var x = $('xc-cfg').querySelector('[aria-invalid="true"]') || $('xc-msg'); if (x) { if (x.scrollIntoView) x.scrollIntoView({ block: 'center' }); if (x.focus) x.focus(); } }
+  /** Lo que se pinta con la configuración vieja se vuelve a pedir. */
+  function xtTrasCambiarConfig() { XT.cfg = null; XT.contactos = null; if (XT.datos) cargarTickets(); if (XS.datos) cargarSla(true); }
   // (fin de XEN · Tickets y SLA)
 
   // ===== XEN · Mantenimientos y actualizaciones: lo nuevo de su agente (alAbrir('mantenimientos', …)) =====

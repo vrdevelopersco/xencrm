@@ -3325,6 +3325,245 @@ dialog.perdida input{width:100%}
 /* (fin de XEN · Optimización de ventas) */
 
 /* ---------- XEN · Tickets y SLA (agente de Tickets y SLA) ---------- */
+/* Tickets, SLA y Configuración › SLA y tickets. Los estados del SLA van con palabra e ícono; el color repite lo que dice
+   el texto. Los tonos de una prioridad son los colores de dato (nunca el acento), y los elige cada negocio. */
+:root[data-piel="xen"] .xt-acciones{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:16px}
+:root[data-piel="xen"] .xt-acciones .ic{width:16px;height:16px}
+:root[data-piel="xen"] .xt-cifras{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
+:root[data-piel="xen"] .xt-cifra{display:flex;flex-direction:column;gap:4px;min-width:0;padding:14px 16px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs);font:inherit;color:inherit;text-align:left}
+:root[data-piel="xen"] button.xt-cifra{cursor:pointer;transition:border-color var(--fx-t-rapido),box-shadow var(--fx-t-rapido)}
+:root[data-piel="xen"] button.xt-cifra:hover{border-color:var(--fx-t4);box-shadow:var(--fx-sombra-sm)}
+:root[data-piel="xen"] button.xt-cifra[aria-pressed="true"]{border-color:var(--fx-acento);box-shadow:0 0 0 1px var(--fx-acento) inset}
+:root[data-piel="xen"] .xt-cifra-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-cifra-cab .ic{width:16px;height:16px;flex:0 0 16px;color:var(--fx-t3)}
+:root[data-piel="xen"] .xt-cifra b{font-family:var(--fx-display);font-size:26px;line-height:1.15;font-weight:700;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xt-cifra small{font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-cifra.t-rojo b{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xt-cifra.t-rojo .ic{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xt-cifra.t-ambar b{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xt-cifra.t-ambar .ic{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xt-cifra.t-verde b{color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xt-cifra.t-verde .ic{color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xt-cifra.t-acento .ic{color:var(--fx-acento-t)}
+:root[data-piel="xen"] .xt-herr{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+:root[data-piel="xen"] .xt-vistas{display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;border:1px solid var(--fx-borde-2);border-radius:var(--fx-r-md);background:var(--fx-panel-2);align-self:flex-start;max-width:100%}
+:root[data-piel="xen"] .xt-vistas button{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border:0;border-radius:8px;background:none;color:var(--fx-t2);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+:root[data-piel="xen"] .xt-vistas button:hover{background:var(--fx-hover);color:var(--fx-t0)}
+:root[data-piel="xen"] .xt-vistas button[aria-pressed="true"]{background:var(--fx-panel);color:var(--fx-t0);box-shadow:var(--fx-sombra-sm)}
+:root[data-piel="xen"] .xt-n{min-width:20px;padding:0 6px;border-radius:var(--fx-r-pill);background:var(--fx-hover);font-size:11.5px;color:var(--fx-t2);text-align:center;font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xt-filtros{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
+:root[data-piel="xen"] .xt-buscar{flex:1 1 260px;min-width:0}
+:root[data-piel="xen"] .xt-f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-f select{min-width:150px}
+:root[data-piel="xen"] .xt-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+:root[data-piel="xen"] .xt-fila{position:relative;display:flex;flex-direction:column;gap:8px;padding:14px 16px 14px 19px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel);cursor:pointer;transition:border-color var(--fx-t-rapido),box-shadow var(--fx-t-rapido)}
+:root[data-piel="xen"] .xt-fila:hover{border-color:var(--fx-t4);box-shadow:var(--fx-sombra-sm)}
+:root[data-piel="xen"] .xt-fila::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:4px;border-radius:0 4px 4px 0;background:var(--fx-borde)}
+:root[data-piel="xen"] .xt-fila.s-incumplido::before{background:var(--fx-rojo)}
+:root[data-piel="xen"] .xt-fila.s-en_riesgo::before{background:var(--fx-ambar)}
+:root[data-piel="xen"] .xt-fila.s-a_tiempo::before,:root[data-piel="xen"] .xt-fila.s-cumplido::before{background:var(--fx-verde)}
+:root[data-piel="xen"] .xt-f-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-width:0}
+:root[data-piel="xen"] .xt-abrir{display:flex;align-items:baseline;gap:8px;min-width:0;padding:0;border:0;background:none;font:inherit;color:var(--fx-t0);text-align:left;cursor:pointer}
+:root[data-piel="xen"] .xt-abrir b{font-size:15px;font-weight:700;overflow-wrap:anywhere}
+:root[data-piel="xen"] .xt-abrir:hover b{color:var(--fx-acento-t)}
+:root[data-piel="xen"] .xt-cod{flex:0 0 auto;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--fx-t3);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xt-f-quien{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-width:0;font-size:13.5px;color:var(--fx-t1)}
+:root[data-piel="xen"] .xt-nom{font-weight:600;min-width:0;overflow-wrap:anywhere}
+:root[data-piel="xen"] .xt-prod{display:inline-flex;align-items:center;gap:4px;min-width:0;font-size:12.5px;color:var(--fx-t2);overflow-wrap:anywhere}
+:root[data-piel="xen"] .xt-prod .ic{width:14px;height:14px;flex:0 0 14px;color:var(--fx-t3)}
+:root[data-piel="xen"] .xt-f-pie{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}
+:root[data-piel="xen"] .xt-f-der{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+:root[data-piel="xen"] .xt-asig{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--fx-t1)}
+:root[data-piel="xen"] .xt-asig-sin{font-weight:500;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-plan{display:inline-flex;align-items:center;padding:1px 8px;border:1px solid var(--fx-suave-borde);border-radius:var(--fx-r-pill);background:var(--fx-suave);color:var(--fx-suave-t);font-size:12px;font-weight:700;white-space:nowrap}
+:root[data-piel="xen"] .xt-plan.sin{border-color:var(--fx-borde);background:var(--fx-hover);color:var(--fx-t2);font-weight:600}
+:root[data-piel="xen"] .xt-prio{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:var(--fx-r-pill);font-size:12px;font-weight:700;white-space:nowrap;background:var(--fx-hover);color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-prio i{width:7px;height:7px;border-radius:50%;background:currentColor}
+:root[data-piel="xen"] .xt-prio.t-rojo{background:var(--fx-rojo-s);color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xt-prio.t-ambar{background:var(--fx-ambar-s);color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xt-prio.t-cielo{background:var(--fx-cielo-s);color:var(--fx-cielo-t)}
+:root[data-piel="xen"] .xt-prio.t-indigo{background:var(--fx-indigo-s);color:var(--fx-indigo-t)}
+:root[data-piel="xen"] .xt-prio.t-verde{background:var(--fx-verde-s);color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xt-estado{display:inline-flex;align-items:center;padding:2px 9px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-pill);font-size:12px;font-weight:600;color:var(--fx-t1);white-space:nowrap}
+:root[data-piel="xen"] .xt-estado.pausa{border-style:dashed}
+:root[data-piel="xen"] .xt-estado.fin{background:var(--fx-hover);color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-reloj{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0;font-size:13px;color:var(--fx-t1)}
+:root[data-piel="xen"] .xt-reloj .ic{width:16px;height:16px;flex:0 0 16px}
+:root[data-piel="xen"] .xt-reloj b{font-weight:700}
+:root[data-piel="xen"] .xt-reloj.s-incumplido b,:root[data-piel="xen"] .xt-reloj.s-incumplido .ic{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xt-reloj.s-en_riesgo b,:root[data-piel="xen"] .xt-reloj.s-en_riesgo .ic{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xt-reloj.s-a_tiempo b,:root[data-piel="xen"] .xt-reloj.s-a_tiempo .ic,:root[data-piel="xen"] .xt-reloj.s-cumplido b,:root[data-piel="xen"] .xt-reloj.s-cumplido .ic{color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xt-reloj.s-en_pausa b,:root[data-piel="xen"] .xt-reloj.s-en_pausa .ic,:root[data-piel="xen"] .xt-reloj.s-sin b,:root[data-piel="xen"] .xt-reloj.s-sin .ic{color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-reloj span{color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-vacio{display:flex;gap:16px;align-items:flex-start;padding:24px;border:1px dashed var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel)}
+:root[data-piel="xen"] .xt-vacio-ic{display:inline-grid;place-items:center;width:44px;height:44px;flex:0 0 44px;border-radius:var(--fx-r-md);background:var(--fx-suave);color:var(--fx-acento-t)}
+:root[data-piel="xen"] .xt-vacio-ic .ic{width:22px;height:22px}
+:root[data-piel="xen"] .xt-vacio h2{margin:0 0 6px;font-size:17px;color:var(--fx-t0)}
+:root[data-piel="xen"] .xt-vacio p{margin:0 0 6px;font-size:14px;color:var(--fx-t1)}
+:root[data-piel="xen"] .xt-error,:root[data-piel="xen"] .xt-sin{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:20px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel)}
+:root[data-piel="xen"] .xt-error b,:root[data-piel="xen"] .xt-sin b{color:var(--fx-t0)}
+:root[data-piel="xen"] .xt-error span,:root[data-piel="xen"] .xt-sin span{color:var(--fx-t2);font-size:14px}
+:root[data-piel="xen"] .xt-nada{margin:6px 0;font-size:13.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-esq{min-height:72px;background:linear-gradient(90deg,var(--fx-panel) 0,var(--fx-panel-2) 50%,var(--fx-panel) 100%);background-size:200% 100%;animation:xt-brillo 1.2s ease-in-out infinite}
+:root[data-piel="xen"] .xt-esq i{display:block;height:10px;margin:6px 0;border-radius:6px;background:var(--fx-hover)}
+@keyframes xt-brillo{from{background-position:100% 0}to{background-position:-100% 0}}
+:root[data-piel="xen"] .xt-crear-chat .ic{width:16px;height:16px}
+/* En la cabecera de la conversación cabe justo: por debajo de 1600 px, solo el ícono (su nombre va en aria-label). */
+@media (max-width:1599px){:root[data-piel="xen"] .xt-crear-chat span{display:none}:root[data-piel="xen"] .xt-crear-chat{padding:0 10px}}
+/* El ticket abierto y el ticket nuevo: diálogos encima de lo que sea (la Bandeja, la ficha). */
+:root[data-piel="xen"] dialog.xt-dlg{width:min(680px,94vw);max-height:90vh;padding:0;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);color:var(--fx-t1);box-shadow:var(--fx-sombra-pop);overflow:auto}
+:root[data-piel="xen"] dialog.xt-dlg.xt-dlg-chico{width:min(560px,94vw)}
+:root[data-piel="xen"] dialog.xt-dlg::backdrop{background:rgb(10 34 39/.45)}
+:root[data-piel="xen"] .xt-dlg-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .xt-dlg-cab h2{margin:4px 0 8px;font-family:var(--fx-display);font-size:21px;line-height:1.25;color:var(--fx-t0);overflow-wrap:anywhere}
+:root[data-piel="xen"] .xt-dlg-quien{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:14px}
+:root[data-piel="xen"] .xt-dlg-cuerpo{display:flex;flex-direction:column;gap:14px;padding:16px 20px 20px}
+:root[data-piel="xen"] .xt-dlg-cuerpo h3{margin:6px 0 0;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fx-t3)}
+:root[data-piel="xen"] .xt-dlg-cargando{margin:8px 0;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-ctl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+:root[data-piel="xen"] .xt-ctl label,:root[data-piel="xen"] .xt-campo{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:12.5px;font-weight:600;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-msg{min-height:0;margin:0;font-size:13px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-msg:empty{display:none}
+:root[data-piel="xen"] .xt-msg.error{color:var(--fx-rojo-t);font-weight:600}
+:root[data-piel="xen"] .xt-medidores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+:root[data-piel="xen"] .xt-medidor{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel-2)}
+:root[data-piel="xen"] .xt-med-cab{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px}
+:root[data-piel="xen"] .xt-med-cab b{font-size:14px;color:var(--fx-t0)}
+:root[data-piel="xen"] .xt-med-obj{font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-barra{height:8px;border-radius:var(--fx-r-pill);background:var(--fx-hover);overflow:hidden}
+:root[data-piel="xen"] .xt-barra i{display:block;height:100%;border-radius:inherit;background:var(--fx-verde)}
+:root[data-piel="xen"] .xt-medidor.s-en_riesgo .xt-barra i{background:var(--fx-ambar)}
+:root[data-piel="xen"] .xt-medidor.s-incumplido .xt-barra i{background:var(--fx-rojo)}
+:root[data-piel="xen"] .xt-medidor.s-en_pausa .xt-barra i{background:var(--fx-t4)}
+:root[data-piel="xen"] .xt-med-pie{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 10px;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-med-est{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:var(--fx-t1)}
+:root[data-piel="xen"] .xt-med-est .ic{width:15px;height:15px}
+:root[data-piel="xen"] .xt-medidor.s-incumplido .xt-med-est{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xt-medidor.s-en_riesgo .xt-med-est{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xt-medidor.s-a_tiempo .xt-med-est,:root[data-piel="xen"] .xt-medidor.s-cumplido .xt-med-est{color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xt-med-nota{margin:0;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-sin-sla,:root[data-piel="xen"] .xt-resp{display:flex;align-items:flex-start;gap:8px;margin:0;font-size:13.5px;color:var(--fx-t1)}
+:root[data-piel="xen"] .xt-sin-sla .ic,:root[data-piel="xen"] .xt-resp .ic{width:16px;height:16px;flex:0 0 16px;margin-top:2px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-resp .ic{color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xt-resp.falta .ic{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xt-resp small{color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-dlg-acc{display:flex;flex-wrap:wrap;gap:8px}
+:root[data-piel="xen"] .xt-dlg-cuerpo>.btn{align-self:flex-start}
+:root[data-piel="xen"] .xt-dlg-acc .ic{width:16px;height:16px}
+:root[data-piel="xen"] .xt-historia{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+:root[data-piel="xen"] .xt-historia li{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;color:var(--fx-t1)}
+:root[data-piel="xen"] .xt-historia time{flex:0 0 auto;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-fila2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+:root[data-piel="xen"] .xt-plan-de{margin:-4px 0 0;font-size:13px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xt-dlg-pie{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--fx-borde-2)}
+/* En la ficha: los tickets de esa persona. */
+:root[data-piel="xen"] .xt-pf{margin:4px 0 18px;padding-bottom:16px;border-bottom:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .xt-pf-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+:root[data-piel="xen"] .xt-pf-cab h4{margin:0}
+:root[data-piel="xen"] .xt-pf-cab .ic{width:15px;height:15px}
+:root[data-piel="xen"] .xt-pf-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+:root[data-piel="xen"] .xt-pf-l li{display:flex;flex-direction:column;gap:5px}
+:root[data-piel="xen"] .xt-pf-t{display:flex;align-items:baseline;gap:6px;padding:0;border:0;background:none;font:inherit;color:var(--fx-t0);text-align:left;cursor:pointer}
+:root[data-piel="xen"] .xt-pf-t b{font-size:14px;overflow-wrap:anywhere}
+:root[data-piel="xen"] .xt-pf-t:hover b{color:var(--fx-acento-t)}
+:root[data-piel="xen"] .xt-pf-m{display:flex;flex-wrap:wrap;gap:6px}
+/* SLA */
+:root[data-piel="xen"] .xs-herr{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
+:root[data-piel="xen"] .xs-periodo{font-size:14px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xs-sec{margin-top:22px}
+:root[data-piel="xen"] .xs-sec h2{margin:0;font-size:17px;color:var(--fx-t0)}
+:root[data-piel="xen"] .xs-sub{margin:4px 0 12px;font-size:13.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xs-dos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+:root[data-piel="xen"] .xs-tabla{position:relative;overflow-x:auto;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel)}
+:root[data-piel="xen"] .xs-tabla table{width:100%;border-collapse:collapse;font-size:13.5px}
+:root[data-piel="xen"] .xs-tabla th,:root[data-piel="xen"] .xs-tabla td{padding:10px 14px;border-bottom:1px solid var(--fx-borde-2);text-align:left;vertical-align:middle}
+:root[data-piel="xen"] .xs-tabla thead th{font-size:12px;font-weight:700;color:var(--fx-t2);background:var(--fx-panel-2)}
+:root[data-piel="xen"] .xs-tabla tbody tr:last-child th,:root[data-piel="xen"] .xs-tabla tbody tr:last-child td{border-bottom:0}
+:root[data-piel="xen"] .xs-tabla .num{text-align:right;font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xs-tabla.xt-esq{min-height:160px}
+:root[data-piel="xen"] .xs-pct{display:inline-flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xs-pct b{font-size:15px}
+:root[data-piel="xen"] .xs-pct small{color:var(--fx-t2)}
+:root[data-piel="xen"] .xs-pct.bien b{color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xs-pct.medio b{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xs-pct.mal b{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xs-mini{display:block;width:100%;max-width:140px;height:5px;margin-top:4px;border-radius:var(--fx-r-pill);background:var(--fx-hover);overflow:hidden}
+:root[data-piel="xen"] .xs-mini i{display:block;height:100%;background:var(--fx-acento)}
+:root[data-piel="xen"] .xs-nada{color:var(--fx-t2)}
+:root[data-piel="xen"] .xs-vs{display:inline-flex;align-items:baseline;gap:6px}
+:root[data-piel="xen"] .xs-vs.bien small{color:var(--fx-verde-t);font-weight:700}
+:root[data-piel="xen"] .xs-vs.mal small{color:var(--fx-rojo-t);font-weight:700}
+:root[data-piel="xen"] .xs-obj{color:var(--fx-t2)}
+:root[data-piel="xen"] .xs-mant{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:10px 0 12px}
+:root[data-piel="xen"] .xs-mant>div{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel)}
+:root[data-piel="xen"] .xs-mant b{font-family:var(--fx-display);font-size:20px;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xs-mant span{font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xs-atraso{display:flex;align-items:flex-start;gap:8px;margin:0 0 10px;font-size:13.5px;color:var(--fx-t1)}
+:root[data-piel="xen"] .xs-atraso .ic{width:16px;height:16px;flex:0 0 16px;margin-top:2px;color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xs-pol-cab{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px}
+:root[data-piel="xen"] .xs-pol-cab .ic{width:15px;height:15px}
+:root[data-piel="xen"] .xs-pol-c{display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xs-pol-c b{color:var(--fx-t0);font-weight:600}
+:root[data-piel="xen"] .xs-edit input,:root[data-piel="xen"] .xs-edit select{min-width:96px}
+:root[data-piel="xen"] .xs-dia{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 10px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-md);font-size:13.5px;cursor:pointer}
+:root[data-piel="xen"] .xs-dia input{width:auto;min-height:0;margin:0}
+/* Configuración › SLA y tickets */
+:root[data-piel="xen"] .xc-intro p{margin:0 0 8px;max-width:72ch;font-size:14px;color:var(--fx-t1)}
+:root[data-piel="xen"] .xc-sec{padding:18px 20px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel)}
+:root[data-piel="xen"] .xc-sec .xs-tabla{border-color:var(--fx-borde-2)}
+:root[data-piel="xen"] .xc-cab{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+:root[data-piel="xen"] .xc-capa{display:inline-flex;align-items:center;padding:1px 8px;border-radius:var(--fx-r-pill);font-size:11.5px;font-weight:700;white-space:nowrap;background:var(--fx-hover);color:var(--fx-t2)}
+:root[data-piel="xen"] .xc-capa.t{background:var(--fx-suave);color:var(--fx-suave-t)}
+:root[data-piel="xen"] .xc-capa.a{background:var(--fx-indigo-s);color:var(--fx-indigo-t)}
+:root[data-piel="xen"] .xc-lista{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:8px}
+:root[data-piel="xen"] .xc-lista[aria-invalid="true"]{outline:2px solid var(--fx-rojo-t);outline-offset:4px;border-radius:var(--fx-r-md)}
+:root[data-piel="xen"] .xc-item{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:8px 10px;border:1px solid var(--fx-borde-2);border-radius:var(--fx-r-md);background:var(--fx-panel-2)}
+:root[data-piel="xen"] .xc-nombre{flex:1 1 200px}
+:root[data-piel="xen"] .xc-alias{flex:2 1 260px}
+:root[data-piel="xen"] .xc-tono{flex:0 0 140px}
+:root[data-piel="xen"] .xc-mover{display:inline-flex;align-items:center;gap:2px;margin-left:auto}
+:root[data-piel="xen"] .xc-mover .fx-ico{width:36px;height:36px;flex:0 0 36px}
+:root[data-piel="xen"] .xc-mover .fx-ico:disabled{opacity:.35;cursor:default}
+:root[data-piel="xen"] .xc-quitar:hover:not(:disabled){background:var(--fx-rojo-s);color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xc-si{display:inline-flex;align-items:center;gap:8px;min-height:36px;font-size:13.5px;font-weight:600;color:var(--fx-t1);cursor:pointer}
+:root[data-piel="xen"] .xc-si input{width:18px;height:18px;min-height:0;margin:0;accent-color:var(--fx-acento)}
+:root[data-piel="xen"] .xc-grupo{margin-top:16px;padding-top:14px;border-top:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .xc-grupo h3{margin:0 0 8px;font-size:14px;color:var(--fx-t0)}
+:root[data-piel="xen"] .xc-regla{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;max-width:640px}
+:root[data-piel="xen"] .xc-ayuda{margin:0;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xc-dias{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;border:0}
+:root[data-piel="xen"] .xc-dias legend{width:100%;margin-bottom:6px;font-size:12.5px;font-weight:600;color:var(--fx-t2)}
+:root[data-piel="xen"] .xc-dias[aria-invalid="true"]{outline:2px solid var(--fx-rojo-t);outline-offset:4px;border-radius:var(--fx-r-md)}
+:root[data-piel="xen"] .xc-pie{position:sticky;bottom:-28px;z-index:5;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;margin-top:20px;padding:14px 0;border-top:1px solid var(--fx-borde);background:var(--fx-fondo)}
+:root[data-piel="xen"] .xc-pie .xt-msg{flex:1 1 100%;margin:0}
+:root[data-piel="xen"] .xc-seguro{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--fx-t1)}
+:root[data-piel="xen"] input[aria-invalid="true"],:root[data-piel="xen"] select[aria-invalid="true"]{border-color:var(--fx-rojo-t);box-shadow:0 0 0 1px var(--fx-rojo-t)}
+:root[data-piel="xen"] #view-tickets .pad,:root[data-piel="xen"] #view-sla .pad,:root[data-piel="xen"] #view-cfg-sla .pad{display:flex;flex-direction:column}
+:root[data-piel="xen"] #view-tickets.active,:root[data-piel="xen"] #view-sla.active,:root[data-piel="xen"] #view-cfg-sla.active{overflow:auto}
+@media (max-width:1100px){
+  :root[data-piel="xen"] .xs-dos{grid-template-columns:minmax(0,1fr)}
+  :root[data-piel="xen"] .xs-mant{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:900px){
+  :root[data-piel="xen"] .xt-cifras{grid-template-columns:repeat(2,minmax(0,1fr))}
+  :root[data-piel="xen"] .xt-ctl,:root[data-piel="xen"] .xt-medidores,:root[data-piel="xen"] .xt-fila2{grid-template-columns:minmax(0,1fr)}
+  :root[data-piel="xen"] .xt-f{flex:1 1 140px}
+  :root[data-piel="xen"] .xt-f select{min-width:0;width:100%}
+  :root[data-piel="xen"] .xt-crear-chat span{display:none}
+  :root[data-piel="xen"] .xs-tabla table,:root[data-piel="xen"] .xs-tabla tbody,:root[data-piel="xen"] .xs-tabla tr,:root[data-piel="xen"] .xs-tabla th,:root[data-piel="xen"] .xs-tabla td{display:block;width:100%}
+  :root[data-piel="xen"] .xs-tabla thead{display:none}
+  :root[data-piel="xen"] .xs-tabla tr{padding:10px 14px;border-bottom:1px solid var(--fx-borde-2)}
+  :root[data-piel="xen"] .xs-tabla th,:root[data-piel="xen"] .xs-tabla td{padding:3px 0;border:0;text-align:left}
+  :root[data-piel="xen"] .xs-tabla td[data-rot]::before{content:attr(data-rot) " ";display:block;font-size:11.5px;font-weight:700;color:var(--fx-t3)}
+  :root[data-piel="xen"] .xs-tabla .num{text-align:left}
+  :root[data-piel="xen"] .xc-item{align-items:stretch}
+  :root[data-piel="xen"] .xc-mover{margin-left:0}
+}
+@media (pointer:coarse){
+  :root[data-piel="xen"] .xt-vistas button{min-height:44px}
+  :root[data-piel="xen"] .xc-mover .fx-ico{width:44px;height:44px;flex:0 0 44px}
+}
+@media (prefers-reduced-motion:reduce){:root[data-piel="xen"] .xt-esq{animation:none}:root[data-piel="xen"] .xt-fila,:root[data-piel="xen"] button.xt-cifra{transition:none}}
 /* (fin de XEN · Tickets y SLA) */
 
 /* ---------- XEN · Mantenimientos y actualizaciones (agente de Mantenimientos) ---------- */
@@ -3715,6 +3954,8 @@ dialog.perdida input{width:100%}
               <button class="btn sm" id="details-btn" style="display:none">Ficha</button>
               <!-- Lo mismo que Xen/Tú, dicho como en un CRM de mensajería: lo que se pausa es la automatización
                    (el agente de IA). Toca el mismo interruptor. -->
+              <!-- XEN · Tickets y SLA: abrir un ticket de esta conversación, con la persona ya puesta. -->
+              <button class="btn sm xt-crear-chat" id="xt-crear-chat" type="button" aria-label="Crear ticket" title="Crear un ticket de esta conversación"><i class="ic" data-ic="ticket"></i><span>Ticket</span></button>
               <button class="btn sm solo-facil" id="fx-control"></button>
             </div>
           </div>
@@ -4034,6 +4275,12 @@ dialog.perdida input{width:100%}
       <!-- XEN · Tickets y SLA: el marcado del SLA va aquí -->
       <div class="pad" id="xs-sla"></div>
       <!-- (fin de XEN · SLA) -->
+    </section>
+
+    <!-- XEN · Tickets y SLA: Configuración › SLA y tickets (todo lo del SLA, editable por quien tenga permiso) -->
+    <section class="view" id="view-cfg-sla">
+      <div class="topbar"><h1>SLA y tickets</h1><span class="grow"></span></div>
+      <div class="pad" id="xc-cfg"></div>
     </section>
 
     <section class="view" id="view-mantenimientos">

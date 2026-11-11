@@ -65,7 +65,7 @@ check('nada de negocio fijo: aviso por plan, cadencia general y por aplicación,
     'mant.aviso.plantilla', 'mant.aviso.cuentaAl', 'mant.quienPrograma', 'mant.periodoDias'].every((id) => ids.has(id)), [...ids].join(', '));
 check('las aplicaciones de fábrica son las del catálogo, sin los planes de soporte', JSON.stringify(R.productos()) === JSON.stringify(['XENTRIS POS', 'XENTRIS Field', 'XENTRIS Stock', 'Desarrollo a la medida']), JSON.stringify(R.productos()));
 check('el archivo valida lo que trae (una cadencia de 0 días no pasa)', !BusinessConfigSchema.safeParse({ ...base, servicio: { mantenimientos: { cadenciaDias: 0 } } }).success);
-check('🪤 y conserva lo de otras pantallas en servicio (servicio.sla)', (BusinessConfigSchema.parse({ ...base, servicio: { sla: { planes: ['Oro'] } } }).servicio as Record<string, unknown>).sla !== undefined);
+check('🪤 y conserva lo de otras pantallas en servicio (servicio.sla)', (BusinessConfigSchema.parse({ ...base, servicio: { sla: { planes: [{ id: 'oro', nombre: 'Oro' }] } } }).servicio as Record<string, unknown>).sla !== undefined);
 
 console.log('— Guardar desde el tablero: todo o nada, limpio');
 g = R.guardarReglas({ 'mant.avisoHoras.Pro': 12, 'mant.avisoHoras.Enterprise': 'abc' });

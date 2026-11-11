@@ -108,6 +108,34 @@ export function msHabiles(desde: number, hasta: number, horario = horarioDelNego
   return total;
 }
 
+/**
+ * El instante en que se cumplen `ms` de tiempo hábil contados desde `desde`: el vencimiento de un plazo que solo
+ * corre dentro del horario (el SLA de un ticket en horas hábiles, crm/tickets.ts). Es lo inverso de msHabiles:
+ * msHabiles(desde, sumarHabiles(desde, x)) === x. Sin franjas declaradas, es tiempo corrido.
+ */
+export function sumarHabiles(desde: number, ms: number, horario = horarioDelNegocio()): number {
+  if (ms <= 0) return desde;
+  if (!horario.franjas.length || !horario.dias.length) return desde + ms;
+  const franjas = horario.franjas.slice().sort((a, b) => a[0] - b[0]);
+  let falta = ms;
+  // Un año de días sin horario hábil sería un horario roto: se corta ahí en vez de dar vueltas sin fin.
+  for (let t = desde, vuelta = 0; vuelta < 400; vuelta++) {
+    const p = enLaZona(t);
+    const medianoche = instante(t, 0);
+    if (horario.dias.includes(p.diaSemana)) {
+      for (const [ini, fin] of franjas) {
+        const a = Math.max(t, medianoche + ini * 60_000);
+        const b = medianoche + fin * 60_000;
+        if (b <= a) continue;
+        if (b - a >= falta) return a + falta;
+        falta -= b - a;
+      }
+    }
+    t = instante(medianoche + DIA + 3600_000, 0); // +1 h de colchón por los cambios de hora
+  }
+  return desde + ms;
+}
+
 // ---------- Las esperas ----------
 
 interface FilaMensaje {

@@ -397,6 +397,11 @@ const EN_OTRO_SITIO: EnOtroSitio[] = [
   { grupo: 'El asistente y la IA', etiqueta: 'Lo que sabe: catálogo, información y diccionario del negocio', donde: 'Configuración › Lo que sabe', vista: 'knowledge' },
   { grupo: 'Canales', etiqueta: 'WhatsApp, chat del sitio y modos de cada canal', donde: 'Configuración › Canales', vista: 'channels' },
   { grupo: 'Rendimiento', etiqueta: 'Metas de cada KPI', donde: 'Rendimiento › KPIs y metas', vista: 'kpis' },
+  // Servicio tiene sus pantallas propias (tablas por plan y prioridad, plantilla del aviso con vista previa): sus
+  // reglas usan las mismas tres capas y la misma llave (`reglas.<id>`), pero se cambian allá para no tener dos
+  // controles del mismo valor.
+  { grupo: 'Servicio', etiqueta: 'Planes, prioridades, tipos y estados de ticket, objetivos del SLA, «En riesgo» y quién puede qué', donde: 'Configuración › SLA y tickets', vista: 'cfg-sla' },
+  { grupo: 'Servicio', etiqueta: 'Aviso mínimo por plan, cadencia de actualizaciones, clientes afectados y plantilla del aviso', donde: 'Configuración › Mantenimientos y actualizaciones', vista: 'cfg-mantenimientos' },
   { grupo: 'Equipo', etiqueta: 'Modo fácil y candado del equipo', donde: 'Ajustes (el engranaje del pie del menú)' },
   { grupo: 'Datos', etiqueta: 'Cuánto tiempo se guardan las conversaciones', donde: 'La consola › el cliente › Retención' },
 ];

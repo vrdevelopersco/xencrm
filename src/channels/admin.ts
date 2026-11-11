@@ -112,6 +112,7 @@ import {
 } from '../crm/mantenimientos-reglas.js';
 import { sentimiento } from '../crm/sentimiento.js';
 import { cambiarReglas, ponerRegla, regla, registro, valoresDeReglas } from '../reglas.js';
+import { cambiarTicket, capasDe, configSla, crearTicket, FABRICA as SLA_DE_FABRICA, guardarConfigSla, listarTickets, olvidarConfigDelTablero, puede as puedeEnSla, reglasSla, slaDelPeriodo, verTicket, vistaDeConfig } from '../crm/tickets.js';
 
 /**
  * Lo que el tablero enseña de cada contacto además de la ficha: temperatura, recap (hechos de la ficha + próxima
@@ -1535,6 +1536,65 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const r = limpiarMetas(body.metas);
     if ('error' in r) return c.json(r, 400);
     return c.json({ metas: guardarMetas(r.metas), definiciones: KPIS });
+  });
+
+  /**
+   * Servicio › Tickets y SLA (crm/tickets.ts): lo que reportan los clientes, con el reloj del SLA de su plan. Sin
+   * modelo ni red. Todo lo del negocio (planes, prioridades, tipos, estados, objetivos, reglas) sale de la
+   * configuración en tres capas; quién puede abrir, mover y cambiar la configuración también (`permisos`), y se
+   * decide aquí con el rol de la sesión (x-xencrm-rol, lo pone la consola; sin él es el token a secas).
+   */
+  const rolDe = (c: { req: { header(n: string): string | undefined } }) => c.req.header('x-xencrm-rol') || undefined;
+  const NO_PUEDE = 'en este negocio eso lo hace quien administra; pídeselo';
+  app.get('/admin/api/tickets', (c) => {
+    const contacto = c.req.query('contacto');
+    const dias = Number(c.req.query('dias') ?? 90) || 90;
+    const cfg = configSla();
+    return c.json({ tickets: listarTickets({ contacto: contacto || undefined, dias }), config: vistaDeConfig(cfg), puede: { crear: puedeEnSla(cfg.permisos.crear, rolDe(c)), mover: puedeEnSla(cfg.permisos.mover, rolDe(c)) }, ahora: Date.now() });
+  });
+  app.get('/admin/api/tickets/:id', (c) => {
+    const t = verTicket(Number(c.req.param('id')));
+    return t ? c.json(t) : c.json({ error: 'ese ticket no existe' }, 404);
+  });
+  app.post('/admin/api/tickets', async (c) => {
+    if (!puedeEnSla(configSla().permisos.crear, rolDe(c))) return c.json({ error: NO_PUEDE }, 403);
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    try {
+      return c.json(crearTicket(body, quienHace(c, body.by)));
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  });
+  app.patch('/admin/api/tickets/:id', async (c) => {
+    if (!puedeEnSla(configSla().permisos.mover, rolDe(c))) return c.json({ error: NO_PUEDE }, 403);
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    try {
+      return c.json(cambiarTicket(Number(c.req.param('id')), body, quienHace(c, body.by)));
+    } catch (err) {
+      const msg = (err as Error).message;
+      return c.json({ error: msg }, msg === 'ese ticket no existe' ? 404 : 400);
+    }
+  });
+  app.get('/admin/api/sla', (c) => c.json({ ...slaDelPeriodo(Number(c.req.query('dias') ?? 30) || 30), config: vistaDeConfig() }));
+  /** Configuración › SLA y tickets: la que manda, de qué capa sale cada parte, la de fábrica y las reglas sueltas. */
+  const configParaElTablero = (c: { req: { header(n: string): string | undefined } }) => {
+    const cfg = configSla();
+    const archivo = (business as { servicio?: { sla?: unknown } }).servicio?.sla;
+    return { config: cfg, fabrica: SLA_DE_FABRICA, capas: capasDe(), reglas: reglasSla(cfg), tieneArchivo: Boolean(archivo), puedeEditar: puedeEnSla(cfg.permisos.politicas, rolDe(c)), jornadaMin: vistaDeConfig(cfg).jornadaMin };
+  };
+  app.get('/admin/api/sla/config', (c) => c.json(configParaElTablero(c)));
+  app.put('/admin/api/sla/config', async (c) => {
+    if (!puedeEnSla(configSla().permisos.politicas, rolDe(c))) return c.json({ error: NO_PUEDE }, 403);
+    const body = (await c.req.json().catch(() => ({}))) as { estructura?: unknown; reglas?: Record<string, unknown> };
+    const r = guardarConfigSla(body);
+    if ('error' in r) return c.json(r, 400);
+    return c.json(configParaElTablero(c));
+  });
+  /** Volver a lo del archivo del cliente (o a lo de fábrica): se borra solo lo que se cambió desde el tablero. */
+  app.delete('/admin/api/sla/config', (c) => {
+    if (!puedeEnSla(configSla().permisos.politicas, rolDe(c))) return c.json({ error: NO_PUEDE }, 403);
+    olvidarConfigDelTablero();
+    return c.json(configParaElTablero(c));
   });
 
   /** De dónde salió cada conversación y en qué terminó: el embudo por campaña. */

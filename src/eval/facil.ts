@@ -74,8 +74,8 @@ const lee: Record<string, string[]> = {
   // XEN · Optimización de ventas
   optimizacion: ['optimizacion'],
   // XEN · Tickets y SLA
-  tickets: ['contacts'],
-  sla: ['stats'],
+  tickets: ['tickets', 'tickets/1', 'contacts'],
+  sla: ['sla', 'sla/config', 'tickets/1'],
   // XEN · Mantenimientos y actualizaciones
   mantenimientos: ['mantenimientos', 'mantenimientos/cumplimiento'],
   // (fin de las pantallas de la suite)

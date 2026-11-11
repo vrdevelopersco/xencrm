@@ -246,6 +246,28 @@ export function getDb(): DatabaseSync {
       nota_por TEXT,
       nota_at INTEGER
     );
+    -- Los tickets de soporte (Servicio › Tickets, crm/tickets.ts). Van en el esquema base, como cuentas_clave, para que
+    -- borrar, unir y anonimizar una ficha los encuentren siempre. Su historia vive en los eventos de la ficha.
+    CREATE TABLE IF NOT EXISTS tickets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      asunto TEXT NOT NULL DEFAULT '',
+      tipo TEXT NOT NULL DEFAULT 'incidente',
+      prioridad TEXT NOT NULL DEFAULT 'media',
+      estado TEXT NOT NULL DEFAULT 'abierto',
+      producto TEXT NOT NULL DEFAULT '',
+      asignado TEXT,
+      creado INTEGER NOT NULL,
+      creado_por TEXT NOT NULL DEFAULT '',
+      respondido INTEGER,
+      respondido_por TEXT,
+      resuelto INTEGER,
+      cerrado INTEGER,
+      pausa_desde INTEGER,
+      pausa_ms INTEGER NOT NULL DEFAULT 0,
+      actualizado INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS tickets_user ON tickets(user_id);
   `);
   migrate(db);
   loadVectors();
