@@ -15,6 +15,7 @@
 //     conversación se responda. Sin esto, una conversación olvidada un domingo manda cientos de mensajes.
 //  3. **Respeta el horario.** El reloj de la espera ya no corre fuera de la jornada, así que tampoco suena de
 //     madrugada por algo que entró de madrugada.
+import { regla } from '../reglas.js';
 import { business } from '../config.js';
 import { getSetting } from './settings.js';
 import { getContact } from './contacts.js';
@@ -33,7 +34,7 @@ const yaAvisados = new Set<string>();
 
 /** Cuántos avisos van en la última hora, como freno de último recurso. */
 let ultimaHora: { desde: number; n: number } = { desde: 0, n: 0 };
-const TOPE_POR_HORA = 12;
+const TOPE_POR_HORA = 12; // el de fábrica: manda la regla vigilante.topePorHora
 
 export interface Aviso {
   userId: string;
@@ -44,7 +45,7 @@ export interface Aviso {
 
 /** Lo que habría que avisar ahora mismo, sin mandar nada. Separado para poder probarlo sin enviar. */
 export function loQueHayQueAvisar(opts: { acuerdoMin?: number; ahora?: number } = {}): Aviso[] {
-  const acuerdoMin = opts.acuerdoMin ?? getSetting('sla.minutos', 15);
+  const acuerdoMin = opts.acuerdoMin ?? regla<number>('atencion.acuerdoMinutos');
   const ahora = opts.ahora ?? Date.now();
   const abiertas = esperas({ desde: ahora - 7 * 86400_000, ahora }).filter((e) => e.hasta === null);
   const out: Aviso[] = [];
@@ -79,7 +80,7 @@ export async function avisar(opts: { acuerdoMin?: number; ahora?: number } = {})
 
   let salieron = 0;
   for (const aviso of loQueHayQueAvisar(opts)) {
-    if (ultimaHora.n >= TOPE_POR_HORA) break; // algo va mal: mejor callarse que inundar a nadie
+    if (ultimaHora.n >= regla<number>('vigilante.topePorHora')) break; // algo va mal: mejor callarse que inundar a nadie
     let alguno = false;
     for (const numero of destinos) {
       // Por el canal que esté vivo. El del sitio web no sirve para esto: nadie tiene esa página abierta.

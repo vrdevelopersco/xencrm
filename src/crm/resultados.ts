@@ -1,6 +1,7 @@
 // Lo que se vendió, lo que se perdió y a quién hay que escribirle: el mismo cálculo para las rutas /ventas y
 // /seguimientos y para Optimización de ventas (crm/optimizacion.ts). Vivía dentro de cada ruta; salió aquí para
 // que ninguna pantalla cuente distinto lo mismo.
+import { regla } from '../reglas.js';
 import { contactNumber, estaCerrada, listContacts, listEvents, rolDe, type Stage } from './contacts.js';
 import { valorDe, type ValorDe } from './valor.js';
 import { listAppointments } from './appointments.js';
@@ -107,19 +108,19 @@ export function seguimientosPendientes(now = Date.now()): { cuantos: number; cal
   const abiertos = listContacts({ limit: 2000 }).filter((x) => !x.archived && !estaCerrada(x.stage));
   const conCita = new Set(listAppointments({ from: now, status: 'confirmada', limit: 1000 }).map((a) => a.userId));
   const esperandoResultado = new Set(
-    listAppointments({ from: now - 14 * 86400_000, to: now, status: 'confirmada', limit: 1000 })
+    listAppointments({ from: now - regla<number>('seg.diasEsperandoResultado') * 86400_000, to: now, status: 'confirmada', limit: 1000 })
       .filter((a) => a.endsAt < now)
       .map((a) => a.userId),
   );
   const filas = abiertos
-    .filter((x) => !conCita.has(x.id) && !esperandoResultado.has(x.id) && (x.lastMessageAt ?? 0) < now - 24 * 3600_000 && !isSnoozed(x, now))
+    .filter((x) => !conCita.has(x.id) && !esperandoResultado.has(x.id) && (x.lastMessageAt ?? 0) < now - regla<number>('seg.horasSinSeguimiento') * 3600_000 && !isSnoozed(x, now))
     .map((x) => {
       const callado = Math.round((now - (x.lastMessageAt ?? x.lastSeen ?? now)) / 86400_000);
       // El motivo en una frase: sin esto la lista es un montón de nombres y nadie sabe por cuál empezar.
-      const porque = x.scoreBase >= 60 ? `Puntaje ${x.scoreBase} y lleva ${callado} día${callado === 1 ? '' : 's'} callado` : `Lleva ${callado} día${callado === 1 ? '' : 's'} sin escribir`;
+      const porque = x.scoreBase >= regla<number>('puntaje.caliente') ? `Puntaje ${x.scoreBase} y lleva ${callado} día${callado === 1 ? '' : 's'} callado` : `Lleva ${callado} día${callado === 1 ? '' : 's'} sin escribir`;
       return { id: x.id, nombre: x.name, phone: contactNumber(x), canal: x.channel, etapa: x.stage, puntaje: x.scoreBase, callado, porque, resumen: x.summary, valor: valorDe(x) };
     })
     // Primero los que más valen la pena: puntaje alto y poco tiempo callados se enfrían rápido.
     .sort((a, b) => b.puntaje - a.puntaje || a.callado - b.callado);
-  return { cuantos: filas.length, calientes: filas.filter((f) => f.puntaje >= 60).length, seguimientos: filas.slice(0, 200) };
+  return { cuantos: filas.length, calientes: filas.filter((f) => f.puntaje >= regla<number>('puntaje.caliente')).length, seguimientos: filas.slice(0, 200) };
 }

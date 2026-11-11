@@ -155,7 +155,7 @@
   // si el mismo dato se viera distinto en dos pantallas, alguien pensaría que son dos datos.
   function abierta(c) { var r = rol(c.stage); return r !== 'ganado' && r !== 'perdido'; }
   // Lo mismo que «calientes» en Hoy y en la barra: abierta y con 60 o más.
-  function esCaliente(c) { return abierta(c) && (c.score || 0) >= 60; }
+  function esCaliente(c) { return abierta(c) && (c.score || 0) >= R('puntaje.caliente', 60); }
   // «Míos»: las que están a cargo de quien mira, o que está atendiendo ahora, por el nombre con el que responde.
   // Sin nombre no hay «míos». 🪤 La misma regla que esDe en crm/contacts.ts: es la que da la cifra de la barra.
   function mismoNombre(a, b) { return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase(); }
@@ -459,6 +459,9 @@
     // Qué proveedores de IA están conectados y cuál hace cada rol. Solo quien administra XENCRM: decide a quién se
     // le factura, y la consola cierra `motores/` a los demás (consola.ts, SOLO_SUPER).
     { view: 'modelos', ic: 'chispa', lbl: 'Modelos de IA', soloSuper: true },
+    // Cada umbral que decide algo de negocio, en un solo sitio (src/reglas.ts). Es de quien administra: el candado y la
+    // consola cierran el cambio a los demás.
+    { view: 'reglas', ic: 'sliders', lbl: 'Reglas y umbrales', soloAdmin: true },
     { view: 'channels', ic: 'plug', lbl: 'Canales' },
     { view: 'knowledge', ic: 'book', lbl: 'Lo que sabe' },
     // 🪤 Solo para quien administra, y es por RUIDO, no por secreto. Quien atiende todo el día no necesita ver
@@ -601,7 +604,7 @@
   // mandó la muestra de cómo lo quería (Nexora) y las tres están en su menú: son del que vende, no del que
   // administra XENCRM. El servidor las abre igual (channels/candado.ts).
   var SOLO_COMPLETO_VISTAS = { agent: 1, trazas: 1 };
-  var VISTAS_DE_QUIEN_ADMINISTRA = { guia: 1, profile: 1, negocio: 1, agent: 1, channels: 1, knowledge: 1, trazas: 1, modelos: 1 };
+  var VISTAS_DE_QUIEN_ADMINISTRA = { guia: 1, profile: 1, negocio: 1, agent: 1, channels: 1, knowledge: 1, trazas: 1, modelos: 1, reglas: 1 };
   var FILTROS_COMPLETOS = /^(human|archived|stage:)/;
   function modoMio() { try { return localStorage.getItem(LLAVE('modo')) || ''; } catch (e) { return ''; } }
   function modoDelEquipo() {
@@ -669,7 +672,7 @@
   // ---------- el panel de la sección ----------
   // 🪤 Solo aparece donde tiene algo que decir. Un panel vacío a la izquierda «para que se vea simétrico» es
   // espacio robado a lo único que importa en esta pantalla, que es la conversación.
-  var CFG_VIEWS = { guia: 1, agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1, modelos: 1 };
+  var CFG_VIEWS = { guia: 1, agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1, modelos: 1, reglas: 1 };
   // 🪤 En las pantallas de configuración el panel decía lo mismo que el título de la página, dos veces en la
   // misma fila. Aquí dice el ÁREA —dónde estás— y la lista de abajo dice la pantalla: cada uno aporta algo.
   var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Clientes', clientes: 'Clientes', ventas: 'Análisis', seguimientos: 'Clientes', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración', trazas: 'Configuración', guia: 'Configuración' };
@@ -1023,6 +1026,7 @@
       sla: ['SLA', 'Si se está cumpliendo lo prometido a cada plan: respuesta, solución, actualizaciones y mantenimientos.'],
       mantenimientos: ['Mantenimientos y actualizaciones', 'Lo que se va a tocar, a quién afecta y si se avisó a tiempo.'],
       modelos: ['Modelos de IA', 'Conecta los proveedores de IA y elige cuál hace cada cosa.'],
+      reglas: ['Reglas y umbrales', 'Cada número que decide algo: cuándo es caliente, cuánto aguanta una cuenta clave, desde cuándo preocupa.'],
       help: ['Ayuda', 'Lo esencial del tablero en dos minutos.']
     }[view];
     var barra = document.querySelector('#view-' + view + ' > .topbar');
@@ -1115,7 +1119,7 @@
       if (state.filter === 'mios') list = list.filter(esMia);
       if (state.filter === 'sin-asignar') list = list.filter(sinAsignar);
       if ($('f-mios')) $('f-mios').hidden = !state.name;
-      if (state.filter === 'hot') list = list.filter(function (c) { return c.score >= 60 || rol(c.stage) === 'cita'; });
+      if (state.filter === 'hot') list = list.filter(function (c) { return c.score >= R('puntaje.caliente', 60) || rol(c.stage) === 'cita'; });
       state.contacts = list; renderRows(); updateBadges(); pintarFiltroFacil();
     });
   }
@@ -1200,8 +1204,8 @@
     if (rol(c.stage) === 'ganado') return { label: 'Cliente', cls: 'v-cliente', why: 'Compró.' };
     if (rol(c.stage) === 'perdido') return { label: 'Perdido', cls: 'v-perdido', why: 'Se descartó.' };
     if (rol(c.stage) === 'cita') return { label: 'Prospecto con cita', cls: 'v-cita', why: 'Ya tiene cita agendada.' };
-    if (c.score >= 60) return { label: 'Prospecto claro', cls: 'v-si', why: topFactor(c) };
-    if (c.score >= 30) return { label: 'Posible prospecto', cls: 'v-posible', why: topFactor(c) };
+    if (c.score >= R('puntaje.caliente', 60)) return { label: 'Prospecto claro', cls: 'v-si', why: topFactor(c) };
+    if (c.score >= R('puntaje.tibio', 30)) return { label: 'Posible prospecto', cls: 'v-posible', why: topFactor(c) };
     return { label: 'Sin señales aún', cls: 'v-no', why: c.messageCount ? 'Todavía no muestra intención de compra.' : 'Acaba de escribir.' };
   }
   function topFactor(c) { var top = (c.scoreFactors || []).slice().sort(function (a, b) { return Math.abs(b.points) - Math.abs(a.points); })[0]; return top ? top.label + '.' : ''; }
@@ -2014,7 +2018,7 @@
       p.classList.add('fx-resalta'); setTimeout(function () { p.classList.remove('fx-resalta'); }, 1600);
     };
     var acciones = accionesDelCopiloto(pend, t || {}, irAlRecuadro);
-    var visibles = acciones.slice(0, 5), resto = acciones.length - visibles.length;
+    var visibles = acciones.slice(0, R('inicio.maxAcciones', 5)), resto = acciones.length - visibles.length;
     var hoy = ((t && t.appointments) || []);
     var hora = new Date().toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' });
     caja.removeAttribute('aria-busy');
@@ -2166,7 +2170,7 @@
         b.onclick = function () { var id = b.getAttribute('data-id'); if (id && id !== 'system') { go('inbox'); openContact(id); } };
       });
     };
-    var avisos = (state.notifs || []).filter(avisoParaMi).slice(0, 5);
+    var avisos = (state.notifs || []).filter(avisoParaMi).slice(0, R('inicio.maxAvisos', 5));
     if (avisos.length) {
       pintar(avisos.map(function (n) { return { id: n.userId, t: n.title, d: n.body, cuando: n.ts, tono: tono(n.kind) }; }));
       return;
@@ -2571,7 +2575,7 @@
       if ($('fx-n-citas')) $('fx-n-citas').textContent = $('badge-cal').textContent;
       renderCalendar();
     });
-    api('/contacts?limit=500').then(function (list) { $('book-contact').innerHTML = list.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(nameOf(c)) + '</option>'; }).join(''); });
+    api('/contacts?limit=' + R('contactos.tope', 500)).then(function (list) { $('book-contact').innerHTML = list.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(nameOf(c)) + '</option>'; }).join(''); });
   }
   function renderCalendar() {
     var end = addDays(cal.start, 6);
@@ -4192,7 +4196,9 @@
   }
 
   function loadClientes() {
-    var params = cli.q ? '?q=' + encodeURIComponent(cli.q) + '&limit=500' : '?limit=500';
+    // El tope de la lista es una regla (contactos.tope, 500 de fábrica): más allá, se busca.
+    var tope = R('contactos.tope', 500);
+    var params = cli.q ? '?q=' + encodeURIComponent(cli.q) + '&limit=' + tope : '?limit=' + tope;
     // XENCRM: mientras llega la lista se ve su forma (esqueleto), no «Nadie por aquí»: eso decía que no había
     // nadie cuando lo que pasaba es que todavía no se sabía. Y si falla, se dice con una salida, no se revienta.
     cli.cargando = true; cli.error = '';
@@ -4281,9 +4287,9 @@
     // «La lleva» (quién contesta ahora) no tiene columna propia: va debajo de «Asignado a», que es su pariente.
     // 🪤 La lista llega con tope (los 500 con actividad más reciente: crm/contacts.ts). Si se llenó, se dice ARRIBA:
     // al pie, después de 500 filas, nadie lo lee y parecería que ese es todo el directorio.
-    var parcial = cli.lista.length >= 500;
+    var parcial = cli.lista.length >= R('contactos.tope', 500);
     $('cli-tabla').innerHTML = (cli.q ? '<div class="cli-resumen">Buscando «' + esc(cli.q) + '»</div>' : '') +
-      (parcial ? '<div class="cli-resumen fx-ct-parcial" role="note">Se muestran los 500 contactos con actividad más reciente. Para encontrar a alguien más, búscalo por su nombre o su número.</div>' : '') +
+      (parcial ? '<div class="cli-resumen fx-ct-parcial" role="note">Se muestran los ' + R('contactos.tope', 500) + ' contactos con actividad más reciente. Para encontrar a alguien más, búscalo por su nombre o su número.</div>' : '') +
       '<table class="cli-tabla"><thead><tr>' +
         // El puntaje ya no tiene columna (no cabía junto a lo demás): va en el último trato, y se ordena desde ahí.
         th('nombre', 'Contacto') + '<th' + aria(orden === 'paso' || orden === 'puntaje') + '>' + ordBtn('paso', 'Último trato') + ordBtn('puntaje', '· puntaje', 'solo-completo fx-ct-ord2') + '</th>' +
@@ -6900,7 +6906,7 @@
     // Dónde se quedan más: el paso con la menor proporción, entre los que tienen al menos tres que llegaron (con
     // menos, un solo caso decide el porcentaje y la pantalla señalaría un problema que no existe).
     var peor = null;
-    tramos.forEach(function (t, i) { if (t.pasan != null && t.llegaron >= 3 && t.pasan < 1 && (peor == null || t.pasan < tramos[peor].pasan)) peor = i; });
+    tramos.forEach(function (t, i) { if (t.pasan != null && t.llegaron >= R('embudo.minParaMarcar', 3) && t.pasan < 1 && (peor == null || t.pasan < tramos[peor].pasan)) peor = i; });
     perdidos.motivos = Object.keys(motivos).map(function (k) { return { motivo: k, n: motivos[k] }; }).sort(function (a, b) { return b.n - a.n || a.motivo.localeCompare(b.motivo, 'es'); });
     return { total: lista.length, tramos: tramos, peor: peor, perdidos: perdidos, sinHistoria: sinHistoria, abiertos: abiertos, valorAbierto: valorAbierto, sinPrecioAbierto: sinPrecioAbierto, ganados: ganados };
   }
@@ -7285,7 +7291,7 @@
   var XK_ANIMO = { positivo: ['😊', 'Contento'], neutral: ['😐', 'Neutral'], negativo: ['😠', 'Molesto'] };
   var XK_INTERES = { 3: ['🤩', 'Quiere comprar'], 2: ['🙂', 'Interés claro'], 1: ['🤔', 'Curiosidad'], 0: ['😶', 'Sin interés'] };
   var XK_NIVEL_IC = { riesgo: 'alerta', atencion: 'reloj', bien: 'check' };
-  var XK_NOTA_MAX = 600;
+  var XK_NOTA_MAX = 600; // el de fábrica: el que manda es la regla kam.maxNota (ver xkNotaMax)
   ICONS.quitar = '<path d="M18 6 6 18M6 6l12 12"/>';
 
   function xkCarita(par) { return par ? '<span class="xk-carita"><span aria-hidden="true">' + par[0] + '</span> ' + esc(par[1]) + '</span>' : '<span class="xk-nada">Sin análisis</span>'; }
@@ -7441,8 +7447,8 @@
     if (XK.editando[k.id]) {
       var val = XK.borradores[k.id] != null ? XK.borradores[k.id] : k.nota;
       return '<div class="xk-plan editando"><label class="xk-plan-l" for="xk-n-' + id + '">Plan de cuenta</label>' +
-        '<textarea id="xk-n-' + id + '" data-xk-nota="' + id + '" data-borrador maxlength="' + XK_NOTA_MAX + '" rows="3" placeholder="Lo que hay que saber antes de hablarle: qué compra, cuándo vuelve, a quién trae, qué no le gusta…">' + esc(val) + '</textarea>' +
-        '<div class="xk-plan-pie"><span class="xk-cuantas" data-xk-cuantas="' + id + '">' + String(val || '').length + ' / ' + XK_NOTA_MAX + '</span>' +
+        '<textarea id="xk-n-' + id + '" data-xk-nota="' + id + '" data-borrador maxlength="' + R('kam.maxNota', XK_NOTA_MAX) + '" rows="3" placeholder="Lo que hay que saber antes de hablarle: qué compra, cuándo vuelve, a quién trae, qué no le gusta…">' + esc(val) + '</textarea>' +
+        '<div class="xk-plan-pie"><span class="xk-cuantas" data-xk-cuantas="' + id + '">' + String(val || '').length + ' / ' + R('kam.maxNota', XK_NOTA_MAX) + '</span>' +
         (XK.errores[k.id] ? '<span class="xk-err" role="alert">No se guardó: ' + esc(XK.errores[k.id]) + '. Lo escrito sigue aquí.</span>' : '') +
         '<button type="button" class="btn sm primary" data-xk-guardar="' + id + '">Guardar plan</button><button type="button" class="btn sm" data-xk-cancelar="' + id + '">Cancelar</button></div></div>';
     }
@@ -7492,7 +7498,7 @@
         var id = t.getAttribute('data-xk-nota');
         XK.borradores[id] = t.value;
         var n = caja.querySelector(xkSel('data-xk-cuantas', id));
-        if (n) n.textContent = t.value.length + ' / ' + XK_NOTA_MAX;
+        if (n) n.textContent = t.value.length + ' / ' + R('kam.maxNota', XK_NOTA_MAX);
       };
       t.onkeydown = function (e) {
         if (e.key !== 'Escape') return;
@@ -8081,7 +8087,204 @@
   })();
   // (fin de XEN · Modelos de IA)
 
-  boot();
+  // ===== XEN · Reglas y umbrales: el registro común (src/reglas.ts) y su pantalla en Configuración =====
+  // Cada número que decide algo de negocio (cuándo es «caliente», cuántos días aguanta una cuenta clave, desde
+  // cuántos tratos se marca «Aquí se quedan más»…) es una regla con su valor de fábrica, lo que trae el archivo del
+  // cliente y lo que se cambie aquí. El tablero también pinta con algunas: las lee al arrancar (R) y, mientras no
+  // han llegado, usa el valor de fábrica, que es el de siempre.
+  function R(id, defecto) {
+    var v = state.reglasValores && state.reglasValores[id];
+    return v === undefined || v === null ? defecto : v;
+  }
+  function cargarReglasDelTablero() {
+    if (!state.token && !PORLACONSOLA) return Promise.resolve();
+    return api('/reglas/valores').then(function (v) {
+      if (v && typeof v === 'object' && !v.error && !Array.isArray(v)) state.reglasValores = v;
+    }).catch(function () { /* sin reglas, el tablero pinta con los valores de fábrica */ });
+  }
+  /** Arranca con las reglas ya leídas: así lo primero que se pinta usa los umbrales de este negocio. */
+  function arrancarConReglas() {
+    var listo = false;
+    var seguir = function () { if (!listo) { listo = true; boot(); } };
+    // Si la red tarda, no se espera más de un segundo y medio: se arranca con los de fábrica y llegan después.
+    setTimeout(seguir, 1500);
+    cargarReglasDelTablero().then(seguir, seguir);
+  }
+
+  TITULOS.reglas = 'Configuración';
+  var XR = { datos: null, cargando: false, error: '', q: '', borrador: {}, errores: {}, guardando: false };
+  var XR_FUENTE = { fabrica: ['De fábrica', 'neutro'], archivo: ['Del archivo del cliente', 'archivo'], tablero: ['Cambiada aquí', 'tablero'] };
+
+  function xrTexto(r, v) {
+    if (v === null || v === undefined) return '—';
+    if (r.tipo === 'si-no') return v ? 'Sí' : 'No';
+    if (r.tipo === 'lista') return (v || []).join(', ');
+    if (r.tipo === 'opciones') { var o = (r.opciones || []).filter(function (x) { return x.valor === v; })[0]; return o ? o.etiqueta : String(v); }
+    if (r.tipo === 'numero') return String(v).replace('.', ',') + (r.unidad ? ' ' + r.unidad : '');
+    return String(v);
+  }
+  /** Lo que muestra el campo: lo escrito sin guardar, o el valor que manda hoy. */
+  function xrComoTexto(r) {
+    if (r.tipo === 'lista') return (r.valor || []).join('\n');
+    if (r.tipo === 'si-no') return r.valor ? 'si' : 'no';
+    return r.tipo === 'numero' ? String(r.valor).replace('.', ',') : String(r.valor);
+  }
+  function xrValorDelCampo(r) {
+    return Object.prototype.hasOwnProperty.call(XR.borrador, r.id) ? XR.borrador[r.id] : xrComoTexto(r);
+  }
+  function xrIdDe(r) { return 'xr-c-' + r.id.replace(/\./g, '-'); }
+  function xrCampo(r) {
+    var id = xrIdDe(r), v = xrValorDelCampo(r), err = XR.errores[r.id];
+    var aria = ' aria-describedby="' + id + '-ayuda' + (err ? ' ' + id + '-err' : '') + '"' + (err ? ' aria-invalid="true"' : '');
+    var dato = ' data-xr="' + esc(r.id) + '" id="' + id + '"' + aria;
+    var control;
+    if (r.tipo === 'si-no') control = '<select' + dato + '><option value="si"' + (v === 'si' ? ' selected' : '') + '>Sí</option><option value="no"' + (v === 'no' ? ' selected' : '') + '>No</option></select>';
+    else if (r.tipo === 'opciones') control = '<select' + dato + '>' + (r.opciones || []).map(function (o) { return '<option value="' + esc(o.valor) + '"' + (o.valor === v ? ' selected' : '') + '>' + esc(o.etiqueta) + '</option>'; }).join('') + '</select>';
+    else if (r.tipo === 'lista') control = '<textarea rows="3"' + dato + ' placeholder="Uno por renglón">' + esc(v) + '</textarea>';
+    else control = '<input type="text"' + (r.tipo === 'numero' ? ' inputmode="decimal"' : '') + dato + ' value="' + esc(v) + '" autocomplete="off">';
+    return '<span class="xr-control' + (r.unidad ? ' con-unidad' : '') + '">' + control + (r.unidad ? '<span class="xr-unidad" aria-hidden="true">' + esc(r.unidad) + '</span>' : '') + '</span>';
+  }
+  function xrFila(r) {
+    var id = xrIdDe(r), f = XR_FUENTE[r.fuente] || XR_FUENTE.fabrica, err = XR.errores[r.id];
+    var cambiada = Object.prototype.hasOwnProperty.call(XR.borrador, r.id);
+    return '<li class="xr-regla' + (cambiada ? ' cambiada' : '') + (err ? ' con-error' : '') + '" data-xr-fila="' + esc(r.id) + '">' +
+      '<div class="xr-que"><label for="' + id + '">' + esc(r.etiqueta) + '</label>' +
+        '<p id="' + id + '-ayuda">' + esc(r.ayuda) + '</p>' +
+        '<p class="xr-de">De fábrica: <b>' + esc(xrTexto(r, r.defecto)) + '</b>' +
+          (r.archivo !== null ? ' · en el archivo del cliente: <b>' + esc(xrTexto(r, r.archivo)) + '</b>' : '') +
+          (r.aplica === 'al-reiniciar' ? ' · <span class="xr-reinicio">se aplica al reiniciar</span>' : '') + '</p>' +
+        (r.archivoError ? '<p class="xr-aviso-archivo"><i class="ic" data-ic="alerta"></i>El archivo del cliente trae un valor que no vale (' + esc(r.archivoError) + '): se usa el de fábrica.</p>' : '') +
+      '</div>' +
+      '<div class="xr-como">' + xrCampo(r) +
+        '<span class="xr-fuente ' + f[1] + '">' + esc(f[0]) + '</span>' +
+        (r.fuente === 'tablero' && !cambiada ? '<button type="button" class="linkbtn xr-volver" data-xr-volver="' + esc(r.id) + '">' + (r.archivo !== null ? 'Volver al del archivo' : 'Volver al de fábrica') + '</button>' : '') +
+        (err ? '<p class="xr-error" id="' + id + '-err" role="alert"><i class="ic" data-ic="alerta"></i>' + esc(err) + '</p>' : '') +
+      '</div></li>';
+  }
+  function xrSinTildes(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  function xrCoincide(r, q) {
+    if (!q) return true;
+    var t = xrSinTildes(r.etiqueta + ' ' + r.ayuda + ' ' + r.grupo + ' ' + r.id);
+    return q.split(/\s+/).every(function (p) { return t.indexOf(p) >= 0; });
+  }
+  function xrBarra() {
+    var n = Object.keys(XR.borrador).length;
+    if (!$('xr-barra')) return;
+    $('xr-barra').hidden = !n;
+    $('xr-barra-t').textContent = n === 1 ? '1 cambio sin guardar' : n + ' cambios sin guardar';
+    $('xr-guardar').disabled = XR.guardando;
+  }
+  function pintarReglas() {
+    var caja = $('xr-reglas');
+    if (!caja) return;
+    if (XR.cargando && !XR.datos) {
+      caja.setAttribute('aria-busy', 'true');
+      caja.innerHTML = [1, 2, 3].map(function () { return '<section class="xr-grupo xr-esq" aria-hidden="true"><i></i><i></i><i></i></section>'; }).join('');
+      return;
+    }
+    caja.removeAttribute('aria-busy');
+    if (XR.error && !XR.datos) {
+      caja.innerHTML = '<div class="xr-vacio" role="alert"><b>No se pudieron leer las reglas</b><span>' + esc(XR.error) + '</span><button type="button" class="btn" id="xr-reintentar">Volver a intentar</button></div>';
+      $('xr-reintentar').onclick = function () { cargarReglas(); };
+      return;
+    }
+    var d = XR.datos || { grupos: [], reglas: [], enOtroSitio: [] };
+    var q = xrSinTildes(XR.q.trim());
+    var visibles = d.reglas.filter(function (r) { return xrCoincide(r, q); });
+    var conAviso = d.reglas.filter(function (r) { return r.archivoError; }).length;
+    var propias = d.reglas.filter(function (r) { return r.fuente !== 'fabrica'; }).length;
+    var html = '<p class="xr-resumen">' + d.reglas.length + ' reglas en ' + d.grupos.length + ' grupos · ' +
+      (propias ? propias + (propias === 1 ? ' con un valor propio de este negocio' : ' con valor propio de este negocio') : 'todas con su valor de fábrica') +
+      (conAviso ? ' · <span class="xr-aviso-archivo">' + conAviso + ' con un valor del archivo que no vale</span>' : '') + '</p>';
+    if (!d.reglas.length) html += '<div class="xr-vacio"><b>Todavía no hay reglas registradas</b><span>Cuando un módulo registre las suyas, salen aquí.</span></div>';
+    else if (!visibles.length) html += '<div class="xr-vacio"><b>Ninguna regla dice «' + esc(XR.q.trim()) + '»</b><span>Prueba con otra palabra: «días», «caliente», «cuenta clave»…</span><button type="button" class="btn" id="xr-limpiar">Ver todas</button></div>';
+    else d.grupos.forEach(function (g) {
+      var del = visibles.filter(function (r) { return r.grupo === g; });
+      if (!del.length) return;
+      var gid = 'xr-g-' + xrSinTildes(g).replace(/[^a-z0-9]+/g, '-');
+      html += '<section class="xr-grupo" aria-labelledby="' + gid + '"><h2 id="' + gid + '">' + esc(g) + '<span class="xr-n">' + del.length + '</span></h2><ul>' + del.map(xrFila).join('') + '</ul></section>';
+    });
+    if ((d.enOtroSitio || []).length && !q) {
+      html += '<section class="xr-grupo xr-otros" aria-labelledby="xr-otros-t"><h2 id="xr-otros-t">También se configura, en otro sitio</h2><ul>' + d.enOtroSitio.map(function (o) {
+        return '<li><span class="xr-otro-que"><b>' + esc(o.etiqueta) + '</b><small>' + esc(o.grupo) + '</small></span>' + (o.vista ? '<button type="button" class="btn sm" data-xr-ir="' + esc(o.vista) + '">' + esc(o.donde) + '</button>' : '<code>' + esc(o.donde) + '</code>') + '</li>';
+      }).join('') + '</ul></section>';
+    }
+    caja.innerHTML = html;
+    iconos(caja);
+    xrBarra();
+    caja.querySelectorAll('[data-xr]').forEach(function (el) {
+      var on = function () {
+        var id = el.getAttribute('data-xr'), r = d.reglas.filter(function (x) { return x.id === id; })[0];
+        if (!r) return;
+        if (el.value === xrComoTexto(r)) delete XR.borrador[id]; else XR.borrador[id] = el.value;
+        var fila = el.closest('[data-xr-fila]');
+        if (fila) fila.classList.toggle('cambiada', Object.prototype.hasOwnProperty.call(XR.borrador, id));
+        xrBarra();
+      };
+      el.addEventListener('input', on);
+      el.addEventListener('change', on);
+    });
+    caja.querySelectorAll('[data-xr-volver]').forEach(function (b) {
+      b.onclick = function () { var o = {}; o[b.getAttribute('data-xr-volver')] = null; xrGuardar(o, 'Listo: volvió al valor de antes'); };
+    });
+    caja.querySelectorAll('[data-xr-ir]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-xr-ir')); }; });
+    if ($('xr-limpiar')) $('xr-limpiar').onclick = function () { XR.q = ''; $('xr-q').value = ''; pintarReglas(); $('xr-q').focus(); };
+  }
+  function cargarReglas() {
+    XR.cargando = true; XR.error = '';
+    pintarReglas();
+    return api('/reglas').then(function (d) {
+      XR.cargando = false;
+      if (!d || d.error || !Array.isArray(d.reglas)) { XR.error = (d && d.error) || 'El servidor no mandó las reglas.'; pintarReglas(); return; }
+      XR.datos = d;
+      pintarReglas();
+    }).catch(function (e) {
+      XR.cargando = false;
+      XR.error = e && e.message === '401' ? 'Tu sesión venció.' : 'No hubo respuesta del servidor.';
+      pintarReglas();
+    });
+  }
+  /** Guarda todo o nada: si una no vale, no se guarda ninguna, lo escrito se queda y cada error va junto a su campo. */
+  function xrGuardar(cambios, dice) {
+    if (!XR.datos) return;
+    XR.guardando = true; XR.errores = {};
+    xrBarra();
+    var enviar = {};
+    Object.keys(cambios).forEach(function (id) {
+      var v = cambios[id], r = XR.datos.reglas.filter(function (x) { return x.id === id; })[0];
+      if (v !== null && r && r.tipo === 'si-no') v = v === 'si';
+      if (v !== null && r && r.tipo === 'lista') v = String(v).split('\n');
+      enviar[id] = v;
+    });
+    return api('/reglas', { method: 'PUT', body: { cambios: enviar } }).then(function (r) {
+      XR.guardando = false;
+      if (!r || r.error) {
+        XR.errores = (r && r.errores) || {};
+        if (!r || !r.errores) toast('No se pudo guardar: ' + ((r && r.error) || 'sin respuesta'));
+        else toast(Object.keys(r.errores).length === 1 ? 'No se pudo guardar: hay una regla que no vale (no se guardó nada)' : 'No se pudo guardar: hay reglas que no valen (no se guardó nada)');
+        pintarReglas();
+        var primero = document.querySelector('#xr-reglas [aria-invalid="true"]');
+        if (primero) primero.focus();
+        return;
+      }
+      XR.borrador = {}; XR.datos = r;
+      pintarReglas();
+      cargarReglasDelTablero();
+      toast(dice || (r.cambiadas.length === 1 ? 'Regla guardada: se aplica desde ya' : r.cambiadas.length + ' reglas guardadas: se aplican desde ya'), null, { icono: 'check' });
+    }).catch(function () {
+      XR.guardando = false;
+      pintarReglas();
+      toast('No se pudo guardar: no hubo respuesta del servidor. Tus cambios siguen aquí.');
+    });
+  }
+  if ($('xr-q')) $('xr-q').addEventListener('input', function () { XR.q = $('xr-q').value; pintarReglas(); });
+  if ($('xr-guardar')) $('xr-guardar').onclick = function () { xrGuardar(Object.assign({}, XR.borrador)); };
+  if ($('xr-descartar')) $('xr-descartar').onclick = function () { XR.borrador = {}; XR.errores = {}; pintarReglas(); };
+  alAbrir('reglas', function () { cargarReglas(); });
+  // (fin de XEN · Reglas y umbrales)
+
+  // Las reglas primero, después el tablero (ver arrancarConReglas).
+  arrancarConReglas();
 })();
 
 // Los botones que solo cierran su diálogo (`data-cerrar="dlg-…"`). 🪤 Iban con `onclick` escrito en la página, y la

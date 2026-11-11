@@ -3,6 +3,7 @@
 // historial, en `agent/memory.ts`) y se lo dice de frente la primera vez, en vez de saludar como si no la conociera.
 // Las fichas no se unen solas: la unión la decide una persona desde el tablero, porque cada ficha es la historia de
 // su canal.
+import { regla } from '../reglas.js';
 import { addEvent, getContact, updateContact } from './contacts.js';
 import { emitEvent } from './events.js';
 import { siblingIds } from './merge.js';
@@ -17,7 +18,7 @@ const CHANNEL_NAME: Record<string, string> = {
 export const channelName = (channel: string) => CHANNEL_NAME[channel] ?? 'otro canal';
 
 /** Solo cuenta como "la misma gestión" lo que pasó hace poco: un mes. */
-const RECENT = 30 * 86400_000;
+const reciente = (): number => regla<number>('contactos.mismaPersonaDias') * 86400_000; // 30 días de fábrica
 
 /**
  * Si esta persona venía hablando por otro canal y todavía no se lo hemos dicho, la frase con la que abre la
@@ -28,7 +29,7 @@ export function crossChannelGreeting(userId: string, now = Date.now()): string |
   if (!me || me.data.cruce_avisado) return null;
   const other = siblingIds(userId, now)
     .map((id) => getContact(id))
-    .find((x) => x && x.channel !== me.channel && x.messageCount > 0 && now - (x.lastMessageAt ?? x.lastSeen) < RECENT);
+    .find((x) => x && x.channel !== me.channel && x.messageCount > 0 && now - (x.lastMessageAt ?? x.lastSeen) < reciente());
   if (!other) return null;
   updateContact(userId, { data: { ...me.data, cruce_avisado: true } }, { silent: true });
   addEvent(userId, 'cross_channel', { from: other.id, channel: other.channel });

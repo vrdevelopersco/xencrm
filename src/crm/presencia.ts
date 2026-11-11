@@ -9,10 +9,12 @@
 //
 // 🪤 La presencia **caduca sola**. Quien cierra la pestaña no avisa, así que si no se refresca, a los pocos
 // minutos deja de aparecer. Sin eso, la lista se llenaría de gente que se fue hace horas.
+import { regla } from '../reglas.js';
 import { getDb } from '../rag/store.js';
 
 /** Cuánto vale una presencia sin refrescar. Más corto molesta al que lee despacio; más largo deja fantasmas. */
-export const DURACION_MS = 3 * 60_000;
+export const DURACION_MS = 3 * 60_000; // el de fábrica: manda la regla presencia.minutos
+const duracionMs = (): number => regla<number>('presencia.minutos') * 60_000;
 
 export interface Presente {
   /** El nombre con el que firma, que es el que ve el cliente. */
@@ -53,7 +55,7 @@ export function entrar(userId: string, nombre: string, now = Date.now()): Presen
   const quien = nombre.trim();
   if (!quien) return quienesEstan(userId, now);
   const otros = quienesEstan(userId, now).filter((p) => p.nombre !== quien);
-  const lista = [...otros, { nombre: quien, hasta: now + DURACION_MS, visto: now }].slice(-12);
+  const lista = [...otros, { nombre: quien, hasta: now + duracionMs(), visto: now }].slice(-12);
   guardar(userId, lista);
   return lista.sort((a, b) => a.visto - b.visto);
 }

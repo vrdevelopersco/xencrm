@@ -9,6 +9,7 @@
 // y es el bueno— son las tripas de los últimos minutos: cuánto tardó cada llamada, qué motor contestó, qué ruta
 // tomó. Guardarlo sería crear una segunda copia de las conversaciones, con datos de clientes dentro, que nadie
 // pidió y que habría que cuidar. Para lo que sirve, media hora de memoria sobra.
+import { regla } from '../reglas.js';
 import { getContact } from './contacts.js';
 import { usageSummary } from '../llm/usage.js';
 
@@ -96,9 +97,9 @@ export function comoVa(cuantos = 25): {
       nombre: c?.name || ts[ts.length - 1]?.nombre || userId,
       turnos: ts.length,
       puntaje: c?.score ?? null,
-      // La temperatura sale del puntaje con los mismos cortes que usa el tablero (60 y 30): no es un campo
-      // aparte, y duplicar los cortes aquí sería que un día digan cosas distintas.
-      temperatura: c?.score == null ? '' : c.score >= 60 ? 'caliente' : c.score >= 30 ? 'tibio' : 'frío',
+      // La temperatura sale del puntaje con los mismos cortes que usa el tablero (reglas puntaje.caliente y
+      // puntaje.tibio): no es un campo aparte, y duplicar los cortes aquí sería que un día digan cosas distintas.
+      temperatura: c?.score == null ? '' : c.score >= regla<number>('puntaje.caliente') ? 'caliente' : c.score >= regla<number>('puntaje.tibio') ? 'tibio' : 'frío',
       porElGuion: guion,
       improvisadas: delModelo.length,
       msMedio: delModelo.length ? Math.round(delModelo.reduce((s, x) => s + x.ms, 0) / delModelo.length) : 0,

@@ -1,5 +1,6 @@
 // Análisis comercial por turno: sentimiento, interés, urgencia, objeciones y datos capturados,
 // con un puntaje explicable de probabilidad de cita/venta. Corre en segundo plano tras cada respuesta.
+import { regla } from '../reglas.js';
 import { escritosAMano } from './ficha.js';
 import { business } from '../config.js';
 import { classify, roleEngine, fallbackOrder, iaAgotada, modeloDe } from '../llm/engines.js';
@@ -116,34 +117,36 @@ export function computeScore(c: Contact, s: Signals, opts: { hasAppointment: boo
   const add = (label: string, points: number, when = true) => {
     if (when && points !== 0) f.push({ label, points });
   };
-  add('Cita agendada', 40, opts.hasAppointment);
-  add('Pidió cita', 30, !opts.hasAppointment && s.quiere_cita);
-  add('Quiere comprar o agendar ya', 20, s.interes >= 3);
-  add('Interés claro', 10, s.interes === 2);
-  add('Curiosidad', 3, s.interes === 1);
-  add('Preguntó precio', 6, s.pidio_precio);
-  add('Mencionó presupuesto', 8, s.menciono_presupuesto || Boolean(s.presupuesto));
-  add('Urgencia alta', 10, s.urgencia === 'alta');
-  add('Urgencia media', 4, s.urgencia === 'media');
-  add('Dio su nombre', 2, Boolean(s.nombre || c.name));
-  add('Dio ciudad o teléfono', 2, Boolean(s.ciudad || s.telefono || c.phone));
+  // Los pesos son reglas (Configuración › Reglas y umbrales, grupo Puntaje): de fábrica, los de siempre.
+  const p = (id: string) => regla<number>(`puntaje.peso.${id}`);
+  add('Cita agendada', p('citaAgendada'), opts.hasAppointment);
+  add('Pidió cita', p('pidioCita'), !opts.hasAppointment && s.quiere_cita);
+  add('Quiere comprar o agendar ya', p('quiereComprar'), s.interes >= 3);
+  add('Interés claro', p('interesClaro'), s.interes === 2);
+  add('Curiosidad', p('curiosidad'), s.interes === 1);
+  add('Preguntó precio', p('pidioPrecio'), s.pidio_precio);
+  add('Mencionó presupuesto', p('presupuesto'), s.menciono_presupuesto || Boolean(s.presupuesto));
+  add('Urgencia alta', p('urgenciaAlta'), s.urgencia === 'alta');
+  add('Urgencia media', p('urgenciaMedia'), s.urgencia === 'media');
+  add('Dio su nombre', p('nombre'), Boolean(s.nombre || c.name));
+  add('Dio ciudad o teléfono', p('ciudadTelefono'), Boolean(s.ciudad || s.telefono || c.phone));
   // Saber qué quiere pesa, pero el cuarto dato no vale lo mismo que el primero: 4, 3, 2, 1…
   let captured = 0;
   for (const field of business.crm.fields) {
     if (!s[field.name]) continue;
-    add(`Dijo ${field.name.replace(/_/g, ' ')}`, Math.max(1, 4 - captured));
+    add(`Dijo ${field.name.replace(/_/g, ' ')}`, Math.max(1, p('primerDato') - captured));
     captured++;
   }
-  add('Conversación sostenida', 5, c.messageCount >= 4);
-  add('Ánimo positivo', 5, s.sentimiento === 'positivo');
-  add('Ánimo negativo', -15, s.sentimiento === 'negativo');
-  add('Tiene una objeción', -10, s.tiene_objecion);
+  add('Conversación sostenida', p('sostenida'), c.messageCount >= regla<number>('puntaje.mensajesSostenida'));
+  add('Ánimo positivo', p('animoPositivo'), s.sentimiento === 'positivo');
+  add('Ánimo negativo', p('animoNegativo'), s.sentimiento === 'negativo');
+  add('Tiene una objeción', p('objecion'), s.tiene_objecion);
   const score = Math.max(0, Math.min(100, f.reduce((a, b) => a + b.points, 0)));
   return { score, factors: f };
 }
 
 export function temperature(score: number): 'caliente' | 'tibio' | 'frio' {
-  return score >= 60 ? 'caliente' : score >= 30 ? 'tibio' : 'frio';
+  return score >= regla<number>('puntaje.caliente') ? 'caliente' : score >= regla<number>('puntaje.tibio') ? 'tibio' : 'frio';
 }
 
 // El embudo es el del negocio (crm.stages): aquí se decide por el papel de cada etapa, no por su nombre.

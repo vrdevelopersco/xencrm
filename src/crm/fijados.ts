@@ -12,11 +12,12 @@
 // otra, se quita de aquí también (reemplazarEnFijados): si no, la retención dejaría el número guardado en los
 // ajustes, que es justo lo que promete no dejar.
 
+import { regla } from '../reglas.js';
 import { getDb } from '../rag/store.js';
 import { getContact } from './contacts.js';
 import { getSetting, setSetting } from './settings.js';
 
-export const MAXIMO_FIJADOS = 12;
+export const MAXIMO_FIJADOS = 12; // el de fábrica: manda la regla fijados.maximo
 const PREFIJO = 'fijados:';
 
 /** Mayúsculas y espacios de más no hacen a otra persona: «Laura» y « laura » fijan lo mismo. */
@@ -34,7 +35,7 @@ export function leerFijados(nombre: string): { id: string; name: string | null }
 export function guardarFijados(nombre: string, ids: unknown): { id: string; name: string | null }[] {
   if (!nombre.trim()) throw new Error('sin nombre no hay a quién guardarle los fijados');
   if (!Array.isArray(ids)) throw new Error('los fijados van en una lista');
-  const limpios = [...new Set(ids.map((x) => String(x)))].filter((id) => getContact(id)).slice(0, MAXIMO_FIJADOS);
+  const limpios = [...new Set(ids.map((x) => String(x)))].filter((id) => getContact(id)).slice(0, regla<number>('fijados.maximo'));
   setSetting(llave(nombre), limpios);
   return leerFijados(nombre);
 }

@@ -16,6 +16,7 @@
 //  4. **Por persona solo lo que se puede atribuir de verdad.** Las respuestas son de quien las escribió (cada
 //     mensaje guarda su autor). Lo ganado y lo vendido es de quien tiene asignado el contacto: es su cuenta, aunque
 //     el cierre lo haya movido el agente de IA. Lo que nadie tiene asignado no se reparte.
+import { regla } from '../reglas.js';
 import { cuandoPasoA } from './resultados.js';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
@@ -399,7 +400,7 @@ export interface Kpis {
 export function calcularKpis(opts: { dias?: number; acuerdoMin?: number; ahora?: number } = {}): Kpis {
   const dias = [7, 30, 90].includes(Number(opts.dias)) ? Number(opts.dias) : 30;
   const ahora = opts.ahora ?? Date.now();
-  const acuerdoMin = opts.acuerdoMin ?? getSetting('sla.minutos', 15);
+  const acuerdoMin = opts.acuerdoMin ?? regla<number>('atencion.acuerdoMinutos');
   const ini = ahora - dias * DIA;
   const iniAnterior = ini - dias * DIA;
   const metas = leerMetas();

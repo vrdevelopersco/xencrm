@@ -11,6 +11,7 @@
 //
 // Se parte en dos: `hallazgosDe` son las reglas, puras (las prueba eval/optimizacion.ts sin base de datos), y
 // `optimizacion` junta los datos de la base para dárselos.
+import { fraccion, regla } from '../reglas.js';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { estaCerrada, listContacts, rolDe, STAGE_DEFS, STAGE_LABELS, type Stage } from './contacts.js';
@@ -23,33 +24,42 @@ import { porCampana } from './origen.js';
 import { sentimiento } from './sentimiento.js';
 import { listVerifications } from './verifications.js';
 import { seguimientosPendientes, ventasDelPeriodo } from './resultados.js';
-import { getSetting } from './settings.js';
 
 const DIA = 86400_000;
 
 /** Los mínimos de cada regla. Por debajo, la regla calla o avisa que es poca evidencia. */
+/**
+ * Los mínimos de cada regla. Son reglas del registro (Configuración › Reglas y umbrales, grupo «Optimización de
+ * ventas»): se leen cada vez, así un cambio desde el tablero se nota en la siguiente carga sin reiniciar. Los
+ * porcentajes se guardan como los lee la gente («60 %») y aquí se usan como fracción (0.6).
+ */
 export const UMBRAL = {
   /** Cuántos tienen que haber llegado a una etapa para juzgar cuántos pasan a la siguiente. */
-  baseEmbudo: 5,
+  get baseEmbudo() { return regla<number>('opt.baseEmbudo'); },
   /** Por debajo de esta tasa de paso, la etapa es «donde se caen». */
-  pasoBajo: 0.6,
+  get pasoBajo() { return fraccion('opt.pasoBajoPct'); },
+  /** Por debajo de esta, el hallazgo es de prioridad alta. */
+  get pasoMuyBajo() { return fraccion('opt.pasoMuyBajoPct'); },
   /** Días sin actividad para que un trato abierto cuente como estancado. */
-  diasEstancado: 7,
+  get diasEstancado() { return regla<number>('opt.diasEstancado'); },
   /** Tratos cerrados con tiempo de primera respuesta medido, y mínimo por grupo (rápidos / lentos). */
-  cerradosVelocidad: 10,
-  grupoVelocidad: 4,
-  /** Respuestas medidas para juzgar el acuerdo de servicio, y desde qué parte fuera del acuerdo preocupa. */
-  respondidas: 10,
-  fueraDeAcuerdo: 0.2,
-  /** Mensajes de clientes para hablar de horas. */
-  mensajesHoras: 30,
+  get cerradosVelocidad() { return regla<number>('opt.cerradosVelocidad'); },
+  get grupoVelocidad() { return regla<number>('opt.grupoVelocidad'); },
+  /** Respuestas medidas para juzgar el acuerdo de servicio, desde qué parte fuera del acuerdo preocupa y desde cuál es alta. */
+  get respondidas() { return regla<number>('opt.respondidas'); },
+  get fueraDeAcuerdo() { return fraccion('opt.fueraDeAcuerdoPct'); },
+  get fueraDeAcuerdoAlta() { return fraccion('opt.fueraDeAcuerdoAltaPct'); },
+  /** Mensajes de clientes para hablar de horas, y desde qué parte fuera de horario se avisa. */
+  get mensajesHoras() { return regla<number>('opt.mensajesHoras'); },
+  get fueraDeHorario() { return fraccion('opt.fueraDeHorarioPct'); },
   /** Contactos por canal para comparar canales, y diferencia mínima (en puntos) para que valga la pena decirlo. */
-  porCanal: 5,
-  difCanal: 0.1,
-  /** Perdidos para hablar de motivos; veces para que una objeción «se repita». */
-  perdidas: 3,
-  objecion: 2,
-} as const;
+  get porCanal() { return regla<number>('opt.porCanal'); },
+  get difCanal() { return regla<number>('opt.difCanalPuntos') / 100; },
+  /** Perdidos para hablar de motivos, desde qué parte sin motivo se avisa, y veces para que una objeción «se repita». */
+  get perdidas() { return regla<number>('opt.perdidas'); },
+  get sinMotivo() { return fraccion('opt.sinMotivoPct'); },
+  get objecion() { return regla<number>('opt.objecion'); },
+};
 
 export type Prioridad = 'alta' | 'media' | 'baja';
 
@@ -136,7 +146,7 @@ export function hallazgosDe(e: Entradas): Hallazgo[] {
     const perdidosAhi = e.perdidasDesde.find((p) => p.titulo === peor.de.titulo);
     h.push({
       id: 'embudo-caida',
-      prioridad: peor.tasa < 0.3 ? 'alta' : 'media',
+      prioridad: peor.tasa < UMBRAL.pasoMuyBajo ? 'alta' : 'media',
       titulo: `Donde más se quedan: entre «${peor.de.titulo}» y «${peor.a.titulo}»`,
       cifra: de(peor.a.llegaron, peor.de.llegaron),
       base: `de los que llegaron a «${peor.de.titulo}» en ${e.dias} días pasaron a «${peor.a.titulo}»` +
@@ -165,7 +175,7 @@ export function hallazgosDe(e: Entradas): Hallazgo[] {
   // 2. Tratos estancados: abiertos y quietos. Es lo más fácil de recuperar: ya conocen el negocio.
   if (e.estancados.length) {
     const conValor = e.estancados.filter((x) => x.valor > 0);
-    const calientes = e.estancados.filter((x) => x.puntaje >= 60).length;
+    const calientes = e.estancados.filter((x) => x.puntaje >= regla<number>('puntaje.caliente')).length;
     h.push({
       id: 'estancados',
       prioridad: conValor.length || calientes ? 'alta' : 'media',
@@ -234,7 +244,7 @@ export function hallazgosDe(e: Entradas): Hallazgo[] {
     if (parte >= UMBRAL.fueraDeAcuerdo) {
       h.push({
         id: 'acuerdo',
-        prioridad: parte >= 0.4 ? 'alta' : 'media',
+        prioridad: parte >= UMBRAL.fueraDeAcuerdoAlta ? 'alta' : 'media',
         titulo: `Una de cada ${Math.max(2, Math.round(1 / parte))} respuestas tarda más de ${e.tiempos.acuerdoMin} minutos`,
         cifra: de(e.tiempos.fueraDeAcuerdo, e.tiempos.respondidas),
         base: `respuestas de los últimos ${e.dias} días fuera del acuerdo de ${e.tiempos.acuerdoMin} minutos (en horario de atención)`,
@@ -297,7 +307,7 @@ export function hallazgosDe(e: Entradas): Hallazgo[] {
         peso: 50,
       });
     }
-    if (e.perdidas.sinMotivo / e.perdidas.cuantas >= 0.5) {
+    if (e.perdidas.sinMotivo / e.perdidas.cuantas >= UMBRAL.sinMotivo) {
       h.push({
         id: 'sin-motivo',
         prioridad: 'media',
@@ -350,7 +360,7 @@ export function hallazgosDe(e: Entradas): Hallazgo[] {
   if (e.horas.total >= UMBRAL.mensajesHoras && e.horas.pico) {
     const p = e.horas.pico;
     const fuera = e.horas.fuera;
-    const muchoFuera = fuera !== null && fuera / e.horas.total >= 0.3;
+    const muchoFuera = fuera !== null && fuera / e.horas.total >= UMBRAL.fueraDeHorario;
     h.push({
       id: 'horas',
       prioridad: muchoFuera ? 'media' : 'baja',
@@ -443,7 +453,7 @@ export interface Optimizacion {
   hallazgos: Hallazgo[];
   estancados: FilaEstancada[];
   estancadosTotal: number;
-  umbral: typeof UMBRAL;
+  umbral: Record<keyof typeof UMBRAL, number>;
   moneda: string;
 }
 
@@ -514,7 +524,7 @@ export function optimizacion(diasPedidos = 30, now = Date.now()): Optimizacion {
     .sort((a, b) => b.valor - a.valor || b.puntaje - a.puntaje || b.diasSinActividad - a.diasSinActividad || a.id.localeCompare(b.id));
 
   // Velocidad: la primera respuesta de cada conversación, contra cómo terminó.
-  const acuerdoMin = getSetting('sla.minutos', 15);
+  const acuerdoMin = regla<number>('atencion.acuerdoMinutos');
   const primera = new Map<string, number>();
   for (const w of esperas({ desde, ahora: now })) {
     if (w.hasta === null || primera.has(w.userId)) continue;
@@ -562,7 +572,7 @@ export function optimizacion(diasPedidos = 30, now = Date.now()): Optimizacion {
   const ven = ventasDelPeriodo(dias, now);
   const seg = seguimientosPendientes(now);
   const sen = sentimiento(dias, now);
-  const vivos = new Set(contactos.filter((c) => ['interes', 'cita'].includes(rolDe(c.stage) ?? '') || c.scoreBase >= 60).map((c) => c.id));
+  const vivos = new Set(contactos.filter((c) => ['interes', 'cita'].includes(rolDe(c.stage) ?? '') || c.scoreBase >= regla<number>('puntaje.caliente')).map((c) => c.id));
   const pendientes = listVerifications('pendiente', 500);
   const emb = valorDelEmbudo();
 
@@ -603,7 +613,7 @@ export function optimizacion(diasPedidos = 30, now = Date.now()): Optimizacion {
     hallazgos,
     estancados: estancados.slice(0, 50),
     estancadosTotal: estancados.length,
-    umbral: UMBRAL,
+    umbral: { ...UMBRAL },
     moneda: business.business.currency,
   };
 }

@@ -2730,6 +2730,72 @@ dialog.perdida input{width:100%}
 @media (max-width:760px){:root[data-piel="xen"] #view-modelos .xm{padding:4px 20px 28px}:root[data-piel="xen"] #view-modelos .xm-rol{grid-template-columns:minmax(0,1fr);gap:10px}}
 /* (fin de XEN · Modelos de IA) */
 
+/* ---------- XEN · Reglas y umbrales (Configuración: el registro común de src/reglas.ts) ---------- */
+:root[data-piel="xen"] #view-reglas .xr{display:flex;flex-direction:column;gap:16px;max-width:1120px}
+:root[data-piel="xen"] #view-reglas .xr-aviso{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border:1px solid var(--fx-suave-borde);border-radius:var(--fx-r-lg);background:var(--fx-suave);color:var(--fx-suave-t);font-size:14px;line-height:1.5}
+:root[data-piel="xen"] #view-reglas .xr-aviso .ic{width:18px;height:18px;flex:0 0 18px;margin-top:1px;color:currentColor}
+:root[data-piel="xen"] #view-reglas .xr-buscar{position:relative;display:block;max-width:520px}
+:root[data-piel="xen"] #view-reglas .xr-buscar .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--fx-t2);pointer-events:none}
+:root[data-piel="xen"] #view-reglas .xr-buscar input{padding-left:38px;width:100%}
+:root[data-piel="xen"] #view-reglas .xr-resumen{margin:0;font-size:13.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] #view-reglas .xr-grupo{background:var(--fx-panel);border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);box-shadow:var(--fx-sombra-xs);overflow:hidden}
+:root[data-piel="xen"] #view-reglas .xr-grupo h2{display:flex;align-items:center;gap:8px;margin:0;padding:14px 20px;font-size:16px;font-weight:700;color:var(--fx-t0);border-bottom:1px solid var(--fx-borde)}
+:root[data-piel="xen"] #view-reglas .xr-n{min-width:22px;height:22px;display:inline-grid;place-items:center;padding:0 7px;border-radius:var(--fx-r-pill);background:var(--fx-hover);color:var(--fx-t2);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] #view-reglas .xr-grupo ul{list-style:none;margin:0;padding:0}
+:root[data-piel="xen"] #view-reglas .xr-regla{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(240px,.75fr);gap:12px 28px;padding:16px 20px;border-top:1px solid var(--fx-borde-2);transition:background var(--fx-t-rapido)}
+:root[data-piel="xen"] #view-reglas .xr-regla:first-child{border-top:0}
+:root[data-piel="xen"] #view-reglas .xr-regla.cambiada{background:var(--fx-panel-2);box-shadow:inset 3px 0 0 var(--fx-acento)}
+:root[data-piel="xen"] #view-reglas .xr-que label{display:block;font-size:14.5px;font-weight:650;color:var(--fx-t0);cursor:pointer}
+:root[data-piel="xen"] #view-reglas .xr-que p{margin:4px 0 0;font-size:13.5px;line-height:1.5;color:var(--fx-t2)}
+:root[data-piel="xen"] #view-reglas .xr-que .xr-de{font-size:12.5px}
+:root[data-piel="xen"] #view-reglas .xr-que .xr-de b{color:var(--fx-t1);font-weight:600}
+:root[data-piel="xen"] #view-reglas .xr-reinicio{color:var(--fx-ambar-t);font-weight:600}
+:root[data-piel="xen"] #view-reglas .xr-aviso-archivo{display:inline-flex;align-items:flex-start;gap:6px;color:var(--fx-ambar-t);font-weight:600}
+:root[data-piel="xen"] #view-reglas .xr-aviso-archivo .ic{width:15px;height:15px;flex:0 0 15px;margin-top:2px;color:currentColor}
+:root[data-piel="xen"] #view-reglas .xr-como{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
+:root[data-piel="xen"] #view-reglas .xr-control{position:relative;display:block;width:100%;max-width:260px}
+:root[data-piel="xen"] #view-reglas .xr-control input,:root[data-piel="xen"] #view-reglas .xr-control select,:root[data-piel="xen"] #view-reglas .xr-control textarea{width:100%;font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] #view-reglas .xr-control.con-unidad input{padding-right:76px}
+:root[data-piel="xen"] #view-reglas .xr-unidad{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12.5px;color:var(--fx-t2);pointer-events:none;max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] #view-reglas .con-error .xr-control input,:root[data-piel="xen"] #view-reglas .con-error .xr-control select,:root[data-piel="xen"] #view-reglas .con-error .xr-control textarea{border-color:var(--fx-rojo-t)}
+:root[data-piel="xen"] #view-reglas .xr-error{display:flex;align-items:flex-start;gap:6px;margin:0;font-size:13px;font-weight:600;color:var(--fx-rojo-t)}
+:root[data-piel="xen"] #view-reglas .xr-error .ic{width:15px;height:15px;flex:0 0 15px;margin-top:1px;color:currentColor}
+:root[data-piel="xen"] #view-reglas .xr-fuente{display:inline-flex;align-items:center;padding:2px 9px;border-radius:var(--fx-r-pill);font-size:12px;font-weight:600;background:var(--fx-hover);color:var(--fx-t2)}
+:root[data-piel="xen"] #view-reglas .xr-fuente.archivo{background:var(--fx-cielo-s);color:var(--fx-cielo-t)}
+:root[data-piel="xen"] #view-reglas .xr-fuente.tablero{background:var(--fx-suave);color:var(--fx-suave-t)}
+:root[data-piel="xen"] #view-reglas .xr-volver{background:none;border:0;padding:0;font:inherit;font-size:13px;font-weight:600;color:var(--fx-acento-t);cursor:pointer;min-height:24px}
+:root[data-piel="xen"] #view-reglas .xr-volver:hover{text-decoration:underline}
+:root[data-piel="xen"] #view-reglas .xr-otros li{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 16px;padding:12px 20px;border-top:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] #view-reglas .xr-otros li:first-child{border-top:0}
+:root[data-piel="xen"] #view-reglas .xr-otro-que{min-width:0}
+:root[data-piel="xen"] #view-reglas .xr-otro-que b{display:block;font-size:14px;font-weight:600;color:var(--fx-t1)}
+:root[data-piel="xen"] #view-reglas .xr-otro-que small{display:block;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] #view-reglas .xr-otros code{font-size:12.5px;padding:3px 8px;border-radius:8px;background:var(--fx-hover);color:var(--fx-t1)}
+:root[data-piel="xen"] #view-reglas .xr-vacio{display:flex;flex-direction:column;align-items:center;gap:6px;padding:40px 20px;border:1px dashed var(--fx-t4);border-radius:var(--fx-r-xl);background:var(--fx-panel);text-align:center}
+:root[data-piel="xen"] #view-reglas .xr-vacio b{font-size:15px;color:var(--fx-t0)}
+:root[data-piel="xen"] #view-reglas .xr-vacio span{font-size:14px;color:var(--fx-t2)}
+:root[data-piel="xen"] #view-reglas .xr-vacio .btn{margin-top:6px}
+:root[data-piel="xen"] #view-reglas .xr-esq{display:flex;flex-direction:column;gap:12px;padding:20px;min-height:180px;box-shadow:none}
+:root[data-piel="xen"] #view-reglas .xr-esq i{display:block;height:14px;border-radius:7px;background:var(--fx-hover)}
+:root[data-piel="xen"] #view-reglas .xr-esq i:first-child{width:30%;height:18px}
+:root[data-piel="xen"] #view-reglas .xr-esq i:nth-child(2){width:80%}
+:root[data-piel="xen"] #view-reglas .xr-esq i:nth-child(3){width:60%}
+:root[data-piel="xen"] #view-reglas .xr-barra{position:sticky;bottom:12px;z-index:5;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:10px 12px;padding:12px 16px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel);box-shadow:var(--fx-sombra-pop)}
+:root[data-piel="xen"] #view-reglas .xr-barra[hidden]{display:none}
+:root[data-piel="xen"] #view-reglas .xr-barra span{margin-right:auto;font-size:14px;font-weight:600;color:var(--fx-t1)}
+@media (max-width:760px){
+  :root[data-piel="xen"] #view-reglas .xr-regla{grid-template-columns:minmax(0,1fr);padding:14px 16px}
+  :root[data-piel="xen"] #view-reglas .xr-control{max-width:none}
+  :root[data-piel="xen"] #view-reglas .xr-grupo h2{padding:12px 16px}
+  :root[data-piel="xen"] #view-reglas .xr-otros li{padding:12px 16px}
+  :root[data-piel="xen"] #view-reglas .xr-otros li .btn{width:100%;min-height:44px}
+  :root[data-piel="xen"] #view-reglas .xr-barra{bottom:8px}
+  :root[data-piel="xen"] #view-reglas .xr-barra .btn{flex:1 1 0;min-height:44px}
+  :root[data-piel="xen"] #view-reglas .xr-barra span{flex:1 1 100%}
+}
+@media (prefers-reduced-motion:reduce){:root[data-piel="xen"] #view-reglas .xr-regla{transition:none}}
+/* (fin de XEN · Reglas y umbrales) */
+
 /* ---------- XEN · Embudo y filtrado (agente del embudo) ---------- */
 /* El filtrado de Dynamics 365 en Contactos, Tratos y Embudo: arriba las vistas (píldoras con su número), debajo
    Filtros con su panel, lo puesto como píldoras que se quitan, Guardar vista y, según la pantalla, Tablero | Lista
@@ -3667,6 +3733,18 @@ dialog.perdida input{width:100%}
       </div>
     </section>
     <!-- (fin de XEN · Modelos de IA) -->
+
+    <!-- XEN · Reglas y umbrales: cada umbral que decide algo de negocio (src/reglas.ts), en un solo sitio -->
+    <section class="view" id="view-reglas">
+      <div class="topbar"><h1>Reglas y umbrales</h1></div>
+      <div class="pad xr">
+        <div class="xr-aviso" role="note"><i class="ic" data-ic="check"></i><span><b>Se aplican en cuanto guardas, sin reiniciar.</b> Cada regla trae su valor de fábrica; si el archivo del cliente o esta pantalla le ponen otro, manda el último. «Volver al de fábrica» deshace lo de aquí.</span></div>
+        <label class="xr-buscar"><i class="ic" data-ic="buscar"></i><span class="sr-only">Buscar una regla</span><input type="search" id="xr-q" placeholder="Buscar: «días», «caliente», «cuenta clave»…" autocomplete="off"></label>
+        <div id="xr-reglas" aria-live="polite"></div>
+        <div class="xr-barra" id="xr-barra" role="region" aria-label="Cambios sin guardar" hidden><span id="xr-barra-t"></span><button class="btn" id="xr-descartar" type="button">Descartar</button><button class="btn primary" id="xr-guardar" type="button">Guardar cambios</button></div>
+      </div>
+    </section>
+    <!-- (fin de XEN · Reglas y umbrales) -->
 
     <section class="view" id="view-help">
       <div class="topbar"><h1>Ayuda</h1><span class="muted small">Lo esencial del tablero en dos minutos</span></div>
