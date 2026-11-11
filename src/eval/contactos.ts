@@ -85,7 +85,7 @@ check('un grupo vacío lleva a ver todos', /grupo: \['embudo'/.test(estado) && /
 check('🪤 la lista llena (el tope de 500) se avisa ARRIBA, no al pie después de 500 filas', /var parcial = cli\.lista\.length >= 500;/.test(render) && /limit=500/.test(carga) && render.indexOf("(parcial ? '<div class=\"cli-resumen fx-ct-parcial\"") < render.indexOf("'<table class=\"cli-tabla\">"));
 
 console.log('— Contactos: cada fila, una tarjeta');
-check('columnas de un CRM de mensajería: contacto, último trato, datos, asignado, valor, última actividad', /th\('nombre', 'Contacto'\)[\s\S]*ordBtn\('paso', 'Último trato'\)[\s\S]*<th>Datos<\/th><th>Asignado a<\/th>' \+ th\('valor', 'Valor', 'num'\) \+ th\('vez', 'Última actividad', 'num'\)/.test(render));
+check('columnas de un CRM de mensajería: contacto, último trato, datos, asignado, valor, última actividad (Datos se va por debajo de 1600 px, como en Dynamics)', /th\('nombre', 'Contacto'\)[\s\S]*ordBtn\('paso', 'Último trato'\)[\s\S]*<th class="fx-ct-datos">Datos<\/th><th>Asignado a<\/th>' \+ th\('valor', 'Valor', 'num'\) \+ th\('vez', 'Última actividad', 'num'\)/.test(render));
 check('🪤 el puntaje nunca solo, y solo en el completo: «89 · caliente» dentro del último trato', /'<span class="solo-completo">' \+ scoreChip\(c\) \+ '<\/span>'/.test(render) && /ordBtn\('puntaje', '· puntaje', 'solo-completo fx-ct-ord2'\)/.test(render));
 check('«La lleva» va debajo de «Asignado a», solo en el completo', /'<div class="dato solo-completo">' \+ esc\(\(c\.humanMode \? 'La lleva ' : 'Responde '\) \+ l\.nombre\)/.test(render));
 check('sin asignar se dice así (no «—»)', /'<span class="fx-ct-sin">Sin asignar<\/span>'/.test(render));

@@ -1586,6 +1586,9 @@ dialog.perdida input{width:100%}
 :root[data-piel="xen"] .btn.sm{min-height:32px;padding:0 12px;font-size:13px}
 :root[data-piel="xen"] .btn.primary{background:var(--fx-acento);border-color:var(--fx-acento);color:var(--fx-sobre-acento)}
 :root[data-piel="xen"] .btn.primary:hover:not(:disabled){background:var(--fx-acento-2);border-color:var(--fx-acento-2);color:var(--fx-sobre-acento)}
+/* 🪤 El ícono de un botón va del color de su texto: con el gris de siempre, sobre el botón verde («Abrir chat») casi
+   no se veía. */
+:root[data-piel="xen"] .btn .ic,:root[data-piel="xen"] .fx-btn .ic{color:currentColor}
 :root[data-piel="xen"] .btn.danger{color:var(--fx-rojo-t);border-color:var(--fx-borde)}
 :root[data-piel="xen"] .btn.danger:hover:not(:disabled){background:var(--fx-rojo-s);color:var(--fx-rojo-t)}
 :root[data-piel="xen"] .btn:disabled{opacity:.5}
@@ -2398,6 +2401,21 @@ dialog.perdida input{width:100%}
   :root[data-piel="xen"] #cli-filtros::-webkit-scrollbar{display:none}
   :root[data-piel="xen"] #cli-filtros button{flex:0 0 auto}
   .fx-ct-nom{max-width:none}
+}
+/* 🪤 En una tabla, el max-width de una celda no limita nada: el «Último trato» y las etiquetas de «Datos» empujaban
+   la tabla y la última columna («Última actividad») quedaba cortada a 1440 en cuanto había valores. Se limita lo de
+   ADENTRO de cada celda, que sí respeta el ancho. */
+@media (min-width:901px){
+  :root[data-piel="xen"] .cli-tabla .fx-ct-trato .quiere{max-width:28ch}
+  :root[data-piel="xen"] .cli-tabla .fx-ct-trato1{max-width:300px}
+  :root[data-piel="xen"] .cli-tabla .fx-ct-tags{max-width:210px}
+  :root[data-piel="xen"] .cli-tabla .fx-ct-quien .fx-ct-nom{max-width:230px}
+  :root[data-piel="xen"] .cli-tabla td.num{white-space:nowrap}
+}
+/* Seis columnas con su aire no caben junto al menú por debajo de ~1600 px: «Datos» se va (como en las grillas de
+   Dynamics). Lo captado sigue en la ficha y en el filtro «Dato captado»; nada se pierde. */
+@media (min-width:901px) and (max-width:1599px){
+  :root[data-piel="xen"] .cli-tabla .fx-ct-datos{display:none}
 }
 /* (fin de XEN · Contactos, ficha y tratos) */
 

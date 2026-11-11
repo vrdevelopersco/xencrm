@@ -4252,7 +4252,7 @@
       '<table class="cli-tabla"><thead><tr>' +
         // El puntaje ya no tiene columna (no cabía junto a lo demás): va en el último trato, y se ordena desde ahí.
         th('nombre', 'Contacto') + '<th' + aria(orden === 'paso' || orden === 'puntaje') + '>' + ordBtn('paso', 'Último trato') + ordBtn('puntaje', '· puntaje', 'solo-completo fx-ct-ord2') + '</th>' +
-        '<th>Datos</th><th>Asignado a</th>' + th('valor', 'Valor', 'num') + th('vez', 'Última actividad', 'num') +
+        '<th class="fx-ct-datos">Datos</th><th>Asignado a</th>' + th('valor', 'Valor', 'num') + th('vez', 'Última actividad', 'num') +
       '</tr></thead><tbody>' +
       list.map(function (c) {
         var l = llevaDe(c);
