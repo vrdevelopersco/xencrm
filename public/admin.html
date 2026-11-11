@@ -876,7 +876,7 @@ dialog#dlg-grupos > b{font-size:17px}
 
 /* Lo traído del historial: se lee igual, pero se ve que es de antes y que no pasó por aquí. */
 .bubble.de-antes{opacity:.82;border-style:dashed}
-.bubble.de-antes .who::after{content:" · antes de aiva";font-weight:400;opacity:.7}
+.bubble.de-antes .who::after{content:" · antes de XENCRM";font-weight:400;opacity:.7}
 
 /* ══ Esqueleto: riel de iconos + panel de la sección ═══════════════════════
    Antes había un solo menú con once botones, y seis de ellos eran configuración:
@@ -2665,7 +2665,7 @@ dialog.perdida input{width:100%}
 <body>
 <div class="login" id="login" hidden>
   <div class="box">
-    <b id="login-title">Aiva · Tablero</b>
+    <b id="login-title">XENCRM · Tablero</b>
     <span class="muted small">Ingresa la clave que te dimos para entrar al tablero.</span>
     <input type="text" id="login-name" placeholder="Tu nombre (así te verá el cliente)" autocomplete="off">
     <input type="text" id="login-token" placeholder="token" autocomplete="off">
@@ -2853,7 +2853,7 @@ dialog.perdida input{width:100%}
             <div class="seg-row">
               <span class="small muted">Responde:</span>
               <div class="seg" id="seg" data-on="bot" role="group" aria-label="Quién responde">
-                <button data-mode="bot" class="on" id="seg-bot" aria-pressed="true">Aiva</button>
+                <button data-mode="bot" class="on" id="seg-bot" aria-pressed="true">Xen</button>
                 <button data-mode="human" id="seg-human" aria-pressed="false">Tú</button>
               </div>
               <!-- «Asignado a»: el mismo dato que la ficha de al lado (c.responsable), con su mismo guardado. -->
@@ -2886,7 +2886,7 @@ dialog.perdida input{width:100%}
               <button role="tab" id="fx-tab-nota" aria-selected="false" aria-controls="composer" tabindex="-1">Nota interna</button>
             </div>
             <div class="ch-warn" id="window-warn" role="status" hidden></div>
-            <div class="hint" id="composer-hint">Aiva está respondiendo esta conversación. Cambia a <b>Tú</b> para escribir.</div>
+            <div class="hint" id="composer-hint">Xen está respondiendo esta conversación. Cambia a <b>Tú</b> para escribir.</div>
             <textarea id="reply" placeholder="Escribe tu respuesta… (Enter envía, Shift+Enter salto)" hidden></textarea>
             <!-- Lo que se va a mandar con el mensaje, si escogieron algo. Se ve antes de enviar y se puede quitar. -->
             <div class="adj-listo" id="adj-listo" hidden>
@@ -3310,8 +3310,8 @@ dialog.perdida input{width:100%}
 <dialog id="dlg-grupos">
   <b>Ver también los grupos</b>
   <div class="small" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
-    <div><b>Qué pasa a partir de ahora:</b> <span id="grupos-agente">Aiva</span> lee lo que se escriba en tus grupos de WhatsApp y aprende de cómo contestas ahí.</div>
-    <div><b>Nunca escribe en un grupo.</b> Ni aunque esté puesta en «Contesta Aiva». Equivocarse en un grupo es equivocarse delante de todos a la vez.</div>
+    <div><b>Qué pasa a partir de ahora:</b> <span id="grupos-agente">Xen</span> lee lo que se escriba en tus grupos de WhatsApp y aprende de cómo contestas ahí.</div>
+    <div><b>Nunca escribe en un grupo.</b> Ni aunque esté puesta en «Contesta el asistente». Equivocarse en un grupo es equivocarse delante de todos a la vez.</div>
     <div><b>Los grupos no entran al tablero</b> como conversaciones: un grupo no es un prospecto y llenaría tus listas de fichas que nadie va a atender.</div>
     <div><b>No se pone al día.</b> Solo entra lo que se hable de aquí en adelante; lo de antes no se trae. Si lo enciendes tarde, esa parte se perdió.</div>
     <div class="muted">En un grupo escribe gente que nunca le escribió a tu negocio. Enciéndelo solo si te parece bien guardar lo que dicen ahí.</div>
@@ -3374,7 +3374,7 @@ dialog.perdida input{width:100%}
     <div class="prof-field">
       <div class="lbl"><label class="small" for="yo-nombre"><b>Nombre</b></label></div>
       <input type="text" id="yo-nombre" autocomplete="off">
-      <div class="small muted">Por WhatsApp va delante del mensaje: <b><span id="yo-ejemplo">Aiva</span>:</b> claro que sí, con gusto.
+      <div class="small muted">Por WhatsApp va delante del mensaje: <b><span id="yo-ejemplo">Xen</span>:</b> claro que sí, con gusto.
       Déjalo con el nombre del asistente si prefieres que el cliente no note el cambio de persona.</div>
     </div>
     <div class="fila" style="gap:8px;margin-top:12px"><button class="btn primary" id="yo-guardar" type="button">Guardar</button>

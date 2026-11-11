@@ -273,7 +273,7 @@ console.log('— Sin una persona, nada cambia');
 console.log('— En el tablero');
 {
   const js = readFileSync(new URL('../../public/admin.js', import.meta.url), 'utf8');
-  check('la propuesta dice que es una ayuda, no «la respuesta»', /p\.conPersona \? \(state\.agentName \|\| 'Aiva'\) \+ ' puede contestar esto'/.test(js));
+  check('la propuesta dice que es una ayuda, no «la respuesta»', /p\.conPersona \? \(state\.agentName \|\| 'Xen'\) \+ ' puede contestar esto'/.test(js));
   check('🪤 y no suena cuando llega a una conversación que lleva alguien', /if \(p && p\.conPersona\) return;/.test(js));
   check('el interruptor está en Agente, con su explicación', /Cuando la llevas tú<\/b>/.test(js) && /deja lista la respuesta a lo que sabe; tú decides si la mandas/.test(js) && /api\('\/agent\/sugiere'/.test(js));
 }

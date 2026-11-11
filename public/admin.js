@@ -156,7 +156,7 @@
    * 🪤 Nunca «bot» ni «admin»: son valores internos de quién la pasó, no nombres de nadie.
    */
   function llevaDe(c) {
-    if (!c.humanMode) return { nombre: state.agentName || 'Aiva', es: 'asistente' };
+    if (!c.humanMode) return { nombre: state.agentName || 'Xen', es: 'asistente' };
     var b = c.humanBy;
     if (!b || b === 'bot' || b === 'admin' || b === 'equipo') return { nombre: 'El equipo', es: 'equipo' };
     return { nombre: b, es: 'persona' };
@@ -846,7 +846,7 @@
     if (enCandado() && VISTAS_DE_QUIEN_ADMINISTRA[view]) {
       // Desde una pantalla que sí puede ver, se queda donde estaba. Si ya estaba en una de esas (el candado se
       // puso mientras miraba), a Hoy.
-      if (state.view !== view && !VISTAS_DE_QUIEN_ADMINISTRA[state.view]) { toast('Eso lo maneja quien administra aiva.'); return; }
+      if (state.view !== view && !VISTAS_DE_QUIEN_ADMINISTRA[state.view]) { toast('Eso lo maneja quien administra XENCRM.'); return; }
       view = 'today';
     }
     // Perfil y El negocio no son pantallas: son configuración, y se abren en un modal encima de lo que estabas
@@ -968,7 +968,7 @@
       var marcas = (v.cls === 'v-no' ? '' : verdictChip(c)) +
         (c.humanMode ? '<span class="chip who">La lleva ' + esc(whoHas(c)) + '</span>' : '');
       var texto = c.hit
-        ? '<span class="snip hit"><span class="who">' + esc(c.hit.role === 'user' ? nameOf(c) : state.agentName || 'Aiva') + ':</span> ' + mark(c.hit.content, state.q) + '</span>'
+        ? '<span class="snip hit"><span class="who">' + esc(c.hit.role === 'user' ? nameOf(c) : state.agentName || 'Xen') + ':</span> ' + mark(c.hit.content, state.q) + '</span>'
         : '<span class="snip"' + (c.summary ? ' title="' + esc(c.summary) + '"' : '') + '>' + esc(c.recap || c.summary || '') + '</span>';
       // La fila de la Bandeja omnicanal: el avatar con la insignia de su canal, el nombre y la hora (en el acento
       // si hay algo sin leer), y debajo lo que dijo con los no leídos en píldora. Las marcas que dicen algo van en
@@ -1078,11 +1078,11 @@
     // ya había escrito, que es lo contrario de lo que pasa.
     var antes = d.antes || [];
     m.innerHTML = (antes.length
-      ? '<div class="sysline">Lo que ya estaba conversado antes de aiva · ' + antes.length + ' mensaje' + (antes.length === 1 ? '' : 's') + '</div>'
+      ? '<div class="sysline">Lo que ya estaba conversado antes de XENCRM · ' + antes.length + ' mensaje' + (antes.length === 1 ? '' : 's') + '</div>'
         + antes.map(burbujaDeAntes).join('')
-        + '<div class="sysline">Desde aquí lo lleva aiva</div>'
+        + '<div class="sysline">Desde aquí lo lleva ' + esc(state.agentName || 'Xen') + '</div>'
       : '') + d.messages.map(bubble).join('');
-    if (c.humanMode) m.insertAdjacentHTML('beforeend', '<div class="sysline">' + esc(state.agentName || 'Aiva') + ' está en pausa: esta conversación la lleva ' + esc(whoHas(c)) + (c.humanSince ? desdeXen(c.humanSince) : '') + '.</div>');
+    if (c.humanMode) m.insertAdjacentHTML('beforeend', '<div class="sysline">' + esc(state.agentName || 'Xen') + ' está en pausa: esta conversación la lleva ' + esc(whoHas(c)) + (c.humanSince ? desdeXen(c.humanSince) : '') + '.</div>');
     pintarAdjuntos(m);
     m.scrollTop = m.scrollHeight;
   }
@@ -1098,7 +1098,7 @@
     // 🪤 `by` es el nombre de quien contestó, y NO siempre lo escribe alguien de la casa: de un chat de WhatsApp
     // importado sale tal cual del archivo. Sin escapar, quien mandó ese chat ejecuta JavaScript en la pantalla
     // de quien atiende —y de ahí se lleva el token del tablero—. Comprobado: se ejecutaba.
-    var label = who === 'customer' ? 'Cliente' : who === 'human' ? (msg.by ? esc(msg.by) + ' (equipo)' : 'Equipo') : esc(state.agentName || 'Aiva');
+    var label = who === 'customer' ? 'Cliente' : who === 'human' ? (msg.by ? esc(msg.by) + ' (equipo)' : 'Equipo') : esc(state.agentName || 'Xen');
     // «¿por qué?»: el turno que produjo esta respuesta (src/crm/turnos.ts). Solo para quien administra, por ruido.
     var porQue = who === 'bot' && msg.turno && esAdmin()
       ? '<button class="por-que solo-completo" type="button" data-turno="' + esc(msg.turno) + '" aria-expanded="false">¿por qué?</button>' : '';
@@ -1226,12 +1226,12 @@
     if (!p) return;
     caja.classList.toggle('vieja', Boolean(p.vieja));
     // La que se dejó mientras la llevabas tú no es «la respuesta»: es una ayuda que puedes usar o no.
-    $('propuesta-titulo').textContent = p.vieja ? 'Esta respuesta se quedó atrás' : p.conPersona ? (state.agentName || 'Aiva') + ' puede contestar esto' : 'Respuesta lista';
+    $('propuesta-titulo').textContent = p.vieja ? 'Esta respuesta se quedó atrás' : p.conPersona ? (state.agentName || 'Xen') + ' puede contestar esto' : 'Respuesta lista';
     // 🪤 Si llegó algo después de redactarla, ya no contesta a lo último que dijeron. Mandarla de un toque
     // sería peor que no tener el modo: el cliente recibiría una respuesta a una pregunta que ya cambió.
     $('propuesta-meta').textContent = p.vieja
       ? 'escribió otra vez después · léela antes de mandarla'
-      : esc(state.agentName || 'Aiva') + ' la escribió hace ' + rel(p.creado);
+      : esc(state.agentName || 'Xen') + ' la escribió hace ' + rel(p.creado);
     $('propuesta-texto').textContent = p.texto;
     $('propuesta-si').classList.toggle('primary', !p.vieja);
   }
@@ -1270,7 +1270,7 @@
     // conversación había que acordarse de mover un interruptor ANTES de tener nada que decir — y lo natural es
     // al revés: uno empieza a escribir. Ahora escribir es la señal, como contestar desde el teléfono.
     $('composer-hint').hidden = human;
-    $('composer-hint').innerHTML = 'Responde ' + esc(state.agentName || 'Aiva') + '. <b>Si escribes aquí, la automatización se pausa</b> en esta conversación.';
+    $('composer-hint').innerHTML = 'Responde ' + esc(state.agentName || 'Xen') + '. <b>Si escribes aquí, la automatización se pausa</b> en esta conversación.';
     $('reply').hidden = false; $('send').hidden = !human;
     // 🪤 El botón de adjuntar solo donde el canal sabe entregarlo. Ofrecerlo en el chat del sitio sería prometer
     // algo que no pasa: el archivo quedaría en la conversación y el cliente no lo recibiría nunca.
@@ -1293,7 +1293,7 @@
         // 🪤 Lo que ya había escrito NO se pierde al recargar la conversación: es trabajo suyo.
         $('reply').value = loEscrito;
         $('reply').focus();
-        toast('Tomaste esta conversación: ' + (state.agentName || 'Aiva') + ' se queda callada aquí');
+        toast('Tomaste esta conversación: ' + (state.agentName || 'Xen') + ' se queda callada aquí');
       })
       .finally(function () { tomando = false; });
   });
@@ -1640,7 +1640,7 @@
       pintarKpis(t.resumen || {}, t.embudo || null);
       // Orden por costo del silencio: primero lo que alguien está esperando.
       var sections = [
-        { t: 'Por verificar', n: t.verifications.length, html: t.verifications.map(verifyItem).join(''), empty: 'Nada pendiente: ' + (state.agentName || 'Aiva') + ' supo responder todo.' },
+        { t: 'Por verificar', n: t.verifications.length, html: t.verifications.map(verifyItem).join(''), empty: 'Nada pendiente: ' + (state.agentName || 'Xen') + ' supo responder todo.' },
         // Lo de los grupos va primero: es lo único de esta pantalla donde alguien está esperando en público.
         { t: 'Te escribieron en un grupo', n: (t.enGrupos || []).length, html: (t.enGrupos || []).map(function (p) {
             return '<div class="card"><div class="body">'
@@ -1663,15 +1663,15 @@
               + '<button class="btn sm primary" data-gr-si="' + p.id + '">Enviar al grupo</button>'
               + '<button class="btn sm" data-gr-no="' + p.id + '">Descartar</button></div></div></div>';
           }).join(''), empty: 'Nadie te ha escrito en un grupo.' },
-        { t: 'Esperan tu respuesta', n: t.unanswered.length, html: t.unanswered.map(function (c) { return contactRow(c, c.humanMode ? 'La última palabra la tiene el cliente y ' + (state.agentName || 'Aiva') + ' está en pausa.' : 'La última palabra la tiene el cliente y ' + (state.agentName || 'Aiva') + ' no respondió.'); }).join(''), empty: 'Nadie espera respuesta de una persona.' },
-        { t: 'Pidieron una persona', n: t.handoffs.length, html: t.handoffs.map(function (c) { return contactRow(c); }).join(''), empty: (state.agentName || 'Aiva') + ' lleva todas las conversaciones.' },
+        { t: 'Esperan tu respuesta', n: t.unanswered.length, html: t.unanswered.map(function (c) { return contactRow(c, c.humanMode ? 'La última palabra la tiene el cliente y ' + (state.agentName || 'Xen') + ' está en pausa.' : 'La última palabra la tiene el cliente y ' + (state.agentName || 'Xen') + ' no respondió.'); }).join(''), empty: 'Nadie espera respuesta de una persona.' },
+        { t: 'Pidieron una persona', n: t.handoffs.length, html: t.handoffs.map(function (c) { return contactRow(c); }).join(''), empty: (state.agentName || 'Xen') + ' lleva todas las conversaciones.' },
         { t: '¿Cómo les fue? (citas que ya pasaron)', n: (t.past || []).length, html: (t.past || []).map(pastItem).join(''), empty: 'Ninguna cita pasada sin resultado.' },
         { t: 'Recordar a mano', n: (t.remind || []).length, html: (t.remind || []).map(remindItem).join(''), empty: 'Los recordatorios de mañana salen solos.' },
         { t: 'Citas de hoy', n: t.appointments.length, html: t.appointments.map(function (a) { return '<div class="appt"><span class="t">' + esc(a.label) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b> <span class="muted small">' + esc(a.service + conSede(a)) + '</span>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Sin citas hoy.' },
         { t: 'Calientes sin seguimiento (más de 24 h)', n: t.hot.length, html: t.hot.map(function (c) {
           return contactRow(c, null, '<button class="btn sm primary" data-follow="' + esc(c.id) + '">Escribirle</button><button class="btn sm" data-snooze="' + esc(c.id) + '">Dejarlo por ahora</button>');
         }).join(''), empty: 'Ningún prospecto caliente abandonado.' },
-        { t: 'Sin leer, ' + (state.agentName || 'Aiva') + ' ya respondió', n: t.unread.length, html: t.unread.map(function (c) { return contactRow(c); }).join(''), empty: 'Todo leído.' },
+        { t: 'Sin leer, ' + (state.agentName || 'Xen') + ' ya respondió', n: t.unread.length, html: t.unread.map(function (c) { return contactRow(c); }).join(''), empty: 'Todo leído.' },
         { t: 'Próximas citas (3 días)', n: t.upcoming.length, html: t.upcoming.map(function (a) { return '<div class="appt"><span class="grow stack"><span class="small muted">' + esc(a.label + conSede(a)) + '</span><b>' + esc(a.contactName || short(a.userId)) + '</b>' + reminderChip(a) + '</span><button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>'; }).join(''), empty: 'Nada agendado en los próximos días.' },
       ];
       var down = t.public && (t.public.state === 'caida' || t.public.state === 'otro_servidor')
@@ -1798,7 +1798,7 @@
     // Lo que pide que alguien haga algo. Las citas de hoy, las próximas y lo ya leído no: eso se mira, no se atiende.
     var pend = (sections || []).filter(function (s) { return s.n > 0 && ['citas', 'leidas', 'proximas'].indexOf(s.tono) < 0; });
     var total = pend.reduce(function (a, s) { return a + s.n; }, 0);
-    var agente = state.agentName || 'Aiva';
+    var agente = state.agentName || 'Xen';
     var caja = $('fx-resumen');
     // Ir al recuadro donde eso se atiende, resaltarlo un momento y dejarle el foco a quien va con el teclado.
     var irAlRecuadro = function (tono) {
@@ -1984,7 +1984,7 @@
     var r = a.reminder, html = '';
     if (a.reply === 'confirmó') html = '<span class="chip v-si">Confirmó</span>';
     else if (a.reply === 'no_puede') html = '<span class="chip v-perdido">No puede</span>';
-    else if (r && r.status === 'enviado') html = '<span class="chip" title="' + esc((r.note || 'Enviado por ' + (state.agentName || 'Aiva')) + (r.at ? ' · hace ' + rel(r.at) : '')) + '">Recordada</span>';
+    else if (r && r.status === 'enviado') html = '<span class="chip" title="' + esc((r.note || 'Enviado por ' + (state.agentName || 'Xen')) + (r.at ? ' · hace ' + rel(r.at) : '')) + '">Recordada</span>';
     else if (r && r.status === 'a_mano') html = '<span class="chip v-posible">Recordar a mano</span>';
     else if (!r && a.remindAt && a.remindAt > Date.now()) {
       var at = new Date(a.remindAt), today = new Date(), tomorrow = new Date(Date.now() + 86400000);
@@ -2008,7 +2008,7 @@
     return '<div class="verify" data-vid="' + v.id + '"><div class="verify-q"><b>' + esc(who) + '</b> <span class="muted small">hace ' + rel(v.createdAt) + '</span><div>«' + esc(v.question) + '»</div></div>' +
       (note ? '<div class="ch-warn">' + esc(note) + '</div>' : '') +
       '<label class="small muted" for="va-' + v.id + '">' + (v.contactName ? 'Respuesta para ' + esc(v.contactName) : 'Tu respuesta') + '</label><textarea id="va-' + v.id + '" rows="2" placeholder="Lo que le quieres responder"></textarea>' +
-      '<label class="small verify-learn"><input type="checkbox" id="vl-' + v.id + '" checked> Agregar a la información de ' + esc(state.bizName || 'la tienda') + ': la próxima vez ' + esc(state.agentName || 'Aiva') + ' ya lo sabe</label>' +
+      '<label class="small verify-learn"><input type="checkbox" id="vl-' + v.id + '" checked> Agregar a la información de ' + esc(state.bizName || 'la tienda') + ': la próxima vez ' + esc(state.agentName || 'Xen') + ' ya lo sabe</label>' +
       '<div class="feed-row"><button class="btn primary" data-vanswer="' + v.id + '">Enviar respuesta</button><button class="btn" data-vdismiss="' + v.id + '">Descartar</button><button class="btn" data-open="' + esc(v.userId) + '">Ver conversación</button></div>' +
       '<div class="small ch-err" id="ve-' + v.id + '" role="status"></div></div>';
   }
@@ -2263,7 +2263,7 @@
   }
   function responsableHtml(c, id) {
     return '<select id="' + id + '" aria-label="Quién está a cargo">' +
-      '<option value=""' + (c.responsable ? '' : ' selected') + '>Nadie todavía</option>' +
+      '<option value=""' + (c.responsable ? '' : ' selected') + '>Sin asignar</option>' +
       genteDelEquipo(c).map(function (n) {
         return '<option value="' + esc(n) + '"' + (mismoNombre(n, c.responsable) ? ' selected' : '') + '>' + esc(n) + (mismoNombre(n, state.name) ? ' (tú)' : '') + '</option>';
       }).join('') + '</select>';
@@ -2926,7 +2926,7 @@
         if (!f) return;
         f.text().then(function (txt) {
           var datos;
-          try { datos = JSON.parse(txt); } catch (e) { $('ap-msg').textContent = 'Ese archivo no es un aprendizaje de aiva.'; return; }
+          try { datos = JSON.parse(txt); } catch (e) { $('ap-msg').textContent = 'Ese archivo no es un aprendizaje de XENCRM (ni de aiva).'; return; }
           var mandar = function (deOtroCliente) {
             api('/historial/importar-aprendizaje', { method: 'POST', body: { aprendizaje: datos, deOtroCliente: deOtroCliente } }).then(function (r) {
               if (r && r.otroCliente && !deOtroCliente) {
@@ -3139,7 +3139,7 @@
 
   // Cuando la llevas tú: si aiva deja lista la respuesta a lo que sabe (crm/propuestas.ts). Nunca escribe sola ahí.
   function sugierePanel(a) {
-    var on = a.sugiereConPersona !== false, ag = esc(a.agent.name || 'Aiva');
+    var on = a.sugiereConPersona !== false, ag = esc(a.agent.name || 'Xen');
     return '<div class="panel" id="sugiere-panel"><b>Cuando la llevas tú</b>' +
       '<div class="fila" style="gap:10px;align-items:center;margin-top:8px">' +
         '<button class="btn sm" id="sugiere-btn" aria-pressed="' + on + '">' + (on ? 'Dejar de sugerir' : 'Sugerir respuestas') + '</button>' +
@@ -3310,14 +3310,14 @@
       // Los tres modos, por orden de confianza. El del medio es el que faltaba: sin él la decisión es «que no
       // diga nada» o «que le hable a mis clientes», y entre esas dos hay un abismo que nadie cruza tranquilo.
       var MODOS = [
-        { id: 'mira', lbl: 'Mira', dice: 'Entra todo al tablero y contestas tú. ' + esc(state.agentName || 'Aiva') + ' no dice nada: mira cómo atiendes y aprende.' },
+        { id: 'mira', lbl: 'Mira', dice: 'Entra todo al tablero y contestas tú. ' + esc(state.agentName || 'Xen') + ' no dice nada: mira cómo atiendes y aprende.' },
         { id: 'propone', lbl: 'Propone', dice: 'Deja la respuesta escrita y la mandas tú con un toque, o la corriges. No manda nada sola.' },
         { id: 'contesta', lbl: 'Contesta', dice: 'Responde sola a quien escriba.' }
       ];
       var modo = ch.modo || (ch.soloEscucha ? 'mira' : 'contesta');
       var escucha = ch.modo === undefined && ch.soloEscucha === undefined ? '' :
         '<div class="fila" style="gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap">' +
-          '<div class="tabs" role="group" aria-label="Qué hace ' + esc(state.agentName || 'Aiva') + ' en ' + esc(ch.name) + '">' +
+          '<div class="tabs" role="group" aria-label="Qué hace ' + esc(state.agentName || 'Xen') + ' en ' + esc(ch.name) + '">' +
             MODOS.map(function (m) {
               return '<button data-modo="' + ch.id + '" data-set="' + m.id + '" aria-pressed="' + (modo === m.id) + '"'
                 + (modo === m.id ? ' class="on"' : '') + '>' + m.lbl + '</button>';
@@ -3332,7 +3332,7 @@
           '<button class="btn sm" data-grupos="' + ch.id + '" data-set="' + (ch.grupos ? '0' : '1') + '">' +
             (ch.grupos ? 'Dejar de ver los grupos' : 'Ver también los grupos') + '</button>' +
           '<span class="small muted">' + (ch.grupos
-            ? (state.agentName || 'Aiva') + ' aprende de lo que se habla en los grupos. Nunca escribe en ellos.'
+            ? (state.agentName || 'Xen') + ' aprende de lo que se habla en los grupos. Nunca escribe en ellos.'
             : 'Los grupos se ignoran: ni se guardan ni se aprenden.') + '</span>' +
         '</div>';
       // Cuando WhatsApp no levanta, lo primero que hay que saber es si este servidor puede siquiera hablar con
@@ -3437,7 +3437,7 @@
           });
         };
         if (!encender) return mandar();
-        $('grupos-agente').textContent = state.agentName || 'Aiva';
+        $('grupos-agente').textContent = state.agentName || 'Xen';
         $('grupos-si').onclick = function () { $('dlg-grupos').close(); mandar(); };
         $('dlg-grupos').showModal();
       };
@@ -4425,7 +4425,7 @@
   function enLista(xs) { return xs.length < 2 ? String(xs[0] || '') : xs.slice(0, -1).join(', ') + ' y ' + xs[xs.length - 1]; }
   function historiaHtml(d, opts) {
     opts = opts || {};
-    var agente = state.agentName || 'Aiva';
+    var agente = state.agentName || 'Xen';
     var quien = function (by) { return !by || by === 'bot' ? agente : by === 'admin' || by === 'equipo' ? 'El equipo' : by; };
     var items = [];
     (d.events || []).forEach(function (e) {
@@ -5434,7 +5434,7 @@
         '</div>';
       if (d.respondidas) {
         html += '<div class="tiempos-quien">' +
-          '<span class="chip">' + esc(state.agentName || 'Aiva') + ': ' + d.porQuien.aiva.n + ' · ' + duracion(d.porQuien.aiva.medianaMs) + '</span>' +
+          '<span class="chip">' + esc(state.agentName || 'Xen') + ': ' + d.porQuien.aiva.n + ' · ' + duracion(d.porQuien.aiva.medianaMs) + '</span>' +
           '<span class="chip">Personas: ' + d.porQuien.persona.n + ' · ' + duracion(d.porQuien.persona.medianaMs) + '</span>' +
           d.personas.map(function (p) { return '<span class="chip who">' + esc(p.nombre) + ': ' + duracion(p.medianaMs) + ' (' + p.n + ')</span>'; }).join('') +
           '</div>';
@@ -5664,7 +5664,7 @@
 
   /** La cabecera de la conversación: quién es, quién responde, a quién está asignada y pausar o reanudar. */
   function pintarCabeceraXen(d) {
-    var c = d.contact, agente = state.agentName || 'Aiva', canal = canalDeXen(c.channel), ini = $('fx-chat-ini');
+    var c = d.contact, agente = state.agentName || 'Xen', canal = canalDeXen(c.channel), ini = $('fx-chat-ini');
     ini.className = 'fx-av fx-av-chat solo-facil av-' + tonoXen(c.id);
     ini.innerHTML = '<span class="fx-av-ini">' + esc(inicialesDe(nameOf(c))) + '</span><i class="fx-canal-ins fx-canal-' + canal.k + '">' + svgXen(canal.ic) + '</i>';
     $('fx-chat-nombre').textContent = nameOf(c);
