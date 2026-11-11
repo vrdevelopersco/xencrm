@@ -112,3 +112,40 @@ lo demás, callado.
    parcial, y datos hostiles (nombres larguísimos, mil filas, cero).
 4. Una pantalla nueva no está probada hasta que se abre en un navegador de verdad, a 1440 y a 390 px, en claro y
    en oscuro, y se mide lo pintado.
+
+## Cómo quedó (2026-11-11)
+
+Hecho en paralelo por seis agentes, cada uno en su worktree sobre los cimientos (`43e7d87`) y en su sección marcada
+del bloque de la piel y de `admin.js` (`XEN · …`), y unido en la rama `xencrm`. Capturas de todas las pantallas en
+[`capturas/xencrm-next-evolution/`](capturas/xencrm-next-evolution/).
+
+| Pieza | Qué quedó | Dónde |
+|---|---|---|
+| Inicio | El **copiloto XEN** (borde teal→violeta): cuántas cosas esperan, hasta cinco acciones con verbo, persona y botón, los pendientes y la agenda de hoy. Todo sale de `/today`; sin pendientes, «Todo al día». Cifras con la letra display, la semana con tokens, el embudo con el color de cada etapa, esqueletos al cargar y «Reintentar» si falla | `pintarInicio`, `pintarResumenDelDia` |
+| Bandeja omnicanal | Mías · Sin asignar · Todas + «Todos los estados» (un solo `state.filter`); avatar con la insignia del canal; papel con trama propia; burbujas con cola; «Pausar / Reanudar automatización» (el mismo Aiva/Tú); «Asignado a» en la cabecera; pestañas **Enviar mensaje · Nota interna** (la nota va por `/contacts/:id/notas`, no toma la conversación y no se borra si falla); la ficha de al lado como la de SendPulse. La conversación se acomoda a su ancho con `@container conversacion` | ancla `XEN · Bandeja omnicanal` |
+| Contactos | Acciones arriba (Agregar contacto, Exportar a Excel), grupos como píldoras con su número, filas-tarjeta (contacto, último trato, datos como etiquetas, asignado, valor, última actividad), esqueleto, error con salida, vacíos con salida y aviso a los 500 | ancla `XEN · Contactos…` |
+| Ficha del contacto | Cabecera de trato: nombre con lápiz, etapa y «Asignado a» como píldoras que se cambian ahí, «Abrir chat»; «Lo que busca» en violeta; «Sobre el contacto», «Contacto» y «Datos del contacto» | ídem |
+| Tratos y Citas | Columnas con la franja y el punto de su etapa, cuenta y suma; citas en índigo, cumplidas verdes, no asistió en rojo | ídem |
+| Analítica | Pestañas **Resumen · Sentimiento**. Interés 🤩 Quiere comprar · 🙂 Interés claro · 🤔 Curiosidad · 😶 Sin interés; ánimo 😊 Contento · 😐 Neutral · 😠 Molesto (emoji con su palabra, `aria-hidden` en el emoji); el cruce interés × ánimo («Cuidar a N»); lo que frena; cómo cambió por día. **Sentimiento por voz: «Por desarrollar»**, con lo que hará, lo que hay (las notas de voz ya se transcriben) y lo que falta; el interruptor está apagado de verdad y la vista previa no tiene cifras | `GET /admin/api/sentimiento` (`src/crm/sentimiento.ts`, solo lectura, sin modelo; el candado la deja leer) |
+| Modelos de IA | Configuración › Modelos de IA (solo super-admin): OpenAI, Anthropic, Apple FM, Ollama, LM Studio y «Otra API compatible con OpenAI», con su estado, llave de solo escritura (vuelve solo la pista), «Probar conexión» que no gasta, y qué modelo hace cada rol. Claude ahora puede hacer un rol y sigue de respaldo; LM Studio y la compatible son motores nuevos (`lmstudio`, `compat`) que reusan el cliente de OpenAI con su dirección. Lo guardado aplica al reiniciar | `src/proveedores.ts`, `/admin/api/motores/proveedores`; variables `LMSTUDIO_URL`, `LMSTUDIO_MODEL`, `COMPAT_URL`, `COMPAT_API_KEY`, `COMPAT_MODEL`, `COMPAT_NOMBRE` |
+| Renombre | XENCRM en la consola (con la piel nueva y el verde agua de fábrica), la portada, la hoja de producto (`docs/xencrm-producto.pdf`), el README, `package.json` y los textos del servidor que ve una persona. El asistente de los clientes nuevos se llama **Xen**; los que ya existen conservan el suyo | ver README › lo que conserva el nombre de aiva |
+
+Tokens que se sumaron en las secciones: `--fx-av-1…6-s/-t` (seis tonos de avatar, ≥ 6.5:1 en claro y ≥ 8.6:1 en
+oscuro; **uno solo para todo XENCRM**, definido con Contactos) y `--fx-canal-wa/web/otro` (la insignia del canal).
+
+🪤 **Dos agentes, el mismo token.** La bandeja y Contactos definieron cada uno `--fx-av-*` con otros valores y su
+propia forma de elegir el tono (una por el nombre, la otra por el id): la misma persona salía de dos colores, y en
+CSS gana la última definición sin avisar. Quedó una paleta y un cálculo (`tonoAvatar`, por el id: corregir el
+nombre no cambia el color). `test:bandeja` vigila que se definan una sola vez y que las dos pantallas coincidan.
+
+Pruebas nuevas: `test:bandeja`, `test:contactos`, `test:sentimiento`, `test:modelos`. Batería completa al unir:
+2794 bien, 0 fallas.
+
+### Lo que queda abierto
+
+- La ficha como página no tiene «⋯»: el menú contextual de siempre cae debajo del diálogo.
+- El aviso de nota del panel (`chat-nota`) sigue además de la pestaña «Nota interna»: las pruebas de borradores lo
+  vigilan. Unificarlo es lo siguiente en la bandeja.
+- El modelo de Ollama no se cambia desde Modelos de IA (`CHAT_MODEL` es de toda la máquina).
+- La consola y la portada no tienen tema oscuro.
+- Sentimiento por voz: falta el modelo que escuche el audio y decidir cuánto se guarda cada nota.

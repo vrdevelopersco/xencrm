@@ -1,5 +1,10 @@
 # Diseño del tablero: decisiones y valores medidos
 
+> **XENCRM, 2026-11-11.** En XENCRM la piel del modo fácil es la de todos, con identidad propia (verde petróleo,
+> acento teal, violeta solo para la IA, Figtree + Bricolage Grotesque) y el vocabulario de un CRM de mensajería. Sus
+> tokens, su glosario y lo que hace cada pantalla están en [`xencrm.md`](xencrm.md). Las reglas de abajo (jerarquía,
+> puntaje, quién habla, contraste, colores de dato, trampas) siguen mandando.
+
 > **Ojo, 2026-10-12.** Desde el 2026-10-02 el tablero es **blanco, azul y plano**, «al estilo de una herramienta»,
 > porque el cliente pidió que se pareciera al administrador de anuncios de Facebook (`442ce16`). Lo que este
 > documento dice del vidrio, las manchas de luz, la crema con dorado y la hoja de bloc es historia: se quitó. Siguen

@@ -7,6 +7,32 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-11-11
+
+### XENCRM: la siguiente generación, con la piel del modo fácil para todos · `43e7d87` … `b220ed4`
+El usuario pidió cambiar la interfaz entera por la del modo fácil, con SendPulse (contactos, ficha, bandeja
+omnicanal), ZapFast (bandeja tipo WhatsApp) y Dynamics 365 (IA) de inspiración, renombrar el proyecto a XENCRM y,
+sobre la marcha, dejar el lenguaje genérico por el de un CRM de mensajería, una pantalla de sentimiento con emojis
+(y la de voz, por desarrollar) y conectar modelos de varios proveedores. La carpeta es una copia de aiva: el remoto
+sigue siendo el de aiva y no se subió nada. Todo en la rama `xencrm`; la guía está en `xencrm.md`.
+- **Los cimientos** (`43e7d87`): la piel va detrás de `data-piel="xen"`, puesta de fábrica, y el modo fácil queda
+  solo para esconder lo avanzado y el candado. Paleta, letras, menú con «Bandeja omnicanal» y «Tratos», y marcas
+  para que cada agente rehiciera su pantalla sin pisar a los demás.
+- **Seis agentes en paralelo**, cada uno en su worktree: Inicio con el copiloto XEN (`6e4e364`), el renombre con la
+  consola y la portada (`fc4b591`), la Bandeja omnicanal (`ea551d8`), Modelos de IA (`6ebc74f`), Analítica con el
+  sentimiento (`5339654`) y Contactos, ficha, Tratos y Citas (`864ff21`). Cuatro uniones chocaron solo en la línea
+  `test` de `package.json` y una en `test:facil` (los dos agentes le enseñaron a saltarse algo distinto).
+- 🪤 **Los worktrees nacieron en `main`, no en los cimientos.** Cada agente lo notó y se movió a `43e7d87` antes de
+  trabajar; al encargar trabajo en worktrees, revisar la base de cada rama antes de unir.
+- 🪤 **El mismo token, dos valores** (`e0a7314`): la bandeja y Contactos definieron `--fx-av-*` cada uno a su manera
+  y la misma persona salía de dos colores. Una sola paleta y un solo cálculo por el id; `test:bandeja` lo vigila.
+- **Arreglos heredados de aiva que salieron en el camino**: los tonos de las secciones de Hoy iban corridos un puesto
+  (la prueba solo contaba cuántos había; ahora compara título por título); Ventas decía «$0» con ventas sin precio;
+  la gráfica de orígenes tenía ejes de 7 px; `notifications.ts` decía «Aiva» fijo en vez del nombre del asistente.
+- **Comprobado**: batería completa 2794 bien, 0 fallas; `tsc` limpio; las nueve pantallas en Chrome a 1440 y 390,
+  claro y oscuro, completo y fácil, sin errores de JavaScript ni desborde. Capturas en
+  `capturas/xencrm-next-evolution/`.
+
 ## 2026-11-07
 
 ### Medido en producción, y la dirección de quien llama · `eaced5d`
