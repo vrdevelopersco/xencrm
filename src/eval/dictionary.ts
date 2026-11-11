@@ -15,7 +15,7 @@ const check = (name: string, ok: boolean, detail = '') => {
 };
 const original = getDictionary();
 const originalFile = business.dictionaryFile;
-business.dictionaryFile = join(mkdtempSync(join(tmpdir(), 'aiva-dic-')), 'dictionary.json');
+business.dictionaryFile = join(mkdtempSync(join(tmpdir(), 'xencrm-dic-')), 'dictionary.json');
 
 // 1. Se aplica al instante
 check('antes: "¿tienen wifi?" no es un tema', ruleIntent('¿tienen wifi?')?.intent !== 'info_tienda');

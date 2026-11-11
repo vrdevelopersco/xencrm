@@ -15,12 +15,12 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-inyeccion-'));
-const base = JSON.parse(readFileSync(new URL('../../aiva.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
-writeFileSync(join(dir, 'aiva.config.json'), JSON.stringify(base));
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-inyeccion-'));
+const base = JSON.parse(readFileSync(new URL('../../xencrm.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+writeFileSync(join(dir, 'xencrm.config.json'), JSON.stringify(base));
 writeFileSync(join(dir, '.env'), '');
-process.env.AIVA_CONFIG = join(dir, 'aiva.config.json');
-process.env.AIVA_ENV_FILE = join(dir, '.env');
+process.env.XENCRM_CONFIG = join(dir, 'xencrm.config.json');
+process.env.XENCRM_ENV_FILE = join(dir, '.env');
 process.env.DB_PATH = join(dir, 'prueba.db');
 process.env.LLM_ENGINE = 'openai';
 process.env.OPENAI_API_KEY = 'clave-de-prueba';

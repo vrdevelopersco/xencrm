@@ -3,11 +3,11 @@
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-const dir = mkdtempSync(join(tmpdir(), 'aiva-meta-'));
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-meta-'));
 const envFile = join(dir, '.env');
 writeFileSync(envFile, '# Máquina de pruebas\nADMIN_TOKEN=abc123\nOPENAI_API_KEY=sk-prueba # clave\n');
-process.env.AIVA_ENV_FILE = envFile;
-process.env.DB_PATH = join(dir, 'aiva.db');
+process.env.XENCRM_ENV_FILE = envFile;
+process.env.DB_PATH = join(dir, 'xencrm.db');
 for (const k of ['META_ACCESS_TOKEN', 'META_PHONE_NUMBER_ID', 'META_VERIFY_TOKEN', 'META_APP_SECRET', 'META_API_VERSION']) delete process.env[k];
 const { saveMetaCredentials } = await import('../channels/meta-credentials.js');
 const { metaStatus } = await import('../channels/meta.js');

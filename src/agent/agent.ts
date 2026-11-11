@@ -191,7 +191,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     : '';
   const contact = getContact(msg.userId);
   const base = { sources: [] as AgentReply['sources'], route: '', gateVia: '' };
-  // La conversación la lleva una persona y aiva la acompaña: hace su trabajo, pero lo que redacte queda como
+  // La conversación la lleva una persona y XENCRM la acompaña: hace su trabajo, pero lo que redacte queda como
   // propuesta para esa persona. Nunca le habla al cliente. Ver «Una persona del equipo tiene la conversación».
   const acompana = Boolean(contact?.humanMode) && !grupo && sugiereConPersona();
   // Si venía hablando por otro canal, se le dice una vez (y el historial de allá ya entró en el contexto). Se
@@ -211,7 +211,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     preguntaAnotada = true;
     recordCustomerMessage(msg.userId, text, intent, msg.media);
   };
-  // Lo que pasa hoy cuando la lleva una persona: el mensaje entra, se analiza, y aiva no dice nada.
+  // Lo que pasa hoy cuando la lleva una persona: el mensaje entra, se analiza, y XENCRM no dice nada.
   const callarse = (route: string, extra: Partial<AgentReply> = {}): AgentReply => {
     anotarLaPregunta('humano');
     scheduleAnalysis(msg.userId);
@@ -223,7 +223,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     const reply = crossNote ? `${crossNote}\n\n${answer}` : answer;
     // Acompañando a una persona: la respuesta queda lista encima de su cajón y no sale. El mensaje del cliente
     // se anota como siempre que la lleva alguien —intención «humano»—, para que nada de lo que mira quién la
-    // tiene (Hoy, los tiempos, las cuentas) cambie porque aiva haya redactado algo.
+    // tiene (Hoy, los tiempos, las cuentas) cambie porque XENCRM haya redactado algo.
     if (acompana) {
       anotarLaPregunta('humano');
       proponer(msg.userId, reply, intent, '', '', { conPersona: true });
@@ -233,7 +233,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       return { ...base, text: '', silent: true, intent, engine, ms: msProp, ...extra, route: `acompaña · ${extra.route ?? ''}`.replace(/ · $/, '') };
     }
     anotarLaPregunta(intent);
-    // 🪤 En «Propone» NO se anota como dicho por aiva: no se ha dicho. Anotarlo dejaría en el historial —y en
+    // 🪤 En «Propone» NO se anota como dicho por xencrm: no se ha dicho. Anotarlo dejaría en el historial —y en
     // lo que el cliente ve si abre el chat del sitio— una respuesta que nadie mandó, y el asistente seguiría la
     // conversación dando por hecho que ya contestó eso.
     if (propone(msg.channel as ChannelId)) {
@@ -279,7 +279,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // Modo prueba: hay una demostración en marcha y este no es de los chats de la demostración.
   //
   // Se trata exactamente igual que «Mira»: su mensaje entra al CRM, se analiza y lo atiende una persona. Lo que
-  // NO pasa es que aiva le conteste sola mientras alguien está enseñando el producto en una pantalla.
+  // NO pasa es que XENCRM le conteste sola mientras alguien está enseñando el producto en una pantalla.
   //
   // 🪤 Va aquí, después de «Mira» y antes de todo lo demás, para que no cueste nada: un cliente que escribe
   // durante la demostración no debe gastar ni una llamada al modelo. Y `puedeContestar` devuelve true cuando no
@@ -293,7 +293,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
 
   // Una persona del equipo tiene la conversación: se registra y analiza, pero no se responde.
   //
-  // Y si el negocio lo dejó encendido (Agente › Cuando la llevas tú), aiva la acompaña: sigue de largo, hace su
+  // Y si el negocio lo dejó encendido (Agente › Cuando la llevas tú), XENCRM la acompaña: sigue de largo, hace su
   // trabajo y se detiene en finish(), justo antes de hablar, dejando la respuesta lista para esa persona. Es lo
   // que hace Boba en un chat de amigos: no se mete en todo, pero cuando alguien pregunta algo que sabe, ahí está.
   //
@@ -370,7 +370,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // Pasó en vivo y fue peor de lo que parecía. El clasificador manda a una persona en cuanto ve «queja»,
   // «reclamo», «pqr», o «hablar con alguien» — lo cual está bien fuera de una demostración—. Ahí el asistente
   // soltaba «ahora te atiende alguien del equipo» y se apartaba. Devolver el switch no bastaba: el siguiente
-  // mensaje con una de esas palabras volvía a traspasar, y quien presentaba veía a aiva repitiendo que viene
+  // mensaje con una de esas palabras volvía a traspasar, y quien presentaba veía a XENCRM repitiendo que viene
   // un humano que no existe, una y otra vez, delante del jurado.
   //
   // Con una prueba en marcha se deja pasar al camino normal: hay un modelo y un guion esperando, y cualquiera
@@ -467,7 +467,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // este sería el único mensaje que se escapara, dejando al cliente con un «ya te digo» que nadie continúa.
   // 🪤 Y nunca se espera a que salga: se manda y se sigue. Si el canal tarda en aceptarlo, lo que no puede pasar
   // es que la respuesta de verdad llegue más tarde todavía por culpa del aviso de que va a tardar.
-  // 🪤 Y nunca acompañando a una persona, por lo mismo: el cliente está hablando con ella, no con aiva.
+  // 🪤 Y nunca acompañando a una persona, por lo mismo: el cliente está hablando con ella, no con XENCRM.
   if (chosen.porLoQuePidio && !propone(msg.channel as ChannelId) && !acompana && canDeliver(msg.userId)) {
     const aviso = pick(MIENTRAS_CONSULTO.filter((x) => x !== ultimoAviso.get(msg.userId)));
     ultimoAviso.set(msg.userId, aviso);
@@ -620,8 +620,8 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   }
 
   // Acompañando, lo que no se sostiene no se le deja a la persona: ni un error, ni un «déjame verificar», ni lo
-  // que habría que rehacer. Se calla como cualquier otro mensaje mientras la lleva alguien — sin «Aiva no pudo
-  // responder» y sin «Por verificar»: quien la lleva está leyendo, no esperando a que aiva le avise.
+  // que habría que rehacer. Se calla como cualquier otro mensaje mientras la lleva alguien — sin «Xen no pudo
+  // responder» y sin «Por verificar»: quien la lleva está leyendo, no esperando a que XENCRM le avise.
   if (acompana) {
     // 🪤 Lo que se redacta acompañando no se dijo: Apple no puede conservarlo en su sesión como si lo hubiera dicho.
     lastEngine.delete(msg.userId);

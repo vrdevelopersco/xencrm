@@ -1,16 +1,16 @@
 // Pruebas de la configuración editable del cliente (sin modelo): pnpm test:ajustes
-// Lo que se guarda desde el tablero va al aiva.config.json de ESE cliente. Dos cosas importan: que nunca se
+// Lo que se guarda desde el tablero va al xencrm.config.json de ESE cliente. Dos cosas importan: que nunca se
 // escriba algo con lo que el cliente no arrancaría, y que lo que no se edita desde ahí se quede como estaba.
 import { copyFileSync, mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // Una copia de la configuración de ejemplo: las pruebas no tocan la de ningún cliente de verdad.
-const dir = mkdtempSync(join(tmpdir(), 'aiva-ajustes-'));
-const config = join(dir, 'aiva.config.json');
-copyFileSync('aiva.config.example.json', config);
-process.env.AIVA_CONFIG = config;
-process.env.DB_PATH = join(dir, 'aiva.db');
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-ajustes-'));
+const config = join(dir, 'xencrm.config.json');
+copyFileSync('xencrm.config.example.json', config);
+process.env.XENCRM_CONFIG = config;
+process.env.DB_PATH = join(dir, 'xencrm.db');
 
 const { ajustesDe, ajustesEnDisco, guardar, comoSeLee, puedeReiniciarse } = await import('../ajustes.js');
 
@@ -49,7 +49,7 @@ check('deja una copia del archivo anterior', existsSync(`${config}.anterior`));
 
 // --- lo que NO se toca desde aquí se queda como estaba ---
 check('no toca las rutas del catálogo ni del conocimiento', leer().sources.productsFile === 'data/catalog/products.json' && leer().sources.knowledgeDir === 'data/knowledge');
-check('ni el embudo, ni lo que captura', JSON.stringify(leer().crm) === JSON.stringify(JSON.parse(readFileSync('aiva.config.example.json', 'utf8')).crm));
+check('ni el embudo, ni lo que captura', JSON.stringify(leer().crm) === JSON.stringify(JSON.parse(readFileSync('xencrm.config.example.json', 'utf8')).crm));
 // Lo que el formulario no manda (el recordatorio de la cita, por ejemplo) tiene que sobrevivir a un guardado:
 // si no, editar el nombre del negocio apagaría el recordatorio sin que nadie lo pidiera.
 const conRecordatorio = leer();
@@ -70,10 +70,10 @@ check('ni una franja que termina antes de empezar', /antes de empezar/.test(inte
 check('y cuando algo se rechaza, el archivo queda intacto', readFileSync(config, 'utf8') === antes);
 
 // --- reiniciar solo donde hay quien lo levante ---
-delete process.env.AIVA_SUPERVISADO;
+delete process.env.XENCRM_SUPERVISADO;
 delete process.env.pm_id;
 check('sin supervisor, no se ofrece reiniciar', puedeReiniciarse() === false);
-process.env.AIVA_SUPERVISADO = '1';
+process.env.XENCRM_SUPERVISADO = '1';
 check('con el arranque del paquete, sí', puedeReiniciarse() === true);
 
 // --- y lo guardado arranca de verdad ---

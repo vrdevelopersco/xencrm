@@ -1,4 +1,4 @@
-// Preguntarle algo a aiva, en corto, por una puerta aparte.
+// Preguntarle algo a XENCRM, en corto, por una puerta aparte.
 //
 // No es el asistente que atiende clientes ni pasa por el tablero: es una libreta para quien monta y opera el
 // sistema. Se abre con una llave larga en la dirección, sin sesión, y sirve para lo que uno necesita a mitad de
@@ -49,7 +49,7 @@ políticas ni disponibilidad. Decir "no tengo ese dato, ¿me lo pasas?" es una r
 inventarlo es un error que nadie va a notar hasta que un cliente lo reciba.`;
 
 /**
- * Lo que aiva sabe del negocio, apretado para una pregunta suelta.
+ * Lo que XENCRM sabe del negocio, apretado para una pregunta suelta.
  *
  * 🪤 Lo INTERNO no entra aquí. Esta puerta no pide sesión —se abre con una llave en la dirección— y quien
  * tenga esa llave podría sacar, preguntando, lo que el equipo escribió para uso interno: márgenes, proveedores,
@@ -66,7 +66,7 @@ function contexto(adjuntos: Adjunto[] = []): string {
   return partes.join('\n\n');
 }
 
-export async function preguntarAAiva(c: Consulta): Promise<{ respuesta: string }> {
+export async function preguntarAXencrm(c: Consulta): Promise<{ respuesta: string }> {
   const pregunta = c.pregunta.trim();
   if (!pregunta) throw new Error('escribe la pregunta');
   const historia = (c.antes ?? []).slice(-4).flatMap((t) => [

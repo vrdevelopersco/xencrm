@@ -7,7 +7,7 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-sentimiento-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-sentimiento-')), 'xencrm.db');
 process.env.ADMIN_TOKEN = 'token-del-tablero-de-prueba-0123456789';
 const { getDb } = await import('../rag/store.js');
 const { agregarSentimiento, claveDeObjecion, diaEnLaZona, sentimiento } = await import('../crm/sentimiento.js');
@@ -137,8 +137,8 @@ const T = { 'x-admin-token': process.env.ADMIN_TOKEN!, 'content-type': 'applicat
   check('y sin token, no', (await app.request('/admin/api/sentimiento')).status === 401);
 }
 check('es del que vende: el candado la deja leer (asesor y admin, en el modo fácil)', frenoDelCandado('sentimiento', 'GET', 'asesor', 'facil') === null && frenoDelCandado('sentimiento', 'GET', 'admin', 'facil') === null);
-await app.request('/admin/api/tablero/modo', { method: 'PUT', headers: { ...T, 'x-aiva-rol': 'super' }, body: JSON.stringify({ modo: 'facil' }) });
-check('y el servidor la abre de verdad con el candado puesto', (await app.request('/admin/api/sentimiento', { headers: { ...T, 'x-aiva-rol': 'asesor' } })).status === 200);
+await app.request('/admin/api/tablero/modo', { method: 'PUT', headers: { ...T, 'x-xencrm-rol': 'super' }, body: JSON.stringify({ modo: 'facil' }) });
+check('y el servidor la abre de verdad con el candado puesto', (await app.request('/admin/api/sentimiento', { headers: { ...T, 'x-xencrm-rol': 'asesor' } })).status === 200);
 
 console.log('— La pantalla: cada emoji con su palabra, y la voz apagada de verdad');
 const js = readFileSync(new URL('../../public/admin.js', import.meta.url), 'utf8');

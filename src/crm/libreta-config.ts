@@ -26,7 +26,7 @@ export interface LibretaConfig {
 const VACIA: LibretaConfig = { llave: '', ips: [] };
 
 function archivo(): string {
-  const dir = process.env.AIVA_CLIENTES_DIR || join(process.cwd(), 'clientes');
+  const dir = process.env.XENCRM_CLIENTES_DIR || join(process.cwd(), 'clientes');
   return join(dir, 'libreta.json');
 }
 
@@ -49,7 +49,7 @@ export function libretaConfig(): LibretaConfig {
 }
 
 export function guardarLibretaConfig(c: LibretaConfig): LibretaConfig {
-  const dir = process.env.AIVA_CLIENTES_DIR || join(process.cwd(), 'clientes');
+  const dir = process.env.XENCRM_CLIENTES_DIR || join(process.cwd(), 'clientes');
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   const limpio: LibretaConfig = {
     llave: c.llave.trim(),

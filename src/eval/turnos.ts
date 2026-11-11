@@ -10,15 +10,15 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-turnos-'));
-const base = JSON.parse(readFileSync(new URL('../../aiva.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-turnos-'));
+const base = JSON.parse(readFileSync(new URL('../../xencrm.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
 // El análisis, casi al instante: así se puede comprobar que el que programa un turno no queda cargado a él.
-writeFileSync(join(dir, 'aiva.config.json'), JSON.stringify({ ...base, crm: { analysisQuietSeconds: 0.05, analysisMaxWaitSeconds: 1 } }));
+writeFileSync(join(dir, 'xencrm.config.json'), JSON.stringify({ ...base, crm: { analysisQuietSeconds: 0.05, analysisMaxWaitSeconds: 1 } }));
 writeFileSync(join(dir, '.env'), '');
 Object.assign(process.env, {
-  AIVA_CONFIG: join(dir, 'aiva.config.json'),
-  AIVA_ENV_FILE: join(dir, '.env'),
-  DB_PATH: join(dir, 'data', 'aiva.db'),
+  XENCRM_CONFIG: join(dir, 'xencrm.config.json'),
+  XENCRM_ENV_FILE: join(dir, '.env'),
+  DB_PATH: join(dir, 'data', 'xencrm.db'),
   WHATSAPP_ENABLED: 'false',
   LLM_ENGINE: 'openai',
   OPENAI_API_KEY: 'clave-de-prueba',
@@ -26,7 +26,7 @@ Object.assign(process.env, {
   EMBED_ENGINE: 'ollama',
   OLLAMA_URL: 'http://ollama.prueba',
   ADMIN_TOKEN: 'token-de-prueba-0123456789',
-  AIVA_VERSION: '',
+  XENCRM_VERSION: '',
 });
 for (const rol of ['', '_LIGHT', '_HEAVY', '_GATE', '_ANALYSIS']) process.env[`OPENAI_MODEL${rol}`] = 'gpt-5.4-mini';
 

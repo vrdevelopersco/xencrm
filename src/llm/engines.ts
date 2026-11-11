@@ -120,7 +120,7 @@ export function roleLabel(role: Role): string {
  * al FINAL, no al principio. Al principio, cada mensaje de ese minuto esperaría a que OpenAI agote su tiempo —hasta
  * 60 segundos si lo que falla es la red— antes de llegar al respaldo. Pasado el minuto vuelve a ir primero. Lo que
  * nunca contestó desde el arranque no está «enfriando» y sigue yendo primero: si alguien lo levanta después, así
- * se entera aiva.
+ * se entera XENCRM.
  */
 export function fallbackOrder(preferred: Engine): Engine[] {
   const seen = new Set<Engine>();

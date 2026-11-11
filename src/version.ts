@@ -4,7 +4,7 @@
 // saber QUÉ está desplegado, antes de teorizar. Hasta ahora la única forma era bajar el archivo servido y buscar en
 // él un cambio conocido. Con esto, /_salud, la consola y cada turno guardado dicen el commit.
 //
-// De dónde sale, en orden: AIVA_VERSION (si el panel la pone), el version.json que deja `pnpm paquete` en la raíz del
+// De dónde sale, en orden: XENCRM_VERSION (si el panel la pone), el version.json que deja `pnpm paquete` en la raíz del
 // paquete, o git si esto es una copia de trabajo. Sin ninguno, «desconocida», que también es una respuesta: dice
 // que no se puede confiar en ese despliegue para saber qué tiene.
 import { execFileSync } from 'node:child_process';
@@ -28,7 +28,7 @@ export function version(): Version {
 }
 
 function leer(): Version {
-  if (process.env.AIVA_VERSION) return { commit: process.env.AIVA_VERSION, fecha: '', origen: 'entorno' };
+  if (process.env.XENCRM_VERSION) return { commit: process.env.XENCRM_VERSION, fecha: '', origen: 'entorno' };
   const archivo = fileURLToPath(new URL('../version.json', import.meta.url));
   if (existsSync(archivo)) {
     try {

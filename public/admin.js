@@ -1,4 +1,4 @@
-/* Tablero de Aiva: bandeja, pipeline, calendario, análisis, agente y conocimiento. Vanilla JS + SSE. */
+/* Tablero de Xen: bandeja, pipeline, calendario, análisis, agente y conocimiento. Vanilla JS + SSE. */
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -7,21 +7,34 @@
   var BASE = location.pathname.replace(/\/admin\/?$/, '');
   // Servido desde la consola: ella le pone el token a cada petición, así que aquí no hace falta ninguno. La marca
   // la inyecta la consola al pasar la página.
-  var PORLACONSOLA = typeof window.AIVA_CONSOLA === 'string';
-  // 🪤 Todos los clientes viven en el MISMO dominio (aiva.../dunor, aiva.../confia), y el almacenamiento del
+  var PORLACONSOLA = typeof window.XENCRM_CONSOLA === 'string';
+  // 🪤 Todos los clientes viven en el MISMO dominio (XENCRM.../dunor, XENCRM.../confia), y el almacenamiento del
   // navegador es por dominio: sin separar las llaves, el nombre con el que respondes, el token y hasta el tema
   // se iban de un cliente a otro. Cada uno lleva su prefijo, que sale de su ruta.
-  var QUIEN = (window.AIVA_CONSOLA || BASE || 'raiz').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'raiz';
-  var LLAVE = function (que) { return 'aiva.admin.' + QUIEN + '.' + que; };
+  var QUIEN = (window.XENCRM_CONSOLA || BASE || 'raiz').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'raiz';
+  var LLAVE = function (que) { return 'xencrm.admin.' + QUIEN + '.' + que; };
+  // XENCRM: lo que el navegador guardó cuando esto se llamaba aiva (las llaves «aiva.…»: token, nombre, tema, la
+  // última vista) se muda una vez a «xencrm.…» y se borra. Así nadie vuelve a poner su token ni pierde su tema.
+  (function deAivaAXencrm() {
+    try {
+      var viejas = [];
+      for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('ai' + 'va.') === 0) viejas.push(k); }
+      viejas.forEach(function (k) {
+        var nueva = 'xencrm.' + k.slice(5);
+        if (localStorage.getItem(nueva) === null) localStorage.setItem(nueva, localStorage.getItem(k));
+        localStorage.removeItem(k);
+      });
+    } catch (e) { /* sin almacenamiento, no hay nada que mudar */ }
+  })();
   // Lo que estaba guardado con la llave vieja (compartida) se muda una vez y se borra, para no dejar a nadie
   // fuera al actualizar.
   (function mudar() {
     try {
       ['token', 'name', 'theme', 'sound', 'notifSeen'].forEach(function (que) {
-        var viejo = localStorage.getItem('aiva.admin.' + que);
+        var viejo = localStorage.getItem('xencrm.admin.' + que);
         if (viejo !== null && localStorage.getItem(LLAVE(que)) === null) localStorage.setItem(LLAVE(que), viejo);
       });
-      ['token', 'name'].forEach(function (que) { localStorage.removeItem('aiva.admin.' + que); });
+      ['token', 'name'].forEach(function (que) { localStorage.removeItem('xencrm.admin.' + que); });
     } catch (e) { /* sin almacenamiento, se entra como la primera vez */ }
   })();
   var state = { token: '', name: '', view: 'today', filter: 'all', q: '', contacts: [], current: null, detail: null, kind: 'knowledge', theme: 'light', sound: true, stageLabels: {}, stages: [], es: null, notifs: [], notifSeen: 0, detailOpen: false };
@@ -29,7 +42,7 @@
   // mantiene al cambiar de equipo y no hay forma de que se cruce con el de otro cliente.
   // 🪤 Primero lo que se haya puesto PARA ESTE CLIENTE, y solo si no hay, el nombre de la cuenta. Al revés, el
   // nombre del super-admin se propagaría a todos los clientes a la vez.
-  try { state.token = localStorage.getItem(LLAVE('token')) || ''; state.name = localStorage.getItem(LLAVE('name')) || (typeof window.AIVA_QUIEN === 'string' && window.AIVA_QUIEN) || ''; state.theme = localStorage.getItem(LLAVE('theme')) || 'light'; state.sound = localStorage.getItem(LLAVE('sound')) !== '0'; state.notifSeen = Number(localStorage.getItem(LLAVE('notifSeen')) || 0); } catch (e) {}
+  try { state.token = localStorage.getItem(LLAVE('token')) || ''; state.name = localStorage.getItem(LLAVE('name')) || (typeof window.XENCRM_QUIEN === 'string' && window.XENCRM_QUIEN) || ''; state.theme = localStorage.getItem(LLAVE('theme')) || 'light'; state.sound = localStorage.getItem(LLAVE('sound')) !== '0'; state.notifSeen = Number(localStorage.getItem(LLAVE('notifSeen')) || 0); } catch (e) {}
 
   // ---------- íconos (monocromos, el color de estado queda para los chips) ----------
   var ICONS = {
@@ -347,7 +360,7 @@
     var headers = { 'x-admin-token': state.token };
     // Quién está haciendo esto, para la historia de cada ficha. Entrando por la consola, la consola la cambia por
     // el nombre de la cuenta; con el token a secas, vale el nombre con que se responde (channels/admin.ts).
-    if (state.name) headers['x-aiva-quien'] = encodeURIComponent(state.name);
+    if (state.name) headers['x-xencrm-quien'] = encodeURIComponent(state.name);
     if (opts.body) headers['content-type'] = 'application/json';
     return fetch(BASE + '/admin/api' + path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined }).then(function (r) {
       if (r.status === 401) { showLogin('Token inválido'); throw new Error('401'); }
@@ -384,7 +397,7 @@
     // eso lo devolvía adentro sin haber salido. «Volver a la consola» es otra cosa y tiene su propio botón.
     if (PORLACONSOLA) {
       fetch('/api/salir', { method: 'POST' }).catch(function () {}).then(function () {
-        try { localStorage.removeItem('aiva.consola.sesion'); localStorage.removeItem('aiva.consola.token'); } catch (e) {}
+        try { localStorage.removeItem('xencrm.consola.sesion'); localStorage.removeItem('xencrm.consola.token'); } catch (e) {}
         location.href = '/consola';
       });
       return;
@@ -434,7 +447,7 @@
   // ---------- la configuración, agrupada por de quién es ----------
   // 🪤 Estos ajustes estaban sueltos en el menú principal, seis de once botones, compitiendo por atención con
   // lo que se usa cada minuto. Pero el lío de verdad no era el sitio: era que no se veía DE QUIÉN es cada cosa.
-  // El nombre del asistente es del cliente; el tuyo es tuyo; la consola es de aiva. Confundir esos tres niveles
+  // El nombre del asistente es del cliente; el tuyo es tuyo; la consola es de XENCRM. Confundir esos tres niveles
   // costó cuatro entregas persiguiendo un nombre que se «cruzaba entre clientes». Aquí se dice en voz alta.
   var CFG_CLIENTE = [
     // Arriba de todo: es lo primero que hay que hacer con un negocio nuevo. Solo para quien administra, porque
@@ -453,7 +466,7 @@
     // todo. Quien entra con el token a secas lo ve igual: con ese token puede llamar a la ruta directamente, y
     // esconder un botón no protege nada — creerse protegido por eso sí hace daño.
     { view: 'trazas', ic: 'chart', lbl: 'Trazabilidad', soloAdmin: true, soloCompleto: true },
-    // Cómo entra todo el equipo. Lo decide quien administra aiva y nadie más: es el candado (ver «modo fácil»).
+    // Cómo entra todo el equipo. Lo decide quien administra XENCRM y nadie más: es el candado (ver «modo fácil»).
     { proxy: 'modo-equipo-btn', ic: 'users', lbl: 'Modo fácil para el equipo', soloSuper: true, modo: 'equipo' }
   ];
   // Todo lo de «Este cliente» es configuración: con el candado puesto no se enseña (ver «modo fácil»).
@@ -469,12 +482,12 @@
    * Quién entró. Por la consola llega su rol; con el token a secas no hay rol y se ve todo, que es lo correcto:
    * ese token ya abre cualquier ruta.
    */
-  function rolDeQuienEntro() { return typeof window.AIVA_ROL === 'string' ? window.AIVA_ROL : ''; }
+  function rolDeQuienEntro() { return typeof window.XENCRM_ROL === 'string' ? window.XENCRM_ROL : ''; }
   function esAdmin() {
     var r = rolDeQuienEntro();
     return !r || r === 'super' || r === 'admin';
   }
-  /** Quién manda en el modo fácil: quien administra aiva, o el token a secas. La misma regla que channels/candado.ts. */
+  /** Quién manda en el modo fácil: quien administra XENCRM, o el token a secas. La misma regla que channels/candado.ts. */
   function mandaEnElModo() {
     var r = rolDeQuienEntro();
     return !r || r === 'super';
@@ -510,9 +523,9 @@
       d.innerHTML = esc(titulo) + (marca ? '<b id="' + marca + '"></b>' : '');
       return d;
     };
-    // De aiva: solo tiene sentido si entró por la consola, que es de quien la maneja.
-    if (window.AIVA_CONSOLA) {
-      pop.appendChild(grupo('Organización', 'aiva'));
+    // De xencrm: solo tiene sentido si entró por la consola, que es de quien la maneja.
+    if (window.XENCRM_CONSOLA) {
+      pop.appendChild(grupo('Organización', 'xencrm'));
       var consola = document.createElement('button');
       consola.className = 'item';
       consola.innerHTML = '<i class="ic" data-ic="grid"></i>Volver a la consola';
@@ -571,22 +584,22 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('cfg-pop').hidden) cerrarCfg(true); });
 
   // ---------- modo fácil ----------
-  // DUNOR pidió un aiva «sencillo de usar», y aiva es mucho más que eso. El modo fácil ESCONDE lo que no es del día
+  // DUNOR pidió un XENCRM «sencillo de usar», y XENCRM es mucho más que eso. El modo fácil ESCONDE lo que no es del día
   // a día —el puntaje y su porqué, Análisis, Seguimientos, la configuración del asistente, las trazas, los filtros
   // de más— y no quita nada: lo escondido lleva la clase `solo-completo` y vuelve con un clic. Es la regla de
   // siempre (sencillo por fuera, todo a un clic adentro), con un interruptor en vez de un nivel más de menú.
   //
-  // Dos interruptores, y los dos son de quien administra aiva: el del cliente (cómo entra todo su equipo, vive en su
+  // Dos interruptores, y los dos son de quien administra xencrm: el del cliente (cómo entra todo su equipo, vive en su
   // base) y el suyo (cómo lo ve él, en su navegador, para revisar lo avanzado sin sacar a nadie del modo).
   //
   // 🪤 El CANDADO. Con el modo fácil puesto, nadie más se sale de él: ni el admin del cliente. DUNOR lo pidió así
-  // —un aiva sencillo del que nadie de su lado se salga sin querer—, y por eso quien no manda no tiene interruptor
+  // —un XENCRM sencillo del que nadie de su lado se salga sin querer—, y por eso quien no manda no tiene interruptor
   // propio y tampoco ve la configuración del cliente. El servidor cumple la misma regla (channels/candado.ts):
   // aquí solo se dejan de enseñar puertas que allá no abren.
   //
   // 🪤 Analítica, Ventas y Seguimientos SÍ van en el modo fácil. Primero no iban —parecían lo avanzado—, pero DUNOR
   // mandó la muestra de cómo lo quería (Nexora) y las tres están en su menú: son del que vende, no del que
-  // administra aiva. El servidor las abre igual (channels/candado.ts).
+  // administra XENCRM. El servidor las abre igual (channels/candado.ts).
   var SOLO_COMPLETO_VISTAS = { agent: 1, trazas: 1 };
   var VISTAS_DE_QUIEN_ADMINISTRA = { guia: 1, profile: 1, negocio: 1, agent: 1, channels: 1, knowledge: 1, trazas: 1, modelos: 1 };
   var FILTROS_COMPLETOS = /^(human|archived|stage:)/;
@@ -681,7 +694,7 @@
   // 🪤 El riel tenía ocho secciones y la mitad eran la misma gente vista de otra forma (Prospectos, Clientes,
   // Seguimientos) o los mismos números (Análisis, Ventas). Para quien empieza eran ocho puertas sin saber cuál
   // abrir. Ahora son áreas: el riel lleva al área y arriba de la pantalla van sus pestañas. Nada se quitó, quedó
-  // un clic más adentro: quien quiera exprimir aiva lo encuentra donde estaba.
+  // un clic más adentro: quien quiera exprimir XENCRM lo encuentra donde estaba.
   //
   // 🪤 Pestañas en la barra de arriba y NO en el panel de la sección: ese panel le quita 212 px al tablero y a la
   // tabla, que son justo las pantallas que necesitan el ancho (por eso se quitó también de Conversaciones).
@@ -1072,7 +1085,7 @@
     if ($('fx-chat-ini')) pintarCabeceraXen(d);
     pintarPropuesta(d.propuesta);
     var m = $('msgs');
-    // 🪤 Primero lo que ya estaba conversado antes de que aiva entrara. Sin esto, el tablero enseñaba media
+    // 🪤 Primero lo que ya estaba conversado antes de que XENCRM entrara. Sin esto, el tablero enseñaba media
     // conversación —lo que escribió el cliente y ninguna respuesta— mientras el asistente sí tenía el contexto
     // entero y contestaba con él. Ver una sola voz da la sensación de que el producto perdió lo que el negocio
     // ya había escrito, que es lo contrario de lo que pasa.
@@ -1087,7 +1100,7 @@
     m.scrollTop = m.scrollHeight;
   }
   // Lo traído del historial se pinta igual pero apagado: es conversación de verdad, pero no pasó por aquí y no
-  // se puede responder a ella. Que se vea distinto evita que alguien crea que aiva contestó eso.
+  // se puede responder a ella. Que se vea distinto evita que alguien crea que XENCRM contestó eso.
   function burbujaDeAntes(msg) {
     var mio = msg.role === 'assistant';
     var quien = mio ? (msg.autor && msg.autor !== 'negocio' ? esc(msg.autor) : 'El negocio') : (msg.autor ? esc(msg.autor) : 'Cliente');
@@ -1216,7 +1229,7 @@
       setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
     }).catch(function (estado) { toast(estado === 404 ? 'Ese archivo ya no está guardado.' : 'No pude bajar el archivo.'); });
   });
-  // ---------- lo que aiva dejó listo ----------
+  // ---------- lo que XENCRM dejó listo ----------
   var propuestaActual = null;
   function pintarPropuesta(p) {
     propuestaActual = p || null;
@@ -1266,7 +1279,7 @@
     $('seg-bot').classList.toggle('on', !human); $('seg-human').classList.toggle('on', human);
     $('seg').dataset.on = human ? 'human' : 'bot';
     $('seg-bot').setAttribute('aria-pressed', String(!human)); $('seg-human').setAttribute('aria-pressed', String(human));
-    // 🪤 El cajón de escribir ya no se esconde cuando contesta aiva. Estaba escondido, así que para tomar una
+    // 🪤 El cajón de escribir ya no se esconde cuando contesta XENCRM. Estaba escondido, así que para tomar una
     // conversación había que acordarse de mover un interruptor ANTES de tener nada que decir — y lo natural es
     // al revés: uno empieza a escribir. Ahora escribir es la señal, como contestar desde el teléfono.
     $('composer-hint').hidden = human;
@@ -1279,7 +1292,7 @@
     if (human) $('reply').focus();
     pintarCajon();
   }
-  // En cuanto se escribe la primera letra, aiva se hace a un lado. No al enviar: mientras uno piensa la
+  // En cuanto se escribe la primera letra, XENCRM se hace a un lado. No al enviar: mientras uno piensa la
   // respuesta, ella podría contestar primero y el cliente recibiría dos versiones de lo mismo.
   var tomando = false;
   $('reply').addEventListener('input', function () {
@@ -1337,7 +1350,7 @@
       fd.append('texto', text);
       fd.append('by', state.name || '');
       envio = fetch(BASE + '/admin/api/contacts/' + encodeURIComponent(state.current) + '/adjunto', {
-        method: 'POST', headers: state.name ? { 'x-admin-token': state.token, 'x-aiva-quien': encodeURIComponent(state.name) } : { 'x-admin-token': state.token }, body: fd,
+        method: 'POST', headers: state.name ? { 'x-admin-token': state.token, 'x-xencrm-quien': encodeURIComponent(state.name) } : { 'x-admin-token': state.token }, body: fd,
       }).then(function (r) { return r.json(); });
     } else {
       envio = api('/contacts/' + encodeURIComponent(state.current) + '/reply', { method: 'POST', body: { text: text, by: state.name } });
@@ -1683,7 +1696,7 @@
       var TONOS = ['verificar', 'grupos', 'esperan', 'persona', 'pasadas', 'recordar', 'citas', 'calientes', 'leidas', 'proximas'];
       sections.forEach(function (s, i) { s.tono = TONOS[i] || ''; });
       // 🪤 En el modo fácil solo sale lo que tiene algo. Nueve recuadros, siete diciendo «nada pendiente», es lo
-      // que hacía sentir a aiva complicado: hay que leerlos todos para descubrir que no hay que hacer nada.
+      // que hacía sentir a XENCRM complicado: hay que leerlos todos para descubrir que no hay que hacer nada.
       // XENCRM: Inicio es el de la piel para todos, y esta es su fila de «lo que espera a alguien».
       var facil = true;
       var visibles = facil ? sections.filter(function (s) { return s.n > 0; }) : sections;
@@ -1720,7 +1733,7 @@
       });
       $('today').querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-open')); }; });
       $('today').querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
-      if ($('help-hide')) $('help-hide').onclick = function () { helpSet('aiva.help.seen', true); loadToday(); };
+      if ($('help-hide')) $('help-hide').onclick = function () { helpSet('xencrm.help.seen', true); loadToday(); };
       pintarGuiaEnHoy();
       bindVerifyItems();
       $('today').querySelectorAll('[data-follow]').forEach(function (b) {
@@ -1762,7 +1775,7 @@
   }
   // ---------- Inicio en el modo fácil ----------
   // El de Nexora: cuatro números, cómo va la semana, dónde está cada persona, lo último que pasó y el resumen del
-  // día. 🪤 Todo sale de lo que aiva ya sabe —/today, /series, /stats, las notificaciones—; ninguna cifra se
+  // día. 🪤 Todo sale de lo que XENCRM ya sabe —/today, /series, /stats, las notificaciones—; ninguna cifra se
   // estima ni se rellena para que la tarjeta no quede vacía: si no hay datos, la tarjeta lo dice.
   var FX = { dias: 7, serie: null };
   function pintarInicio(t, sections) {
@@ -2040,7 +2053,7 @@
     $('notif-list').querySelectorAll('.n').forEach(function (el) { el.onclick = function () { $('notif').classList.remove('open'); var id = el.getAttribute('data-id'); if (id === 'system') go('agent'); else { go('inbox'); openContact(id); } }; });
   }
   // Con el candado no van los avisos del sistema (los motores, el enlace público): quien atiende no puede hacer nada
-  // con ellos y llevan a pantallas que no ve. Quien administra aiva los sigue viendo.
+  // con ellos y llevan a pantallas que no ve. Quien administra XENCRM los sigue viendo.
   function avisoParaMi(n) { return !(enCandado() && n && (n.userId === 'system' || n.kind === 'public' || n.kind === 'engine')); }
   function loadNotifs() { api('/notifications').then(function (list) { state.notifs = Array.isArray(list) ? list.filter(avisoParaMi) : list; renderNotifs(); }); }
   $('bell-btn').onclick = function (e) { e.stopPropagation(); $('notif').classList.toggle('open'); };
@@ -2050,7 +2063,7 @@
   // ---------- pipeline ----------
   // Con varias sedes, el equipo de cada una mira sus prospectos. Quien todavía no escogió sede no es de ninguna: sale
   // en «Todas» y en «Sin sede todavía», que es justo donde hay que ir a preguntarle.
-  var pipSede = helpGet('aiva.pip.sede') || '';
+  var pipSede = helpGet('xencrm.pip.sede') || '';
   function pintarSedesPip() {
     if (!variasSedes()) { $('pip-sede').hidden = true; return; }
     if (pipSede && pipSede !== '_ninguna' && !nombreSede(pipSede)) pipSede = '';
@@ -2059,7 +2072,7 @@
       '<option value="_ninguna"' + (pipSede === '_ninguna' ? ' selected' : '') + '>Sin sede todavía</option>';
     $('pip-sede').hidden = false;
   }
-  $('pip-sede').onchange = function () { pipSede = this.value; helpSet('aiva.pip.sede', pipSede); loadPipeline(); };
+  $('pip-sede').onchange = function () { pipSede = this.value; helpSet('xencrm.pip.sede', pipSede); loadPipeline(); };
   function deLaSede(c) {
     if (!pipSede || !variasSedes()) return true;
     var s = c.data && c.data.sede;
@@ -2253,7 +2266,7 @@
 
   // ---------- quién está a cargo ----------
   // 🪤 «La lleva» es quién contesta AHORA, y se borra cuando el asistente vuelve a atender. «A cargo» es de quién es
-  // el cliente, y se queda: lo que pedía quien revisó aiva era poder decir «este es de Laura» y filtrarlo.
+  // el cliente, y se queda: lo que pedía quien revisó XENCRM era poder decir «este es de Laura» y filtrarlo.
   function genteDelEquipo(c) {
     var nombres = equipoDisponible().map(function (u) { return u.nombre; });
     // Con el token a secas no se sabe quién es el equipo: por lo menos uno mismo.
@@ -2284,7 +2297,7 @@
   // ---------- calendario (vista semanal tipo agenda) ----------
   // En el celular la semana no cabe (siete columnas): se abre en Agenda, que es una lista. Lo que elijas se recuerda.
   var onPhone = function () { return window.matchMedia('(max-width: 900px)').matches; };
-  var cal = { mode: helpGet('aiva.cal.mode') || (onPhone() ? 'agenda' : 'week'), start: startOfWeek(new Date()), cfg: null, appts: [], todas: [], busy: [], sede: helpGet('aiva.cal.sede') || '', sedesAg: [] };
+  var cal = { mode: helpGet('xencrm.cal.mode') || (onPhone() ? 'agenda' : 'week'), start: startOfWeek(new Date()), cfg: null, appts: [], todas: [], busy: [], sede: helpGet('xencrm.cal.sede') || '', sedesAg: [] };
   var HOUR_PX = 56;
   function startOfWeek(d) { var x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
   function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
@@ -2505,8 +2518,8 @@
   }
   // 🪤 Cambiar de modo RECARGA, no solo repinta: Semana pide una semana y Agenda pide cuatro meses. Repintando
   // a secas, Agenda enseñaba lo que había traído Semana —una semana— y seguía diciendo que no hay citas.
-  $('cal-week-btn').onclick = function () { cal.mode = 'week'; helpSet('aiva.cal.mode', 'week'); loadCalendar(); };
-  $('cal-agenda-btn').onclick = function () { cal.mode = 'agenda'; helpSet('aiva.cal.mode', 'agenda'); loadCalendar(); };
+  $('cal-week-btn').onclick = function () { cal.mode = 'week'; helpSet('xencrm.cal.mode', 'week'); loadCalendar(); };
+  $('cal-agenda-btn').onclick = function () { cal.mode = 'agenda'; helpSet('xencrm.cal.mode', 'agenda'); loadCalendar(); };
   $('cal-month-btn').onclick = function () {
     cal.mode = 'month';
     // 🪤 Se ancla al mes de MITAD de semana, no al del lunes. La semana del 28 de septiembre tiene su lunes en
@@ -2514,7 +2527,7 @@
     // parecía que el calendario se había ido al pasado.
     var medio = addDays(cal.start, 3);
     cal.start = new Date(medio.getFullYear(), medio.getMonth(), 1);
-    helpSet('aiva.cal.mode', 'month');
+    helpSet('xencrm.cal.mode', 'month');
     loadCalendar();
   };
   var mover = function (signo) {
@@ -2527,7 +2540,7 @@
   $('cal-today').onclick = function () { cal.start = startOfWeek(new Date()); loadCalendar(); };
   $('cal-sede').onchange = function () {
     cal.sede = $('cal-sede').value;
-    helpSet('aiva.cal.sede', cal.sede);
+    helpSet('xencrm.cal.sede', cal.sede);
     if (cal.sede) $('book-sede').value = cal.sede;
     // Se recarga y no solo se repinta: los bloques ocupados también cambian con la sede.
     loadCalendar();
@@ -2588,7 +2601,7 @@
   // ---------- agente ----------
   function usd(n) { return n === null || n === undefined ? 's/p' : '$' + (n < 0.01 ? n.toFixed(4) : n < 1 ? n.toFixed(3) : n.toFixed(2)); }
   var TASKS = { light: 'Responder (liviano)', heavy: 'Responder (pesado)', gate: 'Clasificar mensaje', analysis: 'Análisis y puntaje', when: 'Interpretar fechas' };
-  // El mes y su tope (src/crm/presupuesto.ts). Aquí solo se lee: el tope lo pone quien administra aiva.
+  // El mes y su tope (src/crm/presupuesto.ts). Aquí solo se lee: el tope lo pone quien administra XENCRM.
   var TOPE_DICE = {
     aviso: 'Al 90 % empieza a ahorrar.',
     ahorro: 'Ahorrando: lo específico lo contesta el modelo de responder, que es el barato.',
@@ -2671,9 +2684,9 @@
     };
   }
   function loadHelp() {
-    helpSet('aiva.help.seen', true);
+    helpSet('xencrm.help.seen', true);
     api('/agent').then(function (a) {
-      var h = helpContent(a), done = helpGet('aiva.help.done') || {};
+      var h = helpContent(a), done = helpGet('xencrm.help.done') || {};
       // Con el candado no van los pasos que llevan a lo de quien administra. Cada paso guarda su número de siempre,
       // que es con el que se recuerda si ya se hizo.
       var pasos = h.steps.map(function (s, i) { return { s: s, i: i }; }).filter(function (x) { return !(enCandado() && VISTAS_DE_QUIEN_ADMINISTRA[x.s.view]); });
@@ -2691,15 +2704,15 @@
       $('help').querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
       $('help').querySelectorAll('[data-done]').forEach(function (b) {
         b.onclick = function () {
-          var i = b.getAttribute('data-done'), d = helpGet('aiva.help.done') || {};
-          d[i] = !d[i]; helpSet('aiva.help.done', d); loadHelp();
+          var i = b.getAttribute('data-done'), d = helpGet('xencrm.help.done') || {};
+          d[i] = !d[i]; helpSet('xencrm.help.done', d); loadHelp();
         };
       });
     });
   }
   // Primera vez: un aviso en Hoy que lleva al tutorial (se va al abrir Ayuda o con "No mostrar más").
   function helpBanner() {
-    if (helpGet('aiva.help.seen')) return '';
+    if (helpGet('xencrm.help.seen')) return '';
     return '<div class="panel help-first"><span class="grow"><b>¿Primera vez aquí?</b> <span class="small">El tutorial rápido te muestra lo esencial en dos minutos.</span></span>' +
       '<button class="btn primary" data-go="help">Ver tutorial</button><button class="btn" id="help-hide">No mostrar más</button></div>';
   }
@@ -2773,7 +2786,7 @@
     try { return Number(localStorage.getItem(LLAVE('guia-oculta')) || 0) > Date.now(); } catch (e) { return false; }
   }
   function bannerDeHoy() {
-    // Con el candado tampoco: cada paso de la guía lleva a la configuración, que es de quien administra aiva.
+    // Con el candado tampoco: cada paso de la guía lleva a la configuración, que es de quien administra XENCRM.
     if (!esAdmin() || enCandado()) return helpBanner();
     // Un sitio reservado: se llena cuando llega la guía. Con lo último que se supo, para que Hoy no salte.
     return '<div id="guia-hoy" class="guia-hoy-sitio">' + tarjetaGuiaHoy() + '</div>';
@@ -2796,7 +2809,7 @@
       sitio.innerHTML = tarjetaGuiaHoy();
       sitio.querySelectorAll('[data-guia-ir]').forEach(function (b) { b.onclick = function () { irAlPaso(b.getAttribute('data-guia-ir')); }; });
       sitio.querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
-      if ($('help-hide')) $('help-hide').onclick = function () { helpSet('aiva.help.seen', true); loadToday(); };
+      if ($('help-hide')) $('help-hide').onclick = function () { helpSet('xencrm.help.seen', true); loadToday(); };
       // «Por ahora» es una semana, como «Dejarlo por ahora» en los seguimientos: después vuelve, si sigue faltando.
       if ($('guia-ocultar')) $('guia-ocultar').onclick = function () { try { localStorage.setItem(LLAVE('guia-oculta'), String(Date.now() + 7 * 86400000)); } catch (e) {} pintar(); };
     };
@@ -2883,7 +2896,7 @@
           ? '<div style="margin-top:12px"><b>Así contestan ustedes</b><div class="small muted">Ejemplos sin cifras, para afinar el tono del asistente. Los precios y plazos nunca salen de aquí.</div>' +
             '<ul class="timeline">' + h.estilo.slice(0, 4).map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul></div>'
           : '') +
-        // Llevarse lo aprendido: es lo único de aiva que no se puede volver a escribir a mano.
+        // Llevarse lo aprendido: es lo único de XENCRM que no se puede volver a escribir a mano.
         '<div class="feed-row" style="margin-top:12px"><b class="small">Llevárselo a otra instancia</b></div>' +
         '<div class="feed-row"><button class="btn sm" id="ap-bajar">Exportar todo</button>' +
         '<button class="btn sm" id="ap-bajar-limpio">Exportar sin conversaciones</button>' +
@@ -2926,7 +2939,7 @@
         if (!f) return;
         f.text().then(function (txt) {
           var datos;
-          try { datos = JSON.parse(txt); } catch (e) { $('ap-msg').textContent = 'Ese archivo no es un aprendizaje de XENCRM (ni de aiva).'; return; }
+          try { datos = JSON.parse(txt); } catch (e) { $('ap-msg').textContent = 'Ese archivo no es un aprendizaje de XENCRM (ni de XENCRM).'; return; }
           var mandar = function (deOtroCliente) {
             api('/historial/importar-aprendizaje', { method: 'POST', body: { aprendizaje: datos, deOtroCliente: deOtroCliente } }).then(function (r) {
               if (r && r.otroCliente && !deOtroCliente) {
@@ -3017,7 +3030,7 @@
     if (!bk.last) return 'Todavía no hay respaldos: el primero se hace un minuto después de arrancar.';
     return 'Último: hace ' + rel(bk.last.at) + ' (' + Math.max(1, Math.round(bk.last.bytes / 1024)) + ' KB) · ' + bk.count + (bk.count === 1 ? ' copia' : ' copias') + ' en ' + bk.dir;
   }
-  // Qué pasa con las conversaciones viejas (src/crm/retencion.ts). Aquí solo se lee: la pone quien administra aiva.
+  // Qué pasa con las conversaciones viejas (src/crm/retencion.ts). Aquí solo se lee: la pone quien administra XENCRM.
   function retencionLinea(r) {
     if (!r || r.error) return '';
     var p = r.politica, u = r.ultima;
@@ -3137,7 +3150,7 @@
     });
   }
 
-  // Cuando la llevas tú: si aiva deja lista la respuesta a lo que sabe (crm/propuestas.ts). Nunca escribe sola ahí.
+  // Cuando la llevas tú: si XENCRM deja lista la respuesta a lo que sabe (crm/propuestas.ts). Nunca escribe sola ahí.
   function sugierePanel(a) {
     var on = a.sugiereConPersona !== false, ag = esc(a.agent.name || 'Xen');
     return '<div class="panel" id="sugiere-panel"><b>Cuando la llevas tú</b>' +
@@ -3170,7 +3183,7 @@
         '<div class="panel"><b>' + esc(a.agent.name) + '</b> · asistente de <b>' + esc(a.business.name) + '</b><div class="muted">' + esc(a.business.description) + '</div><div class="small">Estilo: ' + esc(a.agent.style) + '</div><div class="small">Contacto humano que ofrece: ' + esc(a.business.humanContact) + '</div></div>' +
         sugierePanel(a) +
         '<div class="panel"><b>Motores</b><ul>' + eng + '</ul><div class="small muted">Modo: ' + esc(a.roles.mode) + ' · liviano: ' + esc(a.roles.light) + ' · pesado: ' + esc(a.roles.heavy) + ' · gate: ' + esc(a.roles.gate) + ' · análisis: ' + esc(a.roles.analysis) + '</div><div class="small muted">Modelos: ' + esc(a.models.chat) + ' · embeddings ' + esc(a.models.embed) + ' · nube ' + esc(a.models.openai) + '</div></div>' +
-        '<div class="panel"><b>Citas</b>' + (ap.enabled ? '<div class="small">' + esc(ap.service) + (ap.location ? ' en ' + esc(ap.location) : '') + ' · ' + ap.durationMin + ' min · días ' + ap.days.join(',') + ' · ' + ap.hours.map(function (h) { return h[0] + '–' + h[1]; }).join(', ') + ' · zona ' + esc(a.timezone) + '</div>' : '<div class="muted small">Desactivadas (appointments.enabled en aiva.config.json)</div>') + '</div>' +
+        '<div class="panel"><b>Citas</b>' + (ap.enabled ? '<div class="small">' + esc(ap.service) + (ap.location ? ' en ' + esc(ap.location) : '') + ' · ' + ap.durationMin + ' min · días ' + ap.days.join(',') + ' · ' + ap.hours.map(function (h) { return h[0] + '–' + h[1]; }).join(', ') + ' · zona ' + esc(a.timezone) + '</div>' : '<div class="muted small">Desactivadas (appointments.enabled en xencrm.config.json)</div>') + '</div>' +
         '<div class="panel"><b>Análisis comercial</b><div class="small">Campos capturados además de los básicos: ' + a.crmFields.map(function (f) { return '<code>' + esc(f.name) + '</code>'; }).join(' ') + '</div></div>' +
         '<div class="panel"><b>Conocimiento indexado</b><div class="small">' + (a.docs.product || 0) + ' productos · ' + (a.docs.knowledge || 0) + ' fragmentos de información.</div></div>' +
         backupPanel(bk, ret) + usagePanel(usage, tope) + calendarPanel(calCfg) + '<div class="panel" id="miss-panel"></div><div class="panel" id="dict-panel"></div>';
@@ -3425,7 +3438,7 @@
       };
     });
     // 🪤 Encender se pregunta; apagar, no. Pedir confirmación para dejar de mirar los grupos sería poner una
-    // puerta en la salida: quien quiere que aiva deje de leerlos tiene que poder hacerlo de un clic.
+    // puerta en la salida: quien quiere que XENCRM deje de leerlos tiene que poder hacerlo de un clic.
     $('channels').querySelectorAll('[data-grupos]').forEach(function (b) {
       b.onclick = function () {
         var id = b.getAttribute('data-grupos'), encender = b.getAttribute('data-set') === '1';
@@ -3483,7 +3496,7 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { cerrarMenu(); if ($('dlg-vistazo') && $('dlg-vistazo').open) $('dlg-vistazo').close(); } });
 
   function equipoDisponible() {
-    var eq = Array.isArray(window.AIVA_EQUIPO) ? window.AIVA_EQUIPO : [];
+    var eq = Array.isArray(window.XENCRM_EQUIPO) ? window.XENCRM_EQUIPO : [];
     // Sin nadie más, la opción se enseña igual pero apagada: así se entiende que existe y por qué no se puede.
     return eq.filter(function (u) { return u && u.nombre; });
   }
@@ -3615,7 +3628,7 @@
     $('k-nota-edit').textContent = ''; $('k-nota-limpiar').hidden = true;
   }
   // 🪤 El borrador se enseña y NO se guarda. Guardarlo solo sería poner en boca del negocio cosas que dedujo
-  // una máquina de sus conversaciones; y si algo estuviera mal, aiva aconsejaría con seguridad sobre una
+  // una máquina de sus conversaciones; y si algo estuviera mal, XENCRM aconsejaría con seguridad sobre una
   // premisa falsa sin que nadie sepa de dónde salió. Cada nota se acepta —o se corrige— una por una.
   $('k-retrato').onclick = function () {
     $('k-retrato').disabled = true;
@@ -3912,7 +3925,7 @@
       .catch(function () { $('k-ra-msg').textContent = 'No pude leerlo.'; });
   };
 
-  // Ensayar: lo que de verdad hace falta antes de enseñar aiva en vivo. Dice si la pregunta sale por el guion o
+  // Ensayar: lo que de verdad hace falta antes de enseñar XENCRM en vivo. Dice si la pregunta sale por el guion o
   // se va al modelo, sin mandarle nada a nadie.
   function ensayar() {
     var texto = $('k-ra-ensayo').value.trim();
@@ -4493,7 +4506,7 @@
   // ---------- la ficha: lo de contacto y lo que capta el negocio (crm/ficha.ts) ----------
   // DUNOR lo pidió así: «modificar contacto» solo dejaba nombre y teléfono, y quien llega por Instagram no tenía
   // dónde dejar su usuario. Los campos los dice el servidor (/stats): los de contacto valen para todos, y los del
-  // negocio son los que aiva capta de la conversación (en DUNOR, la talla o las medidas). Se ven igual en los dos
+  // negocio son los que XENCRM capta de la conversación (en DUNOR, la talla o las medidas). Se ven igual en los dos
   // modos: atender bien a alguien no es «avanzado».
   var DE_CONTACTO = { correo: 1, whatsapp: 1, instagram: 1, facebook: 1, contacto_por: 1 };
   function fichaDelNegocio() { return state.ficha || { contacto: [], contactoPor: [], delNegocio: [] }; }
@@ -4531,7 +4544,7 @@
       return campo(x.k, x.etiqueta, '<input id="' + p + x.k + '"' + b + ' value="' + esc(data[x.k] || '') + '"' + (PISTAS[x.k] || '') + '>');
     }).join('');
     if (opts.soloContacto || !f.delNegocio.length) return contacto;
-    // Lo del negocio, con lo que aiva ya captó escrito: aquí se corrige, y lo corregido el análisis ya no lo pisa.
+    // Lo del negocio, con lo que XENCRM ya captó escrito: aquí se corrige, y lo corregido el análisis ya no lo pisa.
     return contacto + '<div class="ancho sub-ficha">Lo que contó</div>' + f.delNegocio.map(function (x) {
       var val = data[x.k] == null ? '' : String(data[x.k]);
       // Lo largo (unas medidas completas) en dos renglones: en un campo de una línea se leía solo el principio.
@@ -4878,7 +4891,7 @@
       var ev = JSON.parse(e.data);
       if (state.current === ev.userId) openContact(ev.userId);
     });
-    // Aiva dejó algo listo: si estás en esa conversación aparece sola; si no, suena y se avisa.
+    // Xen dejó algo listo: si estás en esa conversación aparece sola; si no, suena y se avisa.
     es.addEventListener('propuesta', function (e) {
       var ev = JSON.parse(e.data), p = ev.payload.propuesta;
       if (state.current === ev.userId) { openContact(ev.userId); return; }
@@ -4945,11 +4958,11 @@
       if ($('fx-logo')) $('fx-logo').textContent = (me.business || 'A').trim().charAt(0).toUpperCase();
       pintarQuienSoy();
       state.bizName = me.business; state.agentName = me.agent;
-      // 🪤 El asistente no siempre se llama Aiva (el de DUNOR en el paquete se llama Arthur): lo que el HTML trae escrito
-      // con «Aiva» se cambia aquí, al saberse el nombre. Lo que pinta el JavaScript usa state.agentName.
+      // 🪤 El asistente no siempre se llama Xen (el de DUNOR en el paquete se llama Arthur): lo que el HTML trae escrito
+      // con «Xen» se cambia aquí, al saberse el nombre. Lo que pinta el JavaScript usa state.agentName.
       if (me.agent && $('seg-bot')) $('seg-bot').textContent = me.agent;
       state.sedes = me.sedes || [];
-      // El logo del negocio en su propia barra: entrar a su tablero tiene que sentirse suyo, no de aiva.
+      // El logo del negocio en su propia barra: entrar a su tablero tiene que sentirse suyo, no de XENCRM.
       if (me.logo) {
         var img = document.createElement('img');
         // 🪤 Con BASE delante: servido en /dunor/admin, un "/brand/logo" pelado apuntaría a la raíz del dominio.
@@ -4965,13 +4978,13 @@
         }
       }
       // 🪤 Aquí se rellenaba el nombre de quien atiende con el del ASISTENTE, y quedaba guardado. Como todos los
-      // clientes suelen llamar igual a su asistente, el operador acababa llamándose «Aiva» en todos: parecía que
+      // clientes suelen llamar igual a su asistente, el operador acababa llamándose «Xen» en todos: parecía que
       // el perfil se cruzaba entre clientes y lo que pasaba es que se inventaba el nombre equivocado.
       //
       // Son dos cosas distintas y no se mezclan: el asistente es quien contesta solo, y el operador es la
       // persona que toma el teclado. Si no se sabe quién es, se deja en blanco y se pide; inventarlo es peor,
       // porque queda guardado y nadie vuelve a mirarlo.
-      state.quienSoyPorCuenta = typeof window.AIVA_QUIEN === 'string' && Boolean(window.AIVA_QUIEN);
+      state.quienSoyPorCuenta = typeof window.XENCRM_QUIEN === 'string' && Boolean(window.XENCRM_QUIEN);
       // 🪤 Limpieza de lo que dejó el apaño viejo: si lo guardado es el nombre del ASISTENTE, no lo escribió
       // nadie —lo puso el propio tablero— y hay que quitarlo, o se arrastra para siempre y parece que el perfil
       // se cruza entre clientes.
@@ -4983,7 +4996,7 @@
       // sin pisarlo. Cada cliente es un negocio aparte: quien atiende puede firmar distinto en una boutique que
       // en una financiera, y que el nombre del super-admin se propague a los tres de golpe es exactamente lo
       // que no debe pasar.
-      if (!state.name && state.quienSoyPorCuenta) state.name = window.AIVA_QUIEN;
+      if (!state.name && state.quienSoyPorCuenta) state.name = window.XENCRM_QUIEN;
       pintarQuienSoy();
       document.title = me.agent + ' · Tablero';
       return api('/stats');
@@ -5002,7 +5015,7 @@
   }
 
   // ---------- El negocio: la configuración del cliente, editable sin tocar archivos ----------
-  // Lo que se guarda aquí va a `aiva.config.json`. Se lee al arrancar, así que hasta que el cliente no reinicie
+  // Lo que se guarda aquí va a `xencrm.config.json`. Se lee al arrancar, así que hasta que el cliente no reinicie
   // sigue atendiendo con lo viejo: por eso el aviso de arriba y el botón de reiniciar, que solo aparece donde
   // hay quien lo vuelva a levantar.
   var DIAS = [['Dom', 0], ['Lun', 1], ['Mar', 2], ['Mié', 3], ['Jue', 4], ['Vie', 5], ['Sáb', 6]];
@@ -5434,7 +5447,7 @@
         '</div>';
       if (d.respondidas) {
         html += '<div class="tiempos-quien">' +
-          '<span class="chip">' + esc(state.agentName || 'Xen') + ': ' + d.porQuien.aiva.n + ' · ' + duracion(d.porQuien.aiva.medianaMs) + '</span>' +
+          '<span class="chip">' + esc(state.agentName || 'Xen') + ': ' + d.porQuien.xencrm.n + ' · ' + duracion(d.porQuien.xencrm.medianaMs) + '</span>' +
           '<span class="chip">Personas: ' + d.porQuien.persona.n + ' · ' + duracion(d.porQuien.persona.medianaMs) + '</span>' +
           d.personas.map(function (p) { return '<span class="chip who">' + esc(p.nombre) + ': ' + duracion(p.medianaMs) + ' (' + p.n + ')</span>'; }).join('') +
           '</div>';
@@ -5675,7 +5688,7 @@
     // El puntaje de la cabecera (solo en el completo) va debajo del nombre, no suelto en la fila de botones.
     var quien = $('fx-chat-nombre').parentNode;
     if ($('chat-temp') && $('chat-temp').parentNode !== quien) quien.appendChild($('chat-temp'));
-    // Lo que se pausa es la automatización (el agente de IA): la persona sigue. Es el mismo interruptor Aiva/Tú.
+    // Lo que se pausa es la automatización (el agente de IA): la persona sigue. Es el mismo interruptor Xen/Tú.
     $('fx-control').innerHTML = svgXen(c.humanMode ? 'reanudar' : 'pausa') + '<span>' + (c.humanMode ? 'Reanudar' : 'Pausar') + '<span class="fx-largo"> automatización</span></span>';
     $('fx-control').setAttribute('aria-label', c.humanMode ? 'Reanudar automatización' : 'Pausar automatización');
     $('fx-control').title = c.humanMode ? agente + ' vuelve a contestar esta conversación' : agente + ' deja de contestar aquí: contestas tú';

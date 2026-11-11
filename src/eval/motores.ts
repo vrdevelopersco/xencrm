@@ -8,14 +8,14 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-motores-'));
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-motores-'));
 const envFile = join(dir, '.env');
 // Un .env con comentarios y una clave que no es nuestra: se comprueba abajo que sobreviven intactos.
 writeFileSync(
   envFile,
   ['# el archivo de este cliente', 'LLM_ENGINE=router', 'LIGHT_ENGINE=ollama', 'HEAVY_ENGINE=ollama', 'GATE_ENGINE=ollama', 'ANALYSIS_ENGINE=ollama', 'OPENAI_MODEL_HEAVY=gpt-5.4', 'ADMIN_TOKEN=noloquiteses', ''].join('\n'),
 );
-process.env.AIVA_ENV_FILE = envFile;
+process.env.XENCRM_ENV_FILE = envFile;
 process.env.DB_PATH = join(dir, 'prueba.db');
 
 const motores = await import('../motores.js');

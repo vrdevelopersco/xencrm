@@ -1,6 +1,6 @@
 // Llevarse lo aprendido a otra parte.
 //
-// Un negocio que lleva meses atendiendo con aiva ha ido dejando algo que no está en su configuración ni en su
+// Un negocio que lleva meses atendiendo con XENCRM ha ido dejando algo que no está en su configuración ni en su
 // catálogo: **cómo atiende**. Las preguntas que le hacen de verdad, las palabras con las que contesta, los temas
 // que alguien ya decidió que sí o que no. Eso no se puede volver a escribir a mano, y hasta ahora se quedaba
 // atrás cada vez que la instancia se movía de sitio.

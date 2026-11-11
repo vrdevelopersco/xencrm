@@ -1,6 +1,6 @@
-// Lo que aiva dejó listo para que una persona lo mande.
+// Lo que XENCRM dejó listo para que una persona lo mande.
 //
-// En el modo «Propone», aiva hace todo el trabajo —lee, busca, redacta— y se detiene justo antes de hablar.
+// En el modo «Propone», XENCRM hace todo el trabajo —lee, busca, redacta— y se detiene justo antes de hablar.
 // Quien atiende encuentra la respuesta escrita encima del cajón de escribir y decide: la manda, la corrige o la
 // descarta. Es el paso intermedio entre «que no diga nada» y «que le hable a mis clientes».
 //
@@ -9,7 +9,7 @@
 // eso se guarda con el mensaje que la provocó, y si llegó algo después, se marca como vieja y no se ofrece
 // para mandar de un clic.
 //
-// Y cuando la conversación la lleva una persona, aiva tampoco se aparta del todo: si el cliente pregunta algo que
+// Y cuando la conversación la lleva una persona, XENCRM tampoco se aparta del todo: si el cliente pregunta algo que
 // sabe —un precio, el horario, la dirección—, deja la respuesta lista aquí mismo y quien atiende la manda de un
 // toque o sigue a lo suyo. Nunca escribe sola en una conversación que tiene alguien (ver agent.ts, «acompaña»).
 import { getDb } from '../rag/store.js';
@@ -40,7 +40,7 @@ export interface Propuesta {
 }
 
 /**
- * Que aiva deje respuestas listas cuando la conversación la lleva una persona. Encendido de fábrica: el usuario
+ * Que XENCRM deje respuestas listas cuando la conversación la lleva una persona. Encendido de fábrica: el usuario
  * lo eligió así el 2026-10-21. Cuesta una pasada por el modelo por cada mensaje del cliente mientras alguien la
  * lleva, y por eso se puede apagar por cliente desde el tablero.
  */
@@ -71,7 +71,7 @@ function tabla() {
   const db = getDb();
   if (!lista) {
     db.exec(`
-      -- Respuestas que aiva dejó listas y todavía no ha mandado nadie. Ver crm/propuestas.ts.
+      -- Respuestas que XENCRM dejó listas y todavía no ha mandado nadie. Ver crm/propuestas.ts.
       CREATE TABLE IF NOT EXISTS propuestas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
@@ -103,7 +103,7 @@ const ultimoMensaje = (userId: string): number =>
   Number((tabla().prepare('SELECT COALESCE(MAX(id), 0) n FROM messages WHERE user_id = ?').get(userId) as { n: number }).n);
 
 /**
- * Guarda una propuesta. Solo una pendiente por conversación: si aiva redacta otra, la anterior sobra — es la
+ * Guarda una propuesta. Solo una pendiente por conversación: si XENCRM redacta otra, la anterior sobra — es la
  * misma pregunta con más contexto, y dos respuestas a medias no ayudan a nadie a decidir.
  */
 export function proponer(userId: string, texto: string, intent = '', grupo = '', sobre = '', opts: { conPersona?: boolean } = {}): Propuesta {
@@ -140,7 +140,7 @@ export function cerrarPropuesta(id: number, estado: 'enviada' | 'descartada', po
 }
 
 /**
- * Una persona contestó a mano: lo que aiva dejó listo en esa conversación ya sobra.
+ * Una persona contestó a mano: lo que XENCRM dejó listo en esa conversación ya sobra.
  *
  * 🪤 Sin esto, quien lleva la conversación contesta con sus palabras y encima del cajón se queda la propuesta
  * diciendo «esta respuesta se quedó atrás · escribió otra vez después», como si el cliente hubiera escrito. Es

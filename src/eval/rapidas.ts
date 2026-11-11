@@ -8,10 +8,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-rapidas-'));
-const base = JSON.parse(readFileSync(new URL('../../aiva.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
-writeFileSync(join(dir, 'aiva.config.json'), JSON.stringify(base));
-process.env.AIVA_CONFIG = join(dir, 'aiva.config.json');
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-rapidas-'));
+const base = JSON.parse(readFileSync(new URL('../../xencrm.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+writeFileSync(join(dir, 'xencrm.config.json'), JSON.stringify(base));
+process.env.XENCRM_CONFIG = join(dir, 'xencrm.config.json');
 process.env.DB_PATH = join(dir, 'prueba.db');
 
 // Vectores de mentira, deterministas: aquí se prueba la DECISIÓN (cuándo sí y cuándo no), no la calidad de un

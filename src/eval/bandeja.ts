@@ -2,7 +2,7 @@
 //
 // La bandeja se rehízo como la de un CRM de mensajería (SendPulse) con la conversación de un cliente de WhatsApp de
 // escritorio (ZapFast). Aquí se prueba que lo nuevo no inventó estado ni rutas: los filtros siguen siendo uno solo,
-// la nota interna va por la misma ruta que «Guardar nota», pausar la automatización es el mismo interruptor Aiva/Tú
+// la nota interna va por la misma ruta que «Guardar nota», pausar la automatización es el mismo interruptor Xen/Tú
 // y «Asignado a» es el mismo dato que la ficha. Y las trampas de siempre: [hidden] y la opacidad.
 import { readFileSync } from 'node:fs';
 
@@ -71,13 +71,13 @@ check('🪤 y no son los de las etapas (un avatar rojo se leería «perdido»)',
 console.log('— La conversación');
 const cab = funcion('pintarCabeceraXen');
 check('la cabecera dice quién responde en palabras: «Responde …» o «Automatización pausada · la lleva …»', /'Responde ' \+ esc\(agente\)/.test(cab) && /'Automatización pausada · la lleva ' \+ esc\(whoHas\(c\)\)/.test(cab));
-check('«Pausar automatización» / «Reanudar automatización» es el mismo interruptor Aiva/Tú', /aria-label', c\.humanMode \? 'Reanudar automatización' : 'Pausar automatización'/.test(cab) &&
+check('«Pausar automatización» / «Reanudar automatización» es el mismo interruptor Xen/Tú', /aria-label', c\.humanMode \? 'Reanudar automatización' : 'Pausar automatización'/.test(cab) &&
   /\$\('fx-control'\)\.onclick = function \(\) \{ if \(state\.detail\) \$\(state\.detail\.contact\.humanMode \? 'seg-bot' : 'seg-human'\)\.click\(\); \}/.test(js));
 check('«Asignado a» de la cabecera es el mismo dato y el mismo guardado que la ficha (responsable)', /responsableHtml\(c, 'fx-asignado'\)/.test(cab) && /engancharResponsable\(\$\('fx-asignado'\), c,/.test(cab) && /fila\('Asignado a', responsableHtml\(c, 'f-resp'\)\)/.test(js));
 check('🪤 nada de «desde hace ahora»', /r === 'ahora' \? ' desde ahora'/.test(funcion('desdeXen')) && /desdeXen\(c\.humanSince\)/.test(funcion('renderChat')));
 check('el «¿por qué?» de cada respuesta sigue siendo solo del completo', /class="por-que solo-completo"/.test(funcion('bubble')));
 check('lo que no le llegó al cliente sigue dicho en el mensaje (borde punteado y la palabra)', /No le llegó\./.test(funcion('bubble')) && /\.bubble\.fallo\{outline:1\.5px dashed var\(--fx-rojo-t\)/.test(html));
-check('🪤 lo de antes de aiva se distingue sin opacidad', /:root\[data-piel="xen"\] \.bubble\.de-antes\{opacity:1;/.test(html));
+check('🪤 lo de antes de XENCRM se distingue sin opacidad', /:root\[data-piel="xen"\] \.bubble\.de-antes\{opacity:1;/.test(html));
 check('la trama del papel sale de su token (máscara), no de un color metido en el dibujo', /\.chat::before\{[^}]*background:var\(--fx-papel-trama\)/.test(html) && /mask:url\(/.test(html));
 check('cada quien habla en su color (el agente verde agua, el equipo arena)', /\.bubble\.bot\{background:var\(--fx-burbuja-xen\)\}/.test(html) && /\.bubble\.human\{background:var\(--fx-burbuja-equipo\)\}/.test(html) &&
   /\.bubble\.bot \.who\{color:var\(--fx-nombre-xen\)\}/.test(html) && /\.bubble\.human \.who\{color:var\(--fx-nombre-equipo\)\}/.test(html));

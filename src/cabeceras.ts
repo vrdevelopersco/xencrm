@@ -51,8 +51,8 @@ export async function soloDesdeAqui(c: Context, next: Next) {
   const origen = c.req.header('origin');
   if (!cambia || !origen) return next();
 
-  // 🪤 Con qué se compara: NO con la dirección que ve este proceso. Detrás del servidor del hosting, aiva vive
-  // en un puerto interno y ve `127.0.0.1:3900`, mientras el navegador dice `Origin: https://aiva.<dominio>`. Eso
+  // 🪤 Con qué se compara: NO con la dirección que ve este proceso. Detrás del servidor del hosting, XENCRM vive
+  // en un puerto interno y ve `127.0.0.1:3900`, mientras el navegador dice `Origin: https://xencrm.<dominio>`. Eso
   // nunca coincide, y comparar contra la dirección interna dejó a todo el mundo fuera con un «esa petición no
   // viene de aquí» en el login. Lo que vale es el nombre con el que llamaron, que viaja en las cabeceras.
   const candidatos = new Set(

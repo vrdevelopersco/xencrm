@@ -1,4 +1,4 @@
-// Repasa conversaciones sintéticas del cliente (seedFile y evalFile de aiva.config.json) con los motores
+// Repasa conversaciones sintéticas del cliente (seedFile y evalFile de xencrm.config.json) con los motores
 // configurados y mide tokens y costo: pnpm replay [--fast] [--only=texto] [--keep]
 // Por defecto espera el análisis después de cada mensaje, como en un chat real (la persona tarda en responder);
 // --fast manda los mensajes seguidos (el análisis se agrupa y el costo sale menor que en la realidad).

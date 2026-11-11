@@ -14,8 +14,8 @@
 //   · **borrar**. Todo lo de esa persona se va. El consumo de IA se queda, con el identificador `borrado`: es gasto
 //     real, y el informe del mes no puede encogerse porque alguien se borró.
 //
-// 🪤 Va apagada. Borrar datos de clientes no puede pasar porque alguien actualizó aiva: lo enciende, cliente por
-// cliente, quien administra aiva desde la consola, después de ver cuántas conversaciones tocaría.
+// 🪤 Va apagada. Borrar datos de clientes no puede pasar porque alguien actualizó xencrm: lo enciende, cliente por
+// cliente, quien administra XENCRM desde la consola, después de ver cuántas conversaciones tocaría.
 //
 // 🪤 Antes de tocar nada tiene que haber un respaldo de la base de menos de un día. Si no lo hay, se hace; si no se
 // puede hacer, no se borra nada. Los respaldos se guardan 14 días (BACKUP_KEEP): ese es el tiempo para arrepentirse.

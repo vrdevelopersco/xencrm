@@ -20,7 +20,7 @@ no a ojo. Si tocas un color, vuelve a medir (el script está en el historial: lu
   sonido y salir. «Más» se ve activo cuando la sección abierta está adentro; Escape o tocar fuera la cierran y el
   foco vuelve al botón.
 - "Hoy" es la pantalla de entrada, ordenada por costo del silencio: esperan tu respuesta → pidieron una persona →
-  citas de hoy → calientes sin seguimiento (>24 h, sin cita agendada) → sin leer con Aiva ya respondió → próximas citas.
+  citas de hoy → calientes sin seguimiento (>24 h, sin cita agendada) → sin leer con Xen ya respondió → próximas citas.
   Las conversaciones vendidas o perdidas no piden acción.
 - Una sola cola de calientes: Hoy manda; Análisis solo referencia el conteo (abre el filtro). Ninguna métrica es decorativa.
 - Íconos monocromos con contadores numéricos aparte; el color queda para los chips de estado, y todo chip lleva texto.
@@ -37,8 +37,8 @@ no a ojo. Si tocas un color, vuelve a medir (el script está en el historial: lu
 ## Quién habla
 - El estado "la lleva Laura desde hace 10 min" vive en el servidor (users.human_by, human_since), no en un botón local,
   y lo ve cualquier asesor. Cada mensaje guarda su remitente real (customer / bot / human + nombre), nunca se infiere
-  por posición. El segmentado "Responde: Aiva | Tú" va en su propia fila para no confundir responsable con puntaje.
-- Que Aiva no pueda responder, o que un motor se caiga, son eventos de primera clase: notificación con sonido y la
+  por posición. El segmentado "Responde: Xen | Tú" va en su propia fila para no confundir responsable con puntaje.
+- Que Xen no pueda responder, o que un motor se caiga, son eventos de primera clase: notificación con sonido y la
   conversación entra en "esperan tu respuesta".
 - Un estado se nombra por lo que el sistema sabe, no por lo que parece obvio. Cuando el bot pasa la conversación al
   equipo, human_by guarda "bot" (quién la pasó), pero nadie la ha tomado: el tablero dice "La lleva el equipo" hasta
@@ -75,11 +75,11 @@ fondos pesimistas (negro puro bajo el panel claro, blanco puro bajo el oscuro).
 
 ## Material (capa 3): profundidad, tacto y grano — 2026-09-21, con criterio de HRCAPOLO
 El usuario no quiere un tablero plano: las piezas tienen grosor y se hunden al presionarlas, y hay grano de vidrio
-y cartulina. Probado en tres piezas: botón primario, switch "Responde: Aiva | Tú" y citas del calendario.
+y cartulina. Probado en tres piezas: botón primario, switch "Responde: Xen | Tú" y citas del calendario.
 
 Reglas:
 1. **Todo relleno de color lleva su `--on-*` medido contra esa superficie; nunca se asume blanco o negro.**
-   Aiva lo descubrió con el blanco sobre `--brand` oscuro (2.26:1) y sobre `--bad` oscuro (~2.8:1); es la
+   Xen lo descubrió con el blanco sobre `--brand` oscuro (2.26:1) y sobre `--bad` oscuro (~2.8:1); es la
    misma ley que `--brand-ink` en APOLO y el `--accent` oscurecido en Confía.
 2. **La textura va en lo que se toca o se escanea de un vistazo, nunca en lo que se lee de corrido.** Sí: botones,
    switch, citas, chips, píldoras de navegación. No: tablas (Consumo de IA), paneles de datos densos, fondos grandes
@@ -175,7 +175,7 @@ Al redibujarse por un evento en vivo, el foco vuelve a la misma tarjeta.
 
 Decisiones:
 - La página pública de la cita sigue el tema del sistema a propósito: es una utilidad de calendario, no una pieza de
-  marca, porque aiva todavía no tiene la piel de cada cliente. Cuando la tenga, esa página debe usarla fija.
+  marca, porque XENCRM todavía no tiene la piel de cada cliente. Cuando la tenga, esa página debe usarla fija.
 - El enlace secreto del calendario va enmascarado; "Copiar enlace" es la acción principal y "Mostrar" es opcional.
 
 
@@ -331,7 +331,7 @@ ancho de un teléfono, y se mide lo que quedó pintado** — no lo que dice la h
 El usuario vio un CRM tipo Attio que le gustó mucho. Se le preguntó si quería ese estilo y eligió **quedarse con el de
 hoy** y tomar del video las pantallas, las funciones y los detalles. Se tomó el orden, no el estilo:
 
-| Del video | En aiva |
+| Del video | En XENCRM |
 |---|---|
 | Números al lado de cada sección | En gris, Prospectos abiertos y Clientes. Las insignias rojas siguen siendo solo para lo que urge |
 | Listas guardadas y favoritos | *Calientes* y *Míos* en la barra, y las fichas **fijadas**, que son de quien mira y se guardan en la base con su nombre |
@@ -375,11 +375,11 @@ pantalla una tabla de ejemplo sería ruido. `test:tablero` avisa si la portada v
 
 ## Más sencillo para quien empieza (2026-10-21)
 
-Le dijeron al usuario que aiva era «complejo de usar» y le mostraron Vocero, un CRM de WhatsApp de código abierto.
+Le dijeron al usuario que XENCRM era «complejo de usar» y le mostraron Vocero, un CRM de WhatsApp de código abierto.
 Se comparó con capturas de los dos: Vocero se ve sencillo porque hace menos (desde su 2.0 no trae agente, no
 puntúa, y su ficha arranca vacía), así que copiarle la cara no habría simplificado nada. Lo que sí se tomó:
 
-| De dónde | En aiva |
+| De dónde | En XENCRM |
 |---|---|
 | Su panel de la conversación ES el perfil | El panel derecho de Conversaciones pasó de formulario a perfil: quién es, qué quiere, nota fija, Detalles, «Lo que contó», citas e historia. El formulario, detrás de **Corregir datos** |
 | Pocas secciones | El riel bajó de ocho a cinco: Hoy, Conversaciones, Calendario, **Clientes** (Lista · Por etapa · Seguimientos) y **Análisis** (Resumen · Ventas). Nada se quitó: lo demás son pestañas arriba de la pantalla |
@@ -392,7 +392,7 @@ Reglas que salen de aquí:
 - **Pestañas arriba, no un panel de sección al lado.** El panel le quita 212 px justo a las pantallas que más ancho
   necesitan (el tablero por etapa y la tabla). Por eso se quitó también de Conversaciones.
 - **Un área se abre donde se dejó.** Quien vive en «Por etapa» no pasa por la lista cada vez. Es comodidad de cada
-  quien, en su navegador (`aiva.admin.<cliente>.areas`), y si no hay nada guardado se abre la primera pestaña.
+  quien, en su navegador (`xencrm.admin.<cliente>.areas`), y si no hay nada guardado se abre la primera pestaña.
 - **Lo urgente gana al conteo.** El botón de Clientes lleva la cifra gris de cuántos hay; si hay calientes esperando
   seguimiento, la insignia roja ocupa ese sitio y la cifra se calla.
 - **Repintar no borra lo que se escribe.** El perfil se vuelve a pintar con cada análisis y cada mensaje. Lo que
@@ -415,7 +415,7 @@ desliza es la columna, no la tarjeta.
 
 ### La guía de inicio (2026-10-21)
 
-La de Vocero, en aiva: pasos que se marcan solos, con el motivo de lo que falta. Reglas:
+La de Vocero, en XENCRM: pasos que se marcan solos, con el motivo de lo que falta. Reglas:
 
 - **Hecho lo dice el servidor, no el navegador.** `GET /admin/api/guia` (`src/crm/guia.ts`) mira lo mismo que el
   asistente para contestar: el perfil que lee, el catálogo con el que cotiza, el canal que recibe. El tutorial de
@@ -433,8 +433,8 @@ La de Vocero, en aiva: pasos que se marcan solos, con el motivo de lo que falta.
 
 ## El modo fácil (2026-10-23)
 
-Quien revisó aiva para DUNOR pidió un tablero sencillo, y el usuario lo dijo así: aiva puede seguir siendo lo
-más completo, pero DUNOR quiere un «aiva modo fácil», con un interruptor para no dañar lo hecho. Es la regla de
+Quien revisó XENCRM para DUNOR pidió un tablero sencillo, y el usuario lo dijo así: XENCRM puede seguir siendo lo
+más completo, pero DUNOR quiere un «XENCRM modo fácil», con un interruptor para no dañar lo hecho. Es la regla de
 siempre (sencillo por fuera, todo a un clic adentro) con un interruptor en vez de un nivel más de menú.
 
 | Se esconde en el modo fácil | Se queda |
@@ -455,12 +455,12 @@ Reglas:
 - **Esconder, nunca quitar.** Lo escondido lleva la clase `solo-completo` y lo apaga una sola regla de CSS
   (`:root[data-modo="facil"]`). Ni un `if` por pantalla: así lo que se agregue mañana se esconde marcándolo, y no
   hay dos versiones del tablero que mantener.
-- **Dos interruptores, los dos de quien administra aiva** (desde el 2026-11-03, ver «El candado» abajo). El del
+- **Dos interruptores, los dos de quien administra XENCRM** (desde el 2026-11-03, ver «El candado» abajo). El del
   cliente (Configuración › *Modo fácil para el equipo*, o «⋯ › Poner el modo fácil» en la consola) vive en su base,
-  en `settings`, y no en `aiva.config.json`: la configuración de cada cliente en Hostinger es la de sus datos y el
+  en `settings`, y no en `xencrm.config.json`: la configuración de cada cliente en Hostinger es la de sus datos y el
   ZIP no la pisa. El suyo (Configuración › *Modo fácil*) vive en su navegador, para revisar lo avanzado sin sacar
   a nadie del modo. Quien cambia el del equipo pasa a verlo como su equipo.
-- **El interruptor dice cómo está** («Sí»/«No»), y en Hoy, abajo, «Ver todo lo de aiva» (solo para quien manda).
+- **El interruptor dice cómo está** («Sí»/«No»), y en Hoy, abajo, «Ver todo lo de XENCRM» (solo para quien manda).
   Un modo que no se sabe que existe es una función que se perdió.
 - 🪤 **Lo que se pinta con JavaScript reescribe la clase.** La línea del puntaje de la cabecera tenía
   `solo-completo` en el HTML y `renderChat` le ponía `className` entero: el modo fácil la seguía enseñando. Se vio
@@ -476,15 +476,15 @@ atienden y nada más.
 | Con el candado | Quién |
 |---|---|
 | Prende o apaga el modo, ve lo avanzado desde su navegador | super-admin (y el token a secas) |
-| Atiende: contesta, adjunta, toma y entrega conversaciones, mueve etapas, anota, agenda, archiva, une fichas, contesta lo que aiva pregunta | todos |
-| Configura (Perfil, El negocio, Canales, El asistente, Lo que sabe, la guía), ve lo que cuesta aiva, baja en Excel, borra fichas, el simulador | solo el super-admin |
+| Atiende: contesta, adjunta, toma y entrega conversaciones, mueve etapas, anota, agenda, archiva, une fichas, contesta lo que XENCRM pregunta | todos |
+| Configura (Perfil, El negocio, Canales, El asistente, Lo que sabe, la guía), ve lo que cuesta XENCRM, baja en Excel, borra fichas, el simulador | solo el super-admin |
 
 Desde el 2026-11-04, Analítica, Ventas y Seguimientos **sí** se ven con el candado: están en el menú de Nexora, la
 muestra del modo fácil (ver abajo), y son del que vende. Siguen cerradas la configuración y lo que cuesta.
 
 Reglas:
 
-- **Lo cierra el servidor, no el botón** (`src/channels/candado.ts`). La consola manda el rol en `x-aiva-rol`,
+- **Lo cierra el servidor, no el botón** (`src/channels/candado.ts`). La consola manda el rol en `x-xencrm-rol`,
   sacado de la sesión (y tira el que mande el navegador), y el cliente lo cumple según su modo. Sin esa cabecera
   no hay candado: es el token a secas, que abre cualquier ruta igual.
 - 🪤 **Lo que se puede cambiar es una lista cerrada** de lo del día a día; lo que se puede leer es todo menos lo
@@ -516,17 +516,17 @@ consola y darle a «Abrir tablero» para que se abriera otra página.
 ### El modo fácil se viste de Nexora (2026-11-04)
 
 DUNOR mandó Nexora (un CRM hecho en ChatGPT, que por dentro se llama «Vindex IA») como muestra: «que se vea igual,
-pero en nuestro producto». El modo fácil tomó su piel y su estructura; aiva sigue igual por dentro. Para copiarla
+pero en nuestro producto». El modo fácil tomó su piel y su estructura; XENCRM sigue igual por dentro. Para copiarla
 sin entrar con clave se armó en local con su propio código público y datos de ejemplo.
 
-| De Nexora | En aiva |
+| De Nexora | En XENCRM |
 |---|---|
 | El menú blanco con dos grupos: *Principal* (Inicio, Analítica, Inbox) y *CRM* (Contactos, Citas, Pipeline, Ventas, Seguimientos); abajo Configuración y quién eres | Las mismas pantallas de siempre, cada una con su puerta (`MENU_FACIL`): ninguna nueva |
 | La barra de arriba: buscar (⌘ K), «Crear», ayuda, avisos, tu cuenta | La búsqueda de Ctrl+K, la ficha nueva y la agenda, la Ayuda, la campana, tu nombre / Configuración / Salir |
 | Inicio: cuatro números, *Rendimiento comercial*, *Pipeline por etapa*, *Actividad reciente*, *Resumen inteligente* | Los números de /today, conversaciones nuevas y citas agendadas por día, cuántos hay en cada etapa, los avisos, y el resumen del día (lo que espera a alguien, contado). Los recuadros de Hoy con algo van al final |
-| Inbox en tres columnas; la conversación con «Tomar control»; el resumen al lado con «Abrir Cliente 360°» | La bandeja de siempre con iniciales y canal en cada fila; «Tomar control» toca el mismo Aiva/Tú; la ficha de al lado con «Lo que busca» |
+| Inbox en tres columnas; la conversación con «Tomar control»; el resumen al lado con «Abrir Cliente 360°» | La bandeja de siempre con iniciales y canal en cada fila; «Tomar control» toca el mismo Xen/Tú; la ficha de al lado con «Lo que busca» |
 | Contactos en una tabla con buscador y filtro; Cliente 360 como página | La tabla de Clientes, el buscador y los grupos debajo del título; la ficha completa ocupa la zona de trabajo |
-| Citas, Pipeline, Ventas, Seguimientos, Analítica | Las de aiva, con sus controles en tarjetas y sus columnas grises |
+| Citas, Pipeline, Ventas, Seguimientos, Analítica | Las de XENCRM, con sus controles en tarjetas y sus columnas grises |
 
 Reglas:
 
@@ -543,7 +543,7 @@ Reglas:
 - 🪤 **El celular no tiene la barra de abajo**: el menú se abre desde la barra de arriba, como en Nexora. Las reglas
   de la barra de abajo del completo (`.rail nav` en fila, el alto que se le restaba al contenido) se anulan aquí.
 - **Los colores son los de Nexora** (la paleta pizarra y el azul 600), en tokens `--fx-…`, con su tema oscuro, y la
-  letra es Inter. Lo de aiva que no se rehízo toma los mismos tokens y no desentona.
+  letra es Inter. Lo de XENCRM que no se rehízo toma los mismos tokens y no desentona.
 
 ### Lo que también salió de la revisión
 

@@ -1,5 +1,5 @@
 // Perfil del negocio: lo que el dueño confirma de su negocio (dirección, horarios, pagos, precios, contacto…), editable
-// desde el tablero (Configuración › Perfil). Vive en un archivo por cliente (aiva.config.json > profileFile), como el
+// desde el tablero (Configuración › Perfil). Vive en un archivo por cliente (xencrm.config.json > profileFile), como el
 // diccionario. Lo vacío queda "por confirmar": el bot no lo supone y, si le preguntan, dice que lo verifica.
 // Lo confirmado va en la información fija del prompt y en la búsqueda; si contradice otra información, vale el perfil.
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -43,7 +43,7 @@ export const PROFILE_FIELDS: { key: string; section: string; label: string; hint
 ];
 
 const file = () => business.profileFile;
-// Lo que traía aiva.config.json: si el perfil deja un campo de identidad vacío, vale esto.
+// Lo que traía xencrm.config.json: si el perfil deja un campo de identidad vacío, vale esto.
 const configIdentity = { ...business.business };
 
 let current: Profile | null = null;

@@ -1,5 +1,5 @@
 // Canales para el tablero: estado de cada uno, actividad, qué falta para conectarlo y qué copiar.
-// Todo sale de la configuración del cliente (aiva.config.json + .env); nada es propio de un negocio en particular.
+// Todo sale de la configuración del cliente (xencrm.config.json + .env); nada es propio de un negocio en particular.
 import { business, env } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { metaStatus } from './meta.js';
@@ -24,7 +24,7 @@ export interface ChannelCard {
   soloEscucha?: boolean;
   /** Los tres modos del canal: mira, propone o contesta. */
   modo?: 'mira' | 'propone' | 'contesta';
-  /** Solo WhatsApp: si aiva mira lo que se habla en los grupos (para aprender; nunca escribe en ellos). */
+  /** Solo WhatsApp: si XENCRM mira lo que se habla en los grupos (para aprender; nunca escribe en ellos). */
   grupos?: boolean;
   /** Mensajes de clientes en los últimos 7 días, cuántas personas y cuándo llegó el último (de siempre). */
   messages7d: number;

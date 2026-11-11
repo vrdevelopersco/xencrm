@@ -4,7 +4,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-arch-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-arch-')), 'xencrm.db');
 const { touchUser, appendMessage } = await import('../agent/memory.js');
 const { getContact, listContacts, setArchived, deleteContact, stats, updateContact } = await import('../crm/contacts.js');
 const { getDb } = await import('../rag/store.js');

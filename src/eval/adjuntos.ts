@@ -16,7 +16,7 @@ const check = (name: string, ok: boolean, detail = '') => {
   console.log(`${ok ? '✓' : '✗'} ${name}${ok ? '' : `\n   ${detail}`}`);
 };
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-adjuntos-'));
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-adjuntos-'));
 // Word y Excel de verdad (ZIP + XML), armados aquí para no depender de un archivo suelto en el repositorio.
 const armar = (nombre: string, piezas: Record<string, string>) => {
   const guion = Object.entries(piezas)

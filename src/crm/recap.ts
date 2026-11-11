@@ -22,7 +22,7 @@ export function recap(c: Contact, nextAppointment: Appointment | null): string {
   const add = (s: string) => {
     if (s && !parts.some((p) => p.toLowerCase().includes(s.toLowerCase()))) parts.push(s);
   };
-  // Campos del cliente, en el orden de aiva.config.json; un número suelto lleva su nombre ("talla o medidas: 40").
+  // Campos del cliente, en el orden de xencrm.config.json; un número suelto lleva su nombre ("talla o medidas: 40").
   for (const f of business.crm.fields) {
     const v = text(d[f.name]);
     if (v) add(/^\d+([.,]\d+)?$/.test(v) ? `${f.name.replace(/_/g, ' ')}: ${v}` : clip(v, 40));

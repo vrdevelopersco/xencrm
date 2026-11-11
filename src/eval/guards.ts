@@ -10,7 +10,7 @@ const check = (name: string, got: unknown, want: unknown) => {
 };
 
 // Información de ejemplo, como la que recibe el modelo en un turno
-const info = `Eres Aiva, de DUNOR Boutique: alquiler premium de trajes, esmóquines y accesorios, diseño a la medida y asesoría de imagen.
+const info = `Eres Xen, de DUNOR Boutique: alquiler premium de trajes, esmóquines y accesorios, diseño a la medida y asesoría de imagen.
 ## Información disponible
 Traje azul noche: alquiler con ajustes incluidos. Esmoquin negro clásico. Aceptamos tarjeta de crédito y transferencia.
 Atención solo con cita previa en Barranquilla.`;
@@ -47,7 +47,7 @@ check('"moda masculina" se apoya en una descripción que dice "para hombres"', u
 check('"X es una boutique de moda masculina" y "trabajamos moda masculina" también son alcance', [ungroundedDenial('¿tienen trajes para niño?', 'DUNOR es una boutique de moda masculina, y no tenemos trajes para niño.', info, scope), ungroundedDenial('¿tienen trajes para niño?', 'Trabajamos moda masculina para hombres, y no tenemos trajes para niño.', info, scope)], [null, null]);
 check('"es una excelente opción" no es alcance', ungroundedDenial('¿venden zapatos?', 'No tenemos zapatos, pero el esmoquin es una excelente opción para bodas.', info, `${scope} Para bodas y grados.`), 'zapatos');
 check('sin la descripción, ese mismo "no" se verifica', ungroundedDenial('tienen vestidos de novia?', 'Hola. No, eso no lo vendemos: somos una boutique de moda masculina.', info), 'vestidos novia');
-check('un "no" a mitad del mensaje también cuenta', ungroundedDenial('¿venden zapatos?', 'Hola, soy Aiva de DUNOR. No, eso no lo manejamos.', info, scope), 'zapatos');
+check('un "no" a mitad del mensaje también cuenta', ungroundedDenial('¿venden zapatos?', 'Hola, soy Xen de DUNOR. No, eso no lo manejamos.', info, scope), 'zapatos');
 check('un alcance que no está en la descripción no respalda', ungroundedDenial('¿venden zapatos?', 'No, solo vendemos camisas.', info, scope), 'zapatos');
 
 // Negativas suaves: responden que no sin decir "no"

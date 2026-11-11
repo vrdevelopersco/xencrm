@@ -1,4 +1,4 @@
-// Lo que se puede cambiar de `aiva.config.json` sin tocar archivos: el negocio, el agente, la marca, la zona
+// Lo que se puede cambiar de `xencrm.config.json` sin tocar archivos: el negocio, el agente, la marca, la zona
 // horaria y las citas. Se edita desde el tablero (Configuración › El negocio) y, por lo tanto, desde la consola,
 // que sirve el tablero de cada cliente.
 //
@@ -19,10 +19,10 @@ import { BusinessConfigSchema, business } from './config.js';
 import { listAppointments } from './crm/appointments.js';
 import { idDeSede } from './sedes-texto.js';
 
-const ARCHIVO = () => resolve(process.env.AIVA_CONFIG || 'aiva.config.json');
+const ARCHIVO = () => resolve(process.env.XENCRM_CONFIG || 'xencrm.config.json');
 
 /** ¿Hay quien lo vuelva a levantar si se cae? El arranque del paquete lo marca; pm2 pone pm_id. */
-export const puedeReiniciarse = (): boolean => Boolean(process.env.AIVA_SUPERVISADO || process.env.pm_id);
+export const puedeReiniciarse = (): boolean => Boolean(process.env.XENCRM_SUPERVISADO || process.env.pm_id);
 
 const hora = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'la hora va como HH:MM');
 

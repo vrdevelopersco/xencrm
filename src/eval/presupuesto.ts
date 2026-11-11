@@ -10,16 +10,16 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-presupuesto-'));
-const base = JSON.parse(readFileSync(new URL('../../aiva.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-presupuesto-'));
+const base = JSON.parse(readFileSync(new URL('../../xencrm.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
 writeFileSync(
-  join(dir, 'aiva.config.json'),
+  join(dir, 'xencrm.config.json'),
   JSON.stringify({ ...base, timezone: 'America/Bogota', appointments: { enabled: true, service: 'visita', location: 'la tienda', days: [0, 1, 2, 3, 4, 5, 6], hours: [['08:00', '20:00']], minLeadHours: 0 } }),
 );
 writeFileSync(join(dir, '.env'), '');
 Object.assign(process.env, {
-  AIVA_CONFIG: join(dir, 'aiva.config.json'),
-  AIVA_ENV_FILE: join(dir, '.env'),
+  XENCRM_CONFIG: join(dir, 'xencrm.config.json'),
+  XENCRM_ENV_FILE: join(dir, '.env'),
   DB_PATH: join(dir, 'data', 'prueba.db'), // la carpeta de archivos vive al lado: así queda dentro de la temporal
   WHATSAPP_ENABLED: 'false',
   LLM_ENGINE: 'router',

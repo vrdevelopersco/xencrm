@@ -4,7 +4,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-rem-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-rem-')), 'xencrm.db');
 const { business } = await import('../config.js');
 const { touchUser, appendMessage } = await import('../agent/memory.js');
 const { getContact, updateContact, setHumanMode } = await import('../crm/contacts.js');
@@ -88,7 +88,7 @@ const toLaura = sent.find((s) => s.userId === 'wa:573001112233@s.whatsapp.net');
 check('por WhatsApp: le llega con su nombre y dice que es HOY', Boolean(toLaura && /Hola, Laura 🙂 Te recordamos tu cita de prueba de hoy, 10:00/.test(toLaura.text) && /¿Nos confirmas que vienes\?/.test(toLaura.text)), toLaura?.text);
 // Por WhatsApp el cliente ve siempre el mismo número y contestan el asistente y las personas del equipo, así
 // que todo lo que sale va firmado con quién lo manda. Aquí lo manda el asistente.
-check('y firmado por el asistente, no por una persona', Boolean(toLaura && toLaura.text.startsWith('*Aiva:*')), toLaura?.text);
+check('y firmado por el asistente, no por una persona', Boolean(toLaura && toLaura.text.startsWith('*Xen:*')), toLaura?.text);
 check('queda marcado como enviado', getAppointment(wa)!.reminder?.status === 'enviado');
 check('chat del sitio con número: a mano, con el número para WhatsApp', getAppointment(webPhone)!.reminder?.status === 'a_mano' && /por WhatsApp/.test(getAppointment(webPhone)!.reminder?.note ?? ''));
 check('chat del sitio sin número: a mano y dice por qué', /no dejó número/.test(getAppointment(webNoPhone)!.reminder?.note ?? ''));

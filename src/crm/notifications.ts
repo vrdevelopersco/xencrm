@@ -26,9 +26,9 @@ function push(kind: Notification['kind'], userId: string, title: string, body: s
 }
 
 /**
- * Un recordatorio que aiva NO va a mandar, para que lo mande una persona.
+ * Un recordatorio que XENCRM NO va a mandar, para que lo mande una persona.
  *
- * 🪤 Cuando el canal está en «solo escuchar», aiva no le escribe al cliente — ni siquiera para recordarle una
+ * 🪤 Cuando el canal está en «solo escuchar», XENCRM no le escribe al cliente — ni siquiera para recordarle una
  * cita. Pero callarse y no decir nada es perder la cita: el aviso tiene que ir a alguien, y ese alguien es el
  * equipo. Por eso sale por la campana y no por WhatsApp.
  */

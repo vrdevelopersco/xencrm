@@ -1,13 +1,13 @@
 // Pruebas de lo que salió de la revisión de DUNOR (2026-10-23), sin modelo: pnpm test:revision
 //
-// Quien revisó aiva vio cinco cosas que tenía razón en ver: «undefined COP» en el catálogo, mensajes que no
+// Quien revisó XENCRM vio cinco cosas que tenía razón en ver: «undefined COP» en el catálogo, mensajes que no
 // salieron y quedaban como enviados, una historia que decía «admin» en vez del nombre de quien hizo cada cosa, un
-// embudo sin motivo de pérdida y un «Míos» que se vaciaba cuando el asistente volvía a contestar. Y pidió un aiva
+// embudo sin motivo de pérdida y un «Míos» que se vaciaba cuando el asistente volvía a contestar. Y pidió un XENCRM
 // sencillo: el modo fácil, que esconde sin quitar. Cada bloque de aquí es una de esas cosas.
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-revision-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-revision-')), 'xencrm.db');
 process.env.ADMIN_TOKEN = 'token-del-tablero-de-prueba-0123456789';
 const { business } = await import('../config.js');
 const { touchUser, appendMessage, getMessages } = await import('../agent/memory.js');
@@ -29,7 +29,7 @@ const check = (name: string, ok: boolean, detail = '') => {
 const app = new Hono();
 mountAdmin(app as never);
 const T = { 'x-admin-token': process.env.ADMIN_TOKEN!, 'content-type': 'application/json' };
-const como = (quien?: string) => (quien ? { ...T, 'x-aiva-quien': encodeURIComponent(quien) } : T);
+const como = (quien?: string) => (quien ? { ...T, 'x-xencrm-quien': encodeURIComponent(quien) } : T);
 const pedir = (ruta: string, init: { method?: string; body?: unknown; quien?: string } = {}) =>
   app.request(`/admin/api${ruta}`, { method: init.method ?? 'GET', headers: como(init.quien), body: init.body === undefined ? undefined : JSON.stringify(init.body) });
 const ficha = (id: string, canal: string, nombre: string) => {
@@ -270,15 +270,15 @@ check('el puntaje y su porqué se esconden; la etapa y quién está a cargo, no'
 check('el «¿por qué?» de cada respuesta, también', /class="por-que solo-completo"/.test(js));
 check('🪤 el puntaje de la cabecera de la conversación también (su clase se reescribe al pintar)', /\$\('chat-temp'\)\.className = 'meta-line solo-completo'/.test(js) && /id="chat-temp"/.test(html));
 check('de las pastillas de puntaje queda solo «caliente»', /c\.temperature === 'caliente' \? '' : ' solo-completo'/.test(js));
-// Desde el 2026-11-03 los dos son solo de quien administra aiva: es el candado (ver eval/candado.ts).
-check('hay un interruptor para uno y otro para todo el equipo (los dos, solo para quien administra aiva)', /proxy: 'modo-btn'[^}]*modo: 'yo'[^}]*soloSuper: true/.test(js) && /proxy: 'modo-equipo-btn'[^}]*soloSuper: true[^}]*modo: 'equipo'/.test(js) && /id="modo-btn"/.test(html) && /id="modo-equipo-btn"/.test(html));
+// Desde el 2026-11-03 los dos son solo de quien administra xencrm: es el candado (ver eval/candado.ts).
+check('hay un interruptor para uno y otro para todo el equipo (los dos, solo para quien administra XENCRM)', /proxy: 'modo-btn'[^}]*modo: 'yo'[^}]*soloSuper: true/.test(js) && /proxy: 'modo-equipo-btn'[^}]*soloSuper: true[^}]*modo: 'equipo'/.test(js) && /id="modo-btn"/.test(html) && /id="modo-equipo-btn"/.test(html));
 check('y en el celular también se llega', /data-proxy="modo-btn"/.test(html));
 check('🪤 en el modo fácil Hoy enseña solo lo que tiene algo, y cómo ver todo', /facil \? sections\.filter\(function \(s\) \{ return s\.n > 0; \}\)/.test(js) && /id="hoy-ver-todo"/.test(js));
 const deHoy = js.slice(js.indexOf('function loadToday()'), js.indexOf("var TONOS"));
 const secciones = (deHoy.match(/\{ t: '/g) || []).length;
 const tonos = ((js.match(/var TONOS = \[([^\]]*)\]/)?.[1] ?? '').match(/'[a-z]+'/g) || []).length;
 check('🪤 cada recuadro de Hoy tiene su color (antes los grupos corrían a todos los demás un puesto)', secciones > 0 && secciones === tonos, `${secciones} recuadros y ${tonos} colores`);
-check('el tablero manda quién es en cada llamada', /headers\['x-aiva-quien'\] = encodeURIComponent\(state\.name\)/.test(js));
+check('el tablero manda quién es en cada llamada', /headers\['x-xencrm-quien'\] = encodeURIComponent\(state\.name\)/.test(js));
 check('🪤 si no salió pero quedó guardado, el cajón se vacía: si no, el cliente lo recibiría dos veces', /if \(r\.fallo\) \{ \$\('reply'\)\.value = ''; quitarAdjunto\(\); \}/.test(js));
 check('🪤 todo cambio de etapa pasa por la pregunta de por qué se perdió', (js.match(/method: 'PATCH', body: \{ stage:/g) || []).length === 1 && (js.match(/cambiarEtapa\(c, /g) || []).length >= 4,
   'el único PATCH de etapa directo debe ser el de «¿Cómo les fue? → vendido»');

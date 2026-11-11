@@ -26,7 +26,7 @@ for (const [reply, want] of [
 
 // 2. Abrir sin duplicar, responder, aprender y descartar
 const knowledgeDir = business.sources.knowledgeDir;
-business.sources.knowledgeDir = mkdtempSync(join(tmpdir(), 'aiva-kb-'));
+business.sources.knowledgeDir = mkdtempSync(join(tmpdir(), 'xencrm-kb-'));
 touchUser('test:verif-1', 'cli', 'Prueba');
 const a = openVerification('test:verif-1', '¿tienen wifi?', 'wifi');
 const b = openVerification('test:verif-1', '¿Tienen WiFi?', 'wifi');

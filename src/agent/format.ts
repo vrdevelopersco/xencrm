@@ -162,7 +162,7 @@ export function ungroundedDenial(question: string, reply: string, reference: str
   if (!words.length) return null;
   const r = foldText(reply);
   if (HONEST_RE.test(r)) return null;
-  // Cada frase cuenta, diga "no" al principio ("Hola, soy Aiva. No, eso no lo vendemos"), en la mitad ("Zapatos no
+  // Cada frase cuenta, diga "no" al principio ("Hola, soy Xen. No, eso no lo vendemos"), en la mitad ("Zapatos no
   // tenemos"), sin nombrar lo preguntado ("Eso no lo manejamos") o sin decir "no" ("solo manejamos trajes").
   const denyVerb = new RegExp(DENY_VERB);
   const denied = r
@@ -307,7 +307,7 @@ export function filtraInstrucciones(reply: string, reglas: string): boolean {
 
 /**
  * Quita el saludo y la auto-presentación con que los modelos pequeños abren cada mensaje aunque la
- * conversación ya empezó: "¡Hola, Andrés! 😊", "Hola de nuevo 🌿", "Soy Aiva, del equipo de Casa Verde."
+ * conversación ya empezó: "¡Hola, Andrés! 😊", "Hola de nuevo 🌿", "Soy Xen, del equipo de Casa Verde."
  */
 export function stripRepeatedGreeting(reply: string): string {
   // Saludo: insensible a mayúsculas. Nombre propio detrás: sensible (solo palabras con mayúscula inicial).
@@ -316,7 +316,7 @@ export function stripRepeatedGreeting(reply: string): string {
   let s = reply;
   const m = head.exec(s);
   if (m) s = s.slice(m[0].length).replace(tail, '');
-  // Auto-presentación: "Soy Aiva, del equipo de Casa Verde." / "Es Aiva de Casa Verde:"
+  // Auto-presentación: "Soy Xen, del equipo de Casa Verde." / "Es Xen de Casa Verde:"
   const agent = business.agent.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const intro = new RegExp(`^\\s*[¡!,]?\\s*(soy|es|habla|te habla|aqu[ií])\\s+${agent}\\b[^.!?:\\n]*[.!?:]*\\s*`, 'iu');
   const noIntro = s.replace(intro, '');

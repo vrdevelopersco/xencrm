@@ -1,5 +1,5 @@
 // Tapar credenciales antes de guardar nada. Vive aparte porque lo necesitan los dos caminos por los que un chat
-// de WhatsApp entra a aiva: traerlo como conversación (`importar.ts`) y leerlo para aprender cómo se atiende
+// de WhatsApp entra a xencrm: traerlo como conversación (`importar.ts`) y leerlo para aprender cómo se atiende
 // (`historial.ts`). Un grupo de soporte está lleno de «Usuario: … Clave: …» y eso no puede quedar guardado en
 // ninguno de los dos lados.
 

@@ -7,8 +7,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-general-'));
-process.env.AIVA_CLIENTES_DIR = dir;
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-general-'));
+process.env.XENCRM_CLIENTES_DIR = dir;
 process.env.DB_PATH = join(dir, 'prueba.db');
 
 const { general, guardarGeneral, limpiar, resolver, DEFECTOS } = await import('../crm/general.js');

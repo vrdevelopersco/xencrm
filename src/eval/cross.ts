@@ -5,7 +5,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-cross-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-cross-')), 'xencrm.db');
 const { touchUser, appendMessage, getHistory, getMessages } = await import('../agent/memory.js');
 const { getContact, updateContact, listEvents } = await import('../crm/contacts.js');
 const { crossChannelGreeting, channelName } = await import('../crm/cross.js');

@@ -2,7 +2,7 @@
   "name": "sonda-hosting",
   "version": "1.0.0",
   "private": true,
-  "description": "Dice si un hosting sirve para aiva: proceso vivo 24/7, WebSocket saliente, disco persistente.",
+  "description": "Dice si un hosting sirve para xencrm: proceso vivo 24/7, WebSocket saliente, disco persistente.",
   "main": "app.js",
   "scripts": { "start": "node app.js" },
   "engines": { "node": ">=20" }

@@ -5,8 +5,8 @@ import { mkdtempSync, existsSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const base = mkdtempSync(join(tmpdir(), 'aiva-clientes-'));
-process.env.AIVA_CLIENTES_DIR = base;
+const base = mkdtempSync(join(tmpdir(), 'xencrm-clientes-'));
+process.env.XENCRM_CLIENTES_DIR = base;
 const { crearCliente, leerIndice, puertoLibre, pm2Config, tunelConfig, rutas, slugificar } = await import('../clientes.js');
 
 let fail = 0;
@@ -15,7 +15,7 @@ const check = (name: string, ok: boolean, detail = '') => {
   console.log(`${ok ? '✓' : '✗'} ${name}${ok ? '' : `\n   ${detail}`}`);
 };
 
-const { cliente: dunor, token: tokenDunor } = crearCliente({ nombre: 'DUNOR Boutique', host: 'dunor.aiva.co', prioridad: 'alta', hoy: '2026-09-23' });
+const { cliente: dunor, token: tokenDunor } = crearCliente({ nombre: 'DUNOR Boutique', host: 'dunor.xencrm.co', prioridad: 'alta', hoy: '2026-09-23' });
 const { cliente: fin, token: tokenFin } = crearCliente({ nombre: 'Financiera del Caribe', prioridad: 'media', hoy: '2026-09-23' });
 
 check('el identificador sale del nombre, sin tildes ni espacios', dunor.slug === 'dunor-boutique' && fin.slug === 'financiera-del-caribe', `${dunor.slug} · ${fin.slug}`);
@@ -30,7 +30,7 @@ check('y su propio catálogo y lo que sabe, sin compartir con otro cliente', exi
 check('el .env del cliente no se lee desde afuera', (statSync(r.env).mode & 0o077) === 0, (statSync(r.env).mode & 0o777).toString(8));
 
 const env = readFileSync(r.env, 'utf8');
-check('su .env trae lo suyo: puerto, base, WhatsApp, token y dominio', /PORT=3001/.test(env) && /DB_PATH=.*dunor-boutique\/data\/aiva\.db/.test(env) && /ADMIN_TOKEN=/.test(env) && /PUBLIC_URL=https:\/\/dunor\.aiva\.co/.test(env), env);
+check('su .env trae lo suyo: puerto, base, WhatsApp, token y dominio', /PORT=3001/.test(env) && /DB_PATH=.*dunor-boutique\/data\/xencrm\.db/.test(env) && /ADMIN_TOKEN=/.test(env) && /PUBLIC_URL=https:\/\/dunor\.xencrm\.co/.test(env), env);
 check('y NO repite las claves de la máquina', !/OPENAI_API_KEY/.test(env), env);
 
 const config = JSON.parse(readFileSync(r.config, 'utf8')) as { business: { name: string }; dictionaryFile: string; profileFile: string };
@@ -41,12 +41,12 @@ check('el catálogo y el conocimiento también', fuentes.productsFile.includes('
 check('WhatsApp arranca apagado: el código se escanea cuando el equipo quiera', /WHATSAPP_ENABLED=false/.test(readFileSync(r.env, 'utf8')));
 
 const pm2 = pm2Config();
-check('pm2 lleva una app por cliente', /aiva-dunor-boutique/.test(pm2) && /aiva-financiera-del-caribe/.test(pm2));
-check('cada app apunta a la configuración y al .env de su cliente', /AIVA_CONFIG.*dunor-boutique/.test(pm2) && /AIVA_ENV_FILE.*financiera-del-caribe/.test(pm2));
+check('pm2 lleva una app por cliente', /xencrm-dunor-boutique/.test(pm2) && /xencrm-financiera-del-caribe/.test(pm2));
+check('cada app apunta a la configuración y al .env de su cliente', /XENCRM_CONFIG.*dunor-boutique/.test(pm2) && /XENCRM_ENV_FILE.*financiera-del-caribe/.test(pm2));
 check('y se reinicia sola si se cae', /max_restarts/.test(pm2) && /restart_delay/.test(pm2));
 
 const tunel = tunelConfig();
-check('el túnel manda cada dominio a su puerto', /hostname: dunor\.aiva\.co\n\s+service: http:\/\/localhost:3001/.test(tunel), tunel);
+check('el túnel manda cada dominio a su puerto', /hostname: dunor\.xencrm\.co\n\s+service: http:\/\/localhost:3001/.test(tunel), tunel);
 check('quien no tiene dominio no aparece en el túnel', !/financiera/.test(tunel), tunel);
 check('lo que no coincida no cae en el cliente equivocado', /http_status:404/.test(tunel));
 

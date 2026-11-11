@@ -9,7 +9,7 @@ un aviso que lleva al tutorial. Esta guía es la referencia completa, para entre
 
 ## Cómo entrar
 
-**Si eres del equipo de aiva**, entra por la consola y abre el tablero del cliente desde su fila: no te va a pedir
+**Si eres del equipo de XENCRM**, entra por la consola y abre el tablero del cliente desde su fila: no te va a pedir
 nada, porque ya entraste allá.
 
 **Si eres el negocio**, abre la dirección del tablero (termina en `/admin`) desde el computador o el celular y
@@ -26,7 +26,7 @@ y al cerrarlo vuelves donde estabas.
 
 ## La idea
 
-El asistente (Aiva, o el nombre que tenga tu negocio) responde solo, a cualquier hora. Tú entras cuando hace
+El asistente (Xen, o el nombre que tenga tu negocio) responde solo, a cualquier hora. Tú entras cuando hace
 falta una persona:
 
 - el asistente no sabía algo;
@@ -43,7 +43,7 @@ no pudo responder por una falla).
 
 Lo que falta para que el asistente atienda solo, en una lista que **se marca sola**: un paso queda listo cuando de
 verdad lo está, no cuando alguien le da clic. Está en **Configuración › Guía de inicio** (solo para quien
-administra), y mientras falte algo obligatorio, Hoy lo dice en una línea arriba («Deja listo a Aiva: 3 de 6 ·
+administra), y mientras falte algo obligatorio, Hoy lo dice en una línea arriba («Deja listo a Xen: 3 de 6 ·
 Siguiente: …») con el botón que lleva a arreglarlo. **Ocultar por ahora** la quita una semana.
 
 Los pasos, y cuándo quedan listos:
@@ -113,12 +113,12 @@ respuesta te parece rara.
 escribe "esmoquin azul" y salen las conversaciones donde aparece, cada una con el pedacito donde se dijo y quién lo
 dijo.
 
-**Quién responde.** Arriba del chat está el switch **Responde: Aiva | Tú**. En *Tú*, el asistente no contesta y tú
-escribes; en *Aiva*, vuelve a responder solo. Escribir a mano también te pasa la conversación. En WhatsApp el
+**Quién responde.** Arriba del chat está el switch **Responde: Xen | Tú**. En *Tú*, el asistente no contesta y tú
+escribes; en *Xen*, vuelve a responder solo. Escribir a mano también te pasa la conversación. En WhatsApp el
 cliente ve tu nombre antes de tu mensaje, porque siempre le escribe el mismo número.
 
-**Cuando la llevas tú, Aiva acompaña.** Si el cliente pregunta algo que Aiva sabe —un precio, el horario, si hacen
-envíos—, deja la respuesta escrita encima del cajón con el título *Aiva puede contestar esto*. **Enviar** la manda
+**Cuando la llevas tú, Xen acompaña.** Si el cliente pregunta algo que Xen sabe —un precio, el horario, si hacen
+envíos—, deja la respuesta escrita encima del cajón con el título *Xen puede contestar esto*. **Enviar** la manda
 tal cual (y la conversación sigue siendo tuya), **Corregir** la pasa al cajón para que la ajustes, y **Descartar** la
 quita. Nunca escribe sola, no suena y no abre nada en *Por verificar*: lo que no sabe, simplemente no lo propone, y
 tampoco se mete en saludos, citas ni en quien pide una persona. Si contestas con tus palabras, la propuesta se
@@ -230,7 +230,7 @@ pestañas con su número: *Todos*, *Míos* (las que llevas tú), *🔥 Calientes
 *Perdidos*. Cada fila dice la etapa, el puntaje, el **valor**, el **próximo paso** y **quién la lleva**. Un clic en
 la cabecera de una columna ordena por ella. Al pie, cuántas son y cuánto suman.
 
-**El próximo paso** lo escribe aiva sola, con reglas y sin gastar en modelos, en el mismo orden que Hoy:
+**El próximo paso** lo escribe XENCRM sola, con reglas y sin gastar en modelos, en el mismo orden que Hoy:
 *Contestar* si la última palabra es del cliente, *Atender* si la pasaron al equipo, la cita si tiene una,
 *Retomar* si es un caliente que lleva un día callado. En ámbar va lo que espera a alguien del equipo.
 
@@ -345,7 +345,7 @@ Nada se guarda sin validar, y antes de pisar el archivo queda una copia del ante
 
 - **Respaldo de la base**: cuándo fue la última copia y el botón para hacer una ya. Si tu negocio tiene retención,
   dice también cada cuánto se anonimizan o se borran las conversaciones quietas y cuántas fueron la última vez.
-  Quien tiene una cita por delante nunca entra. La retención la pone quien administra aiva.
+  Quien tiene una cita por delante nunca entra. La retención la pone quien administra XENCRM.
 - **Consumo de IA**: cuánto cuestan las respuestas por conversación y por mensaje. Si tu negocio tiene tope de gasto
   al mes, arriba dice cuánto llevas. Al llegar al tope, lo que necesita IA te llega a ti para contestarlo a mano
   hasta el mes siguiente; las citas y lo demás que no necesita IA siguen igual.
@@ -364,7 +364,7 @@ Por dónde llegan los clientes. Cada canal dice si está conectado, cuántos men
 falta. Encender o apagar un canal aplica al momento.
 
 Arriba está la **Dirección pública**, la que usan el chat del sitio, WhatsApp oficial y el tablero desde el
-celular. aiva la revisa cada 5 minutos. Si deja de responder, avisa en la campana y en Hoy, y dice qué hacer;
+celular. XENCRM la revisa cada 5 minutos. Si deja de responder, avisa en la campana y en Hoy, y dice qué hacer;
 **Revisar ahora** la prueba en el momento.
 
 - **Chat del sitio web**: el código para pegar en el sitio. Lleva el color y el logo del negocio.

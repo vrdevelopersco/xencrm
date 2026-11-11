@@ -1,6 +1,6 @@
 /**
  * Los datos de una persona más allá del nombre y el teléfono: su correo, su WhatsApp si es otro número, su
- * Instagram, su Facebook y por dónde nos contactó. Y los datos del negocio que aiva va captando de la conversación
+ * Instagram, su Facebook y por dónde nos contactó. Y los datos del negocio que XENCRM va captando de la conversación
  * (`crm.fields`: en DUNOR la talla o las medidas, la ocasión, la fecha del evento…), que el equipo también corrige.
  *
  * Lo pidió DUNOR: «modificar contacto» solo dejaba nombre y teléfono, y un cliente que llega por Instagram no tiene

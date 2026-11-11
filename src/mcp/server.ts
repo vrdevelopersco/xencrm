@@ -11,7 +11,7 @@ import { handleMessage } from '../agent/agent.js';
  * Se sirve por stdio (pnpm mcp) o por HTTP en /mcp (accesible por el túnel).
  */
 export function createMcpServer(): McpServer {
-  const server = new McpServer({ name: `aiva-${slug(business.business.name)}`, version: '0.1.0' });
+  const server = new McpServer({ name: `xencrm-${slug(business.business.name)}`, version: '0.1.0' });
 
   server.registerTool(
     'search_products',
@@ -60,7 +60,7 @@ export function createMcpServer(): McpServer {
   );
 
   server.registerTool(
-    'ask_aiva',
+    'ask_xencrm',
     {
       title: `Preguntarle a ${business.agent.name}`,
       description: `Envía un mensaje al asistente de atención de ${business.business.name} y devuelve su respuesta, como si fuera un cliente escribiendo por chat. Usa session_id para mantener la conversación.`,

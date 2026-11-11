@@ -13,14 +13,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const dir = mkdtempSync(join(tmpdir(), 'xen-modelos-'));
-const base = JSON.parse(readFileSync(new URL('../../aiva.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
-writeFileSync(join(dir, 'aiva.config.json'), JSON.stringify({ ...base, timezone: 'America/Bogota' }));
+const base = JSON.parse(readFileSync(new URL('../../xencrm.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+writeFileSync(join(dir, 'xencrm.config.json'), JSON.stringify({ ...base, timezone: 'America/Bogota' }));
 const ENV = join(dir, '.env');
 const LLAVE_CLAUDE = 'sk-ant-api03-de-mentira-para-la-prueba-0000000000000000wxyz';
 writeFileSync(ENV, `ANTHROPIC_API_KEY=${LLAVE_CLAUDE}\n`);
 Object.assign(process.env, {
-  AIVA_CONFIG: join(dir, 'aiva.config.json'),
-  AIVA_ENV_FILE: ENV,
+  XENCRM_CONFIG: join(dir, 'xencrm.config.json'),
+  XENCRM_ENV_FILE: ENV,
   DB_PATH: join(dir, 'data', 'prueba.db'),
   ADMIN_TOKEN: 'token-del-tablero-de-prueba-0123456789',
   WHATSAPP_ENABLED: 'false',
@@ -138,7 +138,7 @@ const sinLlave = await prov.probarProveedor('openai');
 check('OpenAI sin llave no sale a la red: dice que falta', !sinLlave.ok && sinLlave.porque === 'Falta la llave.');
 const nadie = await prov.probarProveedor('ollama');
 check('Ollama apagado: lo dice con su dirección', !nadie.ok && !nadie.contesta && /ollama\.prueba/.test(nadie.porque ?? ''), JSON.stringify(nadie));
-const red = { compatible: async () => ({ ok: true, modelos: [] }), ollama: async () => ({ ok: true, modelos: [] }), anthropic: async () => ({ ok: true, status: 200, modelos: [] }), apple: async () => ({ ok: false, reason: 'falta ./sidecar/bin/aiva-afm (pnpm build:sidecar)' }) };
+const red = { compatible: async () => ({ ok: true, modelos: [] }), ollama: async () => ({ ok: true, modelos: [] }), anthropic: async () => ({ ok: true, status: 200, modelos: [] }), apple: async () => ({ ok: false, reason: 'falta ./sidecar/bin/xencrm-afm (pnpm build:sidecar)' }) };
 const manzana = await prov.probarProveedor('apple', red);
 check('Apple dice por qué no, sin inventarse que sí, y en palabras (no «falta ./sidecar…»)', !manzana.ok && /solo corre en un Mac/.test(manzana.porque ?? '') && !/^falta/.test(manzana.porque ?? ''), manzana.porque);
 const manzana2 = await prov.probarProveedor('apple', { ...red, apple: async () => ({ ok: false, reason: 'Apple Intelligence apagado' }) });

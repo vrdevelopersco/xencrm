@@ -1,5 +1,5 @@
 {
-  "_ayuda": "Diccionario del negocio para aiva. \"topics\": temas que se responden con la información del negocio; \"keywords\" son las palabras que los disparan (sin importar tildes ni mayúsculas) y \"query\" es con qué se busca en la información. \"offerVerbs\": verbos con que la gente pregunta por lo que se ofrece (\"¿alquilan…?\", \"¿venden…?\"). Se importa desde el tablero (Agente › Diccionario del negocio).",
+  "_ayuda": "Diccionario del negocio para XENCRM. \"topics\": temas que se responden con la información del negocio; \"keywords\" son las palabras que los disparan (sin importar tildes ni mayúsculas) y \"query\" es con qué se busca en la información. \"offerVerbs\": verbos con que la gente pregunta por lo que se ofrece (\"¿alquilan…?\", \"¿venden…?\"). Se importa desde el tablero (Agente › Diccionario del negocio).",
   "topics": [
     {
       "keywords": [

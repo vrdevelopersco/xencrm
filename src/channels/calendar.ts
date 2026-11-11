@@ -22,7 +22,7 @@ export function mountCalendar(app: Hono<{ Bindings: HttpBindings }>) {
     if (!appt || !validSig(id, sig)) return c.text('no encontrado', 404);
     if (file.endsWith('.ics')) {
       const name = business.business.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      return c.body(appointmentIcs(appt), 200, { ...ICS_HEADERS, 'content-disposition': `attachment; filename="cita-${name || 'aiva'}.ics"` });
+      return c.body(appointmentIcs(appt), 200, { ...ICS_HEADERS, 'content-disposition': `attachment; filename="cita-${name || 'xencrm'}.ics"` });
     }
     return paginaConCsp(c, customerPage(appt));
   });

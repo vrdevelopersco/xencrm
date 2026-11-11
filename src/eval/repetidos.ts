@@ -8,21 +8,21 @@
 // «escribiendo…» y no le dice al cliente que solo lee texto. Igual que WhatsApp por QR.
 //
 // 🪤 Las peticiones van contra la ruta de verdad (`app.request`), firmadas como firma Meta. Todo en una carpeta
-// temporal; lo que aiva le manda a Meta se anota en vez de salir, y cualquier otra salida a la red hace fallar la prueba.
+// temporal; lo que XENCRM le manda a Meta se anota en vez de salir, y cualquier otra salida a la red hace fallar la prueba.
 import { createHmac } from 'node:crypto';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { HttpBindings } from '@hono/node-server';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-repetidos-'));
-const base = JSON.parse(readFileSync(new URL('../../aiva.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
-writeFileSync(join(dir, 'aiva.config.json'), JSON.stringify(base));
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-repetidos-'));
+const base = JSON.parse(readFileSync(new URL('../../xencrm.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+writeFileSync(join(dir, 'xencrm.config.json'), JSON.stringify(base));
 writeFileSync(join(dir, '.env'), '');
 const SECRETO = 'secreto-de-prueba';
 Object.assign(process.env, {
-  AIVA_CONFIG: join(dir, 'aiva.config.json'),
-  AIVA_ENV_FILE: join(dir, '.env'),
+  XENCRM_CONFIG: join(dir, 'xencrm.config.json'),
+  XENCRM_ENV_FILE: join(dir, '.env'),
   DB_PATH: join(dir, 'prueba.db'),
   META_ACCESS_TOKEN: 'token-de-prueba',
   META_PHONE_NUMBER_ID: '1234567890',
@@ -50,7 +50,7 @@ const check = (name: string, ok: boolean, detail = '') => {
   console.log(`${ok ? '✓' : '✗'} ${name}${ok ? '' : `\n   ${detail}`}`);
 };
 
-// Lo que aiva le pide a Meta: escribirle a alguien, o marcar leído con «escribiendo…».
+// Lo que XENCRM le pide a Meta: escribirle a alguien, o marcar leído con «escribiendo…».
 const aMeta: { para?: string; texto?: string; leido?: string }[] = [];
 globalThis.fetch = (async (url: string | URL | Request, opciones?: RequestInit) => {
   const u = String(url);

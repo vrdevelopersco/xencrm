@@ -1,6 +1,6 @@
 # Demo en vivo
 
-Guion para mostrar aiva funcionando, con el cliente al lado: el celular hace de cliente y el computador muestra el
+Guion para mostrar XENCRM funcionando, con el cliente al lado: el celular hace de cliente y el computador muestra el
 tablero moviéndose solo. Dura entre 8 y 10 minutos. Probado de punta a punta el 22 de septiembre de 2026.
 
 La idea que tiene que quedar: **no es un chatbot que responde, es un CRM que trabaja solo** — atiende, entiende,
@@ -12,7 +12,7 @@ agenda, puntúa y le deja al equipo solo lo que necesita una persona.
 2. **La dirección pública** (el túnel), si no está arriba:
    ```
    cloudflared tunnel --url http://localhost:3000     # imprime la URL
-   PUBLIC_URL=<la URL> pnpm dev                       # reinicia aiva con esa dirección
+   PUBLIC_URL=<la URL> pnpm dev                       # reinicia XENCRM con esa dirección
    ```
    Verifica en **Canales › Dirección pública › Revisar ahora**: tiene que decir que responde.
 3. **Los canales**:
@@ -71,7 +71,7 @@ Mientras el Perfil no tenga dirección, horarios, precios ni formas de pago, **t
 
 - **WhatsApp por código QR no es la vía oficial de Meta**: sirve para mostrar, pero puede bloquear el número. Para
   el cliente de verdad van las credenciales de Meta (Canales › WhatsApp oficial › Credenciales).
-- **La dirección pública es un túnel temporal**: si se cae, el chat del sitio y WhatsApp dejan de entrar. aiva
+- **La dirección pública es un túnel temporal**: si se cae, el chat del sitio y WhatsApp dejan de entrar. XENCRM
   avisa en la campana y en Hoy. Para producción: túnel fijo con dominio propio.
 - **Instagram y Messenger** todavía no están.
 - El **puntaje** es un estimado calibrado con las primeras conversaciones; se afina con los resultados reales de

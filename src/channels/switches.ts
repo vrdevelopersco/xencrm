@@ -33,8 +33,8 @@ export function setChannelOn(id: ChannelId, on: boolean): void {
 /**
  * Los tres modos de un canal, por orden de confianza: **mira · propone · contesta**.
  *
- * - `mira` — entra todo y aiva no dice nada. Es el modo aprendizaje: mira cómo atiende el negocio.
- * - `propone` — aiva prepara la respuesta y la deja lista; la manda una persona con un toque, o la corrige.
+ * - `mira` — entra todo y XENCRM no dice nada. Es el modo aprendizaje: mira cómo atiende el negocio.
+ * - `propone` — XENCRM prepara la respuesta y la deja lista; la manda una persona con un toque, o la corrige.
  * - `contesta` — responde sola.
  *
  * 🪤 El del medio es el que faltaba, y es el más valioso de los tres: sin él la decisión es «que no diga nada»
@@ -53,17 +53,17 @@ export function modoCanal(id: ChannelId): ModoCanal {
 
 export function setModoCanal(id: ChannelId, modo: ModoCanal): void {
   setSetting(`channel.${id}.modo`, modo);
-  // Se mantiene el ajuste viejo al día: si alguien vuelve a una versión anterior, no se encuentra a aiva
+  // Se mantiene el ajuste viejo al día: si alguien vuelve a una versión anterior, no se encuentra a XENCRM
   // contestándole a sus clientes sin haberlo pedido.
   setSetting(`channel.${id}.soloEscucha`, modo !== 'contesta');
 }
 
-/** Aiva no manda nada por su cuenta: ni mirando ni proponiendo. */
+/** Xen no manda nada por su cuenta: ni mirando ni proponiendo. */
 export function soloEscucha(id: ChannelId): boolean {
   return modoCanal(id) !== 'contesta';
 }
 
-/** Aiva prepara la respuesta pero no la manda: la decide una persona. */
+/** Xen prepara la respuesta pero no la manda: la decide una persona. */
 export function propone(id: ChannelId): boolean {
   return modoCanal(id) === 'propone';
 }
@@ -79,8 +79,8 @@ export function setSoloEscucha(id: ChannelId, on: boolean): void {
  * guardar lo que dicen no es lo mismo que guardar una conversación uno a uno con un cliente. Eso lo decide el
  * negocio, no nosotros, y por eso se enciende a mano y con la explicación delante.
  *
- * Cuando está encendido, aiva **mira y aprende**: nunca escribe en un grupo, pase lo que pase con el
- * interruptor de «Contesta Aiva». Un asistente metiéndose en la conversación de un grupo es el peor sitio
+ * Cuando está encendido, XENCRM **mira y aprende**: nunca escribe en un grupo, pase lo que pase con el
+ * interruptor de «Contesta Xen». Un asistente metiéndose en la conversación de un grupo es el peor sitio
  * posible para equivocarse, porque se equivoca delante de todos a la vez.
  *
  * 🪤 Y no se pone al día: entra lo que se hable DESDE que se enciende. Lo de antes no se trae, ni cuando se

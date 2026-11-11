@@ -7,17 +7,17 @@
 // Las peticiones se hacen contra la aplicación de verdad (`app.request`, el mismo camino que un navegador), no
 // contra las funciones por dentro: lo que se quiere probar es el guardia, y el guardia vive en el middleware.
 //
-// 🪤 Todo pasa en una carpeta temporal con clientes inventados (AIVA_CLIENTES_DIR). Ni una línea de esto toca el
+// 🪤 Todo pasa en una carpeta temporal con clientes inventados (XENCRM_CLIENTES_DIR). Ni una línea de esto toca el
 // archivo de usuarios ni los clientes de verdad.
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-seguridad-'));
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-seguridad-'));
 const clientesDir = join(dir, 'clientes');
 mkdirSync(clientesDir, { recursive: true });
-process.env.AIVA_CLIENTES_DIR = clientesDir;
-process.env.DB_PATH = join(dir, 'aiva.db');
+process.env.XENCRM_CLIENTES_DIR = clientesDir;
+process.env.DB_PATH = join(dir, 'xencrm.db');
 process.env.CONSOLA_TOKEN = 'llave-maestra-de-prueba-0123456789';
 process.env.ADMIN_TOKEN = 'token-del-tablero-de-prueba-0123456789';
 
@@ -62,7 +62,7 @@ const entrar = async (usuario: string, clave: string) => {
   });
   // La sesión sale de la galleta, como la ve un navegador: el cuerpo ya no la trae (ver más abajo).
   const galleta = r.headers.get('set-cookie') ?? '';
-  return { status: r.status, cuerpo: (await r.json()) as { sesion?: string; error?: string }, galleta, sesion: /aiva_consola=([^;]*)/.exec(galleta)?.[1] ?? '' };
+  return { status: r.status, cuerpo: (await r.json()) as { sesion?: string; error?: string }, galleta, sesion: /xencrm_consola=([^;]*)/.exec(galleta)?.[1] ?? '' };
 };
 const conSesion = (sesion: string) => ({ 'x-consola-sesion': sesion });
 const pedir = (ruta: string, headers: Record<string, string> = {}, opts: RequestInit = {}) => consola.request(ruta, { ...opts, headers });
@@ -126,7 +126,7 @@ check('y el equipo quedó como estaba', leerUsuarios().length === 2 && !leerUsua
   leerUsuarios().map((u) => u.usuario).join(','));
 check('su rol sigue siendo el que era', leerUsuarios().find((u) => u.usuario === 'agente')!.rol === 'asesor');
 
-// 🪤 Lo que es de quien administra aiva se frena en las DOS puertas al cliente. Estaba solo en /api/c/<slug>/…, y
+// 🪤 Lo que es de quien administra XENCRM se frena en las DOS puertas al cliente. Estaba solo en /api/c/<slug>/…, y
 // por /c/<slug>/admin/api/… —la que usa su tablero abierto desde la consola— pasaba: quien atendía cambiaba los
 // motores, ponía una clave de OpenAI o encendía la retención que borra conversaciones.
 for (const [ruta, metodo] of [['clave', 'POST'], ['motores', 'PUT'], ['motores/tope', 'PUT'], ['retencion', 'PUT']] as [string, string][]) {
@@ -340,12 +340,12 @@ const deAqui = await consola.request('/api/usuarios', {
 });
 check('pero la de la propia consola sí', deAqui.status === 200, `dio ${deAqui.status}`);
 
-// 🪤 Y detrás del servidor del hosting, aiva vive en un puerto interno: ve `127.0.0.1:3900` mientras el
-// navegador dice `https://aiva.<dominio>`. Comparar contra la dirección interna dejó a todo el mundo fuera del
+// 🪤 Y detrás del servidor del hosting, XENCRM vive en un puerto interno: ve `127.0.0.1:3900` mientras el
+// navegador dice `https://xencrm.<dominio>`. Comparar contra la dirección interna dejó a todo el mundo fuera del
 // login —pasó en producción—. Lo que vale es el nombre con el que llamaron.
 const trasElProxy = await consola.request('/api/entrar', {
   method: 'POST',
-  headers: { 'content-type': 'application/json', origin: 'https://aiva.ejemplo.co', host: 'aiva.ejemplo.co', 'x-forwarded-host': 'aiva.ejemplo.co' },
+  headers: { 'content-type': 'application/json', origin: 'https://xencrm.ejemplo.co', host: 'xencrm.ejemplo.co', 'x-forwarded-host': 'xencrm.ejemplo.co' },
   body: JSON.stringify({ usuario: 'jefa', clave: 'clave-de-prueba-2' }),
 });
 check('🪤 entrar desde el dominio de verdad funciona aunque adentro el puerto sea otro', trasElProxy.status === 200, `dio ${trasElProxy.status}`);
@@ -370,7 +370,7 @@ check('en el chat del sitio no se firma: ahí ya se ve quién habla', conFirma('
 // ---------- 🪤 El operador es una persona, no el asistente ----------
 // Esto salió tres veces como «el perfil se cruza entre clientes»: el tablero rellenaba el nombre de quien
 // atiende con el del ASISTENTE cuando estaba vacío, y como todos los clientes llaman igual al suyo, el operador
-// acababa llamándose «Aiva» en todos. La prueba mira el código: que no quede ningún camino que lo rellene solo.
+// acababa llamándose «Xen» en todos. La prueba mira el código: que no quede ningún camino que lo rellene solo.
 const fuenteTablero = readFileSync('public/admin.js', 'utf8');
 check('🪤 el nombre de quien atiende no se rellena con el del asistente', !/state\.name\s*=\s*me\.agent/.test(fuenteTablero) && !/state\.name\s*=.*state\.agentName/.test(fuenteTablero),
   (fuenteTablero.match(/state\.name\s*=.*/g) ?? []).join(' | ').slice(0, 200));

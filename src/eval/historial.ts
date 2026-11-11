@@ -4,7 +4,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-historial-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-historial-')), 'xencrm.db');
 const { guardarImportados, resumenImportado, temasFrecuentes, decidirTema, muestraDeEstilo, leerChatExportado, borrarImportado } = await import('../crm/historial.js');
 const { allDocs, getDb } = await import('../rag/store.js');
 

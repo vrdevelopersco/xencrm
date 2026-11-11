@@ -4,7 +4,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-follow-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-follow-')), 'xencrm.db');
 const { touchUser, appendMessage } = await import('../agent/memory.js');
 const { getContact, updateContact, listEvents } = await import('../crm/contacts.js');
 const { isSnoozed, snoozeFollowup } = await import('../crm/followup.js');

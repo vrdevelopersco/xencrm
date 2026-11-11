@@ -8,8 +8,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-origen-'));
-process.env.DB_PATH = join(dir, 'aiva.db');
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-origen-'));
+process.env.DB_PATH = join(dir, 'xencrm.db');
 
 const { anotarOrigen, deLaUrl, deMeta, origenDe, porCampana } = await import('../crm/origen.js');
 const { touchUser } = await import('../agent/memory.js');

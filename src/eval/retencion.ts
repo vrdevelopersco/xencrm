@@ -4,23 +4,23 @@
 // que venga apagada; que no deje poner menos de 90 días; que antes haya un respaldo, y que sin él no toque nada; que
 // no toque a quien tiene una cita por delante ni a quien escribió hace poco; que al anonimizar no quede el nombre
 // ni el teléfono en NINGUNA tabla —se recorre la base entera buscándolos—, pero sí las cuentas del embudo y del
-// gasto; que borrar borre; y que la consola no deje cambiarla a quien no administra aiva.
+// gasto; que borrar borre; y que la consola no deje cambiarla a quien no administra XENCRM.
 //
 // 🪤 Todo en una carpeta temporal: la base, los archivos del chat y los respaldos.
 import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-retencion-'));
-const base = JSON.parse(readFileSync(new URL('../../aiva.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
-writeFileSync(join(dir, 'aiva.config.json'), JSON.stringify(base));
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-retencion-'));
+const base = JSON.parse(readFileSync(new URL('../../xencrm.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+writeFileSync(join(dir, 'xencrm.config.json'), JSON.stringify(base));
 writeFileSync(join(dir, '.env'), '');
 // Un archivo donde iría la carpeta de respaldos: así se prueba qué pasa cuando no se puede respaldar.
 writeFileSync(join(dir, 'no-es-carpeta'), '');
 Object.assign(process.env, {
-  AIVA_CONFIG: join(dir, 'aiva.config.json'),
-  AIVA_ENV_FILE: join(dir, '.env'),
-  DB_PATH: join(dir, 'data', 'aiva.db'),
+  XENCRM_CONFIG: join(dir, 'xencrm.config.json'),
+  XENCRM_ENV_FILE: join(dir, '.env'),
+  DB_PATH: join(dir, 'data', 'xencrm.db'),
   BACKUP_DIR: join(dir, 'no-es-carpeta', 'respaldos'),
   WHATSAPP_ENABLED: 'false',
   LLM_ENGINE: 'openai',

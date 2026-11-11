@@ -36,7 +36,7 @@ check('🪤 el widget tal cual parsea', parsea(crudo) === '', parsea(crudo));
 // hacen: una comilla simple cierra la cadena donde se mete, y una barra invertida se come lo siguiente.
 const servido = (saludo: string, negocio = 'Boutique') =>
   crudo
-    .replace('__AGENT_NAME__', 'Aiva')
+    .replace('__AGENT_NAME__', 'Xen')
     .replace('__STORE_NAME__', negocio)
     .replace('__BRAND_COLOR__', '#2f7d4f')
     .replace('__BRAND_LOGO__', '/brand/logo')

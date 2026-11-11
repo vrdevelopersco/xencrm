@@ -528,7 +528,7 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
 .btn.primary:focus-visible{outline:none;box-shadow:var(--bevel-hi),0 2px 0 var(--brand-deep),var(--ring)}
 
 /* Switch "Responde": canal hundido con grano y una perilla que se desliza.
-   Aiva = verde de marca; Tú = el amarillo de "lo lleva una persona" (--human, el de los mensajes del equipo),
+   Xen = verde de marca; Tú = el amarillo de "lo lleva una persona" (--human, el de los mensajes del equipo),
    no el ámbar de advertencia. Color, posición, peso del texto y aria-pressed dicen quién contesta. */
 .seg{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:999px;border:1px solid var(--glass-border);
   background:var(--grain),var(--glass-strong);box-shadow:var(--well)}
@@ -731,7 +731,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .tinta{width:30px;height:30px;border-radius:10px;border:2px solid transparent;cursor:pointer;box-shadow:var(--bevel-hi),var(--raise)}
 .tinta.puesto{border-color:var(--text);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 40%,transparent)}
 /* 🪤 Pestañas de verdad, no un interruptor. `.seg` es una rejilla de DOS columnas con una pastilla que se
-   desliza a la mitad: es el «Aiva | Tú», y está bien así. Meterle una tercera opción la parte en dos líneas y
+   desliza a la mitad: es el «Xen | Tú», y está bien así. Meterle una tercera opción la parte en dos líneas y
    deja la pastilla debajo de la pestaña equivocada. Esto es lo mismo por fuera y aguanta las que hagan falta. */
 .tabs{display:inline-flex;flex-wrap:nowrap;white-space:nowrap;gap:4px;padding:3px;border-radius:999px;
   background:var(--glass-strong);border:1px solid var(--glass-border);box-shadow:var(--rim)}
@@ -1353,7 +1353,7 @@ dialog.perdida input{width:100%}
 .motivos-lista .barra i{display:block;height:100%;background:var(--bad)}
 .motivos-lista .n{font-variant-numeric:tabular-nums;font-weight:600}
 /* ===== XENCRM: la piel de todos (nació como el modo fácil con el aspecto de Nexora) ===== */
-/* XENCRM es la siguiente generación de aiva. Su interfaz es la del modo fácil —el menú blanco con sus grupos, la
+/* XENCRM es la siguiente generación del CRM. Su interfaz es la del modo fácil —el menú blanco con sus grupos, la
    barra de arriba con el buscador y «Crear», tarjetas de borde fino—, ahora para todos y con su propia identidad:
    la bruma verde agua de fondo, la tinta verde petróleo, el acento teal para lo que se hace y el violeta solo para
    lo que dice la IA. Va detrás de `:root[data-piel="xen"]`, que el <html> trae puesto de fábrica. El modo fácil
@@ -1396,7 +1396,7 @@ dialog.perdida input{width:100%}
   --fx-anillo:0 0 0 3px rgb(11 116 102/.35);
   /* Movimiento: dos duraciones y una curva. */
   --fx-t-rapido:120ms ease-out;--fx-t-medio:220ms cubic-bezier(.2,.8,.2,1);
-  /* Lo de aiva toma los mismos colores: así lo que no se rehízo tampoco desentona. */
+  /* Lo de XENCRM toma los mismos colores: así lo que no se rehízo tampoco desentona. */
   --bg:var(--fx-fondo);--panel:var(--fx-panel);--glass:var(--fx-panel);--glass-strong:var(--fx-panel);--glass-overlay:var(--fx-panel);
   --glass-border:var(--fx-borde);--glass-shadow:none;--line:var(--fx-borde);--text:var(--fx-t1);--muted:var(--fx-t2);
   --brand:var(--fx-acento);--brand-soft:var(--fx-suave);--on-brand:var(--fx-sobre-acento);--row-hover:var(--fx-fila);--me:var(--fx-suave);
@@ -2691,7 +2691,7 @@ dialog.perdida input{width:100%}
       <button class="rb" data-view="calendar" data-tip="Calendario" aria-label="Calendario"><i class="ic" data-ic="calendar"></i><span class="badge" id="badge-cal"></span></button>
       <!-- 🪤 Cinco secciones, no ocho. Prospectos, Seguimientos y Ventas no se fueron: viven DENTRO de Clientes y de
            Análisis, como pestañas arriba de la pantalla (ver AREAS en admin.js). Quien empieza ve cinco puertas;
-           quien quiere exprimir aiva encuentra todo a un clic más. -->
+           quien quiere exprimir XENCRM encuentra todo a un clic más. -->
       <button class="rb" data-view="clientes" data-tip="Clientes" aria-label="Clientes"><i class="ic" data-ic="users"></i><span class="badge solo-completo" id="badge-seg"></span><span class="cuenta" id="cuenta-cli"></span></button>
       <!-- En el modo fácil no va (ver «modo fácil» en admin.js): los números grandes ya están en Hoy. -->
       <button class="rb solo-completo" data-view="analysis" data-tip="Análisis" aria-label="Análisis"><i class="ic" data-ic="chart"></i></button>
@@ -2723,7 +2723,7 @@ dialog.perdida input{width:100%}
     </div>
   </aside>
 
-  <!-- De quién es cada ajuste: de aiva, del cliente o tuyo. Los tres sitios donde más se confundía la gente. -->
+  <!-- De quién es cada ajuste: de XENCRM, del cliente o tuyo. Los tres sitios donde más se confundía la gente. -->
   <div class="cfg-pop" id="cfg-pop" hidden></div>
 
   <!-- Celular: lo que no cabe en la barra de abajo -->
@@ -2859,14 +2859,14 @@ dialog.perdida input{width:100%}
               <!-- «Asignado a»: el mismo dato que la ficha de al lado (c.responsable), con su mismo guardado. -->
               <label class="fx-asignado solo-facil" id="fx-asignado-caja"><i class="ic" data-ic="user" aria-hidden="true"></i><span class="fx-asignado-t">Asignado a</span><span id="fx-asignado-sel"></span></label>
               <button class="btn sm" id="details-btn" style="display:none">Ficha</button>
-              <!-- Lo mismo que Aiva/Tú, dicho como en un CRM de mensajería: lo que se pausa es la automatización
+              <!-- Lo mismo que Xen/Tú, dicho como en un CRM de mensajería: lo que se pausa es la automatización
                    (el agente de IA). Toca el mismo interruptor. -->
               <button class="btn sm solo-facil" id="fx-control"></button>
             </div>
           </div>
           <div class="presentes" id="presentes" hidden></div>
           <div class="msgs" id="msgs" hidden></div>
-          <!-- Lo que aiva dejó listo: se lee, y se manda o se corrige. Encima del cajón porque es una decisión
+          <!-- Lo que XENCRM dejó listo: se lee, y se manda o se corrige. Encima del cajón porque es una decisión
                que se toma antes de escribir, no un campo más del formulario. -->
           <div class="propuesta" id="propuesta" hidden>
             <div class="fila" style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">
@@ -3259,7 +3259,7 @@ dialog.perdida input{width:100%}
             </details>
             <div class="small muted">De un recap de tickets o un historial salen los <b>temas</b> y cómo los preguntan. La respuesta la escribes tú: lo que se contestó en marzo puede no ser lo que prometes hoy.</div>
             <!--
-              Ensayar antes de salir al escenario. Es la pieza que faltaba para enseñar aiva en vivo: saber si la
+              Ensayar antes de salir al escenario. Es la pieza que faltaba para enseñar XENCRM en vivo: saber si la
               pregunta que vas a guiar sale por el guion —instantánea, escrita por ti, sin pasar por el modelo— o
               se va al modelo, que tarda y puede decir que no tiene el dato. Descubrirlo delante de la gente es
               el peor momento, y es cuando se descubre si no hay forma de ensayarlo.

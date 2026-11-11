@@ -19,16 +19,16 @@
 // así que el cambio de `ppid` es la señal: barata, sin latido, sin archivo de por medio, y funciona también si
 // al lanzador lo matan con SIGKILL, que es justo cuando no puede despedirse de nadie.
 //
-// Solo se vigila cuando hay lanzador (`AIVA_SUPERVISADO`): arrancado a mano, nadie se va a ningún sitio.
+// Solo se vigila cuando hay lanzador (`XENCRM_SUPERVISADO`): arrancado a mano, nadie se va a ningún sitio.
 
 /** Vigila al lanzador y se va si desaparece. No hace nada si este proceso se arrancó a mano. */
 export function irseSiQuedaHuerfano(despedirse?: () => void): void {
-  if (process.env.AIVA_SUPERVISADO !== '1') return;
+  if (process.env.XENCRM_SUPERVISADO !== '1') return;
   const padre = process.ppid;
   const reloj = setInterval(() => {
     if (process.ppid === padre) return;
     clearInterval(reloj);
-    console.error('[aiva] me quedé sin lanzador: me voy para no dejar agarrados el puerto ni WhatsApp.');
+    console.error('[xencrm] me quedé sin lanzador: me voy para no dejar agarrados el puerto ni WhatsApp.');
     try {
       despedirse?.();
     } catch {

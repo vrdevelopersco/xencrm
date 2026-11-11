@@ -154,7 +154,7 @@ export async function sendToContact(
   const id = appendMessage(userId, 'assistant', text, undefined, author, by, medio);
   emitEvent('message', userId, { id, role: 'assistant', author, by: by ?? null, content: text, ts: Date.now(), media: medio });
   updateContact(userId, { unread: 0 }, { silent: true });
-  // Contestó una persona con sus palabras: lo que aiva había dejado listo aquí ya no hace falta.
+  // Contestó una persona con sus palabras: lo que XENCRM había dejado listo aquí ya no hace falta.
   if (author === 'human') apartarPropuestas(userId, by ?? '');
   // Lo que contesta una persona enseña cómo atiende este negocio: entra al material de aprendizaje. Del propio
   // asistente no se aprende nada (ver crm/historial.ts).

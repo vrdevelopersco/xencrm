@@ -9,7 +9,7 @@ const PHONE_CANDIDATE_RE = /\+?\d[\d\s().-]{6,}\d/g;
 
 /**
  * Teléfono en formato internacional para guardar, según el país del negocio (phoneCountryCode y phoneLocalDigits en
- * aiva.config.json): en Colombia "300 123 4567", "+57 300-123-4567" o "605 3601234" → "+573001234567". Un número de
+ * xencrm.config.json): en Colombia "300 123 4567", "+57 300-123-4567" o "605 3601234" → "+573001234567". Un número de
  * otro país se acepta con su + (8 a 15 dígitos).
  */
 export function parsePhone(text: string): string | null {

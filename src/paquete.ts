@@ -1,12 +1,12 @@
-// Arma UN paquete para subir aiva a una plataforma de apps (Hostinger y parecidas), con todos los clientes bajo
+// Arma UN paquete para subir XENCRM a una plataforma de apps (Hostinger y parecidas), con todos los clientes bajo
 // un solo dominio y separados por ruta:
 //
-//     aiva.hrctechnologies.com/            → la portada: qué es aiva
-//     aiva.hrctechnologies.com/consola     → la consola (vigilancia y atención)
-//     aiva.hrctechnologies.com/confia/     → el tablero y el chat de CONFIA
-//     aiva.hrctechnologies.com/hrc/        → los de HRC
+//     xencrm.hrctechnologies.com/            → la portada: qué es XENCRM
+//     xencrm.hrctechnologies.com/consola     → la consola (vigilancia y atención)
+//     xencrm.hrctechnologies.com/confia/     → el tablero y el chat de CONFIA
+//     xencrm.hrctechnologies.com/hrc/        → los de HRC
 //
-//   pnpm paquete                       usa aiva.hrctechnologies.com
+//   pnpm paquete                       usa xencrm.hrctechnologies.com
 //   pnpm paquete midominio.com
 //
 // Por qué un solo paquete y no uno por cliente: en estas plataformas cada app es un despliegue, un dominio y un
@@ -26,7 +26,7 @@ import { dirname, join, resolve } from 'node:path';
 import { afinarLoServido } from './afinar.js';
 import { leerIndice, rutas, type ClienteRef } from './clientes.js';
 
-const DOMINIO = (process.argv[2] ?? 'aiva.hrctechnologies.com').replace(/^https?:\/\//, '').replace(/\/$/, '');
+const DOMINIO = (process.argv[2] ?? 'xencrm.hrctechnologies.com').replace(/^https?:\/\//, '').replace(/\/$/, '');
 const SALIDA = resolve('paquetes');
 const PUERTO_INTERNO = 4100; // los procesos de adentro; nadie los ve desde afuera
 
@@ -80,11 +80,11 @@ async function tramoLibre(base, cuantos) {
   for (let inicio = base; inicio < base + 200; inicio += cuantos) {
     const estados = await Promise.all(Array.from({ length: cuantos }, (_, i) => libre(inicio + i)));
     if (estados.every(Boolean)) {
-      if (inicio !== base) console.log('[aiva] los puertos ' + base + '+ estaban ocupados (¿versión anterior sin cerrar?); uso ' + inicio + '+');
+      if (inicio !== base) console.log('[xencrm] los puertos ' + base + '+ estaban ocupados (¿versión anterior sin cerrar?); uso ' + inicio + '+');
       return inicio;
     }
   }
-  console.error('[aiva] no encontré puertos libres; lo intento en ' + base + ' de todos modos');
+  console.error('[xencrm] no encontré puertos libres; lo intento en ' + base + ' de todos modos');
   return base;
 }
 
@@ -152,7 +152,7 @@ function matarLosDeAntes() {
   } catch {
     return 0; // sin la lista de procesos no se adivina
   }
-  if (idos) console.log('[aiva] eché a ' + idos + ' proceso(s) de la versión anterior que seguían vivos.');
+  if (idos) console.log('[xencrm] eché a ' + idos + ' proceso(s) de la versión anterior que seguían vivos.');
   return idos;
 }
 
@@ -160,7 +160,7 @@ function matarLosDeAntes() {
 // Estas plataformas despliegan en una carpeta nueva cada vez, así que lo que se escriba al lado del código se
 // pierde en la siguiente actualización. Se busca un sitio estable; el primero donde se pueda escribir, gana.
 let datos = null;
-for (const dir of [process.env.AIVA_DATOS, join(homedir(), 'aiva-datos'), resolve(aqui, '..', '..', '..', '..', 'aiva-datos'), join(tmpdir(), 'aiva-datos')].filter(Boolean)) {
+for (const dir of [process.env.XENCRM_DATOS, join(homedir(), 'xencrm-datos'), resolve(aqui, '..', '..', '..', '..', 'xencrm-datos'), join(tmpdir(), 'xencrm-datos')].filter(Boolean)) {
   try {
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, '.escribible'), String(Date.now()));
@@ -171,10 +171,10 @@ for (const dir of [process.env.AIVA_DATOS, join(homedir(), 'aiva-datos'), resolv
   }
 }
 if (!datos) {
-  console.error('[aiva] no encontré dónde guardar. Define AIVA_DATOS con una ruta donde se pueda escribir.');
+  console.error('[xencrm] no encontré dónde guardar. Define XENCRM_DATOS con una ruta donde se pueda escribir.');
   process.exit(1);
 }
-console.log('[aiva] datos en ' + datos);
+console.log('[xencrm] datos en ' + datos);
 
 // Los sockets por los que el enrutador también puede hablarle a los de adentro. Van en los datos y no en el
 // despliegue, que estrena carpeta en cada actualización.
@@ -187,9 +187,9 @@ mkdirSync(dirSockets, { recursive: true });
 function socketPara(slug) {
   const enDatos = join(dirSockets, slug + '.sock');
   if (enDatos.length <= 100) return enDatos;
-  const corto = join(tmpdir(), 'aiva-' + slug + '.sock');
+  const corto = join(tmpdir(), 'xencrm-' + slug + '.sock');
   if (corto.length <= 100) return corto;
-  console.error('[aiva] sin socket para ' + slug + ': no hay ninguna ruta lo bastante corta.');
+  console.error('[xencrm] sin socket para ' + slug + ': no hay ninguna ruta lo bastante corta.');
   return '';
 }
 
@@ -239,7 +239,7 @@ function levantar(slug, guion, env, puerto, esLaConsola) {
   const sock = socketPara(slug);
   if (sock) socketDe.set(puerto, sock);
   const hijo = spawn(process.execPath, [join(aqui, guion)], {
-    env: { ...process.env, ...env, PORT: String(puerto), AIVA_SOCK: sock, AIVA_BIND: process.env.AIVA_BIND || '127.0.0.1' },
+    env: { ...process.env, ...env, PORT: String(puerto), XENCRM_SOCK: sock, XENCRM_BIND: process.env.XENCRM_BIND || '127.0.0.1' },
     stdio: ['ignore', 'inherit', 'inherit'],
   });
   hijo.on('exit', (code) => {
@@ -250,7 +250,7 @@ function levantar(slug, guion, env, puerto, esLaConsola) {
       h.ultimoCodigo = code;
       h.ultimaCaida = Date.now();
     }
-    console.error('[aiva] ' + slug + ' se cayó (' + code + '); lo levanto en 5 s');
+    console.error('[xencrm] ' + slug + ' se cayó (' + code + '); lo levanto en 5 s');
     // 🪤 Se vuelve a pasar esLaConsola. Sin esto, la bandera se perdía en el primer reinicio: el proceso
     // volvía igual de bien pero /_salud empezaba a preguntarle por un servicio que no tiene, y a partir de ahí
     // enseñaba una alarma permanente por algo que funcionaba. Una bandera que no sobrevive al reinicio es una
@@ -280,7 +280,7 @@ function cerrar(senal) {
     try {
       h.hijo.kill(senal === 'SIGKILL' ? 'SIGKILL' : 'SIGTERM');
     } catch {
-      console.error('[aiva] no pude cerrar ' + slug);
+      console.error('[xencrm] no pude cerrar ' + slug);
     }
   }
   setTimeout(() => process.exit(0), 1500).unref();
@@ -302,13 +302,13 @@ const porDefecto = {
   EMBED_ENGINE: process.env.EMBED_ENGINE || 'openai',
   // Aquí hay quien los vuelva a levantar (este mismo arranque), así que el tablero puede ofrecer reiniciar para
   // aplicar un cambio de configuración sin miedo a dejar al cliente abajo.
-  AIVA_SUPERVISADO: '1',
+  XENCRM_SUPERVISADO: '1',
   // WhatsApp arranca apagado: se enciende desde el tablero de cada cliente, en Canales, cuando vayan a escanear
   // el código. Esto es solo el arranque de fábrica; una vez lo prenden, queda prendido en su base.
   WHATSAPP_ENABLED: process.env.WHATSAPP_ENABLED || 'false',
   // Al vincular el WhatsApp de un negocio de verdad, lo prudente es mirar antes de hablar: entra todo al CRM, se
   // lee lo que ya estaba conversado para aprender cómo atienden, y el asistente se queda callado hasta que el
-  // negocio le dé voz desde el tablero (Canales › Contesta Aiva).
+  // negocio le dé voz desde el tablero (Canales › Contesta Xen).
   WHATSAPP_SOLO_ESCUCHAR: process.env.WHATSAPP_SOLO_ESCUCHAR || 'true',
   // 🪤 Pedir TODO el historial al vincular tumba la vinculación: WhatsApp cierra con 428 antes de enseñar el
   // código, en bucle, sin decir por qué. Costó medio día de diagnóstico creyendo que era el alojamiento. Se
@@ -330,7 +330,7 @@ clientes.forEach((c, i) => {
   // 🪤 Si el cliente ya tiene la suya en los datos, manda ESA: ahí están los cambios que hicieron desde el
   // tablero (nombre, asistente, citas, marca), y pisarlos en cada actualización sería borrarles el trabajo. La
   // que trae el paquete solo se usa la primera vez.
-  const configPath = join(mio, 'aiva.config.json');
+  const configPath = join(mio, 'xencrm.config.json');
   const deFabrica = join(aqui, 'config', c.slug + '.json');
   const config = JSON.parse(readFileSync(existsSync(configPath) ? configPath : deFabrica, 'utf8'));
   config.dictionaryFile = join(mio, 'dictionary.json');
@@ -376,10 +376,10 @@ clientes.forEach((c, i) => {
     ...porDefecto,
     // La carpeta que comparten la consola y los clientes. La consola escribe ahí la configuración de la
     // libreta —la llave y desde qué direcciones se abre— y cada cliente la lee.
-    AIVA_CLIENTES_DIR: join(datos, '_consola'),
-    AIVA_CONFIG: configPath,
-    AIVA_SLUG: c.slug,
-    DB_PATH: join(mio, 'data', 'aiva.db'),
+    XENCRM_CLIENTES_DIR: join(datos, '_consola'),
+    XENCRM_CONFIG: configPath,
+    XENCRM_SLUG: c.slug,
+    DB_PATH: join(mio, 'data', 'xencrm.db'),
     WHATSAPP_AUTH_DIR: join(mio, 'auth'),
     ADMIN_TOKEN: tokenDe(c.slug),
     PUBLIC_URL: 'https://' + dominio + '/' + c.slug,
@@ -420,16 +420,16 @@ function escribirIndiceDeClientes() {
 paraLevantar.push({
   slug: 'consola',
   guion: 'dist/consola.js',
-  // 🪤 AIVA_SUPERVISADO también aquí, y no es un detalle: es lo que hace que la consola se vaya si el lanzador
+  // 🪤 XENCRM_SUPERVISADO también aquí, y no es un detalle: es lo que hace que la consola se vaya si el lanzador
   // se muere. Sin esto sobrevive sola, se queda con su puerto, y el lanzador siguiente tiene que correrse de
   // tramo y levantar una segunda copia de TODO. Lo encontró la prueba de matar al lanzador: de cuatro procesos
   // se iban tres, y el que se quedaba era justo este.
-  env: { AIVA_CLIENTES_DIR: dirClientes, CONSOLA_HOST: process.env.AIVA_BIND || '127.0.0.1', AIVA_SUPERVISADO: '1' },
+  env: { XENCRM_CLIENTES_DIR: dirClientes, CONSOLA_HOST: process.env.XENCRM_BIND || '127.0.0.1', XENCRM_SUPERVISADO: '1' },
   esLaConsola: true,
 });
 
 // ── El enrutador ────────────────────────────────────────────────────────────
-// La portada: una página que explica qué es aiva. La sirve el enrutador mismo, sin molestar a nadie, porque es
+// La portada: una página que explica qué es XENCRM. La sirve el enrutador mismo, sin molestar a nadie, porque es
 // lo único que ve quien llega al dominio pelado. La consola queda en /consola, y sus llamadas (/api/...) siguen
 // saliendo de la raíz, que es a donde van por defecto.
 /**
@@ -548,7 +548,7 @@ const conDestino = (puerta, puerto, resto) =>
  *
  * 🪤 Por eso el nombre original se guarda en x-forwarded-host ANTES de pisarlo. Sin esto, lo único que salva el
  * login es que el servidor del alojamiento ponga esa cabecera por su cuenta: el día que no la ponga —o que
- * alguien entre directo al puerto de Node— adentro se compara «https://aiva.midominio» contra «127.0.0.1:4100»,
+ * alguien entre directo al puerto de Node— adentro se compara «https://xencrm.midominio» contra «127.0.0.1:4100»,
  * no coinciden, y TODO lo que no sea abrir una página se cae con un 403. Entrar, contestar, guardar: todo. Y no
  * se ve en ninguna prueba del código, porque el código está bien; lo que faltaba era el dato.
  */
@@ -557,7 +557,7 @@ const conDestino = (puerta, puerto, resto) =>
 // que el navegador diga de sí mismo en cf-connecting-ip o en la cola del x-forwarded-for no pasa: adentro se cree
 // a esas cabeceras para frenar intentos y para la lista de direcciones de la libreta.
 const paraAdentro = (cabeceras, puerto) => ({
-  ...borde.sinSuplantar(cabeceras, borde.direccionDeQuienLlama(cabeceras, process.env.AIVA_IP)),
+  ...borde.sinSuplantar(cabeceras, borde.direccionDeQuienLlama(cabeceras, process.env.XENCRM_IP)),
   'x-forwarded-host': cabeceras['x-forwarded-host'] || cabeceras.host,
   host: '127.0.0.1:' + puerto,
 });
@@ -694,11 +694,11 @@ async function esperarALosDeAdentro(maxMs = 30000) {
   for (;;) {
     const fallan = await sondearATodos();
     if (!fallan.length) {
-      console.log('[aiva] todos adentro listos, por ' + [...new Set([...porDondeVa.values()].map(nombreDePuerta))].join(' y '));
+      console.log('[xencrm] todos adentro listos, por ' + [...new Set([...porDondeVa.values()].map(nombreDePuerta))].join(' y '));
       return;
     }
     if (Date.now() > hasta) {
-      console.log('[aiva] abro igual: ' + fallan.length + ' de ' + losDeAdentro().length + ' no contestaron — ' + fallan.map((x) => x.puerto + ': ' + x.motivo).join(', '));
+      console.log('[xencrm] abro igual: ' + fallan.length + ' de ' + losDeAdentro().length + ' no contestaron — ' + fallan.map((x) => x.puerto + ': ' + x.motivo).join(', '));
       return;
     }
     await new Promise((r) => setTimeout(r, 500));
@@ -706,7 +706,7 @@ async function esperarALosDeAdentro(maxMs = 30000) {
 }
 
 /**
- * El token de /_salud. pnpm paquete lo genera en la máquina que arma el ZIP (~/aiva-credenciales/salud-token.txt)
+ * El token de /_salud. pnpm paquete lo genera en la máquina que arma el ZIP (~/xencrm-credenciales/salud-token.txt)
  * y aquí solo viaja su huella, en salud.json: el ZIP no lleva ningún secreto y no hay que tocar el panel para leer
  * la bitácora de accesos. Si se pone SALUD_TOKEN en el panel, también vale; y la llave maestra, como siempre.
  */
@@ -787,13 +787,13 @@ const servidor = http.createServer(async (pide, responde) => {
         // tiene el mando o es un espejo, y a quién sigue.
         papel: soyElDueno ? 'con el mando' : 'espejo del ' + (mandoDe || 'otro lanzador'),
         // 🪤 Cómo le llegó ESTA petición: la cadena entera de x-forwarded-for y la dirección que se eligió de
-        // ella. Es lo que hace falta para fijar AIVA_IP (ver borde.cjs): mandando una dirección inventada en esa
+        // ella. Es lo que hace falta para fijar XENCRM_IP (ver borde.cjs): mandando una dirección inventada en esa
         // cabecera, se ve en qué posición queda la de verdad.
         tuPeticion: {
           xForwardedFor: String(pide.headers['x-forwarded-for'] || ''),
           otras: ['x-real-ip', 'forwarded', 'via', 'cf-connecting-ip', 'true-client-ip'].filter((k) => pide.headers[k]).map((k) => k + ': ' + pide.headers[k]),
-          elegida: borde.direccionDeQuienLlama(pide.headers, process.env.AIVA_IP),
-          regla: process.env.AIVA_IP === undefined ? 'la última (lo medido; AIVA_IP sin definir)' : 'AIVA_IP=' + process.env.AIVA_IP,
+          elegida: borde.direccionDeQuienLlama(pide.headers, process.env.XENCRM_IP),
+          regla: process.env.XENCRM_IP === undefined ? 'la última (lo medido; XENCRM_IP sin definir)' : 'XENCRM_IP=' + process.env.XENCRM_IP,
         },
         enrutador: { puerto: PUERTO, memoriaMB: Math.round(mem.rss / 1048576) },
         // 🪤 Sin sondeo hecho NO se dice «todos contestan». El espejo nunca sondeaba y contestaba eso mismo
@@ -945,7 +945,7 @@ const servidor = http.createServer(async (pide, responde) => {
  * unos segundos. Eso es mucho mejor que no contestar.
  */
 servidor.listen(PUERTO, () => {
-  console.log('[aiva] escuchando en ' + PUERTO);
+  console.log('[xencrm] escuchando en ' + PUERTO);
 });
 
 async function levantarALosMios() {
@@ -954,7 +954,7 @@ async function levantarALosMios() {
   // después de eso siguen ahí: un tramo distinto significa dos copias vivas, y eso es lo que hay que evitar.
   matarLosDeAntes();
   if (!(await esperarElTramo(puertoBase, paraLevantar.length, 12000))) {
-    console.error('[aiva] los puertos de siempre siguen ocupados y algo quedó vivo ahí. Busco otro tramo, pero revisa /_salud.');
+    console.error('[xencrm] los puertos de siempre siguen ocupados y algo quedó vivo ahí. Busco otro tramo, pero revisa /_salud.');
     puertoInterno = await tramoLibre(puertoBase, paraLevantar.length);
   } else {
     puertoInterno = puertoBase;
@@ -972,9 +972,9 @@ async function levantarALosMios() {
   // que decir cómo están las cosas ahora, no cómo estaban al arrancar.
   setInterval(() => void sondearATodos(), 15000).unref();
   (() => {
-    console.log('[aiva]   https://' + dominio + '/            → qué es XENCRM');
-    console.log('[aiva]   https://' + dominio + '/consola     → la consola (tu pantalla)');
-    for (const c of clientes) console.log('[aiva]   https://' + dominio + '/' + c.slug + '/  → ' + c.nombre);
+    console.log('[xencrm]   https://' + dominio + '/            → qué es XENCRM');
+    console.log('[xencrm]   https://' + dominio + '/consola     → la consola (tu pantalla)');
+    for (const c of clientes) console.log('[xencrm]   https://' + dominio + '/' + c.slug + '/  → ' + c.nombre);
   })();
 }
 
@@ -1007,7 +1007,7 @@ function seguirAlQueManda() {
  * a los clientes. Así dos lanzadores no se estorban, pero tampoco se quedan los dos de brazos cruzados.
  */
 async function deEspejo() {
-  console.log('[aiva] otro lanzador tiene el mando; este solo reparte (no levanta a nadie).');
+  console.log('[xencrm] otro lanzador tiene el mando; este solo reparte (no levanta a nadie).');
   for (;;) {
     // Sondear no es cosa del dueño: es de quien reparte. Y reparten los dos.
     if (seguirAlQueManda()) await sondearATodos();
@@ -1015,7 +1015,7 @@ async function deEspejo() {
     if (cerrando) return;
     const cerrojo = await tomarElMando(PUERTO_MANDO);
     if (cerrojo) {
-      console.log('[aiva] el lanzador que mandaba ya no está: tomo el mando y levanto a los clientes.');
+      console.log('[xencrm] el lanzador que mandaba ya no está: tomo el mando y levanto a los clientes.');
       rutas.clear();
       await levantarALosMios();
       return;
@@ -1042,7 +1042,7 @@ if (!clientes.length) {
 // 🪤 Se borra SOLO lo que este guion crea. Antes barría `paquetes/` entera y se llevó por delante archivos que
 // alguien había dejado ahí (unas credenciales, en su momento): una carpeta de salida no es una carpeta propia.
 mkdirSync(SALIDA, { recursive: true });
-const dir = join(SALIDA, 'aiva');
+const dir = join(SALIDA, 'xencrm');
 rmSync(dir, { recursive: true, force: true });
 rmSync(`${dir}.zip`, { force: true });
 mkdirSync(join(dir, 'config'), { recursive: true });
@@ -1052,7 +1052,7 @@ execFileSync('node_modules/.bin/tsc', ['--noEmit', 'false', '--outDir', join(dir
 cpSync(resolve('public'), join(dir, 'public'), { recursive: true });
 // El borde (cabeceras, lo que no pasa hacia adentro) lo cargan el lanzador y lo compilado: va junto a lo compilado.
 cpSync(resolve('src', 'borde.cjs'), join(dir, 'dist', 'borde.cjs'));
-if (process.env.AIVA_SIN_AFINAR !== '1') afinarLoServido(join(dir, 'public'));
+if (process.env.XENCRM_SIN_AFINAR !== '1') afinarLoServido(join(dir, 'public'));
 for (const c of clientes) {
   cpSync(rutas(c.slug).config, join(dir, 'config', `${c.slug}.json`));
   // Su marca (logos, favicon) viaja con él: sin esto, en el servidor apunta a archivos que no existen.
@@ -1071,7 +1071,7 @@ writeFileSync(
 writeFileSync(join(dir, 'app.js'), ARRANQUE);
 // El token de /_salud se queda en esta máquina; al paquete va solo su huella (ver abreLaSalud en el arranque).
 // 🪤 Si el archivo existe, se usa tal cual y nunca se pisa: cambiarlo dejaría sin lectura al que ya está subido.
-const ARCHIVO_TOKEN_SALUD = process.env.AIVA_SALUD_TOKEN_ARCHIVO || join(homedir(), 'aiva-credenciales', 'salud-token.txt');
+const ARCHIVO_TOKEN_SALUD = process.env.XENCRM_SALUD_TOKEN_ARCHIVO || join(homedir(), 'xencrm-credenciales', 'salud-token.txt');
 const tokenDeSalud = (() => {
   if (existsSync(ARCHIVO_TOKEN_SALUD)) {
     const t = readFileSync(ARCHIVO_TOKEN_SALUD, 'utf8').trim();
@@ -1101,7 +1101,7 @@ writeFileSync(join(dir, 'salud.json'), `${JSON.stringify({ huella: createHash('s
 const base = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { dependencies: Record<string, string> };
 writeFileSync(
   join(dir, 'package.json'),
-  `${JSON.stringify({ name: 'aiva', private: true, main: 'app.js', engines: { node: '>=22.13' }, scripts: { start: 'node app.js' }, dependencies: base.dependencies }, null, 2)}\n`,
+  `${JSON.stringify({ name: 'xencrm', private: true, main: 'app.js', engines: { node: '>=22.13' }, scripts: { start: 'node app.js' }, dependencies: base.dependencies }, null, 2)}\n`,
 );
 // La raíz NO declara "type": "module": el arranque tiene que ser CommonJS porque el servidor de la plataforma
 // hace require() del archivo de inicio, y un require() de ESM con await arriba revienta. Lo compilado sí es ESM,
@@ -1160,7 +1160,7 @@ writeFileSync(
     ...variables,
     '',
     'Opcionales del blindaje (ver docs/seguridad.md):',
-    '  AIVA_IP=0                 cuántos saltos desde la derecha del x-forwarded-for está la dirección de verdad.',
+    '  XENCRM_IP=0                 cuántos saltos desde la derecha del x-forwarded-for está la dirección de verdad.',
     '                            0 (el último) es lo medido en Hostinger y lo de por defecto; primera = lo de antes.',
     '  TABLERO_DIRECTO=si        vuelve a abrir el tablero de cada cliente por /<cliente>/admin con su token.',
     '                            Sin esto, el tablero solo se abre desde la consola.',
@@ -1169,8 +1169,8 @@ writeFileSync(
     '(PORT lo pone la plataforma: no lo definas. WhatsApp arranca apagado en cada cliente; se enciende',
     ' desde su tablero, en Canales, cuando vayan a escanear el código.)',
     '',
-    'Los datos —base, WhatsApp, perfil, diccionario— NO viven en esta carpeta: van a ~/aiva-datos, fuera del',
-    'despliegue. Por eso una actualización no borra nada. Si el panel no deja escribir ahí, define AIVA_DATOS.',
+    'Los datos —base, WhatsApp, perfil, diccionario— NO viven en esta carpeta: van a ~/xencrm-datos, fuera del',
+    'despliegue. Por eso una actualización no borra nada. Si el panel no deja escribir ahí, define XENCRM_DATOS.',
     '',
     'Adentro corre un proceso por cliente, cada uno con su base: lo que no se mezcla no se puede filtrar.',
     '',
@@ -1194,6 +1194,6 @@ ${clientes.map((c) => `     https://${DOMINIO}/${c.slug}/${' '.repeat(Math.max(1
   En el panel:  Node 24 · compilar "npm install --omit=dev" · iniciar "npm start"
   Las variables de entorno están en el LEEME.txt de adentro; sin ellas no arranca.
 
-  Quién ha entrado a la consola, ya subido:  pnpm salud ${DOMINIO === 'aiva.hrctechnologies.com' ? '' : DOMINIO}
+  Quién ha entrado a la consola, ya subido:  pnpm salud ${DOMINIO === 'xencrm.hrctechnologies.com' ? '' : DOMINIO}
   (lee el token de ${ARCHIVO_TOKEN_SALUD.replace(homedir(), '~')})
 `);

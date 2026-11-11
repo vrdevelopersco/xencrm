@@ -5,8 +5,8 @@ import { existsSync, mkdtempSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const base = mkdtempSync(join(tmpdir(), 'aiva-usuarios-'));
-process.env.AIVA_CLIENTES_DIR = base;
+const base = mkdtempSync(join(tmpdir(), 'xencrm-usuarios-'));
+process.env.XENCRM_CLIENTES_DIR = base;
 process.env.CONSOLA_TOKEN = 'llave-maestra';
 const { crearUsuario, actualizarUsuario, borrarUsuario, verificar, abrirSesion, sesionDe, cerrarSesion, leerUsuarios, alcanza, cambiarLoMio, colorDe, COLORES, ACENTOS } = await import('../consola-usuarios.js');
 const { crearCliente } = await import('../clientes.js');
@@ -57,7 +57,7 @@ const app = new Hono();
 mountConsola(app);
 const comoAna = async (ruta: string, init: RequestInit = {}) => {
   const entrar = await app.request('http://local/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ usuario: 'ana', clave: 'clave-larga-1' }) });
-  const sesion = /aiva_consola=([^;]*)/.exec(entrar.headers.get('set-cookie') ?? '')?.[1] ?? '';
+  const sesion = /xencrm_consola=([^;]*)/.exec(entrar.headers.get('set-cookie') ?? '')?.[1] ?? '';
   return app.request(`http://local${ruta}`, { ...init, headers: { 'x-consola-sesion': sesion, 'content-type': 'application/json', ...(init.headers ?? {}) } });
 };
 const maestra = (ruta: string, init: RequestInit = {}) =>
@@ -169,7 +169,7 @@ check('y vaciarlo devuelve al automático', (() => { cambiarLoMio('pablo', { col
 // El color de la consola es de cada quien, y el de siempre es el verde agua de XENCRM («xen»).
 const pablo = () => leerUsuarios().find((u) => u.usuario === 'pablo')!;
 check('sin elegir, la consola no guarda color: es el verde agua', pablo().acento === undefined);
-check('el verde agua de XENCRM va primero en la lista, y el azul de aiva sigue como opción', ACENTOS[0] === 'xen' && ACENTOS.includes('azul') && ACENTOS.includes('dorado'));
+check('el verde agua de XENCRM va primero en la lista, y el azul de XENCRM sigue como opción', ACENTOS[0] === 'xen' && ACENTOS.includes('azul') && ACENTOS.includes('dorado'));
 cambiarLoMio('pablo', { acento: 'dorado' });
 check('cada quien elige el color de su consola', pablo().acento === 'dorado');
 check('cambiar el color no toca su nombre ni su clave', pablo().nombre === 'Pablo Ruiz' && Boolean(verificar('pablo', 'otra-clave-larga')));
@@ -185,14 +185,14 @@ check('🪤 volver al verde agua no lo guarda: «el de siempre» queda siguiendo
 
 // --- 🪤 el admin de un cliente maneja a su gente, y a nadie más ---
 // Lo pidió el usuario el 2026-10-16: que el dueño de DUNOR cree y maneje a sus empleados sin pedírselo a quien
-// administra aiva. Se prueba por HTTP, que es por donde llegaría alguien queriendo pasarse.
+// administra XENCRM. Se prueba por HTTP, que es por donde llegaría alguien queriendo pasarse.
 crear2({ nombre: 'DUNOR', slug: 'dunor', puerto: 39104, plantilla: 'soporte' });
 crearUsuario({ usuario: 'dueno', nombre: 'Dueño de DUNOR', clave: 'clave-dueno-1', rol: 'admin', clientes: ['dunor'] });
 crearUsuario({ usuario: 'luis', nombre: 'Luis HRC', correo: 'luis@hrc.co', clave: 'clave-luis-1', rol: 'super' });
 crearUsuario({ usuario: 'mixto', nombre: 'Atiende dos', correo: 'mixto@hrc.co', clave: 'clave-mixto-1', rol: 'asesor', clientes: ['dunor', 'confia'] });
 const como = async (usuario: string, clave: string) => {
   const r = await app.request('http://local/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ usuario, clave }) });
-  const sesion = /aiva_consola=([^;]*)/.exec(r.headers.get('set-cookie') ?? '')?.[1] ?? '';
+  const sesion = /xencrm_consola=([^;]*)/.exec(r.headers.get('set-cookie') ?? '')?.[1] ?? '';
   return (ruta: string, init: RequestInit = {}) =>
     app.request(`http://local${ruta}`, { ...init, headers: { 'x-consola-sesion': sesion, 'content-type': 'application/json', ...(init.headers ?? {}) } });
 };
@@ -208,7 +208,7 @@ check('🪤 y no a la de otros clientes', !visto.some((u) => u.usuario === 'ana'
 check('al super-admin lo ve, pero solo de nombre', visto.find((u) => u.usuario === 'luis')?.soloVer === true && !visto.find((u) => u.usuario === 'luis')?.correo);
 const elMixto = visto.find((u) => u.usuario === 'mixto');
 check('a quien atiende además otro negocio, solo de nombre', elMixto?.soloVer === true && !elMixto?.correo);
-check('🪤 sin enterarse de qué otros clientes tiene aiva', !JSON.stringify(visto).includes('confia'), JSON.stringify(elMixto));
+check('🪤 sin enterarse de qué otros clientes tiene XENCRM', !JSON.stringify(visto).includes('confia'), JSON.stringify(elMixto));
 check('ni de quiénes quedaron sin clientes', ((await json(dueno('/api/usuarios'))).sinClientes as string[]).length === 0);
 
 const nueva = await json(dueno('/api/usuarios', { method: 'POST', body: JSON.stringify({ usuario: 'camila', nombre: 'Camila', clave: 'clave-camila-1' }) }));

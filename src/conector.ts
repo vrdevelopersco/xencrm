@@ -1,6 +1,6 @@
 // El conector de WhatsApp: la única pieza que corre fuera del servidor.
 //
-//   pnpm conector            (con AIVA_URL y AIVA_TOKEN en el entorno o en conector.env)
+//   pnpm conector            (con XENCRM_URL y XENCRM_TOKEN en el entorno o en conector.env)
 //
 // Qué es: un proceso pequeño que mantiene la sesión de WhatsApp de un cliente y se la presta al CRM, que sigue
 // donde estaba. Existe porque WhatsApp rechaza las conexiones que salen de un alojamiento compartido —cierra al
@@ -34,14 +34,14 @@ for (const linea of existsSync('conector.env') ? readFileSync('conector.env', 'u
   const m = /^\s*([A-Z_]+)\s*=\s*(.*)$/.exec(linea);
   if (m && process.env[m[1]!] === undefined) process.env[m[1]!] = m[2]!.trim().replace(/^["']|["']$/g, '');
 }
-const URL_CRM = (process.env.AIVA_URL ?? '').replace(/\/$/, '');
-const TOKEN = process.env.AIVA_TOKEN ?? '';
+const URL_CRM = (process.env.XENCRM_URL ?? '').replace(/\/$/, '');
+const TOKEN = process.env.XENCRM_TOKEN ?? '';
 const CARPETA = process.env.WHATSAPP_AUTH_DIR ?? 'auth-conector';
 if (!URL_CRM || !TOKEN) {
   console.error(
     'Faltan datos. Crea un archivo `conector.env` junto a esto con:\n\n' +
-      '  AIVA_URL=https://aiva.tu-dominio.com/<cliente>\n' +
-      '  AIVA_TOKEN=<el token del tablero de ese cliente>\n' +
+      '  XENCRM_URL=https://xencrm.tu-dominio.com/<cliente>\n' +
+      '  XENCRM_TOKEN=<el token del tablero de ese cliente>\n' +
       '  WHATSAPP_AUTH_DIR=auth-conector\n',
   );
   process.exit(1);

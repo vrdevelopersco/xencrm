@@ -1,6 +1,6 @@
-// Aiva acompaña cuando la lleva una persona (sin modelo y sin red): pnpm test:sugiere
+// Xen acompaña cuando la lleva una persona (sin modelo y sin red): pnpm test:sugiere
 //
-// Lo que se prueba: que mientras una persona lleva la conversación, aiva deje lista la respuesta a lo que SABE y
+// Lo que se prueba: que mientras una persona lleva la conversación, XENCRM deje lista la respuesta a lo que SABE y
 // nada más. Que no le escriba al cliente ni una palabra —tampoco el «dame un segundito»—, que no le quite la
 // conversación a quien la tiene, que no toque una cita a medias, que lo que no sabe no se convierta en un «Por
 // verificar» ni en una campana, y que con el ajuste apagado todo siga como antes: callada del todo.
@@ -11,16 +11,16 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-sugiere-'));
-const base = JSON.parse(readFileSync(new URL('../../aiva.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-sugiere-'));
+const base = JSON.parse(readFileSync(new URL('../../xencrm.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
 writeFileSync(
-  join(dir, 'aiva.config.json'),
+  join(dir, 'xencrm.config.json'),
   JSON.stringify({ ...base, timezone: 'America/Bogota', appointments: { enabled: true, service: 'visita', location: 'la tienda', days: [0, 1, 2, 3, 4, 5, 6], hours: [['08:00', '20:00']], minLeadHours: 0 } }),
 );
 writeFileSync(join(dir, '.env'), '');
 Object.assign(process.env, {
-  AIVA_CONFIG: join(dir, 'aiva.config.json'),
-  AIVA_ENV_FILE: join(dir, '.env'),
+  XENCRM_CONFIG: join(dir, 'xencrm.config.json'),
+  XENCRM_ENV_FILE: join(dir, '.env'),
   DB_PATH: join(dir, 'data', 'prueba.db'),
   ADMIN_TOKEN: 'token-del-tablero-de-prueba-0123456789',
   WHATSAPP_ENABLED: 'false',
@@ -157,7 +157,7 @@ console.log('— Pregunta algo que sabe');
   const r2 = await app.request(`/admin/api/propuestas/${p!.id}/enviar`, { method: 'POST', headers: T, body: JSON.stringify({ by: 'Laura' }) });
   check('sale', r2.status === 200, String(r2.status));
   const dicho = getDb().prepare("SELECT content, author FROM messages WHERE user_id = ? AND role = 'assistant' ORDER BY id DESC LIMIT 1").get(id) as { content: string; author: string } | undefined;
-  check('queda escrita como de aiva (la redactó ella; de ella no se aprende)', dicho?.author === 'bot' && /envíos/.test(dicho.content), JSON.stringify(dicho));
+  check('queda escrita como de XENCRM (la redactó ella; de ella no se aprende)', dicho?.author === 'bot' && /envíos/.test(dicho.content), JSON.stringify(dicho));
   check('🪤 y la conversación la sigue llevando Laura', getContact(id)?.humanMode === true && getContact(id)?.humanBy === 'Laura', JSON.stringify({ h: getContact(id)?.humanMode, by: getContact(id)?.humanBy }));
   check('ya no queda pendiente', propuestaDe(id) === null);
 }
@@ -234,7 +234,7 @@ console.log('— Las propuestas se quedan atrás');
   await handleMessage({ userId: id, channel: 'web', text: 'hola' });
   check('el cliente escribió otra vez: se marca como vieja', propuestaDe(id)?.vieja === true, JSON.stringify(propuestaDe(id)));
   await sendToContact(id, 'Hola, sí te llega en dos días.', 'human', { by: 'Laura' });
-  check('🪤 Laura contestó con sus palabras: la de aiva se aparta', propuestaDe(id) === null, JSON.stringify(propuestaDe(id)));
+  check('🪤 Laura contestó con sus palabras: la de XENCRM se aparta', propuestaDe(id) === null, JSON.stringify(propuestaDe(id)));
 }
 
 // =====================================================================================================
@@ -262,7 +262,7 @@ console.log('— Sin una persona, nada cambia');
   const id = 'web:sola-1';
   touchUser(id, 'web', null);
   const r = await handleMessage({ userId: id, channel: 'web', text: '¿envían a Medellín?' });
-  check('aiva contesta sola, como siempre', !r.silent && /envíos/.test(r.text) && cuantas(id) === 0, JSON.stringify(r));
+  check('XENCRM contesta sola, como siempre', !r.silent && /envíos/.test(r.text) && cuantas(id) === 0, JSON.stringify(r));
   const t = 'web:sola-2';
   touchUser(t, 'web', null);
   await handleMessage({ userId: t, channel: 'web', text: '¿qué planta me recomiendas para una oficina con poca luz?' });

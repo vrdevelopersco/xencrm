@@ -53,9 +53,9 @@ const pending = new Map<string, Pending>();
 // el estado que mira el tablero está en whatsapp-estado.ts, que no carga nada pesado.
 let current: WASocket | null = null;
 let wanted = false;
-// Los mensajes que salieron de aiva por este socket: WhatsApp los devuelve marcados como propios y, sin esta
+// Los mensajes que salieron de XENCRM por este socket: WhatsApp los devuelve marcados como propios y, sin esta
 // lista, se guardarían otra vez como si los hubiera escrito una persona.
-const enviadosPorAiva = new Set<string>();
+const enviadosPorXen = new Set<string>();
 
 /**
  * Lo que se contesta cuando llega un archivo solo, sin texto.
@@ -112,8 +112,8 @@ async function mandar(sock: WASocket, jid: string, texto: string, medio?: Medio 
   const enviado = await sock.sendMessage(jid, contenido);
   const id = enviado?.key?.id;
   if (id) {
-    enviadosPorAiva.add(id);
-    if (enviadosPorAiva.size > 300) enviadosPorAiva.delete(enviadosPorAiva.values().next().value as string);
+    enviadosPorXen.add(id);
+    if (enviadosPorXen.size > 300) enviadosPorXen.delete(enviadosPorXen.values().next().value as string);
   }
 }
 // Cortes seguidos sin haber llegado a aguantar abierta. Sirve para dos cosas: esperar cada vez un poco más en
@@ -320,7 +320,7 @@ export async function startWhatsApp(): Promise<WASocket> {
 /**
  * Lo que el negocio contesta desde SU PROPIO teléfono.
  *
- * 🪤 Esto se descartaba en la primera línea (`if (m.key.fromMe) return`), y era razonable mientras aiva fuera
+ * 🪤 Esto se descartaba en la primera línea (`if (m.key.fromMe) return`), y era razonable mientras XENCRM fuera
  * la única que contestaba. Con el canal en «solo escuchar» deja de serlo: el negocio sigue atendiendo desde su
  * teléfono y el tablero enseñaba **media conversación** —lo que escribía el cliente y ninguna respuesta—.
  * Quien miraba creía que se había perdido lo que ya había escrito.
@@ -329,8 +329,8 @@ export async function startWhatsApp(): Promise<WASocket> {
  * que se contesta desde el tablero, porque es exactamente lo mismo: su forma de atender.
  */
 function anotarLoDelNegocio(m: WAMessage, jid: string, texto: string): void {
-  // Lo que mandó aiva por este mismo socket también vuelve marcado como propio: ya está guardado, no se duplica.
-  if (m.key.id && enviadosPorAiva.has(m.key.id)) return;
+  // Lo que mandó XENCRM por este mismo socket también vuelve marcado como propio: ya está guardado, no se duplica.
+  if (m.key.id && enviadosPorXen.has(m.key.id)) return;
   const userId = `wa:${jid}`;
   try {
     touchUser(userId, 'whatsapp', null);
@@ -339,10 +339,10 @@ function anotarLoDelNegocio(m: WAMessage, jid: string, texto: string): void {
     emitEvent('message', userId, { id, role: 'assistant', author: 'human', by: quien, content: texto, ts: Date.now() });
     // Contestaron: ya no está esperando a nadie.
     updateContact(userId, { unread: 0 }, { silent: true });
-    // 🪤 Y aiva se calla en esta conversación, igual que cuando se contesta desde el tablero: contestar A MANO
+    // 🪤 Y XENCRM se calla en esta conversación, igual que cuando se contesta desde el tablero: contestar A MANO
     // toma el control, venga del tablero o del teléfono. Si no, los dos responden a la vez al mismo cliente —y
     // el cliente recibe dos versiones de lo mismo, que es peor que no recibir ninguna.
-    // Se devuelve cuando alguien mueva el interruptor a «Aiva» en el tablero: esa decisión es de una persona.
+    // Se devuelve cuando alguien mueva el interruptor a «Xen» en el tablero: esa decisión es de una persona.
     const c = getContact(userId);
     if (c && !c.humanMode) setHumanMode(userId, true, quien);
     aprenderDeLaRespuesta(userId, texto, quien);
@@ -416,9 +416,9 @@ async function nombreDelGrupo(sock: WASocket, jid: string): Promise<string> {
 }
 
 /**
- * Le hablaron al negocio en un grupo y el canal está en «Propone»: aiva redacta y espera a una persona.
+ * Le hablaron al negocio en un grupo y el canal está en «Propone»: XENCRM redacta y espera a una persona.
  *
- * 🪤 Redacta y NADA MÁS. En un grupo, aiva no manda ni aunque el canal estuviera en «Contesta»: equivocarse
+ * 🪤 Redacta y NADA MÁS. En un grupo, XENCRM no manda ni aunque el canal estuviera en «Contesta»: equivocarse
  * ahí es equivocarse delante de todos a la vez y no hay forma de recogerlo. Lo que sale de un grupo siempre lo
  * manda una persona, mensaje por mensaje.
  */
@@ -427,7 +427,7 @@ async function proponerEnGrupo(sock: WASocket, m: WAMessage, jid: string, texto:
     const quien = m.pushName ?? 'alguien del grupo';
     const nombre = await nombreDelGrupo(sock, jid);
     // 🪤 El hilo, con nombres. En un grupo la pregunta casi nunca se entiende sola: «¿y eso cuánto vale?»
-    // depende de lo que otro preguntó tres mensajes antes. Y sin saber quién es quién, aiva le contesta a
+    // depende de lo que otro preguntó tres mensajes antes. Y sin saber quién es quién, XENCRM le contesta a
     // Marcela lo que preguntó Jorge. Sale de lo que ya se guarda del grupo, así que no cuesta nada más.
     const antes = ultimosDeChat(`wa:${jid}`, 12)
       .filter((x) => x.content !== texto)
@@ -439,7 +439,7 @@ async function proponerEnGrupo(sock: WASocket, m: WAMessage, jid: string, texto:
       channel: 'whatsapp',
       text: texto,
       userName: quien,
-      grupo: nombre, // sin esto, aiva contestaría como si hablara a solas con quien escribió
+      grupo: nombre, // sin esto, XENCRM contestaría como si hablara a solas con quien escribió
       hilo: antes,
       gente: quienes,
     });
@@ -466,7 +466,7 @@ async function onMessage(sock: WASocket, m: WAMessage) {
   }
   const jid = m.key.remoteJid;
   if (!jid || isJidStatusBroadcast(jid) || isJidNewsletter(jid)) return;
-  // 🪤 Aiva NUNCA escribe en un grupo, esté como esté el interruptor de «Contesta Aiva». Equivocarse en un
+  // 🪤 Xen NUNCA escribe en un grupo, esté como esté el interruptor de «Contesta Xen». Equivocarse en un
   // grupo es equivocarse delante de todos a la vez, y no hay forma de recogerlo. Se mira y se aprende.
   if (isJidGroup(jid)) {
     const texto = extractText(m.message);
@@ -528,7 +528,7 @@ async function flush(sock: WASocket, jid: string) {
   if (!p) return;
   pending.delete(jid);
   try {
-    // 🪤 En «solo escuchar» aiva no marca como leído ni pone «escribiendo…». Parecen inofensivos y son lo
+    // 🪤 En «solo escuchar» XENCRM no marca como leído ni pone «escribiendo…». Parecen inofensivos y son lo
     // contrario: el cliente ve el doble check azul y que alguien teclea, y luego no le contesta nadie. Es peor
     // que no hacer nada. Quien lee de verdad es el negocio, desde su teléfono, y su teléfono ya lo marcará.
     const callado = soloEscucha('whatsapp');

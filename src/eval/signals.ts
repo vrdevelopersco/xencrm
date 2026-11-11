@@ -19,7 +19,7 @@ check('con 57 sin +', parsePhone('573001234567'), '+573001234567');
 check('número incompleto no es teléfono', parsePhone('mi número es 300 123'), null);
 check('una fecha no es teléfono', parsePhone('el 12/10/2026'), null);
 check('formato para mostrar', formatPhone('+573001234567'), '300 123 4567');
-// Otro país (México): el indicativo y los dígitos salen de aiva.config.json, no del código.
+// Otro país (México): el indicativo y los dígitos salen de xencrm.config.json, no del código.
 {
   const { business } = await import('../config.js');
   const before = { ...business.business };
@@ -57,12 +57,12 @@ check('presupuesto corto con tope', shortBudget('no quiero gastar más de 2 mill
 check('presupuesto corto sin tope', shortBudget('tengo como 800 mil para el traje'), '800 mil');
 check('presupuesto sin monto se recorta', shortBudget('lo que sea razonable, no tengo un número definido todavía'), 'lo que sea razonable, no tengo un…');
 
-// Recap: los campos de DUNOR en el orden de aiva.config.json, sin repetir, con la cita y lo que lo frena.
+// Recap: los campos de DUNOR en el orden de xencrm.config.json, sin repetir, con la cita y lo que lo frena.
 const contact = (data: Record<string, unknown>) => ({ id: 'x', data } as unknown as Contact);
 const appt = { startsAt: Date.UTC(2026, 8, 24, 15), status: 'confirmada' } as Appointment;
 check(
   'recap completo',
-  // 🪤 El mes abreviado lo pone el ICU de Node, no aiva: hasta Node 24 era «sept» y en Node 26 (ICU 79) es «sep».
+  // 🪤 El mes abreviado lo pone el ICU de Node, no xencrm: hasta Node 24 era «sept» y en Node 26 (ICU 79) es «sep».
   // Las dos se leen igual; la prueba es del orden y de los campos, no de la versión de Node.
   recap(contact({ servicio: 'diseño a la medida', prenda: 'traje', ocasion: 'boda (novio)', fecha_evento: '6 de diciembre', presupuesto: 'no quiero gastar más de 2 millones', ciudad: 'Barranquilla', objecion: 'le queda lejos' }), appt).replace(' de sep,', ' de sept,'),
   'diseño a la medida · traje · boda (novio) · 6 de diciembre · hasta 2 millones · Barranquilla · cita jue, 24 de sept, 10:00 a. m. · lo frena: le queda lejos',

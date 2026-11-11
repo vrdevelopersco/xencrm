@@ -35,7 +35,7 @@ const HUMAN_RE =
   /\b(hablar|comunicar(me)?|contactar|pasar(me)?|atender(me)?)\b.{0,25}\b(persona|humano|asesor|agente|alguien|encargado|ser humano)\b|\bno (quiero|deseo) (hablar con un |hablar con el )?(bot|robot|m[aá]quina)\b/i;
 
 // ---------- Preguntas típicas que no necesitan modelo ----------
-// Temas de la tienda (lo genérico del español); cada negocio suma los suyos en aiva.config.json > dictionary.topics.
+// Temas de la tienda (lo genérico del español); cada negocio suma los suyos en xencrm.config.json > dictionary.topics.
 const BUILTIN_TOPICS: { re: RegExp; query: string }[] = [
   {
     re: /\b(?:d[oó]nde|en qu[eé] parte)\b.{0,20}\b(?:quedan?|est[aá]n?|ubicad[oa]s?|encuentro|la tienda|la boutique|el local)\b|\b(?:direcci[oó]n|ubicaci[oó]n|c[oó]mo llego|local f[ií]sico|tienda f[ií]sica)\b/i,

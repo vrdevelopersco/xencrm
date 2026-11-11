@@ -397,7 +397,7 @@ export async function probarProveedor(id: ProveedorId, red: Red = redDeVerdad): 
   if (id === 'apple') {
     const a = await red.apple();
     if (a.ok) return { ok: true, contesta: true, modelos: [] };
-    // 🪤 El motivo de abajo habla de archivos («falta ./sidecar/bin/aiva-afm»): se dice qué significa para quien
+    // 🪤 El motivo de abajo habla de archivos («falta ./sidecar/bin/xencrm-afm»): se dice qué significa para quien
     // configura, y el detalle va al final para quien lo vaya a instalar.
     const porque = /^falta /.test(a.reason ?? '')
       ? 'Esta máquina no tiene el puente con Apple: solo corre en un Mac con Apple Intelligence (se instala con pnpm build:sidecar).'

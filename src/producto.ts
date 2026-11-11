@@ -23,7 +23,7 @@ if (!CHROME) {
   process.exit(1);
 }
 
-const perfil = mkdtempSync(join(tmpdir(), 'aiva-pdf-'));
+const perfil = mkdtempSync(join(tmpdir(), 'xencrm-pdf-'));
 const puerto = 9400 + Math.floor(Math.random() * 100);
 const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${puerto}`, `--user-data-dir=${perfil}`, 'about:blank'], { stdio: 'ignore' });
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));

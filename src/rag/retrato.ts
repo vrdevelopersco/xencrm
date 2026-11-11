@@ -1,12 +1,12 @@
-// El retrato del negocio: lo que aiva entendió, escrito por ella para que alguien lo corrija.
+// El retrato del negocio: lo que XENCRM entendió, escrito por ella para que alguien lo corrija.
 //
-// La idea es no pedirle a nadie que se siente a escribir en blanco lo que su negocio hace. aiva ya tiene el
+// La idea es no pedirle a nadie que se siente a escribir en blanco lo que su negocio hace. XENCRM ya tiene el
 // material: la configuración, las conversaciones que se trajeron al vincular, los temas que se repiten, cómo
 // contestan, cuánto tardan, qué se gana y qué se pierde. Con eso puede redactar un primer borrador y pedir que
 // lo enmienden, que es una tarea mucho más fácil —y mucho más honesta— que la de la hoja en blanco.
 //
 // 🪤 Lo que sale de aquí es un BORRADOR y se dice en voz alta. Un retrato equivocado es peor que no tener
-// ninguno: aiva aconsejaría con seguridad sobre premisas falsas, y nadie sabría de dónde salió la premisa. Por
+// ninguno: XENCRM aconsejaría con seguridad sobre premisas falsas, y nadie sabría de dónde salió la premisa. Por
 // eso cada nota lleva de cuántas conversaciones se dedujo, no se guarda sola, y al guardarla queda marcada como
 // «deducido y confirmado»: se sabe que la escribió ella y que alguien la miró.
 //

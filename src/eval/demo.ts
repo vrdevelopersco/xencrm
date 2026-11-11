@@ -5,8 +5,8 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-demo-'));
-process.env.DB_PATH = join(dir, 'aiva.db');
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-demo-'));
+process.env.DB_PATH = join(dir, 'xencrm.db');
 
 const { cargar, quitar, cuantas, PREFIJO } = await import('../crm/demo.js');
 const { getDb } = await import('../rag/store.js');

@@ -1,4 +1,4 @@
-// aiva-afm: sidecar de Apple Foundation Models para aiva.
+// xencrm-afm: sidecar de Apple Foundation Models para XENCRM.
 // Protocolo: una línea JSON por petición en stdin, una línea JSON por respuesta en stdout.
 //   {"id":1,"op":"health"}
 //   {"id":2,"op":"count","text":"..."}
@@ -199,7 +199,7 @@ struct Main {
         }
       }
     } catch {
-      log("[aiva-afm] stdin cerrado: \(error)")
+      log("[xencrm-afm] stdin cerrado: \(error)")
     }
   }
 }

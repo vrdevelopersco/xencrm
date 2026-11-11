@@ -3,5 +3,5 @@
 set -e
 cd "$(dirname "$0")"
 mkdir -p bin
-swiftc -O -parse-as-library main.swift -o bin/aiva-afm
-echo "ok -> sidecar/bin/aiva-afm"
+swiftc -O -parse-as-library main.swift -o bin/xencrm-afm
+echo "ok -> sidecar/bin/xencrm-afm"

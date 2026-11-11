@@ -9,7 +9,7 @@
 //
 //   80 %   aviso: la campana del tablero, la consola y, si hay a quién, un WhatsApp al equipo.
 //   90 %   ahorro: lo específico lo contesta el modelo de responder, que es el barato.
-//   100 %  se acabó: aiva deja de llamar a la IA de pago hasta el mes siguiente o hasta que se suba el tope. Lo que
+//   100 %  se acabó: XENCRM deja de llamar a la IA de pago hasta el mes siguiente o hasta que se suba el tope. Lo que
 //          se resuelve sin IA sigue —citas, pedir una persona, respuestas rápidas— y lo demás pasa al equipo, con
 //          aviso al cliente. Si hay un motor en la máquina (Ollama, Apple), sigue contestando ese, que no cuesta.
 //

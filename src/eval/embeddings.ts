@@ -5,7 +5,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-embed-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-embed-')), 'xencrm.db');
 process.env.EMBED_ENGINE = 'openai';
 process.env.OPENAI_API_KEY = 'sk-de-prueba';
 const { embed, embedModelo } = await import('../llm/embeddings.js');

@@ -1,4 +1,4 @@
-// Agenda de citas con disponibilidad configurable (aiva.config.json > appointments), sin dependencias externas.
+// Agenda de citas con disponibilidad configurable (xencrm.config.json > appointments), sin dependencias externas.
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { findDuplicates } from './merge.js';

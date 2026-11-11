@@ -18,7 +18,7 @@ import { transformSync } from 'esbuild';
  * escapa justo para esa comilla (crm/chat-config.ts). El minificador cambia las comillas a dobles —con eso, un
  * saludo con una comilla doble rompería la cadena— y además pliega `'__SALUDO__' || …` a la marca sola, porque
  * una cadena no vacía siempre es verdadera, y se pierde el saludo de respaldo. A ese solo se le quitan las líneas
- * que son comentario. `AIVA_SIN_AFINAR=1` arma el ZIP con todo legible, para mirar un fallo en el servidor.
+ * que son comentario. `XENCRM_SIN_AFINAR=1` arma el ZIP con todo legible, para mirar un fallo en el servidor.
  */
 export function afinarLoServido(carpeta: string): void {
   let antes = 0;

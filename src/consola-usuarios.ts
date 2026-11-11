@@ -1,6 +1,6 @@
 // Quién entra a la consola y qué ve. El super-admin ve y atiende todos los clientes; a quien atiende un cliente
 // solo le aparece —y le suena— lo de ese cliente. El admin de un cliente, además, maneja la gente de ese cliente:
-// así el dueño de un negocio da de alta a sus empleados sin pedírselo a quien administra aiva. Los usuarios viven
+// así el dueño de un negocio da de alta a sus empleados sin pedírselo a quien administra XENCRM. Los usuarios viven
 // en un archivo junto a los clientes, con la clave guardada como hash (scrypt), nunca en claro.
 //
 // El CONSOLA_TOKEN sigue sirviendo como llave maestra del super-admin: es con lo que se entra la primera vez, antes
@@ -11,7 +11,7 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypt
 import { CLIENTES_DIR, leerIndice } from './clientes.js';
 
 /**
- * - `super`: quien administra aiva. Ve todos los clientes, los da de alta y maneja a todo el equipo.
+ * - `super`: quien administra XENCRM. Ve todos los clientes, los da de alta y maneja a todo el equipo.
  * - `admin`: el admin de un cliente (el dueño, el gerente). Atiende sus clientes y maneja a la gente de ellos.
  * - `asesor`: atiende sus clientes y nada más; no ve el equipo.
  */
@@ -85,7 +85,7 @@ export function colorDe(usuario: { usuario: string; color?: string }): string {
 
 /**
  * Los colores que puede tener la consola de cada quien. Es preferencia de la persona, no del negocio: cambia lo que
- * ve ella y nada más. El verde agua de XENCRM («xen») es el de siempre y va primero; el azul, que lo fue en aiva,
+ * ve ella y nada más. El verde agua de XENCRM («xen») es el de siempre y va primero; el azul, que lo fue en XENCRM,
  * queda como una opción más. Cada uno tiene su pintura en public/consola.html, y test:tablero falla si aquí
  * aparece uno que allá no esté pintado.
  */
@@ -93,7 +93,7 @@ export const ACENTOS = ['xen', 'azul', 'dorado', 'grafito', 'morado'] as const;
 export type Acento = (typeof ACENTOS)[number];
 
 /** El de siempre no se guarda: «no eligió» y «eligió el de siempre» son lo mismo, y así un cambio del de siempre los
- * alcanza. 🪤 Por eso quien en aiva tenía el azul (que no se guardaba) entra a XENCRM con el verde agua. */
+ * alcanza. 🪤 Por eso quien en XENCRM tenía el azul (que no se guardaba) entra a XENCRM con el verde agua. */
 const acentoLimpio = (acento: string | undefined): Acento | undefined => {
   const a = String(acento ?? '').trim();
   if (!a || a === 'xen') return undefined;
@@ -244,7 +244,7 @@ export type EnElEquipo = UsuarioPublico & { soloVer?: boolean };
  * sepa quién más ve sus conversaciones.
  *
  * 🪤 De esos otros NO sale la lista entera de sus clientes: que DUNOR viera que alguien atiende también a CONFIA
- * le estaría contando quiénes más son clientes de aiva. Solo se le dice lo que tiene que ver con los suyos.
+ * le estaría contando quiénes más son clientes de XENCRM. Solo se le dice lo que tiene que ver con los suyos.
  */
 export function equipoPara(actor: UsuarioPublico | null): EnElEquipo[] {
   const usuarios = leerUsuarios();
@@ -287,7 +287,7 @@ const CAMPOS_DEL_ADMIN = ['nombre', 'correo', 'color', 'rol', 'clientes', 'activ
  * lo mismo que si no existiera: así no se entera de quién trabaja en otros negocios.
  *
  * 🪤 Su propio rol, sus clientes y si sigue activo no se los cambia él mismo: un admin que se baja a asesor o se
- * desactiva deja a su negocio sin nadie que maneje el equipo, y de ahí solo lo saca quien administra aiva.
+ * desactiva deja a su negocio sin nadie que maneje el equipo, y de ahí solo lo saca quien administra XENCRM.
  */
 export function actualizarComo(actor: UsuarioPublico | null, usuario: string, cambios: Record<string, unknown>): UsuarioPublico {
   if (!manejaEquipo(actor)) throw new Error('el equipo lo maneja el admin de tu cliente');

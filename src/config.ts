@@ -5,8 +5,8 @@ import { z } from 'zod';
 // ---------- Variables de entorno (.env) ----------
 // Node >= 20.6 puede cargar .env con --env-file; aquí lo hacemos manualmente para
 // que funcione igual con `tsx` y sin flags.
-/** El archivo de secretos de la máquina. AIVA_ENV_FILE elige otro (pruebas aisladas que no tocan el real). */
-export const ENV_FILE = process.env.AIVA_ENV_FILE || '.env';
+/** El archivo de secretos de la máquina. XENCRM_ENV_FILE elige otro (pruebas aisladas que no tocan el real). */
+export const ENV_FILE = process.env.XENCRM_ENV_FILE || '.env';
 function loadDotEnv(path = ENV_FILE) {
   if (!existsSync(path)) return;
   for (const raw of readFileSync(path, 'utf8').split('\n')) {
@@ -73,7 +73,7 @@ export const env = {
   whatsappModo: (process.env.WHATSAPP_MODO === 'puente' ? 'puente' : 'local') as 'local' | 'puente',
   debounceMs: num(process.env.DEBOUNCE_MS, 1500),
 
-  dbPath: process.env.DB_PATH || './data/aiva.db',
+  dbPath: process.env.DB_PATH || './data/xencrm.db',
   historyTurns: num(process.env.HISTORY_TURNS, 8),
 
   // Motores por rol. 'router' reparte por tipo de turno entre LIGHT_ENGINE y HEAVY_ENGINE;
@@ -86,7 +86,7 @@ export const env = {
   heavyEngine: engineName(process.env.HEAVY_ENGINE, 'ollama'),
   gateEngine: engineName(process.env.GATE_ENGINE, 'ollama'),
   analysisEngine: engineName(process.env.ANALYSIS_ENGINE, engineName(process.env.GATE_ENGINE, 'ollama')),
-  appleSidecarBin: process.env.APPLE_SIDECAR_BIN || './sidecar/bin/aiva-afm',
+  appleSidecarBin: process.env.APPLE_SIDECAR_BIN || './sidecar/bin/xencrm-afm',
   appleMaxPromptTokens: num(process.env.APPLE_MAX_PROMPT_TOKENS, 2800),
 
   // OpenAI (o cualquier API compatible): motor de nube opcional.
@@ -150,7 +150,7 @@ function engineName(v: string | undefined, def: MotorConf): MotorConf {
   return MOTORES_CONF.includes(v as MotorConf) ? (v as MotorConf) : def;
 }
 
-// ---------- Configuración del negocio (aiva.config.json) ----------
+// ---------- Configuración del negocio (xencrm.config.json) ----------
 export const BusinessConfigSchema = z.object({
   business: z.object({
     name: z.string(),
@@ -313,7 +313,7 @@ export const BusinessConfigSchema = z.object({
     })
     .prefault({}),
   /**
-   * Archivo del diccionario del negocio (lo que cada cliente le enseña a aiva sin tocar código: temas que se
+   * Archivo del diccionario del negocio (lo que cada cliente le enseña a XENCRM sin tocar código: temas que se
    * responden con su información y verbos con que su gente pregunta). Se importa y exporta desde el tablero.
    * Ver src/agent/dictionary.ts.
    */
@@ -325,7 +325,7 @@ export const BusinessConfigSchema = z.object({
     .object({
       /** Color principal, hex (#C5A47E). */
       color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#2f7d4f'),
-      /** Logo: URL https o archivo local (png, jpg, svg, webp) que aiva sirve en /brand/logo. */
+      /** Logo: URL https o archivo local (png, jpg, svg, webp) que XENCRM sirve en /brand/logo. */
       logo: z.string().optional(),
       /**
        * El logo para fondo oscuro. Muchas marcas tienen dos versiones —DUNOR es negro sobre claro y dorado
@@ -350,13 +350,13 @@ export const BusinessConfigSchema = z.object({
 });
 export type BusinessConfig = z.infer<typeof BusinessConfigSchema>;
 
-export function loadBusinessConfig(path = 'aiva.config.json'): BusinessConfig {
+export function loadBusinessConfig(path = 'xencrm.config.json'): BusinessConfig {
   const abs = resolve(path);
   if (!existsSync(abs)) {
-    throw new Error(`No existe ${path}. Copia aiva.config.example.json a aiva.config.json y ajústalo.`);
+    throw new Error(`No existe ${path}. Copia xencrm.config.example.json a xencrm.config.json y ajústalo.`);
   }
   return BusinessConfigSchema.parse(JSON.parse(readFileSync(abs, 'utf8')));
 }
 
-// AIVA_CONFIG elige otro archivo: un proceso por cliente, o una copia para pruebas que no toquen el diccionario real.
-export const business = loadBusinessConfig(process.env.AIVA_CONFIG || 'aiva.config.json');
+// XENCRM_CONFIG elige otro archivo: un proceso por cliente, o una copia para pruebas que no toquen el diccionario real.
+export const business = loadBusinessConfig(process.env.XENCRM_CONFIG || 'xencrm.config.json');

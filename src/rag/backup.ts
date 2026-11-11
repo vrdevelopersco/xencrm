@@ -1,6 +1,6 @@
 // Respaldo diario de la base (contactos, conversaciones, citas, fichas): una copia consistente con VACUUM INTO, aunque
 // el servidor esté escribiendo, en data/backups/ (BACKUP_DIR), conservando las últimas BACKUP_KEEP (14). Tienen datos
-// de clientes: no van al repositorio. Para restaurar: detener aiva y copiar la copia elegida sobre DB_PATH.
+// de clientes: no van al repositorio. Para restaurar: detener XENCRM y copiar la copia elegida sobre DB_PATH.
 import { chmodSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { env } from '../config.js';
@@ -20,7 +20,7 @@ export function listBackups(): { file: string; at: number; bytes: number }[] {
   const dir = backupDir();
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
-    .filter((f) => /^aiva-\d{4}-\d{2}-\d{2}-\d{4}\.db$/.test(f))
+    .filter((f) => /^xencrm-\d{4}-\d{2}-\d{2}-\d{4}\.db$/.test(f))
     .map((f) => {
       const st = statSync(join(dir, f));
       return { file: join(dir, f), at: st.mtimeMs, bytes: st.size };
@@ -38,7 +38,7 @@ export function backupNow(now = new Date()): { file: string; bytes: number } {
   const dir = backupDir();
   mkdirSync(dir, { recursive: true });
   const p = (n: number) => String(n).padStart(2, '0');
-  const name = `aiva-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}.db`;
+  const name = `xencrm-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}.db`;
   const file = join(dir, name);
   if (existsSync(file)) rmSync(file); // dos respaldos en el mismo minuto: vale el último
   getDb().exec(`VACUUM INTO '${file.replace(/'/g, "''")}'`);

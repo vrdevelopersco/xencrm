@@ -26,9 +26,9 @@ sigue siendo el de aiva y no se subió nada. Todo en la rama `xencrm`; la guía 
   trabajar; al encargar trabajo en worktrees, revisar la base de cada rama antes de unir.
 - 🪤 **El mismo token, dos valores** (`e0a7314`): la bandeja y Contactos definieron `--fx-av-*` cada uno a su manera
   y la misma persona salía de dos colores. Una sola paleta y un solo cálculo por el id; `test:bandeja` lo vigila.
-- **Arreglos heredados de aiva que salieron en el camino**: los tonos de las secciones de Hoy iban corridos un puesto
+- **Arreglos heredados de XENCRM que salieron en el camino**: los tonos de las secciones de Hoy iban corridos un puesto
   (la prueba solo contaba cuántos había; ahora compara título por título); Ventas decía «$0» con ventas sin precio;
-  la gráfica de orígenes tenía ejes de 7 px; `notifications.ts` decía «Aiva» fijo en vez del nombre del asistente.
+  la gráfica de orígenes tenía ejes de 7 px; `notifications.ts` decía «Xen» fijo en vez del nombre del asistente.
 - **Comprobado**: batería completa 2794 bien, 0 fallas; `tsc` limpio; las nueve pantallas en Chrome a 1440 y 390,
   claro y oscuro, completo y fácil, sin errores de JavaScript ni desborde. Capturas en
   `capturas/xencrm-next-evolution/`.
@@ -42,15 +42,15 @@ se borra igual; `/consola` sin sesión pesa 37 KB y no trae la consola; el table
 nota 🪤; lo de servicio de cada cliente da 404, también disfrazado.
 - 🪤 **La cadena del `x-forwarded-for`**, medida con `/_salud` › `tuPeticion` mandando direcciones inventadas: sin
   cabecera llega `R, R,R`; con `F`, `F, R, F, R,R`. Lo del navegador queda siempre antes y la última es la de verdad.
-  Esa es ahora la de por defecto (`AIVA_IP=0`); la cadena medida quedó como prueba en `test:blindaje`.
+  Esa es ahora la de por defecto (`XENCRM_IP=0`); la cadena medida quedó como prueba en `test:blindaje`.
 - **El verificador, corregido por AIVA-CRYPTO** con lo que salió de correrlo aquí: creía la última cabecera repetida
   (la CSP del alojamiento, y no la nuestra), y buscaba `security.txt` debajo de la ruta en vez de en la raíz. Con el
   guion corregido, **portada y consola: 8 OK · 1 MAL**. El MAL es `server: hcdn`, del alojamiento.
 
-### Blindaje contra quien desarma aiva desde fuera · `3c96d5d`
+### Blindaje contra quien desarma XENCRM desde fuera · `3c96d5d`
 El usuario lo pidió así: «blindarme ante ingeniería inversa necia». Se midió producción con el verificador del
 estándar de HRC (`~/proyectos/AUDITORIA-SEGURIDAD.md`, salido de la auditoría externa de HRC-Check) y se miró lo que
-se aprende de aiva sin entrar. Antes: portada **7 MAL**, consola **5 MAL**. En el ZIP: portada **0 MAL**. El detalle,
+se aprende de XENCRM sin entrar. Antes: portada **7 MAL**, consola **5 MAL**. En el ZIP: portada **0 MAL**. El detalle,
 fila por fila, en `seguridad.md` › «El blindaje».
 - **El código ya no se regala**: `/dunor/admin.js` (387 KB, con todos sus comentarios) se bajaba sin clave. El
   tablero ahora solo sale por la consola, la consola sin sesión es solo la puerta (37 KB en vez de 180) y al ZIP lo
@@ -67,7 +67,7 @@ fila por fila, en `seguridad.md` › «El blindaje».
   1, 5, 15 y 60 minutos—, en disco (un despliegue ya no lo borra) y `Retry-After` en todo 429.
 - 🪤 **La dirección de quien llama la escribía él**: el alojamiento AÑADE la de verdad al `x-forwarded-for` que mande
   el navegador, y la bitácora anotó tal cual una inventada. El enrutador ya manda una sola hacia adentro; falta medir
-  en producción cuál es la buena (`/_salud` › `tuPeticion`) y fijarla con `AIVA_IP`.
+  en producción cuál es la buena (`/_salud` › `tuPeticion`) y fijarla con `XENCRM_IP`.
 - 🪤 **Lo que vio Chrome y no las búsquedas**: el logo de cada cliente en la consola traía un `onerror` armado
   dentro de una cadena; la CSP lo frenó y quedaba la imagen rota. El recorrido en Chrome por todas las pantallas
   (fácil, completo, consola, monitor, portada, demo y chat) terminó con **0 violaciones de CSP y 0 errores**, y las
@@ -90,7 +90,7 @@ clave, se armó en local con su propio código público y datos de ejemplo, y se
 - **Las demás pantallas con su piel**: Inbox en tres columnas con «Tomar control»; Contactos con el buscador debajo
   del título y la ficha completa como página; Citas con sus controles en una tarjeta; Pipeline con columnas grises.
 - **El candado deja leer Analítica, Ventas y Seguimientos**, que están en el menú de la muestra; la configuración
-  y lo que cuesta aiva siguen cerrados.
+  y lo que cuesta XENCRM siguen cerrados.
 - 🪤 Fallos que salieron en las capturas y no en las pruebas: Inicio no se escondía al cambiar de pantalla (una regla
   le ponía `display` sin mirar si estaba activa); el arranque se cortaba por una lista usada antes de definirse; en
   el celular el menú salía acostado y sobraba una franja gris abajo (reglas de la barra de abajo del completo); el
@@ -135,7 +135,7 @@ consola. Cero errores de JS.
 ### El candado del modo fácil · `33b8188`
 DUNOR quiso el tablero mucho más simple y que nadie de su lado se saliera de él. Se le preguntó al usuario quién
 quedaba adentro y dijo que todo DUNOR, bryan incluido: solo el super-admin quita el modo y ve lo avanzado.
-- **Lo cierra el servidor.** `channels/candado.ts`: la consola manda el rol en `x-aiva-rol`, de la sesión y no del
+- **Lo cierra el servidor.** `channels/candado.ts`: la consola manda el rol en `x-xencrm-rol`, de la sesión y no del
   navegador, y con el modo fácil quien no es super-admin solo cambia lo del día a día (una lista cerrada: una ruta
   nueva nace cerrada) y no lee Ventas, Seguimientos, trazas, exportaciones ni el simulador. El modo lo cambia solo
   el super-admin, también en completo: si no, el candado se abría desde adentro.
@@ -160,7 +160,7 @@ errores metidos a propósito, los 16 atrapados. Suite completa 2.339 ✓, 0 ✗.
 cliente en modo fácil, a 1440 y a 390. Con el ZIP y sus dos lanzadores, por el espejo y con Chrome: el super-admin
 lo puso desde «⋯» de la consola; una cuenta admin de DUNOR entró por su clave, quedó en fácil y con candado, solo
 vio «Tú» y Ayuda en Configuración, y el servidor le negó quitar el modo, Ventas, el Excel, la configuración y
-borrar (aunque el navegador mandara `x-aiva-rol: super`) y le dejó mover la etapa y anotar. Cero errores de JS.
+borrar (aunque el navegador mandara `x-xencrm-rol: super`) y le dejó mover la etapa y anotar. Cero errores de JS.
 
 ## 2026-10-23
 
@@ -168,10 +168,10 @@ borrar (aunque el navegador mandara `x-aiva-rol: super`) y le dejó mover la eta
 Alguien de DUNOR (por la bitácora de entradas, bryan) dejó un PDF con catorce mejoras. La mitad ya existía y no
 se vio porque el tablero estaba sin datos: DUNOR lleva diez días sin recibir mensajes y el Perfil tiene catorce
 campos vacíos, que son justo «los 14 datos pendientes» del PDF. De lo que sí tenía razón salió esto:
-- **Modo fácil.** El usuario lo pidió así: aiva puede seguir con todo, pero DUNOR quiere un aiva fácil, con un
+- **Modo fácil.** El usuario lo pidió así: XENCRM puede seguir con todo, pero DUNOR quiere un XENCRM fácil, con un
   interruptor que no dañe lo hecho. Esconde (no quita) Análisis, Seguimientos, el puntaje y su porqué, «La lleva»,
   el «¿por qué?» de cada respuesta, la configuración del asistente, los filtros de más y los recuadros vacíos de
-  Hoy. Lo pone el cliente para su equipo (en su base, no en `aiva.config.json`, que en Hostinger no se pisa) y
+  Hoy. Lo pone el cliente para su equipo (en su base, no en `xencrm.config.json`, que en Hostinger no se pisa) y
   cada persona puede verlo distinto. Sin decir nada, completo. Reglas en `diseno-tablero.md`.
 - **«undefined COP».** Los cinco productos de DUNOR no tienen precio (se define en la cita) y la ficha indexada
   decía «Precio: undefined COP». Sin precio, la línea ya no va; el catálogo que quedó así se reindexa solo al
@@ -179,7 +179,7 @@ campos vacíos, que son justo «los 14 datos pendientes» del PDF. De lo que sí
 - **Mensajes que no salieron.** Se guardaban antes de salir y, si el canal fallaba, quedaban como dichos. Ahora
   quedan marcados con el motivo («WhatsApp no está conectado») y se reintentan desde la burbuja, sin duplicarse.
 - **Quién hizo qué.** La historia decía «El equipo» para todo lo que se hacía desde el tablero. La consola manda
-  ahora el nombre de la cuenta en `x-aiva-quien` (y tira lo que mande el navegador), y quedan con nombre las
+  ahora el nombre de la cuenta en `x-xencrm-quien` (y tira lo que mande el navegador), y quedan con nombre las
   etapas, las correcciones de datos, las notas borradas, archivar, unir, entregar y las citas. 🪤 Agendar desde
   el tablero se decidía por `by === 'admin'` para poder caer encima de un evento del dueño: con el nombre real
   eso dejaba de cumplirse, y ahora va con su propio aviso.
@@ -208,7 +208,7 @@ Batería completa: 2254 ✓, 0 ✗.
 ## 2026-10-22
 
 ### Claude de respaldo: si OpenAI falla, contesta Claude · `b72db16`
-En el servidor no corren Ollama ni Apple, así que si OpenAI se caía, rechazaba la llave o se quedaba sin saldo, aiva
+En el servidor no corren Ollama ni Apple, así que si OpenAI se caía, rechazaba la llave o se quedaba sin saldo, XENCRM
 dejaba de contestar en los tres clientes: la lista de respaldo existía, pero no tenía a quién pasar. Ahora, con
 `ANTHROPIC_API_KEY` en el panel, contesta Claude (`src/llm/anthropic.ts`). Usa **Haiku 5.5** para lo de todos los
 días y el análisis, y **Sonnet 5.5** para lo específico y para el clasificador, que no baja de categoría ni siendo
@@ -228,7 +228,7 @@ conteste no sale una sola llamada a Claude, y lo que gaste cuenta para el tope d
 - **Salud:** con OpenAI caído y Claude arriba, dice «está contestando Claude, el respaldo», no «no puede
   contestar».
 - **Probarlo de titular** con las frases de siempre: `pnpm test:scenarios --engine=anthropic`. La llave sale de
-  `~/aiva-credenciales/anthropic.txt`, no del `.env` de la raíz, que leería cualquier prueba.
+  `~/xencrm-credenciales/anthropic.txt`, no del `.env` de la raíz, que leería cualquier prueba.
 
 Son 68 comprobaciones en `test:claude`, con OpenAI y Claude simulados. Se metieron nueve roturas a propósito y
 todas las detecta. La primera vez se escapaba una: que Claude no recibiera la ficha completa. Se agregó la
@@ -236,12 +236,12 @@ comprobación que la detecta. Batería completa: 2151 ✓, 0 ✗.
 
 ## 2026-10-21
 
-### El tablero decía «Aiva» aunque el asistente se llamara de otra forma · `7858597`
-Salió al probar el paquete antes de entregarlo: ahí el asistente de DUNOR se llama **Arthur**, y Hoy decía «Aiva
-lleva todas las conversaciones» y «Sin leer, Aiva ya respondió». El interruptor de la conversación decía
-«Responde: Aiva | Tú» y las burbujas del asistente iban firmadas «Aiva». Eran nueve textos escritos a mano. Ahora
-salen con el nombre de cada cliente, y `test:tablero` revisa todo `admin.js`: falla si vuelve a aparecer «Aiva»
-fuera del respaldo `state.agentName || 'Aiva'`. Una rotura puesta a propósito lo detecta. Batería completa: 2082 ✓,
+### El tablero decía «Xen» aunque el asistente se llamara de otra forma · `7858597`
+Salió al probar el paquete antes de entregarlo: ahí el asistente de DUNOR se llama **Arthur**, y Hoy decía «Xen
+lleva todas las conversaciones» y «Sin leer, Xen ya respondió». El interruptor de la conversación decía
+«Responde: Xen | Tú» y las burbujas del asistente iban firmadas «Xen». Eran nueve textos escritos a mano. Ahora
+salen con el nombre de cada cliente, y `test:tablero` revisa todo `admin.js`: falla si vuelve a aparecer «Xen»
+fuera del respaldo `state.agentName || 'Xen'`. Una rotura puesta a propósito lo detecta. Batería completa: 2082 ✓,
 0 ✗.
 
 ### Guía de inicio: los pasos se marcan solos · `b9e6f9d`
@@ -287,7 +287,7 @@ El canal salió de la tarjeta. Pasó de unos 170 px a entre 108 y 129.
   que había calientes esperando. Ahora se pide con las cuentas de la barra.
 - **«No pude cargar la imagen»** salía en fotos que se habían borrado a propósito: los archivos viejos se limpian
   para no llenar el disco y el mensaje se queda. Con un 404 ahora dice «Esta foto ya no está guardada».
-- **Las «veces» de una respuesta rápida** contaban también las que aiva solo propuso mientras la llevaba una
+- **Las «veces» de una respuesta rápida** contaban también las que XENCRM solo propuso mientras la llevaba una
   persona.
 
 Son 10 comprobaciones nuevas en `test:tablero`. Tres roturas puestas a propósito (el puntaje en todas, sin «Mover…»
@@ -303,11 +303,11 @@ habría seguido sin verse. Se comprobó en Chrome sin pantalla que los ocho elem
 - **«La lleva admin»:** cuando la toma alguien sin nombre, el servidor guarda `admin`, y el encabezado lo decía tal
   cual. Ahora dice «La lleva el equipo», como ya lo decía el panel.
 
-### Cuando la lleva una persona, aiva deja lista la respuesta a lo que sabe · `fd1055d`
+### Cuando la lleva una persona, XENCRM deja lista la respuesta a lo que sabe · `fd1055d`
 De la comparación con Boba, el usuario tomó lo de «se mete en la charla cuando es útil» y escogió dónde: en la
-conversación que lleva una persona, no en los grupos. Hasta hoy aiva se callaba del todo ahí. Ahora, si el cliente
-pregunta un producto o un dato de la tienda que aiva sabe, la respuesta queda escrita encima del cajón con el título
-*Aiva puede contestar esto*. Quien atiende la envía, la corrige o la descarta, y la conversación sigue siendo suya.
+conversación que lleva una persona, no en los grupos. Hasta hoy XENCRM se callaba del todo ahí. Ahora, si el cliente
+pregunta un producto o un dato de la tienda que XENCRM sabe, la respuesta queda escrita encima del cajón con el título
+*Xen puede contestar esto*. Quien atiende la envía, la corrige o la descarta, y la conversación sigue siendo suya.
 Es la misma propuesta del modo «Propone», marcada `con_persona`.
 - **Nunca escribe sola ahí:** ni la respuesta ni el «dame un segundito», que se colaba igual que en «Propone».
 - 🪤 **Solo lo que sabe:** un «déjame verificar», una cifra o una afirmación sin respaldo, una promesa o una cita
@@ -317,19 +317,19 @@ Es la misma propuesta del modo «Propone», marcada `con_persona`.
   redacción por mensaje como máximo, más el clasificador (que no se tocó). Una cita a medias o el tope de gasto
   cortan antes, sin gastar nada.
 - **Sin campana:** la persona ya recibió el mensaje del cliente; la propuesta aparece en la conversación y punto.
-- **Si contesta con sus palabras**, lo que aiva dejó se aparta, en vez de quedarse diciendo «se quedó atrás».
+- **Si contesta con sus palabras**, lo que XENCRM dejó se aparta, en vez de quedarse diciendo «se quedó atrás».
 - Se apaga por cliente en **Configuración › El asistente › Cuando la llevas tú** (`PUT /admin/api/agent/sugiere`). Viene encendido.
 
 Son 47 comprobaciones en `test:sugiere`, y dos roturas puestas a propósito (el aviso sin el freno, rehacer lo que
 no tenía respaldo) las detectan. Con el ajuste apagado todo es como antes: callada, sin una llamada al modelo.
 
 ### Más sencillo para quien empieza: el perfil al lado del chat y cinco secciones · `4ed68be`
-Al usuario le dijeron que aiva es «complejo de usar» y le sugirieron la cara de Vocero, con su insistencia en «el
+Al usuario le dijeron que XENCRM es «complejo de usar» y le sugirieron la cara de Vocero, con su insistencia en «el
 perfil del cliente». Comparado con capturas de los dos, el perfil ya existía y era mejor que el de Vocero, pero
 estaba escondido: al lado de la conversación había un formulario. Ahora ese panel es el perfil (quién es, qué
 quiere, Detalles, «Lo que contó», citas, historia) y el formulario quedó detrás de **Corregir datos**. El riel bajó de
 ocho secciones a cinco, y Prospectos, Seguimientos y Ventas son pestañas dentro de Clientes y Análisis: el usuario
-pidió que no se viera cargado pero que quien sepa pueda «necear para exprimir aiva». Detalle en
+pidió que no se viera cargado pero que quien sepa pueda «necear para exprimir XENCRM». Detalle en
 `diseno-tablero.md` › «Más sencillo para quien empieza».
 - 🪤 **Tarjetas aplastadas en Por etapa:** con una columna llena, cada tarjeta medía 48 px y su contenido 166. Venía
   del `overflow:hidden` de la piel del 2026-10-02, y DUNOR lo tenía así en producción.
@@ -354,7 +354,7 @@ Mac que yo pueda leer. Ahora la consola anota en `accesos.jsonl` cada ingreso, c
 equivocada, cuenta desactivada, usuario que no existe, frenado), cada tablero abierto, cada salida y cada cambio de
 cuenta, con dirección y navegador. `/_salud` lo trae con la cabecera `x-salud-token`, y `pnpm salud` lo pinta en hora
 de Colombia (`--usuario`, `--seguir`).
-- **El token:** `pnpm paquete` lo creó en `~/aiva-credenciales/salud-token.txt` y al ZIP va solo su huella, así que
+- **El token:** `pnpm paquete` lo creó en `~/xencrm-credenciales/salud-token.txt` y al ZIP va solo su huella, así que
   no hay variable nueva en el panel. Abre `/_salud` y nada más.
 - 🪤 **Lo escrito como usuario:** si no es una cuenta que exista, va tapado (`cl…(18)`), porque es donde la gente
   pega la clave por error. Ninguna clave entra al archivo, y anotar nunca tumba el login.
@@ -385,7 +385,7 @@ Hostinger (`require('./app.js')`):
 ## 2026-10-16
 
 ### El acceso de cada cliente, desde su fila · `59c15f8`
-El usuario entraba a aiva.confiafintech.com como super-admin, pero no sabía con qué usuario y clave entraba cada
+El usuario entraba a xencrm.confiafintech.com como super-admin, pero no sabía con qué usuario y clave entraba cada
 negocio. Lo primero no estaba a la vista y lo segundo no se puede saber: se guarda la huella, no la clave. Ahora
 cada fila de Clientes dice `admin: <usuario>` o **sin admin del cliente** en rojo. En **Ver más › Quién entra a este
 cliente** se crea el acceso (si no hay admin, viene marcado ese rol), se le pone una clave nueva a alguien y se
@@ -403,11 +403,11 @@ crea asesores u otros admins de su negocio, les cambia la clave, los desactiva o
 mismo que hacía «Atiende» (todo en su cliente menos Equipo), como lo decidió el usuario. Quien tenía `agente` quedó
 como admin del cliente para que nadie perdiera nada al desplegar. 🪤 Al super-admin y a quien atiende además otro
 negocio, el admin del cliente los ve solo por su nombre: mostrarle sus clientes le contaba qué otros negocios tiene
-aiva. Si intenta tocarlos, recibe «no existe». Tampoco puede bajarse ni desactivarse a sí mismo. Son unas 40 comprobaciones
+XENCRM. Si intenta tocarlos, recibe «no existe». Tampoco puede bajarse ni desactivarse a sí mismo. Son unas 40 comprobaciones
 nuevas en `test:usuarios`. Visto en Chrome sin pantalla como dueño, asesora y super-admin: la casilla que el
 servidor rechaza vuelve a como estaba.
 
-### Lo de aiva pasaba por la segunda puerta · `52a46b0`
+### Lo de XENCRM pasaba por la segunda puerta · `52a46b0`
 Motores, la clave de OpenAI, el tope de gasto y encender la retención solo se frenaban en `/api/c/<slug>/…`. Por
 `/c/<slug>/admin/api/…`, la que usa el tablero abierto desde la consola, alguien con «Atiende» los cambiaba. La
 clave no se podía leer (sale tapada), pero sí reemplazar. Se comprobó pasando antes de tocar nada (502 en vez de
@@ -629,7 +629,7 @@ Para cambiar una clave había que ser super-admin. Ahora cada quien se cambia su
 
 ### El empaquetador borra solo lo que él crea · `9934d5f`
 `pnpm paquete` barría `paquetes/` entera y se llevó por delante unas credenciales que había dejado ahí. Ahora
-borra su directorio de trabajo y el zip, nada más. Las credenciales de la máquina viven en `~/aiva-credenciales`.
+borra su directorio de trabajo y el zip, nada más. Las credenciales de la máquina viven en `~/xencrm-credenciales`.
 
 ### La configuración de cada cliente se edita desde el tablero · `4afb5eb`
 Nombre, asistente, marca, zona horaria y citas salían del archivo a mano. Se validan con el mismo esquema con el
@@ -645,7 +645,7 @@ EventSource no pueden poner cabeceras.
 
 ### Una portada en la raíz, y la consola en /consola · `becf4b0`
 El dominio pelado mostraba la consola: quien llegaba se topaba con una pantalla de trabajo pidiendo clave. Ahora
-la raíz explica qué es aiva y la consola vive en `/consola`; la sirve el enrutador mismo, sin proceso extra, y las
+la raíz explica qué es XENCRM y la consola vive en `/consola`; la sirve el enrutador mismo, sin proceso extra, y las
 llamadas de la consola siguen saliendo de la raíz. Salieron tres cosas más al probar el paquete: un cliente
 llamado "consola" o "api" habría quedado tapado por el enrutador (ahora se rechaza al crear); los motores
 arrancan en OpenAI solos, porque en un hosting de apps no hay Ollama y una variable olvidada dejaba al cliente
@@ -727,7 +727,7 @@ de una devuelve 401 en la otra. `pnpm test:clientes` (21 casos).
 
 ### El asistente sabe que ya venías hablando por el otro canal · `114f571`
 Empezaba la gestión por el chat del sitio y en la tarde escribía por WhatsApp: para el cliente es la misma
-conversación, pero aiva lo saludaba como a un desconocido y le preguntaba todo otra vez. Ahora, cuando el número
+conversación, pero XENCRM lo saludaba como a un desconocido y le preguntaba todo otra vez. Ahora, cuando el número
 coincide con otra ficha suya, la conversación de allá entra en el contexto y lo dice una sola vez: *"Hola, Marta 🙂
 Vi que veníamos hablando por el chat del sitio; ya me puse al tanto"*, y sigue respondiendo con lo que ya sabía (el
 traje, la ocasión, la cita). El equipo lo ve en la campana y une las fichas con un botón. **No se unen solas**: cada
@@ -889,7 +889,7 @@ análisis en vez de 17 (−53 % en análisis, −19 % por conversación). `pnpm 
 
 ### Aviso cuando la dirección pública (el túnel) se cae · `ff25073`
 El túnel rápido de Cloudflare se cerró esa mañana ("Tunnel not found") y nadie se enteró: sin él no funcionan el
-chat del sitio, WhatsApp oficial, el calendario en Google/Outlook ni el tablero desde el celular. Ahora aiva se
+chat del sitio, WhatsApp oficial, el calendario en Google/Outlook ni el tablero desde el celular. Ahora XENCRM se
 llama a sí misma por `PUBLIC_URL` cada 5 minutos comparando un código único del proceso; tras 3 fallas seguidas
 avisa en la campana, en Hoy y en Canales, y avisa también cuando vuelve. `pnpm test:public`.
 
@@ -946,7 +946,7 @@ Lo que las reglas no entienden queda anotado y se enseña desde el tablero, solo
 `pnpm test:misses`.
 
 ### WhatsApp oficial: respetar la ventana de 24 horas · `0f59ca3`
-Pasadas 24 horas desde el último mensaje del cliente, aiva no envía (ni guarda como enviado) lo que Meta
+Pasadas 24 horas desde el último mensaje del cliente, XENCRM no envía (ni guarda como enviado) lo que Meta
 rechazaría, y el tablero lo advierte antes de escribir.
 
 ### Tablero en celular: "Chats" en la barra de abajo · `afe0834`

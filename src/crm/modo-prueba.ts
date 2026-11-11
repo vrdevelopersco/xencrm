@@ -1,7 +1,7 @@
-// Modo prueba: que aiva conteste SOLO a unos chats concretos, y a nadie más.
+// Modo prueba: que XENCRM conteste SOLO a unos chats concretos, y a nadie más.
 //
 // Para una demostración en vivo. Sin esto hay que elegir entre dos cosas malas: dejar el canal encendido —y que
-// aiva le conteste a cualquier cliente de verdad que escriba en mitad de la demo— o apagarlo entero, y entonces
+// XENCRM le conteste a cualquier cliente de verdad que escriba en mitad de la demo— o apagarlo entero, y entonces
 // tampoco contesta a quien está enseñando. Aquí se dice a quién sí, y el resto del mundo se queda como en «Mira»:
 // sus mensajes entran al CRM y los atiende una persona después.
 //
@@ -53,14 +53,14 @@ export function quitarPrueba(): void {
 }
 
 /**
- * ¿Aiva puede contestarle a este?
+ * ¿Xen puede contestarle a este?
  *
  * Sin prueba en marcha, a todo el mundo: esta función no debe cambiar nada mientras nadie la use. Con prueba en
  * marcha, solo a los de la lista.
  *
  * 🪤 Se compara por los DÍGITOS y por el final, no por la cadena entera. Quien monta una demostración escribe
  * «300 123 4567» o «+57 300 1234567»; lo que llega por el canal es `wa:573001234567@s.whatsapp.net`. Exigir que
- * coincidan letra por letra haría que la lista no casara nunca y que aiva se quedara muda en su propia demo,
+ * coincidan letra por letra haría que la lista no casara nunca y que XENCRM se quedara muda en su propia demo,
  * que es exactamente el peor momento para descubrirlo.
  */
 export function puedeContestar(userId: string, ahora = Date.now()): boolean {

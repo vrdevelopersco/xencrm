@@ -7,8 +7,8 @@
 import { mkdtempSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-const base = mkdtempSync(join(tmpdir(), 'aiva-salud-'));
-process.env.DB_PATH = join(base, 'data', 'aiva.db');
+const base = mkdtempSync(join(tmpdir(), 'xencrm-salud-'));
+process.env.DB_PATH = join(base, 'data', 'xencrm.db');
 const { saludDelCliente } = await import('../salud.js');
 const { registerSender } = await import('../crm/outbox.js');
 const { touchUser, appendMessage } = await import('../agent/memory.js');

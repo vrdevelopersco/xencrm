@@ -15,7 +15,7 @@ primer día de cada cliente.
 `src/crm/tiempos.ts` · pruebas: `pnpm test:tiempos` · en el tablero: **Análisis**
 
 La unidad no es el mensaje, es la **espera**: desde que alguien escribe y se queda sin respuesta hasta que
-alguien le contesta. De cada una se sabe cuánto tardó, quién contestó —Aiva o una persona, con su nombre— y
+alguien le contesta. De cada una se sabe cuánto tardó, quién contestó —Xen o una persona, con su nombre— y
 cuántas veces insistió mientras esperaba.
 
 Tres decisiones que cambian lo que dicen los números:
@@ -37,7 +37,7 @@ tiempo **hábil** manda en las medias y en el cumplimiento, que es donde tiene s
 
 ### Dónde se ve
 
-- **Tablero del cliente**, en Análisis: mediana, p90, cumplimiento, Aiva contra personas, quién contesta más
+- **Tablero del cliente**, en Análisis: mediana, p90, cumplimiento, Xen contra personas, quién contesta más
   rápido, y quién está esperando ahora mismo (cada nombre abre su conversación).
 - **Consola**, en tres sitios: la cifra de arriba suma las personas esperando en todos los clientes; la fila de
   cada cliente marca en rojo «N min esperando de más»; y sale como aviso urgente, por encima de todo lo demás,
@@ -117,7 +117,7 @@ mensajes llegaron.
 Por WhatsApp el cliente ve siempre el mismo número, y por ese número contestan dos: el asistente y las personas
 del equipo. Así que todo lo que sale va firmado con **el papel**, no con la persona:
 
-- El asistente firma con su nombre, el que el negocio le puso (`agent.name`): `*Aiva:* …`
+- El asistente firma con su nombre, el que el negocio le puso (`agent.name`): `*Xen:* …`
 - Una persona firma como el equipo (`crm.firmaHumano`, por defecto «Operador»): `*Operador:* …`
 - En el chat del sitio **no se firma**: ahí ya se ve en pantalla quién habla.
 
@@ -127,12 +127,12 @@ guardándose, pero solo para adentro: en el tablero se ve quién contestó cada 
 
 ## Los tres nombres
 
-Esto es lo que más confunde de aiva, y conviene decirlo entero: **hay tres nombres distintos** y cada uno se
+Esto es lo que más confunde de XENCRM, y conviene decirlo entero: **hay tres nombres distintos** y cada uno se
 cambia en un sitio.
 
 | Cuál | Qué es | Dónde se cambia | Quién lo ve |
 |---|---|---|---|
-| **El asistente** (p. ej. «Aiva») | Cómo se llama el asistente de ese negocio | *El negocio* | El cliente final, firmando lo que contesta el asistente |
+| **El asistente** (p. ej. «Xen») | Cómo se llama el asistente de ese negocio | *El negocio* | El cliente final, firmando lo que contesta el asistente |
 | **Tu nombre** | El de tu cuenta, el mismo en toda la consola | Tu perfil | El equipo, en la consola y como punto de partida en cada tablero |
 | **Cómo firmas aquí** | Con qué nombre atiendes en **ese** cliente | La ficha de perfil del tablero de ese cliente | El equipo, en cada mensaje que contestes ahí |
 
@@ -153,7 +153,7 @@ hablando*). El nombre de la persona es para adentro: para que el equipo sepa qui
 Este modelo costó cuatro entregas. Los dos errores, para que nadie los repita:
 
 - 🪤 **El tablero rellenaba el nombre de quien atiende con el del ASISTENTE** cuando estaba vacío, y lo dejaba
-  guardado. Como casi todos los clientes llaman igual al suyo, el operador acababa llamándose «Aiva» en todos y
+  guardado. Como casi todos los clientes llaman igual al suyo, el operador acababa llamándose «Xen» en todos y
   parecía que los perfiles se cruzaban entre clientes. No se cruzaba nada: se inventaba el nombre equivocado, y
   al quedar guardado volvía a aparecer aunque se quitara el apaño.
 - 🪤 **El arreglo siguiente se pasó al otro extremo**: unificarlo en la cuenta hizo que el nombre del

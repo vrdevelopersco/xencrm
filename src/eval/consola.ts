@@ -5,8 +5,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const base = mkdtempSync(join(tmpdir(), 'aiva-consola-'));
-process.env.AIVA_CLIENTES_DIR = base;
+const base = mkdtempSync(join(tmpdir(), 'xencrm-consola-'));
+process.env.XENCRM_CLIENTES_DIR = base;
 process.env.CONSOLA_TOKEN = 'token-de-prueba';
 const { ticketsDe, ordenar, mountConsola } = await import('../consola.js');
 const { crearCliente, leerIndice, tokenDe } = await import('../clientes.js');
@@ -120,12 +120,12 @@ const galleta = entrada.headers.get('set-cookie') ?? '';
 const sesionMaestra = (await entrada.json()) as { sesion?: string; usuario?: { rol?: string } };
 // 🪤 La sesión sale SOLO en la galleta: en el cuerpo, la consola la guardaba en el navegador, donde la lee cualquier guion.
 check('el cuerpo de entrar no trae la sesión', sesionMaestra.sesion === undefined, JSON.stringify(sesionMaestra).slice(0, 90));
-const sesionDeMaestra = /aiva_consola=([^;]*)/.exec(galleta)?.[1] ?? '';
+const sesionDeMaestra = /xencrm_consola=([^;]*)/.exec(galleta)?.[1] ?? '';
 check('con la llave maestra se abre sesión de super-admin', entrada.status === 200 && sesionMaestra.usuario?.rol === 'super', JSON.stringify(sesionMaestra).slice(0, 90));
-check('y la sesión sale en una galleta, que no se puede leer desde el navegador', /aiva_consola=/.test(galleta) && /HttpOnly/i.test(galleta), galleta);
+check('y la sesión sale en una galleta, que no se puede leer desde el navegador', /xencrm_consola=/.test(galleta) && /HttpOnly/i.test(galleta), galleta);
 check('con una llave maestra equivocada, no', (await app.request('http://local/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ maestra: 'otra' }) })).status === 401);
 
-const conGalleta = (ruta: string) => app.request(`http://local${ruta}`, { headers: { cookie: `aiva_consola=${sesionDeMaestra}` } });
+const conGalleta = (ruta: string) => app.request(`http://local${ruta}`, { headers: { cookie: `xencrm_consola=${sesionDeMaestra}` } });
 check('la galleta vale para la API', (await conGalleta('/api/yo')).status === 200);
 check('el tablero de un cliente se abre desde la consola', (await conGalleta('/c/financiera-del-caribe/admin/api/me')).status === 502, 'la instancia está apagada: 502 quiere decir que pasó el control');
 check('sin sesión, el tablero manda a la puerta', (await app.request('http://local/c/financiera-del-caribe/admin')).status === 302);
@@ -135,7 +135,7 @@ check('por la consola solo se llega al tablero, no a lo demás del cliente', (aw
 const { crearUsuario: nuevoUsuario, abrirSesion: abrir } = await import('../consola-usuarios.js');
 nuevoUsuario({ usuario: 'ana', nombre: 'Ana', clave: 'clave-de-prueba', rol: 'asesor', clientes: ['financiera-del-caribe'] });
 const sesionAna = abrir({ usuario: 'ana', nombre: 'Ana', rol: 'asesor', clientes: ['financiera-del-caribe'], activo: true, desde: '2026-09-25' });
-const comoAna = (ruta: string) => app.request(`http://local${ruta}`, { headers: { cookie: `aiva_consola=${sesionAna}` } });
+const comoAna = (ruta: string) => app.request(`http://local${ruta}`, { headers: { cookie: `xencrm_consola=${sesionAna}` } });
 check('entra al tablero del cliente que atiende', (await comoAna('/c/financiera-del-caribe/admin/api/me')).status === 502);
 check('y al de otro cliente, no', (await comoAna('/c/litografia-industrial/admin')).status === 403);
 check('tampoco a su API', (await comoAna('/c/litografia-industrial/admin/api/contacts')).status === 403);
@@ -148,7 +148,7 @@ const eco = createServer((req, res) => {
   req.on('data', (t: Buffer) => trozos.push(t));
   req.on('end', () => {
     res.setHeader('content-type', 'application/json');
-    res.end(JSON.stringify({ tipo: req.headers['content-type'] ?? '', quien: req.headers['x-aiva-quien'] ?? '', rol: req.headers['x-aiva-rol'] ?? '', token: req.headers['x-admin-token'] ?? '', cuerpo: Buffer.concat(trozos).toString('base64') }));
+    res.end(JSON.stringify({ tipo: req.headers['content-type'] ?? '', quien: req.headers['x-xencrm-quien'] ?? '', rol: req.headers['x-xencrm-rol'] ?? '', token: req.headers['x-admin-token'] ?? '', cuerpo: Buffer.concat(trozos).toString('base64') }));
   });
 });
 await new Promise<void>((listo) => eco.listen(39001, 'localhost', () => listo()));
@@ -158,7 +158,7 @@ const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff, 0xfe, 0xf1, 0x
 const formulario = new FormData();
 formulario.append('archivo', new Blob([bytes], { type: 'image/png' }), 'traje.png');
 formulario.append('texto', 'Así queda el azul');
-const envio = new Request('http://local/c/financiera-del-caribe/admin/api/contacts/web:1/adjunto', { method: 'POST', body: formulario, headers: { cookie: `aiva_consola=${sesionAna}`, 'x-aiva-quien': 'Otra Persona', 'x-aiva-rol': 'super' } });
+const envio = new Request('http://local/c/financiera-del-caribe/admin/api/contacts/web:1/adjunto', { method: 'POST', body: formulario, headers: { cookie: `xencrm_consola=${sesionAna}`, 'x-xencrm-quien': 'Otra Persona', 'x-xencrm-rol': 'super' } });
 const tipoEnviado = envio.headers.get('content-type') ?? '';
 const cuerpoEnviado = Buffer.from(await envio.clone().arrayBuffer()).toString('base64');
 const llego = (await (await app.request(envio)).json()) as Eco;
@@ -169,7 +169,7 @@ check('quién hace las cosas sale de la cuenta, no de lo que mande el navegador'
 // El candado del modo fácil (channels/candado.ts) se decide en el cliente con este rol: si el navegador pudiera
 // ponerlo, un asesor se diría super-admin y el candado no cerraría nada.
 check('🪤 y con qué rol, también de la cuenta: un asesor no se dice super-admin', llego.rol === 'asesor', llego.rol);
-const json = (await (await app.request('http://local/c/financiera-del-caribe/admin/api/contacts/web:1', { method: 'PATCH', headers: { cookie: `aiva_consola=${sesionAna}`, 'content-type': 'application/json' }, body: JSON.stringify({ stage: 'perdido', motivo: 'Precio' }) })).json()) as Eco;
+const json = (await (await app.request('http://local/c/financiera-del-caribe/admin/api/contacts/web:1', { method: 'PATCH', headers: { cookie: `xencrm_consola=${sesionAna}`, 'content-type': 'application/json' }, body: JSON.stringify({ stage: 'perdido', motivo: 'Precio' }) })).json()) as Eco;
 check('lo de siempre (JSON) sigue llegando igual', json.tipo === 'application/json' && Buffer.from(json.cuerpo, 'base64').toString('utf8') === '{"stage":"perdido","motivo":"Precio"}', JSON.stringify(json));
 const sinCuerpo = (await (await comoAna('/c/financiera-del-caribe/admin/api/stats')).json()) as Eco;
 check('una consulta sin cuerpo no lleva tipo', sinCuerpo.tipo === '' && sinCuerpo.cuerpo === '', JSON.stringify(sinCuerpo));
@@ -178,11 +178,11 @@ check('lo que cambia la consola por su API también lleva nombre', decodeURIComp
 check('y su rol: la llave maestra es super-admin', porLaApi.rol === 'super', porLaApi.rol);
 nuevoUsuario({ usuario: 'bryan', nombre: 'Bryan', clave: 'clave-de-prueba', rol: 'admin', clientes: ['financiera-del-caribe'] });
 const sesionBryan = abrir({ usuario: 'bryan', nombre: 'Bryan', rol: 'admin', clientes: ['financiera-del-caribe'], activo: true, desde: '2026-11-03' });
-const comoBryan = (await (await app.request('http://local/c/financiera-del-caribe/admin/api/stats', { headers: { cookie: `aiva_consola=${sesionBryan}` } })).json()) as Eco;
+const comoBryan = (await (await app.request('http://local/c/financiera-del-caribe/admin/api/stats', { headers: { cookie: `xencrm_consola=${sesionBryan}` } })).json()) as Eco;
 check('el admin del cliente llega como admin, no como super: el candado también es para él', comoBryan.rol === 'admin', comoBryan.rol);
 nuevoUsuario({ usuario: 'andres', nombre: 'Andrés Núñez', clave: 'clave-de-prueba', rol: 'asesor', clientes: ['financiera-del-caribe'] });
 const sesionAndres = abrir({ usuario: 'andres', nombre: 'Andrés Núñez', rol: 'asesor', clientes: ['financiera-del-caribe'], activo: true, desde: '2026-10-23' });
-const conTilde = (await (await app.request('http://local/c/financiera-del-caribe/admin/api/stats', { headers: { cookie: `aiva_consola=${sesionAndres}` } })).json()) as Eco;
+const conTilde = (await (await app.request('http://local/c/financiera-del-caribe/admin/api/stats', { headers: { cookie: `xencrm_consola=${sesionAndres}` } })).json()) as Eco;
 check('🪤 un nombre con tildes viaja escapado (una cabecera solo lleva ASCII) y se lee entero', decodeURIComponent(conTilde.quien) === 'Andrés Núñez', conTilde.quien);
 eco.close();
 

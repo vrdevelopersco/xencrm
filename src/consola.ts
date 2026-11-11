@@ -89,7 +89,7 @@ const pesoUrgencia = { alta: 3, media: 2, baja: 1 } as const;
 const pesoPrioridad = { alta: 3, media: 2, baja: 1 } as const;
 
 /**
- * Los tickets de un cliente: lo que alguien de aiva tiene que atender, no lo que atiende el negocio. Salen solos
+ * Los tickets de un cliente: lo que alguien de XENCRM tiene que atender, no lo que atiende el negocio. Salen solos
  * del estado, sin que nadie los escriba.
  */
 export function ticketsDe(cliente: ClienteRef, e: EstadoCliente): Ticket[] {
@@ -97,7 +97,7 @@ export function ticketsDe(cliente: ClienteRef, e: EstadoCliente): Ticket[] {
   if (!e.arriba) {
     // El aviso dice lo que se sabe (no contesta) y no lo que se teme (se cayó, se perdió todo). Casi siempre es
     // la red o un reinicio, y las conversaciones siguen en su sitio: alarmar de más hace que se deje de leer.
-    t.push({ urgencia: 'alta', titulo: 'Sin conexión con este cliente', detalle: `No estamos alcanzando a ${cliente.nombre} ahora mismo; sus conversaciones están guardadas. Suele ser la red o un reinicio. Si sigue así, revisar con pm2 logs aiva-${cliente.slug}.` });
+    t.push({ urgencia: 'alta', titulo: 'Sin conexión con este cliente', detalle: `No estamos alcanzando a ${cliente.nombre} ahora mismo; sus conversaciones están guardadas. Suele ser la red o un reinicio. Si sigue así, revisar con pm2 logs xencrm-${cliente.slug}.` });
     return t; // si está caída, lo demás no se sabe
   }
   // 🪤 Cada estado con lo que significa (channels/public-check.ts). Antes cualquiera distinto de «ok» era «no
@@ -121,7 +121,7 @@ export function ticketsDe(cliente: ClienteRef, e: EstadoCliente): Ticket[] {
     t.push({ urgencia: 'media', titulo: `WhatsApp en "${e.whatsapp}"`, detalle: 'Puede que haya que volver a escanear el código.' });
   }
   // El tope de gasto. 🪤 Al 100 % es urgencia alta aunque nada esté caído: lo que necesita IA ya no lo contesta
-  // aiva, y si nadie del negocio está mirando su tablero, esos clientes se quedan esperando.
+  // XENCRM, y si nadie del negocio está mirando su tablero, esos clientes se quedan esperando.
   const p = e.presupuesto;
   if (p && p.tope !== null && p.porcentaje !== null) {
     const cuanto = `Lleva $${p.gastado.toFixed(2)} de $${p.tope.toFixed(2)} este mes.`;
@@ -295,7 +295,7 @@ export async function pendientes(usuario: UsuarioPublico | null = null): Promise
 // ---------- Quién entra ----------
 // La sesión viaja en una galleta además de la cabecera: es lo único que sirve para una navegación normal (abrir
 // el tablero de un cliente) y para el flujo en vivo, que no pueden poner cabeceras.
-const GALLETA = 'aiva_consola';
+const GALLETA = 'xencrm_consola';
 
 /** Con la llave maestra se entra como super-admin, sin usuario en el archivo. */
 const SUPER_DE_EMERGENCIA: UsuarioPublico = {
@@ -321,14 +321,14 @@ const quitarGalleta = (c: Context) => deleteCookie(c, GALLETA, { path: '/', http
 
 /** Quién hace la petición, por cabecera o por galleta. `usuario` null con la llave maestra: alcanza a todos. */
 /**
- * Lo que solo puede tocar quien administra aiva, aunque el cliente sea suyo.
+ * Lo que solo puede tocar quien administra XENCRM, aunque el cliente sea suyo.
  *
  * La llave de OpenAI y el reparto de motores deciden a quién se le factura y cuánto: no son de la operación
  * del negocio. Todo lo demás —sus contactos, sus citas, su conocimiento, su configuración— sí es suyo.
  */
 const SOLO_SUPER = /^(clave|motores)(\/|$)/;
 /**
- * Lo que el negocio puede ver pero solo cambia quien administra aiva. La retención borra (o anonimiza) datos de sus
+ * Lo que el negocio puede ver pero solo cambia quien administra XENCRM. La retención borra (o anonimiza) datos de sus
  * clientes: el negocio tiene que saber que existe y cuándo pasó, pero encenderla no es de la operación del día.
  */
 const SOLO_SUPER_CAMBIA = /^retencion(\/|$)/;
@@ -476,7 +476,7 @@ export function mountConsola(app: Hono) {
     return c.html(pagina.html);
   };
   app.get('/', puerta);
-  // La misma puerta donde la pone el despliegue (aiva.hrctechnologies.com/consola), para que mandar aquí funcione
+  // La misma puerta donde la pone el despliegue (xencrm.hrctechnologies.com/consola), para que mandar aquí funcione
   // igual con el enrutador del paquete y con la consola corriendo sola.
   app.get('/consola', puerta);
 
@@ -591,7 +591,7 @@ export function mountConsola(app: Hono) {
     try {
       const r = await llamarACliente(cliente, url.pathname + url.search, {
         method: metodo,
-        headers: { 'x-admin-token': token, 'x-aiva-rol': miRol, ...(nombre ? { 'x-aiva-quien': encodeURIComponent(nombre) } : {}), ...(cuerpo?.length ? { 'content-type': tipo } : {}) },
+        headers: { 'x-admin-token': token, 'x-xencrm-rol': miRol, ...(nombre ? { 'x-xencrm-quien': encodeURIComponent(nombre) } : {}), ...(cuerpo?.length ? { 'content-type': tipo } : {}) },
         body: cuerpo,
         ...(esFlujo ? {} : { esperaMs: 15000 }),
       });
@@ -614,13 +614,13 @@ export function mountConsola(app: Hono) {
         // aquí nunca se escribió, así que leerlo daba vacío siempre y el tablero se quedaba sin saber quién
         // atiende — que es justo el fallo que se estaba persiguiendo.
         const soy = quien.usuario?.nombre || (quien.esSuper ? 'Llave maestra' : '');
-        // 🪤 Y su ROL (`miRol`, el mismo que va en `x-aiva-rol`), para que el tablero pueda guardar lo que no es del
+        // 🪤 Y su ROL (`miRol`, el mismo que va en `x-xencrm-rol`), para que el tablero pueda guardar lo que no es del
         // día a día —el gasto, las llamadas al modelo— detrás de una sección que solo ve quien administra. Quien
         // entra con el token a secas no pasa por aquí y lo ve todo: es su token, y con él puede llamar a cualquier
         // ruta igual. Esto ORDENA la pantalla; lo que cierra de verdad es el candado del servidor (channels/candado.ts).
         const html = (await r.text()).replace(
           '</head>',
-          `<script>window.AIVA_CONSOLA=${JSON.stringify(slug)};window.AIVA_EQUIPO=${JSON.stringify(equipo)};window.AIVA_QUIEN=${JSON.stringify(soy)};window.AIVA_ROL=${JSON.stringify(miRol)}</script></head>`,
+          `<script>window.XENCRM_CONSOLA=${JSON.stringify(slug)};window.XENCRM_EQUIPO=${JSON.stringify(equipo)};window.XENCRM_QUIEN=${JSON.stringify(soy)};window.XENCRM_ROL=${JSON.stringify(miRol)}</script></head>`,
         );
         // La CSP se saca de la página YA inyectada: la huella de ese guion cambia con cada quien que entra.
         c.header('content-security-policy', cspDePagina(html));
@@ -848,7 +848,7 @@ export function mountConsola(app: Hono) {
     try {
       const r = await llamarACliente(cliente, url.pathname + url.search, {
         method,
-        headers: { 'x-admin-token': token, 'x-aiva-rol': rol, ...(nombre ? { 'x-aiva-quien': encodeURIComponent(nombre) } : {}), ...(body ? { 'content-type': 'application/json' } : {}) },
+        headers: { 'x-admin-token': token, 'x-xencrm-rol': rol, ...(nombre ? { 'x-xencrm-quien': encodeURIComponent(nombre) } : {}), ...(body ? { 'content-type': 'application/json' } : {}) },
         body,
         esperaMs: 8000,
       });
@@ -940,8 +940,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   irseSiQuedaHuerfano(); // si el lanzador se muere, esta consola se va con él y no deja el puerto agarrado
   // La misma puerta de servicio que los clientes: un socket de archivo por si al enrutador no le llega por red.
   // Ver el porqué en channels/web.ts; aquí duele más, porque sin consola no se ve ningún cliente.
-  if (process.env.AIVA_SOCK) {
-    const ruta = process.env.AIVA_SOCK;
+  if (process.env.XENCRM_SOCK) {
+    const ruta = process.env.XENCRM_SOCK;
     try {
       rmSync(ruta, { force: true });
     } catch {

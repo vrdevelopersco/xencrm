@@ -28,3 +28,6 @@ paquetes/
 # el ZIP de la sonda se arma con `zip -r Archive.zip .`: tampoco se guarda
 herramientas/sonda-hosting/Archive.zip
 DUNORKEY.env
+
+# respaldos que deja herramientas/migrar-a-xencrm.mjs (tienen las mismas llaves que la .env)
+*.antes-de-xencrm

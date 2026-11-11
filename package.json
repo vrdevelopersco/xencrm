@@ -2,7 +2,7 @@
   "name": "xencrm",
   "version": "0.1.0",
   "private": true,
-  "description": "XENCRM: CRM conversacional con IA para WhatsApp y el chat del sitio, con bandeja omnicanal, tratos y citas (la siguiente generación de aiva)",
+  "description": "XENCRM: CRM conversacional con IA para WhatsApp y el chat del sitio, con bandeja omnicanal, tratos y citas (la siguiente generación de XENCRM)",
   "type": "module",
   "engines": {
     "node": ">=22.13"

@@ -1,7 +1,7 @@
 // Datos de demostración desde la terminal. La lógica vive en crm/demo.ts, porque en un servidor no hay terminal
 // y cargar y quitar tiene que poder hacerse también desde la consola.
 //
-//   pnpm seed          carga el archivo `seedFile` de aiva.config.json
+//   pnpm seed          carga el archivo `seedFile` de xencrm.config.json
 //   pnpm seed --clear  borra solo los contactos sembrados (ids wa:seed-…)
 import { archivoDemo, cargar, cuantas, quitar } from './crm/demo.js';
 
@@ -12,7 +12,7 @@ if (process.argv.includes('--clear')) {
 
 const archivo = archivoDemo();
 if (!archivo) {
-  console.error('Este cliente no tiene datos de demostración: define "seedFile" en aiva.config.json.');
+  console.error('Este cliente no tiene datos de demostración: define "seedFile" en xencrm.config.json.');
   process.exit(1);
 }
 

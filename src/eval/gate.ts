@@ -17,7 +17,7 @@ const CASES: Case[] = [
   ['¿hacen envíos a Santa Marta?', 'info_tienda', 'envíos y domicilios · envios santa marta'],
   ['tienen parqueadero?', 'info_tienda', 'parqueadero'],
   ['¿tienen estacionamiento?', 'info_tienda', 'parqueadero'],
-  // Del diccionario del cliente (aiva.config.json > dictionary): pagos locales y sus verbos
+  // Del diccionario del cliente (xencrm.config.json > dictionary): pagos locales y sus verbos
   ['¿aceptan nequi?', 'info_tienda', 'formas de pago'],
   ['¿confeccionan chalecos?', 'compra', 'chalecos'],
   ['cómo funciona el proceso?', 'info_tienda'],

@@ -1,10 +1,10 @@
-// Quién ha entrado a la consola de aiva, ya desplegada: pnpm salud [dominio] [--usuario x] [--n 50] [--seguir] [--json]
+// Quién ha entrado a la consola de XENCRM, ya desplegada: pnpm salud [dominio] [--usuario x] [--n 50] [--seguir] [--json]
 //
-// Lee el token de ~/aiva-credenciales/salud-token.txt (lo crea `pnpm paquete`; al ZIP va solo su huella), le
+// Lee el token de ~/xencrm-credenciales/salud-token.txt (lo crea `pnpm paquete`; al ZIP va solo su huella), le
 // pide /_salud al servidor con él y pinta la bitácora de accesos en hora de Colombia. El token va en una cabecera,
 // nunca en la dirección: lo que va en la dirección queda escrito en los registros de cualquier servidor de paso.
 //
-//   pnpm salud                          aiva.hrctechnologies.com, últimos 50 movimientos
+//   pnpm salud                          xencrm.hrctechnologies.com, últimos 50 movimientos
 //   pnpm salud --usuario dueno.dunor    solo lo de esa persona
 //   pnpm salud --seguir                 se queda mirando y pinta lo nuevo cada 20 segundos
 //   pnpm salud http://localhost:3500    un paquete levantado aquí para probarlo
@@ -16,12 +16,12 @@ const args = process.argv.slice(2);
 const opcion = (nombre) => { const i = args.indexOf(`--${nombre}`); return i >= 0 ? args[i + 1] : undefined; };
 const bandera = (nombre) => args.includes(`--${nombre}`);
 const sueltos = args.filter((a, i) => !a.startsWith('--') && !['--usuario', '--n'].includes(args[i - 1]));
-const destino = sueltos[0] || 'aiva.hrctechnologies.com';
+const destino = sueltos[0] || 'xencrm.hrctechnologies.com';
 const base = (/^https?:\/\//.test(destino) ? destino : `https://${destino}`).replace(/\/+$/, '');
 const n = Math.min(Number(opcion('n')) || 50, 2000);
 const usuario = opcion('usuario') || '';
 
-const archivo = process.env.AIVA_SALUD_TOKEN_ARCHIVO || join(homedir(), 'aiva-credenciales', 'salud-token.txt');
+const archivo = process.env.XENCRM_SALUD_TOKEN_ARCHIVO || join(homedir(), 'xencrm-credenciales', 'salud-token.txt');
 let token = '';
 try { token = readFileSync(archivo, 'utf8').trim(); } catch {
   console.error(`No encuentro el token en ${archivo}. Lo crea «pnpm paquete»; el paquete que esté subido tiene que haberse armado en esta máquina.`);
@@ -40,7 +40,7 @@ const ancho = (s, w) => String(s ?? '').padEnd(w).slice(0, w);
 async function pedir() {
   const q = new URLSearchParams({ accesos: String(n) });
   if (usuario) q.set('usuario', usuario);
-  const r = await fetch(`${base}/_salud?${q}`, { headers: { 'x-salud-token': token, 'user-agent': 'aiva-salud' } });
+  const r = await fetch(`${base}/_salud?${q}`, { headers: { 'x-salud-token': token, 'user-agent': 'xencrm-salud' } });
   if (!r.ok) throw new Error(`/_salud contestó ${r.status}`);
   return r.json();
 }

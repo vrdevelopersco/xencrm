@@ -1,4 +1,4 @@
-// Modo prueba: que aiva conteste solo a unos chats. pnpm test:prueba
+// Modo prueba: que XENCRM conteste solo a unos chats. pnpm test:prueba
 //
 // Esto es lo que más fácil puede arruinar un negocio de todo lo que hay en el CRM, y no por romperse: por
 // quedarse encendido. Nada da error, nada se cae; simplemente los clientes escriben y nadie contesta, durante
@@ -8,10 +8,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-prueba-'));
-const base = JSON.parse(readFileSync(new URL('../../aiva.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
-writeFileSync(join(dir, 'aiva.config.json'), JSON.stringify(base));
-process.env.AIVA_CONFIG = join(dir, 'aiva.config.json');
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-prueba-'));
+const base = JSON.parse(readFileSync(new URL('../../xencrm.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+writeFileSync(join(dir, 'xencrm.config.json'), JSON.stringify(base));
+process.env.XENCRM_CONFIG = join(dir, 'xencrm.config.json');
 process.env.DB_PATH = join(dir, 'prueba.db');
 
 const p = await import('../crm/modo-prueba.js');
@@ -22,7 +22,7 @@ const check = (name: string, ok: boolean, detail = '') => {
   console.log(`${ok ? '✓' : '✗'} ${name}${ok ? '' : `\n   ${detail}`}`);
 };
 
-// 🪤 Sin prueba en marcha, aiva le contesta a TODO EL MUNDO. Esta función corre en cada mensaje de cada cliente
+// 🪤 Sin prueba en marcha, XENCRM le contesta a TODO EL MUNDO. Esta función corre en cada mensaje de cada cliente
 // del sistema, use esto o no: si se equivocara hacia el otro lado, dejaría mudo a un negocio que nunca la tocó.
 check('🪤 sin prueba, le contesta a cualquiera', p.puedeContestar('wa:573001234567@s.whatsapp.net') && p.puedeContestar('web:loquesea'));
 check('y no hay ninguna activa', p.pruebaActiva() === null);
@@ -30,7 +30,7 @@ check('y no hay ninguna activa', p.pruebaActiva() === null);
 p.ponerPrueba(['300 123 4567'], 2, 'Luigi');
 check('con prueba, le contesta al de la lista', p.puedeContestar('wa:573001234567@s.whatsapp.net'));
 // 🪤 Por los dígitos y por el final. Quien monta una demostración escribe «300 123 4567»; lo que llega es
-// `wa:573001234567@s.whatsapp.net`. Exigir que coincidan letra por letra dejaría a aiva muda en su propia demo,
+// `wa:573001234567@s.whatsapp.net`. Exigir que coincidan letra por letra dejaría a XENCRM muda en su propia demo,
 // que es el peor momento posible para descubrirlo.
 check('🪤 da igual cómo se escriba el número', p.puedeContestar('wa:3001234567@s.whatsapp.net') && p.puedeContestar('wa:573001234567@c.us'));
 check('y a los demás, no', !p.puedeContestar('wa:573009999999@s.whatsapp.net'));

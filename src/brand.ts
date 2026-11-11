@@ -60,7 +60,7 @@ export function localLogo(): { path: string; type: string } | null {
   return type && existsSync(path) ? { path, type } : null;
 }
 
-/** Dirección del logo para una página servida por aiva (`base` = origen de aiva, para páginas de otros sitios). */
+/** Dirección del logo para una página servida por XENCRM (`base` = origen de XENCRM, para páginas de otros sitios). */
 export function logoUrl(base = ''): string | null {
   const logo = business.brand.logo;
   if (!logo) return null;

@@ -46,7 +46,7 @@ check('y el que no lo consigue reparte en vez de levantar', /function deEspejo/.
 // 🪤 La consola también tiene que irse con su lanzador. Cuando no llevaba esta variable, de cuatro procesos se
 // iban tres: el que se quedaba obligaba al siguiente a correrse de tramo y a levantar una segunda copia.
 const bloqueConsola = arranque.slice(arranque.indexOf("slug: 'consola'"), arranque.indexOf("esLaConsola: true"));
-check('🪤 la consola también se va si se muere el lanzador', /AIVA_SUPERVISADO: '1'/.test(bloqueConsola), bloqueConsola.slice(0, 200));
+check('🪤 la consola también se va si se muere el lanzador', /XENCRM_SUPERVISADO: '1'/.test(bloqueConsola), bloqueConsola.slice(0, 200));
 
 // Correrse de puerto esconde el problema en vez de arreglarlo: antes de eso hay que echar a los de antes y
 // esperar a que suelten.
@@ -141,7 +141,7 @@ check('y el espejo dice por dónde reparte', /reparte: soyElDueno/.test(arranque
 // propios procesos estaba bloqueada.
 const { llamarACliente } = await import('../clientes.js');
 const { createServer } = await import('node:http');
-const dirSock = mkdtempSync(join(tmpdir(), 'aiva-sock-'));
+const dirSock = mkdtempSync(join(tmpdir(), 'xencrm-sock-'));
 const sock = join(dirSock, 'c.sock');
 const deMentira = createServer((_pide, responde) => {
   responde.writeHead(200, { 'content-type': 'application/json' });
@@ -163,7 +163,7 @@ deMentira.close();
 // ---------- Que los hijos se vayan de verdad al quedarse sin padre ----------
 // Un abuelo (esta prueba) levanta un padre, el padre levanta un hijo que vigila. Se mata al padre con SIGKILL
 // —que es lo que hace el alojamiento, sin despedidas— y el hijo tiene que irse solo.
-const dir = mkdtempSync(join(tmpdir(), 'aiva-huerfano-'));
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-huerfano-'));
 const hijoJs = join(dir, 'hijo.mjs');
 const padreJs = join(dir, 'padre.mjs');
 const senal = join(dir, 'sigo-vivo');
@@ -177,7 +177,7 @@ writeFileSync(
 writeFileSync(
   padreJs,
   `import { spawn } from 'node:child_process';
-   spawn(process.execPath, ['--import', 'tsx', ${JSON.stringify(hijoJs)}], { env: { ...process.env, AIVA_SUPERVISADO: '1' }, stdio: 'ignore' });
+   spawn(process.execPath, ['--import', 'tsx', ${JSON.stringify(hijoJs)}], { env: { ...process.env, XENCRM_SUPERVISADO: '1' }, stdio: 'ignore' });
    setInterval(() => {}, 1000);`,
 );
 

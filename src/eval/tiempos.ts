@@ -7,8 +7,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-tiempos-'));
-process.env.DB_PATH = join(dir, 'aiva.db');
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-tiempos-'));
+process.env.DB_PATH = join(dir, 'xencrm.db');
 
 const { esperas, msHabiles, resumenTiempos } = await import('../crm/tiempos.js');
 const { getDb } = await import('../rag/store.js');
@@ -54,7 +54,7 @@ const e2 = esperas({ desde: martes10 - MIN, userId: 'wa:dos', ahora: martes10 + 
 check('🪤 cinco mensajes seguidos no son cinco esperas', e2.length === 1, JSON.stringify(e2.map((x) => x.ms)));
 check('se cuenta desde el primero sin responder', e2[0]!.ms === 15 * MIN, String(e2[0]?.ms));
 check('y queda dicho cuántas veces insistió', e2[0]!.mensajes === 3, String(e2[0]?.mensajes));
-check('contestó Aiva', e2[0]!.quien === 'aiva' && e2[0]!.por === null);
+check('contestó Xen', e2[0]!.quien === 'xencrm' && e2[0]!.por === null);
 
 // --- 🪤 el reloj se para fuera del horario ---
 // Con un horario FIJO y no el del cliente de turno: si mañana alguien cambia su horario en el tablero, esta
@@ -90,7 +90,7 @@ check('y se sabe cuánto lleva', e3[0]!.ms === 60 * MIN, String(e3[0]?.ms));
 // --- el resumen ---
 const r = resumenTiempos({ desde: martes10 - MIN, acuerdoMin: 10, ahora });
 check('cuenta las respondidas', r.respondidas === 2, String(r.respondidas));
-check('separa a Aiva de las personas', r.porQuien.aiva.n === 1 && r.porQuien.persona.n === 1, JSON.stringify(r.porQuien));
+check('separa a Xen de las personas', r.porQuien.xencrm.n === 1 && r.porQuien.persona.n === 1, JSON.stringify(r.porQuien));
 check('nombra a quien contesta', r.personas.length === 1 && r.personas[0]!.nombre === 'Marcela', JSON.stringify(r.personas));
 check('dice quién sigue esperando', r.esperando.length === 1 && r.esperando[0]!.userId === 'wa:tres', JSON.stringify(r.esperando.map((x) => x.userId)));
 check('y cuántas pasaron del acuerdo', r.fueraDeAcuerdo === 1, `${r.fueraDeAcuerdo} (la de 15 min con acuerdo de 10)`);

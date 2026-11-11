@@ -1,6 +1,7 @@
-# XENCRM: la siguiente generación de aiva
+# XENCRM: la siguiente generación
 
-XENCRM nace de aiva (mismo código, misma historia de git) para ver en qué puede convertirse. Este documento es la
+XENCRM es la siguiente generación del CRM conversacional de HRC, que hasta noviembre de 2026 se llamó aiva (mismo
+código, misma historia de git). Este documento es la
 referencia de su interfaz: el brief, los tokens, el vocabulario y lo que hace cada pantalla. Las reglas de
 `diseno-tablero.md` (jerarquía, puntaje, quién habla, contraste, colores de dato, trampas) siguen mandando; lo que
 este documento cambia, lo dice.
@@ -16,7 +17,7 @@ este documento cambia, lo dice.
 
 ## Una sola piel
 
-Hasta aiva el tablero tenía dos caras: el completo (blanco y azul) y el modo fácil (el aspecto de Nexora, que DUNOR
+Hasta XENCRM el tablero tenía dos caras: el completo (blanco y azul) y el modo fácil (el aspecto de Nexora, que DUNOR
 mandó como muestra). En XENCRM **la del modo fácil es la de todos**, rehecha con identidad propia:
 
 - La piel va detrás de `:root[data-piel="xen"]`, que el `<html>` trae puesto de fábrica y `aplicarModo()` vuelve a
@@ -39,8 +40,8 @@ palabra para cada cosa, la misma en el menú, el título, el botón y el aviso:
 |---|---|---|
 | Inbox / Conversaciones | **Bandeja omnicanal** | WhatsApp, el chat del sitio y lo que venga, en un solo sitio |
 | Pipeline / Por etapa | **Tratos** | Cada contacto en su etapa del embudo, con valor y próximo paso |
-| Tomar control · Responde Aiva / Tú | **Pausar automatización** · **Reanudar automatización** | Lo que se pausa es el agente de IA; la persona sigue |
-| El asistente | Por su nombre configurado (`agent.name`, el que ve el cliente: «Aiva» en DUNOR); en textos genéricos, **el agente de IA** | Que el equipo y el cliente lo llamen igual |
+| Tomar control · Responde Xen / Tú | **Pausar automatización** · **Reanudar automatización** | Lo que se pausa es el agente de IA; la persona sigue |
+| El asistente | Por su nombre configurado (`agent.name`, el que ve el cliente: «Xen» en DUNOR); en textos genéricos, **el agente de IA** | Que el equipo y el cliente lo llamen igual |
 | Resumen del día (Inicio) | **Copiloto XEN** | El producto es XENCRM; el copiloto es suyo, no del agente del cliente |
 | A cargo | **Asignado a** | |
 | Sin dueño | **Sin asignar** | Filtros Mías · Sin asignar · Todas |
@@ -122,13 +123,14 @@ del bloque de la piel y de `admin.js` (`XEN · …`), y unido en la rama `xencrm
 | Pieza | Qué quedó | Dónde |
 |---|---|---|
 | Inicio | El **copiloto XEN** (borde teal→violeta): cuántas cosas esperan, hasta cinco acciones con verbo, persona y botón, los pendientes y la agenda de hoy. Todo sale de `/today`; sin pendientes, «Todo al día». Cifras con la letra display, la semana con tokens, el embudo con el color de cada etapa, esqueletos al cargar y «Reintentar» si falla | `pintarInicio`, `pintarResumenDelDia` |
-| Bandeja omnicanal | Mías · Sin asignar · Todas + «Todos los estados» (un solo `state.filter`); avatar con la insignia del canal; papel con trama propia; burbujas con cola; «Pausar / Reanudar automatización» (el mismo Aiva/Tú); «Asignado a» en la cabecera; pestañas **Enviar mensaje · Nota interna** (la nota va por `/contacts/:id/notas`, no toma la conversación y no se borra si falla); la ficha de al lado como la de SendPulse. La conversación se acomoda a su ancho con `@container conversacion` | ancla `XEN · Bandeja omnicanal` |
+| Bandeja omnicanal | Mías · Sin asignar · Todas + «Todos los estados» (un solo `state.filter`); avatar con la insignia del canal; papel con trama propia; burbujas con cola; «Pausar / Reanudar automatización» (el mismo Xen/Tú); «Asignado a» en la cabecera; pestañas **Enviar mensaje · Nota interna** (la nota va por `/contacts/:id/notas`, no toma la conversación y no se borra si falla); la ficha de al lado como la de SendPulse. La conversación se acomoda a su ancho con `@container conversacion` | ancla `XEN · Bandeja omnicanal` |
 | Contactos | Acciones arriba (Agregar contacto, Exportar a Excel), grupos como píldoras con su número, filas-tarjeta (contacto, último trato, datos como etiquetas, asignado, valor, última actividad), esqueleto, error con salida, vacíos con salida y aviso a los 500 | ancla `XEN · Contactos…` |
 | Ficha del contacto | Cabecera de trato: nombre con lápiz, etapa y «Asignado a» como píldoras que se cambian ahí, «Abrir chat»; «Lo que busca» en violeta; «Sobre el contacto», «Contacto» y «Datos del contacto» | ídem |
 | Tratos y Citas | Columnas con la franja y el punto de su etapa, cuenta y suma; citas en índigo, cumplidas verdes, no asistió en rojo | ídem |
 | Analítica | Pestañas **Resumen · Sentimiento**. Interés 🤩 Quiere comprar · 🙂 Interés claro · 🤔 Curiosidad · 😶 Sin interés; ánimo 😊 Contento · 😐 Neutral · 😠 Molesto (emoji con su palabra, `aria-hidden` en el emoji); el cruce interés × ánimo («Cuidar a N»); lo que frena; cómo cambió por día. **Sentimiento por voz: «Por desarrollar»**, con lo que hará, lo que hay (las notas de voz ya se transcriben) y lo que falta; el interruptor está apagado de verdad y la vista previa no tiene cifras | `GET /admin/api/sentimiento` (`src/crm/sentimiento.ts`, solo lectura, sin modelo; el candado la deja leer) |
 | Modelos de IA | Configuración › Modelos de IA (solo super-admin): OpenAI, Anthropic, Apple FM, Ollama, LM Studio y «Otra API compatible con OpenAI», con su estado, llave de solo escritura (vuelve solo la pista), «Probar conexión» que no gasta, y qué modelo hace cada rol. Claude ahora puede hacer un rol y sigue de respaldo; LM Studio y la compatible son motores nuevos (`lmstudio`, `compat`) que reusan el cliente de OpenAI con su dirección. Lo guardado aplica al reiniciar | `src/proveedores.ts`, `/admin/api/motores/proveedores`; variables `LMSTUDIO_URL`, `LMSTUDIO_MODEL`, `COMPAT_URL`, `COMPAT_API_KEY`, `COMPAT_MODEL`, `COMPAT_NOMBRE` |
-| Renombre | XENCRM en la consola (con la piel nueva y el verde agua de fábrica), la portada, la hoja de producto (`docs/xencrm-producto.pdf`), el README, `package.json` y los textos del servidor que ve una persona. El asistente de los clientes nuevos se llama **Xen**; los que ya existen conservan el suyo | ver README › lo que conserva el nombre de aiva |
+| Renombre | XENCRM en la consola (con la piel nueva y el verde agua de fábrica), la portada, la hoja de producto (`docs/xencrm-producto.pdf`), el README, `package.json` y los textos del servidor que ve una persona. El asistente de fábrica se llama **Xen** | README › «El renombre es completo» |
+| Renombre completo | También lo de adentro: `XENCRM_*`, `xencrm.config.json`, `data/xencrm.db`, `xencrm_consola`, `x-xencrm-*`, `xencrm.*` en el navegador (las llaves viejas se mudan solas), pm2 `xencrm-<cliente>`, MCP `ask_xencrm`. Lo local que git no sigue (la `.env`, `clientes/`, las bases, el lanzador, el sidecar) se migra con `herramientas/migrar-a-xencrm.mjs` | `migrar-a-xencrm.mjs` |
 
 Tokens que se sumaron en las secciones: `--fx-av-1…6-s/-t` (seis tonos de avatar, ≥ 6.5:1 en claro y ≥ 8.6:1 en
 oscuro; **uno solo para todo XENCRM**, definido con Contactos) y `--fx-canal-wa/web/otro` (la insignia del canal).

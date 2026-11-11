@@ -18,14 +18,14 @@ globalThis.fetch = (async (_url: string, init: { body: string }) => {
   return { ok: true, status: 200, json: async () => ({ embeddings: textos.map(() => [0.1, 0.2, 0.3]) }), text: async () => '' };
 }) as unknown as typeof fetch;
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-docs-'));
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-docs-'));
 const conocimiento = join(dir, 'conocimiento');
 const catalogo = join(dir, 'catalogo');
 // Una configuración mínima que apunte a esta carpeta de usar y tirar.
-const base = JSON.parse(readFileSync(new URL('../../aiva.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+const base = JSON.parse(readFileSync(new URL('../../xencrm.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
 base.sources = { ...(base.sources as object), productsFile: join(catalogo, 'productos.json'), knowledgeDir: conocimiento };
-writeFileSync(join(dir, 'aiva.config.json'), JSON.stringify(base));
-process.env.AIVA_CONFIG = join(dir, 'aiva.config.json');
+writeFileSync(join(dir, 'xencrm.config.json'), JSON.stringify(base));
+process.env.XENCRM_CONFIG = join(dir, 'xencrm.config.json');
 process.env.DB_PATH = join(dir, 'prueba.db');
 
 const { nombreSeguro, guardarDocumento, borrarDocumento, documentosDelNegocio } = await import('../rag/documentos.js');
@@ -91,8 +91,8 @@ await borrarDocumento('politicas.md');
 check('🪤 borrar se lleva el archivo', !existsSync(join(conocimiento, 'politicas.md')));
 check('y ya no está en la lista', documentosDelNegocio().length === 1);
 check('borrar algo que no está, lo dice', (await borrarDocumento('no-existe.md')) === false);
-check('🪤 y no se puede borrar fuera de la carpeta', (await falla(() => borrarDocumento('../../aiva.config.json'))).includes('no es de este negocio'));
-check('la configuración sigue ahí', existsSync(join(dir, 'aiva.config.json')));
+check('🪤 y no se puede borrar fuera de la carpeta', (await falla(() => borrarDocumento('../../xencrm.config.json'))).includes('no es de este negocio'));
+check('la configuración sigue ahí', existsSync(join(dir, 'xencrm.config.json')));
 
 // ── El troceado ──
 // 🪤 El título del archivo sale de su `# H1`, así que en un documento de un solo encabezado los dos son iguales

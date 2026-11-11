@@ -73,7 +73,7 @@ export const archivoDePlantilla = (plantilla?: string): string => {
   return p ? p.archivo : plantilla; // también admite la ruta de una configuración que ya exista
 };
 
-const BASE = 'aiva.config.example.json';
+const BASE = 'xencrm.config.example.json';
 const esObjeto = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 function mezclar(base: Record<string, unknown>, encima: Record<string, unknown>): Record<string, unknown> {
   const out = { ...base };
@@ -94,7 +94,7 @@ export function configDePlantilla(plantilla?: string): Record<string, unknown> {
   return PLANTILLAS.some((p) => p.archivo === archivo) ? mezclar(base, encima) : encima;
 }
 
-export const CLIENTES_DIR = process.env.AIVA_CLIENTES_DIR || 'clientes';
+export const CLIENTES_DIR = process.env.XENCRM_CLIENTES_DIR || 'clientes';
 const INDEX = () => join(CLIENTES_DIR, 'index.json');
 const PUERTO_BASE = 3001;
 
@@ -135,10 +135,10 @@ export function rutas(slug: string) {
   const dir = join(CLIENTES_DIR, slug);
   return {
     dir,
-    config: join(dir, 'aiva.config.json'),
+    config: join(dir, 'xencrm.config.json'),
     env: join(dir, '.env'),
     data: join(dir, 'data'),
-    db: join(dir, 'data', 'aiva.db'),
+    db: join(dir, 'data', 'xencrm.db'),
     auth: join(dir, 'auth'),
     diccionario: join(dir, 'dictionary.json'),
     perfil: join(dir, 'profile.json'),
@@ -286,7 +286,7 @@ export function crearCliente(opts: {
   const env = [
     `# ${opts.nombre} · lo que es de este cliente. Lo compartido (claves de OpenAI, Ollama) está en el .env de la raíz.`,
     `PORT=${puerto}`,
-    `AIVA_SLUG=${slug}`,
+    `XENCRM_SLUG=${slug}`,
     `DB_PATH=${resolve(r.db)}`,
     `WHATSAPP_AUTH_DIR=${resolve(r.auth)}`,
     `ADMIN_TOKEN=${token}`,
@@ -336,19 +336,19 @@ export function darDeBajaCliente(slug: string, hoy = new Date()): { cliente: Cli
 /** El ecosystem de pm2: una app por cliente, con su configuración y su base. */
 export function pm2Config(clientes = leerIndice()): string {
   const apps = clientes.map((c) => ({
-    name: `aiva-${c.slug}`,
+    name: `xencrm-${c.slug}`,
     script: 'node_modules/.bin/tsx',
     args: 'src/index.ts',
     cwd: resolve('.'),
     env: {
-      AIVA_CONFIG: resolve(rutas(c.slug).config),
-      AIVA_ENV_FILE: resolve(rutas(c.slug).env),
+      XENCRM_CONFIG: resolve(rutas(c.slug).config),
+      XENCRM_ENV_FILE: resolve(rutas(c.slug).env),
       NODE_ENV: 'production',
     },
     max_restarts: 10,
     restart_delay: 4000,
-    out_file: resolve(join(rutas(c.slug).dir, 'aiva.log')),
-    error_file: resolve(join(rutas(c.slug).dir, 'aiva.error.log')),
+    out_file: resolve(join(rutas(c.slug).dir, 'xencrm.log')),
+    error_file: resolve(join(rutas(c.slug).dir, 'xencrm.error.log')),
   }));
   return `// Generado por: pnpm cliente pm2 — no editar a mano.\nmodule.exports = { apps: ${JSON.stringify(apps, null, 2)} };\n`;
 }
@@ -359,8 +359,8 @@ export function tunelConfig(clientes = leerIndice(), opts: { tunnel?: string } =
   const reglas = conHost.map((c) => `  - hostname: ${c.host}\n    service: http://localhost:${c.puerto}`).join('\n');
   return [
     '# Generado por: pnpm cliente tunel',
-    `tunnel: ${opts.tunnel ?? 'aiva'}`,
-    `credentials-file: ~/.cloudflared/${opts.tunnel ?? 'aiva'}.json`,
+    `tunnel: ${opts.tunnel ?? 'xencrm'}`,
+    `credentials-file: ~/.cloudflared/${opts.tunnel ?? 'xencrm'}.json`,
     '',
     'ingress:',
     reglas || '  # (ningún cliente tiene dominio todavía)',

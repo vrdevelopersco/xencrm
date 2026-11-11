@@ -106,7 +106,7 @@ mismo que traerlo una.
 
 ## Antes de tocar un solo mensaje
 
-Son datos personales de terceros (Ley 1581, Habeas Data). El negocio es el responsable y aiva el encargado:
+Son datos personales de terceros (Ley 1581, Habeas Data). El negocio es el responsable y XENCRM el encargado:
 
 - Autorización escrita del cliente para procesar su historial, con la finalidad dicha (entrenar la atención).
 - Finalidad limitada: nada de cruzar datos entre clientes. Cada tenant tiene su base, y eso se mantiene.

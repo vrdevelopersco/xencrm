@@ -1,19 +1,19 @@
 # Sonda de hosting
 
-Una app mínima (sin dependencias) que se despliega en un hosting y responde **si ahí puede vivir aiva**.
+Una app mínima (sin dependencias) que se despliega en un hosting y responde **si ahí puede vivir XENCRM**.
 
-No prueba "si corre Node" —eso lo dice cualquier panel—; prueba las cuatro cosas que aiva necesita y que un
+No prueba "si corre Node" —eso lo dice cualquier panel—; prueba las cuatro cosas que XENCRM necesita y que un
 hosting compartido normalmente **no** tiene:
 
 1. **Que el proceso siga vivo sin que nadie lo visite.** WhatsApp mantiene un socket abierto; si el hosting duerme
-   la app entre peticiones, el número se desconecta y aiva deja de recibir mensajes.
+   la app entre peticiones, el número se desconecta y XENCRM deja de recibir mensajes.
 2. **Que pueda abrir un WebSocket hacia afuera y sostenerlo.** Así habla Baileys con WhatsApp.
 3. **Que el disco sea de verdad y persista.** La base de cada cliente es un archivo SQLite.
 4. **Cuánta memoria hay y si el proceso se reinicia solo.**
 
 ## Cómo usarla
 
-1. Sube esta carpeta a un repositorio (o usa el de aiva y apunta a `herramientas/sonda-hosting`).
+1. Sube esta carpeta a un repositorio (o usa el de XENCRM y apunta a `herramientas/sonda-hosting`).
 2. En el panel del hosting, "Desplegar app web" desde GitHub, con `npm start` como comando de arranque.
 3. Abre la URL. La página se recarga sola cada 30 segundos.
 4. **Lo importante: vuelve una hora después sin haberla visitado.** Si los latidos siguieron subiendo, el hosting
@@ -25,7 +25,7 @@ hosting compartido normalmente **no** tiene:
 
 ## Cómo leer el resultado
 
-| Lo que dice | Qué significa para aiva |
+| Lo que dice | Qué significa para XENCRM |
 |---|---|
 | El proceso late solo | ✅ Puede sostener WhatsApp |
 | El proceso NO late solo | ❌ Sirve para el chat del sitio, no para WhatsApp |
@@ -48,5 +48,5 @@ por separado. Para comprobarlo:
 3. Abre de nuevo. Si `arranques` volvió a 1 pero `arranquesEnSitioEstable` siguió subiendo, ahí es donde va la base
    de datos, y el hosting sirve. Si los dos volvieron a 1, no hay dónde guardar nada que dure.
 
-Si todo sale bien, falta una sola cosa antes de mover aiva ahí: **cuántas apps permite el plan**. aiva corre un
+Si todo sale bien, falta una sola cosa antes de mover XENCRM ahí: **cuántas apps permite el plan**. XENCRM corre un
 proceso por cliente más la consola, así que con tres clientes son cuatro apps (o un VPS donde corren todas).

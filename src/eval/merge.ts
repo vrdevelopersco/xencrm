@@ -4,7 +4,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-merge-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-merge-')), 'xencrm.db');
 const { touchUser, appendMessage } = await import('../agent/memory.js');
 const { getContact, updateContact, setStage, addEvent, contactNumber, listEvents } = await import('../crm/contacts.js');
 const { findDuplicates, keeperOf, mergeContacts } = await import('../crm/merge.js');

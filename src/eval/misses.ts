@@ -23,7 +23,7 @@ const check = (name: string, ok: boolean, detail = '') => {
 };
 const original = getDictionary();
 const originalFile = business.dictionaryFile;
-business.dictionaryFile = join(mkdtempSync(join(tmpdir(), 'aiva-misses-')), 'dictionary.json');
+business.dictionaryFile = join(mkdtempSync(join(tmpdir(), 'xencrm-misses-')), 'dictionary.json');
 const usageBefore = (getDb().prepare('SELECT COUNT(*) n FROM llm_usage').get() as { n: number }).n;
 const empty = { topics: [], offerVerbs: [] };
 

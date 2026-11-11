@@ -82,6 +82,18 @@ main{padding:16px 20px 40px;max-width:1100px;margin:0 auto}
 </main>
 
 <script>
+// XENCRM: las llaves que el navegador guardó cuando esto se llamaba aiva («aiva.…») se mudan una vez a «xencrm.…».
+(function deAivaAXencrm() {
+  try {
+    var viejas = [];
+    for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('ai' + 'va.') === 0) viejas.push(k); }
+    viejas.forEach(function (k) {
+      var nueva = 'xencrm.' + k.slice(5);
+      if (localStorage.getItem(nueva) === null) localStorage.setItem(nueva, localStorage.getItem(k));
+      localStorage.removeItem(k);
+    });
+  } catch (e) { /* sin almacenamiento, no hay nada que mudar */ }
+})();
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) {
@@ -98,7 +110,7 @@ main{padding:16px 20px 40px;max-width:1100px;margin:0 auto}
   var BASE = location.pathname.replace(/\/admin\/monitor\/?$/, '');
 
   var token = (location.hash || '').replace(/^#/, '').trim();
-  try { if (token) localStorage.setItem('aiva.monitor.token', token); else token = localStorage.getItem('aiva.monitor.token') || ''; } catch (e) {}
+  try { if (token) localStorage.setItem('xencrm.monitor.token', token); else token = localStorage.getItem('xencrm.monitor.token') || ''; } catch (e) {}
   if (token) history.replaceState(null, '', location.pathname);
 
   function hora(ts) {

@@ -9,8 +9,8 @@ import { appendFileSync, mkdtempSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const base = mkdtempSync(join(tmpdir(), 'aiva-accesos-'));
-process.env.AIVA_CLIENTES_DIR = base;
+const base = mkdtempSync(join(tmpdir(), 'xencrm-accesos-'));
+process.env.XENCRM_CLIENTES_DIR = base;
 process.env.CONSOLA_TOKEN = 'llave-maestra-de-prueba';
 const { anotarAcceso, leerAccesos, resumenPorUsuario, accesosParaSalud, tapado, navegadorDe, rutaAccesos } = await import('../accesos.js');
 
@@ -21,7 +21,7 @@ const check = (name: string, ok: boolean, detail = '') => {
 };
 
 // ---------- El módulo, solo ----------
-const suelto = mkdtempSync(join(tmpdir(), 'aiva-accesos-suelto-'));
+const suelto = mkdtempSync(join(tmpdir(), 'xencrm-accesos-suelto-'));
 const t = (min: number) => new Date(Date.UTC(2026, 9, 19, 15, min));
 anotarAcceso(suelto, { tipo: 'fallo', usuario: 'dueno', motivo: 'clave equivocada' }, t(0));
 anotarAcceso(suelto, { tipo: 'entro', usuario: 'dueno', rol: 'admin' }, t(1));
@@ -59,7 +59,7 @@ check('Edge no se confunde con Chrome',
 check('un programa se nombra como programa', navegadorDe('curl/8.7.1') === 'programa');
 
 // No crece sin fin: con un tope pequeño, se queda con las últimas y la más nueva sigue ahí.
-const grande = mkdtempSync(join(tmpdir(), 'aiva-accesos-grande-'));
+const grande = mkdtempSync(join(tmpdir(), 'xencrm-accesos-grande-'));
 for (let i = 0; i < 3000; i++) anotarAcceso(grande, { tipo: 'fallo', usuario: `u${i}`, motivo: 'clave equivocada' }, t(0), 60_000);
 const quedan = leerAccesos(grande);
 check('pasando el tope se recorta, sin perder lo último', statSync(rutaAccesos(grande)).size < 250_000 && quedan.length <= 2000 && quedan.at(-1)?.usuario === 'u2999', `${quedan.length} líneas`);
@@ -92,7 +92,7 @@ const ultima = () => leerAccesos(base).at(-1);
 const archivo = () => readFileSync(rutaAccesos(base), 'utf8');
 
 const bien = await entrar({ usuario: 'dueno', clave: 'clave-del-dueno-1' });
-const sesion = /aiva_consola=([^;]*)/.exec(bien.headers.get('set-cookie') ?? '')?.[1] ?? '';
+const sesion = /xencrm_consola=([^;]*)/.exec(bien.headers.get('set-cookie') ?? '')?.[1] ?? '';
 check('entrar deja su línea: quién, con qué rol, desde dónde y con qué',
   bien.status === 200 && ultima()?.tipo === 'entro' && ultima()?.usuario === 'dueno' && ultima()?.rol === 'admin' && ultima()?.ip === '190.24.1.2' && ultima()?.navegador === 'Chrome · Windows',
   JSON.stringify(ultima()));
@@ -135,7 +135,7 @@ check('pero no cada llamada de adentro: sería ruido', leerAccesos(base).filter(
 
 await comoDueno('/api/yo', { method: 'PATCH', body: JSON.stringify({ claveActual: 'clave-del-dueno-1', claveNueva: 'clave-nueva-del-dueno' }) });
 check('cambiarse la clave uno mismo queda, sin la clave', ultima()?.que === 'lo suyo: clave nueva' && ultima()?.por === 'dueno' && !/clave-nueva-del-dueno/.test(archivo()), JSON.stringify(ultima()));
-const otra = /aiva_consola=([^;]*)/.exec((await entrar({ usuario: 'dueno', clave: 'clave-nueva-del-dueno' })).headers.get('set-cookie') ?? '')?.[1] ?? '';
+const otra = /xencrm_consola=([^;]*)/.exec((await entrar({ usuario: 'dueno', clave: 'clave-nueva-del-dueno' })).headers.get('set-cookie') ?? '')?.[1] ?? '';
 await app.request('http://local/api/salir', { method: 'POST', headers: { ...desde('190.24.1.2'), 'x-consola-sesion': otra } });
 check('salir se anota', ultima()?.tipo === 'salio' && ultima()?.usuario === 'dueno');
 

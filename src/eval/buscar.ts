@@ -4,7 +4,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-buscar-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-buscar-')), 'xencrm.db');
 
 // 🪤 Los vectores salen de un Ollama local, y esta prueba dependía de que estuviera encendido: pasaba en la
 // máquina donde lo estaba y se caía en cualquier otra —y se cayó hoy, sin que nadie tocara nada—. Una prueba

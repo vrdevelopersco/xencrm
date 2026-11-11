@@ -7,8 +7,8 @@
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-const base = mkdtempSync(join(tmpdir(), 'aiva-transcribir-'));
-process.env.DB_PATH = join(base, 'data', 'aiva.db');
+const base = mkdtempSync(join(tmpdir(), 'xencrm-transcribir-'));
+process.env.DB_PATH = join(base, 'data', 'xencrm.db');
 // 🪤 SIN llave, a propósito. Una prueba no sale a internet: no puede depender de que haya red, no puede
 // costar dinero y no puede tardar lo que tarde OpenAI. Sin llave, transcribir() se planta antes del fetch, y
 // eso deja comprobar todo lo que importa aquí —el tope y la cuenta— sin tocar la red ni una vez.

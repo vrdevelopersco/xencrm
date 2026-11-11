@@ -115,7 +115,7 @@ DTSTART;TZID=America/Bogota:20261002T080000
 DURATION:PT1H30M
 END:VEVENT
 BEGIN:VEVENT
-UID:aiva-appt-7@aiva.local
+UID:xencrm-appt-7@xencrm.local
 DTSTART:20261003T150000Z
 DTEND:20261003T160000Z
 END:VEVENT
@@ -136,11 +136,11 @@ check('diario con COUNT=3', ['2026-09-25', '2026-09-26', '2026-09-27', '2026-09-
 check('mensual segundo martes (13 de octubre)', has('2026-10-13T14:00', '2026-10-13T15:00'));
 check('zona de Windows (Outlook)', has('2026-10-01T14:00', '2026-10-01T15:00'));
 check('DURATION en vez de DTEND', has('2026-10-02T13:00', '2026-10-02T14:30'));
-check('ignora las citas de aiva (no se bloquea a sí mismo)', !busy.some((b) => iso(b.start) === '2026-10-03T15:00'));
+check('ignora las citas de XENCRM (no se bloquea a sí mismo)', !busy.some((b) => iso(b.start) === '2026-10-03T15:00'));
 const weekly = busy.filter((b) => new Date(b.start).getUTCHours() === 15 && [1, 3].includes(new Date(b.start).getUTCDay()));
 check('semanal: 8 ocurrencias en la ventana', weekly.length === 8, `obtuvo ${weekly.length}: ${weekly.map((b) => iso(b.start)).join(', ')}`);
 
-// ---------- 2. Formato de lo que publica aiva ----------
+// ---------- 2. Formato de lo que publica XENCRM ----------
 const appts = listAppointments({ from: Date.now() - 60 * 86400_000, limit: 5000 });
 const feed = appointmentsFeed();
 const lines = feed.split('\r\n');

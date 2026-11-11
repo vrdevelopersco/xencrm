@@ -6,8 +6,8 @@
 import { mkdtempSync, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-const base = mkdtempSync(join(tmpdir(), 'aiva-medios-'));
-process.env.DB_PATH = join(base, 'data', 'aiva.db');
+const base = mkdtempSync(join(tmpdir(), 'xencrm-medios-'));
+process.env.DB_PATH = join(base, 'data', 'xencrm.db');
 const { guardar, rutaDe, borrar, tipoDe, seAcepta, carpeta, cuantoOcupa, limpiar, MedioRechazado, MAXIMO_BYTES, MIMES_ACEPTADOS } =
   await import('../crm/medios.js');
 const { touchUser, appendMessage, getMessages } = await import('../agent/memory.js');
@@ -178,10 +178,10 @@ for (const tipo of ['imagen', 'video', 'audio', 'documento']) {
 }
 // Varias por tipo: tres fotos seguidas con la misma frase delatan al robot.
 check('y más de una frase, para no repetirse', (bloqueAcuse.match(/',\s*$/gm) || []).length >= 4, 'solo hay una frase por tipo');
-// 🪤 Y no se contesta cuando no toca: en «solo escuchar» aiva no le escribe al cliente, y si la conversación
+// 🪤 Y no se contesta cuando no toca: en «solo escuchar» XENCRM no le escribe al cliente, y si la conversación
 // la lleva una persona, el acuse se le cruzaría por encima.
 check('🪤 no se acusa en modo aprendizaje ni si la lleva una persona', /!soloEscucha\('whatsapp'\) && !getContact\(userId\)\?\.humanMode/.test(fuenteWa),
-  'el acuse se manda siempre, también cuando aiva debe estar callada');
+  'el acuse se manda siempre, también cuando XENCRM debe estar callada');
 
 console.log(fail ? `\n${fail} fallo(s)` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

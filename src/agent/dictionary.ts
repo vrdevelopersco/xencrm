@@ -1,7 +1,7 @@
-// Diccionario del negocio: lo que cada cliente le enseña a aiva sin tocar código (temas que se responden con su
+// Diccionario del negocio: lo que cada cliente le enseña a XENCRM sin tocar código (temas que se responden con su
 // información, verbos con que su gente pregunta por lo que ofrece y expresiones propias: "a la hora del almuerzo"
 // quiere decir "a las 12"). Vive en un archivo por cliente
-// (aiva.config.json > dictionaryFile), se importa y exporta desde el tablero y se aplica sin reiniciar.
+// (xencrm.config.json > dictionaryFile), se importa y exporta desde el tablero y se aplica sin reiniciar.
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { z } from 'zod';
 import { business } from '../config.js';
@@ -39,7 +39,7 @@ let version = 0;
 
 const file = () => business.dictionaryFile;
 
-/** El diccionario del archivo; si no existe, el que venga dentro de aiva.config.json (versiones anteriores) o vacío. */
+/** El diccionario del archivo; si no existe, el que venga dentro de xencrm.config.json (versiones anteriores) o vacío. */
 function load(): Dictionary {
   if (existsSync(file())) return DictionarySchema.parse(JSON.parse(readFileSync(file(), 'utf8')));
   return DictionarySchema.parse(business.dictionary ?? {});

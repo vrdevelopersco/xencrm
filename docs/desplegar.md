@@ -1,10 +1,10 @@
-# Subir aiva a un hosting de apps
+# Subir XENCRM a un hosting de apps
 
 Un solo despliegue atiende a todos los clientes, separados por ruta. Se arma con `pnpm paquete` y sale un
-`paquetes/aiva.zip` que se sube tal cual al panel.
+`paquetes/xencrm.zip` que se sube tal cual al panel.
 
 ```
-pnpm paquete                       usa aiva.hrctechnologies.com
+pnpm paquete                       usa xencrm.hrctechnologies.com
 pnpm paquete midominio.com
 ```
 
@@ -12,7 +12,7 @@ pnpm paquete midominio.com
 
 | Ruta | Qué es |
 |---|---|
-| `/` | La portada: qué es aiva. Es lo único que ve quien llega al dominio pelado. |
+| `/` | La portada: qué es XENCRM. Es lo único que ve quien llega al dominio pelado. |
 | `/consola` | La consola de vigilancia y atención: todos los clientes en una pantalla. |
 | `/dunor/` | El chat del sitio de ese cliente. Su tablero se abre desde la consola (`/c/dunor/admin`): por `/dunor/admin` ya no se sirve (2026-11-07, ver `seguridad.md`). |
 | `/.well-known/security.txt` | A quién escribirle si alguien encuentra un fallo (RFC 9116). |
@@ -57,7 +57,7 @@ Si el error aparece, no es el código: es el campo del panel.
 ## Variables de entorno
 
 Ningún secreto viaja dentro del ZIP. Se ponen en el panel, y el `LEEME.txt` de adentro las trae listas para
-copiar. En esta máquina están juntas en `~/aiva-credenciales/` (permisos 700, cada archivo 600).
+copiar. En esta máquina están juntas en `~/xencrm-credenciales/` (permisos 700, cada archivo 600).
 
 🪤 Ahí, y no en `paquetes/`: esa carpeta es la salida del empaquetador.
 
@@ -68,19 +68,19 @@ copiar. En esta máquina están juntas en `~/aiva-credenciales/` (permisos 700, 
 
 Opcionales del blindaje (2026-11-07; el porqué en `seguridad.md` › «El blindaje»):
 
-- `AIVA_IP` — cuántos saltos desde la derecha del `x-forwarded-for` está la dirección de verdad de quien llama.
+- `XENCRM_IP` — cuántos saltos desde la derecha del `x-forwarded-for` está la dirección de verdad de quien llama.
   Sin definir, `0` (la última): es lo medido en Hostinger el 2026-11-07. `primera` vuelve a lo de antes, que deja
   a quien llama escribir su dirección. Se mide con `/_salud` (con su token) mandando una dirección inventada:
   `tuPeticion` enseña la cadena entera.
 - `TABLERO_DIRECTO=si` — vuelve a abrir el tablero de cada cliente por `/<cliente>/admin` con su token. Sin esto,
   solo se abre desde la consola.
 - `SEGURIDAD_CONTACTO` — a quién escribir según `security.txt` (por defecto, el de HRC: `laft@hrctechnologies.com`).
-- `AIVA_SIN_AFINAR=1` — al ARMAR el ZIP (no en el panel): deja el código servido legible, con sus comentarios,
+- `XENCRM_SIN_AFINAR=1` — al ARMAR el ZIP (no en el panel): deja el código servido legible, con sus comentarios,
   para mirar un fallo en el servidor.
 
 Los motores (`LIGHT_ENGINE`, `HEAVY_ENGINE`, `GATE_ENGINE`, `ANALYSIS_ENGINE`, `EMBED_ENGINE`) **arrancan en
 `openai` solos**: en un hosting de apps no hay Ollama ni lo va a haber, y una variable que se olvide no puede
-dejar a aiva esperando un modelo local que no existe. Si se ponen en el panel, manda el panel.
+dejar a XENCRM esperando un modelo local que no existe. Si se ponen en el panel, manda el panel.
 
 ## Dónde quedan los datos
 
@@ -88,12 +88,12 @@ Estas plataformas estrenan carpeta en cada actualización, así que lo que se es
 El arranque busca dónde guardar y se queda con el primero donde pueda escribir:
 
 ```
-$AIVA_DATOS  →  ~/aiva-datos  →  ../../../../aiva-datos  →  el temporal del sistema
+$XENCRM_DATOS  →  ~/xencrm-datos  →  ../../../../xencrm-datos  →  el temporal del sistema
 ```
 
 Ahí adentro va una carpeta por cliente con su base, su sesión de WhatsApp, su perfil, su diccionario, su catálogo
 y su conocimiento. Por eso actualizar no borra nada. Si el panel no deja escribir en ninguno de esos sitios,
-se define `AIVA_DATOS` con una ruta que sí.
+se define `XENCRM_DATOS` con una ruta que sí.
 
 ## WhatsApp
 
@@ -111,9 +111,9 @@ Se descomprime aparte, se le apunta a una carpeta de datos de mentira y se levan
 
 ```bash
 cd /tmp && rm -rf prueba && mkdir prueba && cd prueba
-unzip -q ~/proyectos/aiva/paquetes/aiva.zip
-ln -s ~/proyectos/aiva/node_modules node_modules
-PORT=3500 AIVA_DATOS=/tmp/prueba-datos OPENAI_API_KEY=sk-de-prueba \
+unzip -q ~/proyectos/xencrm/paquetes/xencrm.zip
+ln -s ~/proyectos/xencrm/node_modules node_modules
+PORT=3500 XENCRM_DATOS=/tmp/prueba-datos OPENAI_API_KEY=sk-de-prueba \
   CONSOLA_TOKEN=x TOKEN_DUNOR=x TOKEN_CONFIA=x TOKEN_HRC=x node app.js
 ```
 
@@ -172,13 +172,13 @@ persona (último ingreso, cuántas veces, fallos desde entonces) y las últimas 
 Nació el 2026-10-19: se le pasó su acceso a DUNOR y no había forma de saber si habían entrado.
 
 ```
-pnpm salud                          aiva.hrctechnologies.com, en hora de Colombia
+pnpm salud                          xencrm.hrctechnologies.com, en hora de Colombia
 pnpm salud --usuario dueno.dunor    solo lo de esa persona
 pnpm salud --seguir                 se queda mirando y pinta lo nuevo cada 20 segundos
 pnpm salud --json                   la respuesta tal cual
 ```
 
-- **El token** lo crea `pnpm paquete` la primera vez, en `~/aiva-credenciales/salud-token.txt` (600), y no lo
+- **El token** lo crea `pnpm paquete` la primera vez, en `~/xencrm-credenciales/salud-token.txt` (600), y no lo
   vuelve a cambiar. Al ZIP va solo su huella (`salud.json`), así que no hay variable nueva en el panel y el ZIP no
   lleva ningún secreto. Abre `/_salud` y nada más: no entra a la consola ni a ningún tablero. 🪤 Un paquete armado
   en otra máquina trae la huella de *ese* token. Si `pnpm salud` dice que no lo reconoce, es eso.
@@ -215,7 +215,7 @@ Tres cosas lo sostienen ahora, y las tres hacen falta:
    Si el que mandaba desaparece, el otro lo nota en cuatro segundos y toma el relevo.
 2. **Ningún hijo sobrevive a su padre.** Cada proceso de cliente —y la consola— vigila su `ppid`; cuando lo
    adopta `init`, se va solo. Es lo que impide que un SIGKILL al lanzador deje cuatro procesos agarrando
-   puertos y sesiones de WhatsApp. La consola necesita `AIVA_SUPERVISADO=1` para esto, igual que los clientes:
+   puertos y sesiones de WhatsApp. La consola necesita `XENCRM_SUPERVISADO=1` para esto, igual que los clientes:
    sin esa variable se quedaba viva ella sola y obligaba al siguiente lanzador a correrse de tramo.
 3. **Correrse de puerto es el último recurso.** Antes se echa a los procesos de la versión anterior (se
    reconocen porque cuelgan de la carpeta de este dominio y son uno de nuestros dos guiones) y se espera doce
@@ -301,7 +301,7 @@ abrirlos y entra en un bucle del que no sale solo. En el registro se ve así:
 
 ```
 App did not call listen() within 3 seconds… App is hanging at startup
-[aiva] los puertos 4100+ estaban ocupados (¿versión anterior sin cerrar?); uso 4104+
+[xencrm] los puertos 4100+ estaban ocupados (¿versión anterior sin cerrar?); uso 4104+
 ```
 
 Por eso el enrutador **escucha antes de levantar a nadie** (arranca en menos de medio segundo) y los procesos de

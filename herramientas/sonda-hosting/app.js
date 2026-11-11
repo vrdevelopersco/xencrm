@@ -1,5 +1,5 @@
 // Sonda de hosting: se despliega en un hosting cualquiera (Hostinger, Render, Railway…) y responde si ahí puede
-// vivir aiva o no. No prueba "si corre Node" —eso lo dice cualquiera—: prueba las cuatro cosas que aiva necesita y
+// vivir XENCRM o no. No prueba "si corre Node" —eso lo dice cualquiera—: prueba las cuatro cosas que XENCRM necesita y
 // que un hosting compartido suele NO tener.
 //
 //   1. Que el proceso siga vivo sin que nadie lo visite (WhatsApp exige un socket abierto 24/7).
@@ -213,7 +213,7 @@ http
   .createServer((req, res) => {
     const v = veredicto();
     const cuerpo = {
-      veredicto: v.sirve ? 'Aquí puede vivir aiva' : 'Todavía no se puede concluir (o no sirve)',
+      veredicto: v.sirve ? 'Aquí puede vivir XENCRM' : 'Todavía no se puede concluir (o no sirve)',
       bien: v.bien,
       problemas: v.problemas,
       detalle: {
@@ -240,13 +240,13 @@ http
     }
     const lista = (xs, icono) => xs.map((x) => `<li>${icono} ${x}</li>`).join('');
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    res.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Sonda · ¿cabe aiva aquí?</title>
+    res.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Sonda · ¿cabe XENCRM aquí?</title>
 <meta http-equiv="refresh" content="30">
 <style>body{font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:720px;margin:40px auto;padding:0 20px;color:#111827}
 h1{font-size:20px}h2{font-size:15px;margin-top:24px}ul{padding-left:20px}li{margin-bottom:6px}
 .v{padding:12px 14px;border-radius:12px;font-weight:600;background:${v.sirve ? '#dcfce7' : '#fef3c7'};color:${v.sirve ? '#166534' : '#a3480a'}}
 pre{background:#f3f4f6;padding:12px;border-radius:10px;overflow:auto;font-size:12px}</style></head><body>
-<h1>Sonda de hosting · ¿cabe aiva aquí?</h1>
+<h1>Sonda de hosting · ¿cabe XENCRM aquí?</h1>
 <p class="v">${cuerpo.veredicto}</p>
 ${v.bien.length ? `<h2>Lo que sí</h2><ul>${lista(v.bien, '✅')}</ul>` : ''}
 ${v.problemas.length ? `<h2>Lo que falta o falla</h2><ul>${lista(v.problemas, '⚠️')}</ul>` : ''}

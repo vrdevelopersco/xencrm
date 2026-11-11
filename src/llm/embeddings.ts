@@ -3,7 +3,7 @@
 // Dos caminos, y se elige con EMBED_ENGINE:
 //   · ollama (por defecto): `bge-m3` corriendo en la misma máquina. Gratis y nada sale de ahí. Pide ~3 GB de RAM.
 //   · openai: `text-embedding-3-small`. Cuesta $0.02 por millón de tokens —una búsqueda son ~20 tokens— y quita la
-//     única dependencia pesada, que es lo que permite correr aiva en una máquina chica o en un hosting de apps.
+//     única dependencia pesada, que es lo que permite correr XENCRM en una máquina chica o en un hosting de apps.
 //
 // 🪤 Los vectores de dos modelos NO son comparables: bge-m3 da 1024 números y text-embedding-3-small 1536. Al
 // cambiar de motor hay que volver a indexar (`pnpm ingest`). Mientras tanto, el buscador descarta los vectores que

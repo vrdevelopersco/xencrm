@@ -1,6 +1,6 @@
 // ¿La dirección pública (PUBLIC_URL, el túnel) llega a este servidor? Si se cae, dejan de funcionar el chat del sitio,
 // el webhook de WhatsApp oficial, el calendario en Google/Outlook y el tablero desde el celular, y nadie se entera.
-// aiva se llama a sí misma por esa dirección cada 5 minutos y compara un código único de este proceso (así también
+// XENCRM se llama a sí misma por esa dirección cada 5 minutos y compara un código único de este proceso (así también
 // detecta que la dirección apunta a otro servidor). Justo después de crear un túnel, este equipo a veces tarda en
 // resolver el nombre: por eso solo se da por caída después de 3 fallas seguidas.
 import { randomBytes } from 'node:crypto';

@@ -1,13 +1,13 @@
 // Pruebas del modo fácil con el aspecto de Nexora, sin modelo: pnpm test:facil
 //
-// DUNOR mandó Nexora como muestra de cómo quiere ver aiva («que se vea igual, pero en nuestro producto»). El modo
-// fácil tomó su menú, su barra de arriba y su Inicio, con los datos y las acciones de aiva. Aquí se prueba que el
+// DUNOR mandó Nexora como muestra de cómo quiere ver XENCRM («que se vea igual, pero en nuestro producto»). El modo
+// fácil tomó su menú, su barra de arriba y su Inicio, con los datos y las acciones de XENCRM. Aquí se prueba que el
 // menú es el de la muestra y que cada puerta abre (también con el candado), que la gráfica dice la verdad, que lo
 // que se muda vuelve a su sitio y que el modo completo no cambió: todo lo nuevo vive detrás del modo fácil.
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-facil-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-facil-')), 'xencrm.db');
 process.env.ADMIN_TOKEN = 'token-del-tablero-de-prueba-0123456789';
 const { getDb } = await import('../rag/store.js');
 const { citasPorDia } = await import('../crm/series.js');
@@ -44,7 +44,7 @@ const vistas = grupos.flatMap((g) => g.items.map((x) => x[0]!));
 check('🪤 cada puerta lleva a una pantalla que existe (ninguna nueva: son las de siempre)', vistas.every((v) => html.includes(`id="view-${v}"`)), vistas.join(','));
 const cerradas = /var VISTAS_DE_QUIEN_ADMINISTRA = \{([^}]*)\}/.exec(js)?.[1] ?? '';
 const soloCompleto = /var SOLO_COMPLETO_VISTAS = \{([^}]*)\}/.exec(js)?.[1] ?? '';
-check('🪤 ninguna es de las que cierra el candado: bryan no se topa con «Eso lo maneja quien administra aiva»', vistas.every((v) => !new RegExp(`\\b${v}: 1`).test(cerradas)), cerradas);
+check('🪤 ninguna es de las que cierra el candado: bryan no se topa con «Eso lo maneja quien administra XENCRM»', vistas.every((v) => !new RegExp(`\\b${v}: 1`).test(cerradas)), cerradas);
 check('ni de las que el modo fácil esconde', vistas.every((v) => !new RegExp(`\\b${v}: 1`).test(soloCompleto)), soloCompleto);
 check('la configuración sigue abajo, en el engranaje de siempre (con su candado)', /id="cfg-btn"/.test(html) && /CFG_CLIENTE\.forEach\(function \(d\) \{ d\.candado = true; \}\)/.test(js));
 
@@ -69,11 +69,11 @@ for (const v of vistas) {
 const app = new Hono();
 mountAdmin(app as never);
 const T = { 'x-admin-token': process.env.ADMIN_TOKEN!, 'content-type': 'application/json' };
-await app.request('/admin/api/tablero/modo', { method: 'PUT', headers: { ...T, 'x-aiva-rol': 'super' }, body: JSON.stringify({ modo: 'facil' }) });
+await app.request('/admin/api/tablero/modo', { method: 'PUT', headers: { ...T, 'x-xencrm-rol': 'super' }, body: JSON.stringify({ modo: 'facil' }) });
 for (const ruta of ['/ventas', '/seguimientos', '/series?dias=7', '/tiempos', '/origenes', '/sentimiento']) {
-  check(`el servidor la abre de verdad: ${ruta} con el candado`, (await app.request(`/admin/api${ruta}`, { headers: { ...T, 'x-aiva-rol': 'asesor' } })).status === 200);
+  check(`el servidor la abre de verdad: ${ruta} con el candado`, (await app.request(`/admin/api${ruta}`, { headers: { ...T, 'x-xencrm-rol': 'asesor' } })).status === 200);
 }
-check('🪤 y lo que cuesta aiva sigue cerrado', (await app.request('/admin/api/usage', { headers: { ...T, 'x-aiva-rol': 'asesor' } })).status === 403);
+check('🪤 y lo que cuesta XENCRM sigue cerrado', (await app.request('/admin/api/usage', { headers: { ...T, 'x-xencrm-rol': 'asesor' } })).status === 403);
 
 console.log('— La gráfica de Inicio dice la verdad');
 const DIA = 86400_000, ahora = Date.parse('2026-11-04T15:00:00-05:00');
@@ -180,7 +180,7 @@ check('«Crear» abre la ficha nueva de siempre y la agenda', /\$\('cli-nuevo'\)
 check('el buscador es la búsqueda de Ctrl+K', /\$\('fx-buscar'\)\.onclick = function \(\) \{ abrirPaleta\(\); \}/.test(js));
 const delBloqueYo = js.slice(js.indexOf("document.querySelectorAll('[data-yo]')"), js.indexOf("if ($('cfg-btn')) $('cfg-btn').addEventListener"));
 check('🪤 los botones de «tu cuenta» paran el clic (si no, lo que abren se cerraba al instante)', delBloqueYo.length > 0 && delBloqueYo.length < 800 && /b\.onclick = function \(e\) \{\s*e\.stopPropagation\(\);/.test(delBloqueYo), String(delBloqueYo.length));
-check('«Tomar control» toca el mismo interruptor de Aiva/Tú', /\$\('fx-control'\)\.onclick = function \(\) \{ if \(state\.detail\) \$\(state\.detail\.contact\.humanMode \? 'seg-bot' : 'seg-human'\)\.click\(\); \}/.test(js));
+check('«Tomar control» toca el mismo interruptor de Xen/Tú', /\$\('fx-control'\)\.onclick = function \(\) \{ if \(state\.detail\) \$\(state\.detail\.contact\.humanMode \? 'seg-bot' : 'seg-human'\)\.click\(\); \}/.test(js));
 // XENCRM: la ficha empieza justo donde acaba el menú. Se compara con el ancho del menú en vez de fijar un número:
 // cuando el menú cambió de 256 a 248 px, un número fijo habría dejado una franja de 8 px o tapado el borde.
 const anchoMenu = /:root\[data-piel="xen"\] \.app\{grid-template-columns:(\d+)px /.exec(bloque)?.[1];

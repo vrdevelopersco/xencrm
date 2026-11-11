@@ -1,5 +1,5 @@
 // Asistente de configuración de un cliente: pnpm onboard
-// Crea aiva.config.json (desde un ejemplo o desde cero), carpetas de datos y las claves de .env que falten.
+// Crea xencrm.config.json (desde un ejemplo o desde cero), carpetas de datos y las claves de .env que falten.
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, cpSync } from 'node:fs';
@@ -24,7 +24,7 @@ const slug = (s: string) =>
     .replace(/^-|-$/g, '');
 
 console.log('\n🌱 XENCRM · configuración de un cliente\n');
-if (existsSync('aiva.config.json') && !(await yes('Ya existe aiva.config.json. ¿Lo reemplazo?', false))) {
+if (existsSync('xencrm.config.json') && !(await yes('Ya existe xencrm.config.json. ¿Lo reemplazo?', false))) {
   console.log('Sin cambios.');
   process.exit(0);
 }
@@ -41,7 +41,7 @@ const mode = await ask('¿Empezar desde un ejemplo (dunor | boutique | casa-verd
 let config: Record<string, unknown>;
 
 if (mode === 'dunor' || mode === 'boutique' || mode === 'casa-verde') {
-  config = JSON.parse(readFileSync(`examples/${mode}/aiva.config.json`, 'utf8'));
+  config = JSON.parse(readFileSync(`examples/${mode}/xencrm.config.json`, 'utf8'));
   const biz = config.business as Record<string, string>;
   biz.name = await ask('Nombre del negocio', biz.name);
   biz.description = await ask('Descripción corta (qué vende y a quién)', biz.description);
@@ -140,8 +140,8 @@ if (await yes('¿Atiende en varias sedes con el mismo número?', false)) {
   }
 }
 
-writeFileSync('aiva.config.json', JSON.stringify(config, null, 2) + '\n');
-console.log('\n✓ aiva.config.json escrito');
+writeFileSync('xencrm.config.json', JSON.stringify(config, null, 2) + '\n');
+console.log('\n✓ xencrm.config.json escrito');
 
 // ---------- .env ----------
 const envPath = '.env';

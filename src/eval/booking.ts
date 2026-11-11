@@ -4,7 +4,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-booking-')), 'aiva.db'); // agenda propia: no toca la del negocio
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-booking-')), 'xencrm.db'); // agenda propia: no toca la del negocio
 const { touchUser } = await import('../agent/memory.js');
 const { getContact, updateContact, deleteContactsByPrefix } = await import('../crm/contacts.js');
 const { availableSlots, tzParts, dayKey, listAppointments, formatDay, zoned } = await import('../crm/appointments.js');

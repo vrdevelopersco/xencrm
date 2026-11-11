@@ -1,7 +1,7 @@
 // Quién es quién en cada grupo.
 //
 // En una conversación uno a uno el contacto ES la persona. En un grupo no: hay diez, entran y salen, y la
-// pregunta de hoy la hace alguien que lleva un mes ahí o alguien que acaba de llegar. Sin saber eso, aiva
+// pregunta de hoy la hace alguien que lleva un mes ahí o alguien que acaba de llegar. Sin saber eso, XENCRM
 // redacta igual para todos y quien atiende no sabe a quién le está contestando.
 //
 // 🪤 Esto NO es un contacto del CRM y no debe serlo. Quien escribe en un grupo no le escribió al negocio: no
@@ -10,7 +10,7 @@
 //
 // Lo que se guarda es lo barato y lo que de verdad ayuda: cómo se llama, cuánto habla y desde cuándo. Quien
 // más escribe suele ser el que organiza; quien llegó ayer todavía no sabe lo que ya se dijo. Con eso y el hilo,
-// aiva contesta a la persona y no al mensaje.
+// XENCRM contesta a la persona y no al mensaje.
 import { getDb } from '../rag/store.js';
 
 export interface GenteDeGrupo {

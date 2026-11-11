@@ -43,7 +43,7 @@ check('🪤 la sección activa se marca de más de una forma',
 check('🪤 en el celular el riel se encoge en vez de desbordar', /\.rail \.rb\{width:38px;height:38px/.test(html) && /\.rail\{grid-row:3[^}]*overflow:hidden\}/.test(html),
   'si el riel desborda, la lista y la búsqueda salen cortadas sin que nada parezca roto');
 
-// Los tres niveles de la configuración: de aiva, del cliente y tuyo. Confundirlos costó cuatro entregas
+// Los tres niveles de la configuración: de XENCRM, del cliente y tuyo. Confundirlos costó cuatro entregas
 // persiguiendo un nombre que parecía cruzarse entre clientes.
 check('🪤 la configuración dice de quién es cada cosa', /grupo\('Este cliente', 'cfg-biz'\)/.test(js) && /grupo\('Tú', 'cfg-yo'\)/.test(js));
 check('y pone el nombre de verdad, no la etiqueta', /\$\('cfg-biz'\)\.textContent = state\.bizName/.test(js) && /\$\('cfg-yo'\)\.textContent = state\.name/.test(js));
@@ -54,8 +54,8 @@ for (const cual of ['theme-btn', 'sound-btn', 'logout-btn', 'foot-user', 'conn']
   check(`sigue habiendo dónde tocar «${cual}»`, html.includes(`id="${cual}"`), 'lo usa el resto del tablero; quitarlo revienta al arrancar');
 }
 
-// 🪤 Escribir es la señal de que hay una persona. El cajón estaba escondido mientras contestaba aiva, así que
-// para tomar una conversación había que mover un interruptor ANTES de tener nada que decir; y aiva podía
+// 🪤 Escribir es la señal de que hay una persona. El cajón estaba escondido mientras contestaba XENCRM, así que
+// para tomar una conversación había que mover un interruptor ANTES de tener nada que decir; y XENCRM podía
 // contestar primero mientras uno pensaba la respuesta, dejando al cliente con dos versiones de lo mismo.
 check('🪤 el cajón de escribir está siempre, no solo en modo persona', /\$\('reply'\)\.hidden = false;/.test(js),
   'si se esconde, escribir no puede ser la señal');
@@ -64,10 +64,10 @@ check('y no se pierde lo que ya habías escrito', /\$\('reply'\)\.value = loEscr
 
 const wa = readFileSync(new URL('../channels/whatsapp.ts', import.meta.url), 'utf8');
 check('🪤 contestar desde el teléfono también toma la conversación', /if \(c && !c\.humanMode\) setHumanMode\(userId, true, quien\)/.test(wa),
-  'si no, aiva y la persona contestan a la vez al mismo cliente');
-check('y lo que contesta el negocio se guarda de verdad', /function anotarLoDelNegocio/.test(wa) && /enviadosPorAiva/.test(wa));
+  'si no, XENCRM y la persona contestan a la vez al mismo cliente');
+check('y lo que contesta el negocio se guarda de verdad', /function anotarLoDelNegocio/.test(wa) && /enviadosPorXen/.test(wa));
 
-// ---------- «Solo escuchar» es modo aprendizaje: aiva mira, no se mete ----------
+// ---------- «Solo escuchar» es modo aprendizaje: XENCRM mira, no se mete ----------
 // 🪤 Los tres sitios por donde se asomaba. Ninguno era una respuesta del modelo, y por eso ninguno saltaba a la
 // vista: una contestación a las notas de voz, el doble check azul y el «escribiendo…». El cliente veía señales
 // de que había alguien y luego no le contestaba nadie, que es peor que no hacer nada.
@@ -134,10 +134,10 @@ for (const jerga of ['pnpm ', 'CALENDAR_BUSY_ICS', 'PUBLIC_URL', 'ADMIN_TOKEN', 
 const sw = readFileSync(new URL('../channels/switches.ts', import.meta.url), 'utf8');
 check('🪤 los grupos vienen apagados', /getSetting\(`channel\.\$\{id\}\.grupos`, false\)/.test(sw),
   'en un grupo escribe gente que nunca le escribió al negocio: eso se enciende a mano');
-// 🪤 Nunca, pase lo que pase con «Contesta Aiva». Equivocarse en un grupo es equivocarse delante de todos a la
+// 🪤 Nunca, pase lo que pase con «Contesta Xen». Equivocarse en un grupo es equivocarse delante de todos a la
 // vez y no hay forma de recogerlo. Si alguien conecta el envío a los grupos, esto lo dice.
 const dentroDelGrupo = wa.slice(wa.indexOf('if (isJidGroup(jid)) {'), wa.indexOf('if (env.whatsappAllowedNumbers.length)'));
-check('🪤 aiva nunca escribe en un grupo', dentroDelGrupo.includes('return;') && !/mandar\(|sendMessage\(/.test(dentroDelGrupo),
+check('🪤 XENCRM nunca escribe en un grupo', dentroDelGrupo.includes('return;') && !/mandar\(|sendMessage\(/.test(dentroDelGrupo),
   dentroDelGrupo.slice(0, 200));
 check('lo del grupo va al aprendizaje, no al tablero', /function anotarDelGrupo/.test(wa) && /'whatsapp-grupo'/.test(wa) && !/anotarDelGrupo[\s\S]{0,400}appendMessage/.test(wa),
   'un grupo no es un prospecto: como conversación llenaría las listas de fichas que nadie atiende');
@@ -148,9 +148,9 @@ check('🪤 y no se pone al día: el historial sigue sin traer grupos', /isJidGr
 check('encender los grupos pasa por un modal', /\$\('dlg-grupos'\)\.showModal\(\)/.test(js) && html.includes('id="dlg-grupos"'));
 check('y apagarlos es de un clic', /if \(!encender\) return mandar\(\);/.test(js));
 
-// ---------- El retrato: lo que aiva entendió del negocio ----------
+// ---------- El retrato: lo que XENCRM entendió del negocio ----------
 const ret = readFileSync(new URL('../rag/retrato.ts', import.meta.url), 'utf8');
-// 🪤 Un retrato equivocado es peor que no tener ninguno: aiva aconsejaría con seguridad sobre una premisa falsa
+// 🪤 Un retrato equivocado es peor que no tener ninguno: XENCRM aconsejaría con seguridad sobre una premisa falsa
 // y nadie sabría de dónde salió. Por eso NO se guarda solo y dice de qué se dedujo.
 check('🪤 el retrato es un borrador: no se guarda solo', !/guardarNotaInterna/.test(ret) && /Nada de esto se ha guardado todav/.test(js),
   'guardarlo solo sería poner en boca del negocio lo que dedujo una máquina');
@@ -171,17 +171,17 @@ const prop = readFileSync(new URL('../crm/propuestas.ts', import.meta.url), 'utf
 const adm = readFileSync(new URL('../channels/admin.ts', import.meta.url), 'utf8');
 
 check('hay tres modos, no dos', /'mira' \| 'propone' \| 'contesta'/.test(sw2));
-// 🪤 Quien ya tenía el canal en «solo escuchar» no debe encontrarse a aiva hablándole a sus clientes.
+// 🪤 Quien ya tenía el canal en «solo escuchar» no debe encontrarse a XENCRM hablándole a sus clientes.
 check('🪤 el ajuste viejo se respeta al actualizar', /escuchaba \? 'mira' : 'contesta'/.test(sw2),
   'sin esto, actualizar pondría el canal en «contesta» a quien lo tenía callado');
 // 🪤 «Propone» tiene que pasar por el modelo: ese es su trabajo. Solo «mira» se corta antes.
 check('🪤 solo «mira» se corta antes del modelo', /modoCanal\(msg\.channel as ChannelId\) === 'mira'/.test(ag2));
 // 🪤 Anotar como dicho algo que nadie mandó deja al asistente siguiendo la conversación como si ya hubiera
 // contestado eso, y al cliente viendo una respuesta que no recibió.
-check('🪤 lo propuesto NO se anota como dicho por aiva', /if \(propone\(msg\.channel as ChannelId\)\) \{[\s\S]{0,300}?proponer\(/.test(ag2) && !/proponer\([\s\S]{0,200}?recordBotReply/.test(ag2));
+check('🪤 lo propuesto NO se anota como dicho por XENCRM', /if \(propone\(msg\.channel as ChannelId\)\) \{[\s\S]{0,300}?proponer\(/.test(ag2) && !/proponer\([\s\S]{0,200}?recordBotReply/.test(ag2));
 // 🪤 Del propio asistente no se aprende nada; de lo que escribe una persona, sí.
-check('🪤 sin corregir la manda aiva; corregida, la manda la persona', /corregida \? 'human' : 'bot'/.test(adm),
-  'si va siempre como humana, aiva acabaría aprendiendo de sí misma');
+check('🪤 sin corregir la manda XENCRM; corregida, la manda la persona', /corregida \? 'human' : 'bot'/.test(adm),
+  'si va siempre como humana, XENCRM acabaría aprendiendo de sí misma');
 // 🪤 Una respuesta preparada hace veinte minutos, con tres mensajes nuevos encima, ya no contesta a nada.
 check('🪤 la propuesta caduca cuando el cliente vuelve a escribir', /vieja: ultimoMensaje\(userId\) > f\.sobre_mensaje/.test(prop));
 check('y solo hay una esperando por conversación', /estado = 'reemplazada'/.test(prop));
@@ -192,7 +192,7 @@ const cont = readFileSync(new URL('../crm/contacts.ts', import.meta.url), 'utf8'
 // sería plata quemada y un aviso cada tres minutos hasta que alguien lo apague de puro cansancio.
 check('🪤 en un grupo solo se propone si le hablan al negocio', /function meHablanAMi/.test(wa) && /mentionedJid/.test(wa) && /quotedMessage/.test(wa),
   'el disparador no puede ser «alguien escribió»');
-check('y aiva sigue sin mandar nada a un grupo por su cuenta', /if \(propone\('whatsapp'\) && meHablanAMi/.test(wa) && !/proponerEnGrupo[\s\S]{0,400}?mandar\(/.test(wa));
+check('y XENCRM sigue sin mandar nada a un grupo por su cuenta', /if \(propone\('whatsapp'\) && meHablanAMi/.test(wa) && !/proponerEnGrupo[\s\S]{0,400}?mandar\(/.test(wa));
 // 🪤 El camino de una conversación da de alta al que escribe. Un grupo acabaría en las listas y en el embudo
 // como un prospecto: fichas que nadie va a atender y un embudo mentiroso.
 check('🪤 un grupo nunca entra al CRM como contacto', /u\.id NOT LIKE '%@g\.us'/.test(cont) && /id NOT LIKE '%@g\.us'/.test(cont));
@@ -206,7 +206,7 @@ check('🪤 la tabla vieja se actualiza sola', /ALTER TABLE propuestas ADD COLUM
 // ---------- Seguirle la cuerda al grupo ----------
 const hist = readFileSync(new URL('../crm/historial.ts', import.meta.url), 'utf8');
 // 🪤 «¿y eso cuánto vale?» no se entiende solo: depende de lo que otro preguntó tres mensajes antes. Y sin
-// nombres, aiva le contesta a Marcela lo que preguntó Jorge.
+// nombres, XENCRM le contesta a Marcela lo que preguntó Jorge.
 check('🪤 en un grupo se le pasa el hilo, con nombres', /hilo: antes/.test(wa) && /x\.autor \|\| 'alguien'/.test(wa),
   'contestar un mensaje suelto en un grupo es contestar a medias');
 // 🪤 mensajesDeChat ordena de viejo a nuevo y corta con LIMIT: devuelve los PRIMEROS.
@@ -255,7 +255,7 @@ for (const clase of new Set([...nacenEscondidas, 'propuesta', 'login', 'detail-m
 const menus = readFileSync('public/admin.js', 'utf8');
 check('🪤 lo de solo-admin se filtra en TODOS los menús, no en uno', (menus.match(/\.filter\(visiblePara\)/g) || []).length >= 3,
   `solo ${(menus.match(/\.filter\(visiblePara\)/g) || []).length} de 3 sitios lo filtran`);
-check('y el rol sale de quien entró por la consola', /window\.AIVA_ROL/.test(menus));
+check('y el rol sale de quien entró por la consola', /window\.XENCRM_ROL/.test(menus));
 // Con el token a secas no hay rol y se ve todo: con ese token se puede llamar a la ruta igual, así que
 // esconder el botón no protegería nada. Es orden de pantalla, no un cerrojo.
 check('sin rol (token a secas) se ve todo', /return !r \|\| r === 'super' \|\| r === 'admin'/.test(menus), 'cambió la regla de quién es admin');
@@ -293,7 +293,7 @@ const historia = js.slice(js.indexOf('function historiaHtml'), js.indexOf('funct
 check('la historia no enseña tipos de evento internos', /default: return;/.test(historia) && !/default: return e\.type/.test(historia));
 check('🪤 la historia nunca dice «bot» ni «admin» como si fueran alguien', /by === 'bot' \? agente/.test(historia) && /by === 'admin' \|\| by === 'equipo' \? 'El equipo'/.test(historia));
 check('borrar una nota pide un segundo clic, sin ventanas del navegador', /function engancharBorrarNotas/.test(js) && !/confirm\(/.test(js.slice(js.indexOf('function engancharBorrarNotas'), js.indexOf('function engancharBorrarNotas') + 900)));
-check('los fijados son de este cliente, no de todos los del dominio', /localStorage\.getItem\(LLAVE\('fijados'\)\)/.test(js) && !/localStorage\.getItem\('aiva\.fijados/.test(js));
+check('los fijados son de este cliente, no de todos los del dominio', /localStorage\.getItem\(LLAVE\('fijados'\)\)/.test(js) && !/localStorage\.getItem\('XENCRM\.fijados/.test(js));
 check('el dinero sale en la moneda del negocio, no en pesos fijos', /currency: state\.moneda \|\| 'COP'/.test(js) && !/currency: 'COP'/.test(js));
 check('🪤 sin valor es «—», nunca «$0»', /function valorHtml\(c, corto\) \{\s*return c\.valor \?/.test(js));
 check('los filtros de Conversaciones van encima de la lista, no en un panel que le quita sitio al chat', /<div class="list">[\s\S]*?id="filters"/.test(html) && /var conPanel = CFG_VIEWS\[view\];/.test(js));
@@ -332,7 +332,7 @@ const palabras = principal.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).l
 check('la portada no vuelve a llenarse de texto (menos de 260 palabras)', palabras < 260, `tiene ${palabras}`);
 check('la vista del tablero en la portada se lee como una imagen con su descripción', /class="vista" role="img" aria-label="[^"]{30,}"/.test(portada));
 
-// — Más sencillo para quien empieza (2026-10-21). Salió de comparar aiva con Vocero: «complejo de usar».
+// — Más sencillo para quien empieza (2026-10-21). Salió de comparar XENCRM con Vocero: «complejo de usar».
 // 🪤 Con una columna llena, las tarjetas se aplastaban a 48 px y solo se veía la pastilla y medio nombre.
 check('🪤 las tarjetas del tablero por etapa no se aplastan cuando la columna se llena', /\.col \.cards>\.card\{flex-shrink:0\}/.test(html),
   'sin flex-shrink:0, el overflow:hidden de .card deja que la columna las encoja');
@@ -399,11 +399,11 @@ check('se vuelve a mirar al volver a la pestaña y al cerrar el perfil o El nego
 check('el hueco de la guía en Hoy no ocupa una columna cuando está vacío', /\.guia-hoy-sitio\{grid-column:1 \/ -1\}/.test(html) && /\.guia-hoy-sitio:empty\{display:none\}/.test(html));
 check('si la guía no llega, Hoy cae al tutorial de siempre y no deja un hueco', /if \(!state\.guia\) return state\.guiaFallo \? helpBanner\(\) : ''/.test(js));
 
-// 🪤 Multicliente: el asistente no siempre se llama Aiva (en el paquete, el de DUNOR es Arthur). Ningún texto que se
-// le enseña a quien atiende puede llevar «Aiva» escrito a mano; va state.agentName, con «Aiva» solo de respaldo.
-const conAivaFijo = js.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l) && /'[^'\n]*\bAiva\b[^'\n]*'/.test(l.replace(/state\.agentName \|\| 'Aiva'|a\.agent\.name \|\| 'Aiva'/g, '')));
-check('ningún texto del tablero lleva «Aiva» fijo en vez del nombre del asistente', conAivaFijo.length === 0, conAivaFijo.map((l) => l.trim().slice(0, 90)).join(' | '));
-check('el «Responde: Aiva | Tú» dice el nombre de este asistente', /if \(me\.agent && \$\('seg-bot'\)\) \$\('seg-bot'\)\.textContent = me\.agent;/.test(js));
+// 🪤 Multicliente: el asistente no siempre se llama Xen (en el paquete, el de DUNOR es Arthur). Ningún texto que se
+// le enseña a quien atiende puede llevar «Xen» escrito a mano; va state.agentName, con «Xen» solo de respaldo.
+const conXenFijo = js.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l) && /'[^'\n]*\bXen\b[^'\n]*'/.test(l.replace(/state\.agentName \|\| 'Xen'|a\.agent\.name \|\| 'Xen'/g, '')));
+check('ningún texto del tablero lleva «Xen» fijo en vez del nombre del asistente', conXenFijo.length === 0, conXenFijo.map((l) => l.trim().slice(0, 90)).join(' | '));
+check('el «Responde: Xen | Tú» dice el nombre de este asistente', /if \(me\.agent && \$\('seg-bot'\)\) \$\('seg-bot'\)\.textContent = me\.agent;/.test(js));
 
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

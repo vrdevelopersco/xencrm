@@ -160,7 +160,7 @@ export function ponerNumerosAlDia() {
 }
 
 export function listContacts(opts: { stage?: Stage; humanMode?: boolean; q?: string; limit?: number; archived?: boolean } = {}): Contact[] {
-  // 🪤 Un grupo NUNCA es un contacto. Cuando alguien le habla al negocio en un grupo, aiva pasa por el mismo
+  // 🪤 Un grupo NUNCA es un contacto. Cuando alguien le habla al negocio en un grupo, XENCRM pasa por el mismo
   // camino que una conversación —y ese camino da de alta al que escribe—, así que el grupo acabaría en las
   // listas y en el embudo como si fuera un prospecto: fichas que nadie va a atender y un embudo mentiroso, que
   // es de donde el negocio saca sus decisiones. Se quedan fuera aquí, por su dirección, que es lo único que no

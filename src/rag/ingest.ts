@@ -95,7 +95,7 @@ export async function fetchShopify(storeUrl: string): Promise<Product[]> {
   const base = storeUrl.replace(/\/$/, '');
   const out: Product[] = [];
   for (let page = 1; page <= 20; page++) {
-    const res = await fetch(`${base}/products.json?limit=250&page=${page}`, { headers: { 'user-agent': 'aiva-ingest/0.1' } });
+    const res = await fetch(`${base}/products.json?limit=250&page=${page}`, { headers: { 'user-agent': 'xencrm-ingest/0.1' } });
     if (!res.ok) throw new Error(`Shopify ${res.status} en ${base}/products.json`);
     const { products } = (await res.json()) as { products: Record<string, any>[] };
     if (!products?.length) break;
@@ -125,7 +125,7 @@ const tienePrecio = (v: unknown): boolean => v !== null && v !== undefined && v 
 export function productToDoc(p: Product): Doc {
   const currency = p.currency ?? business.business.currency;
   // 🪤 Un producto sin precio es normal: DUNOR no pone precio a ninguno, porque se define en la cita. Escrito con
-  // plantilla a secas salía «Precio: undefined COP» en la ficha, y eso fue lo primero que vio quien revisó aiva
+  // plantilla a secas salía «Precio: undefined COP» en la ficha, y eso fue lo primero que vio quien revisó XENCRM
   // al buscar en Lo que sabe. Sin precio, la línea no va: si el negocio explica cómo se cobra, eso está en su
   // ficha técnica, y el asistente ya recibe «sin precio» del buscador (retriever.ts).
   const variants = Array.isArray(p.variants)
@@ -250,7 +250,7 @@ export async function crawlPages(urls: string[]): Promise<Doc[]> {
   for (const url of urls) {
     try {
       const res = await fetch(url, {
-        headers: { 'user-agent': 'Mozilla/5.0 (compatible; aiva-ingest/0.1)' },
+        headers: { 'user-agent': 'Mozilla/5.0 (compatible; xencrm-ingest/0.1)' },
         signal: AbortSignal.timeout(20_000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -331,7 +331,7 @@ export async function runIngest(opts: { only?: 'products' | 'knowledge' | 'site'
       console.log(`[ingest] ${site.length} fragmentos del sitio (${src.sitePages.length} páginas)`);
       replaceDocs('knowledge', await embedDocs(site), 'site');
     } else if (opts.only === 'site') {
-      console.log('[ingest] sources.sitePages está vacío en aiva.config.json');
+      console.log('[ingest] sources.sitePages está vacío en xencrm.config.json');
     }
   }
   console.log(`[ingest] listo en ${((Date.now() - t0) / 1000).toFixed(1)}s ->`, countDocs());

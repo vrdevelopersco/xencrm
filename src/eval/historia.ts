@@ -5,7 +5,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-historia-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-historia-')), 'xencrm.db');
 const { touchUser } = await import('../agent/memory.js');
 const { bookAppointment, updateAppointment } = await import('../crm/appointments.js');
 const { etapaCon, STAGE_DEFS } = await import('../crm/contacts.js');
@@ -53,12 +53,12 @@ const hv = historiaDe(vuelve, { ahora });
 check('🪤 un silencio largo y luego escribe: eso sí es volver', hv.volvio === 2, `volvio=${hv.volvio}`);
 check('y se cuenta en la frase', enUnaFrase(hv) === 'volvió 2 veces', enUnaFrase(hv));
 
-// Lo que conteste aiva no es que el cliente haya vuelto.
+// Lo que conteste XENCRM no es que el cliente haya vuelto.
 const soloBot = 'wa:573007778899';
 dijo(soloBot, ahora - 40 * DIA);
 dijo(soloBot, ahora - 20 * DIA, 'bot');
 dijo(soloBot, ahora - 1 * DIA, 'bot');
-check('🪤 los mensajes de aiva no cuentan como que el cliente volvió', historiaDe(soloBot, { ahora }).volvio === 0 && historiaDe(soloBot, { ahora }).mensajes === 1, JSON.stringify(historiaDe(soloBot, { ahora })));
+check('🪤 los mensajes de XENCRM no cuentan como que el cliente volvió', historiaDe(soloBot, { ahora }).volvio === 0 && historiaDe(soloBot, { ahora }).mensajes === 1, JSON.stringify(historiaDe(soloBot, { ahora })));
 
 // ── Citas ─────────────────────────────────────────────────────────────────────
 const conCita = 'wa:573001234567';

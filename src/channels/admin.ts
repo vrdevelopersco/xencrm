@@ -104,7 +104,7 @@ function forBoard<T extends Contact>(list: T[]) {
 export const ADMIN_TOKEN = env.adminToken || randomBytes(12).toString('hex');
 
 /**
- * Quién está haciendo esto, para la historia de la ficha. Lo dice la cabecera `x-aiva-quien`: la consola la pone
+ * Quién está haciendo esto, para la historia de la ficha. Lo dice la cabecera `x-xencrm-quien`: la consola la pone
  * con el nombre de la cuenta con que se entró (y tira la que mande el navegador), y el tablero abierto con el
  * token a secas manda el nombre con que responde. Si no hay ninguna, lo que venga en el cuerpo, y si no, «equipo».
  *
@@ -112,7 +112,7 @@ export const ADMIN_TOKEN = env.adminToken || randomBytes(12).toString('hex');
  * personas atendiendo, eso no le sirve a nadie para saber a quién preguntar.
  */
 export function quienHace(c: { req: { header(nombre: string): string | undefined } }, delCuerpo?: unknown, siNadie = 'equipo'): string {
-  const h = c.req.header('x-aiva-quien');
+  const h = c.req.header('x-xencrm-quien');
   if (h) {
     try {
       const n = decodeURIComponent(h).trim().slice(0, 40);
@@ -142,7 +142,7 @@ function camposCambiados(antes: Contact, patch: Record<string, unknown>): string
 const modoDelTablero = (): 'facil' | 'completo' => (getSetting<string>('tablero.modo', 'completo') === 'facil' ? 'facil' : 'completo');
 
 /** El nombre corto de este cliente, el mismo que usa el respaldo. */
-const soyElCliente = (): string => (process.env.AIVA_SLUG ?? business.business.name).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+const soyElCliente = (): string => (process.env.XENCRM_SLUG ?? business.business.name).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   startNotifications();
@@ -169,7 +169,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   // El candado del modo fácil (channels/candado.ts). Después del token: sin token no se le dice a nadie qué hay.
   app.use('/admin/api/*', async (c, next) => {
     const ruta = c.req.path.replace(/^.*?\/admin\/api\//, '');
-    const freno = frenoDelCandado(ruta, c.req.method, c.req.header('x-aiva-rol'), modoDelTablero());
+    const freno = frenoDelCandado(ruta, c.req.method, c.req.header('x-xencrm-rol'), modoDelTablero());
     if (freno) return c.json({ error: freno }, 403);
     await next();
   });
@@ -179,7 +179,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       ok: true,
       business: business.business.name,
       agent: business.agent.name,
-      // Para que el tablero se sienta del negocio: su logo y su color, no los de aiva.
+      // Para que el tablero se sienta del negocio: su logo y su color, no los de XENCRM.
       logo: logoUrl(),
       color: business.brand.color,
       // 🪤 El color de una marca casi nunca se lee como texto: el dorado de una boutique da 2.2:1 sobre papel.
@@ -262,7 +262,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     return c.json({
       contact: { ...forBoard([contact])[0], unread: 0 },
       messages: getMessages(id, 300),
-      // Lo que ya estaba conversado antes de que aiva entrara. Solo lo anterior al primer mensaje que tenemos
+      // Lo que ya estaba conversado antes de que XENCRM entrara. Solo lo anterior al primer mensaje que tenemos
       // en la conversación: en el empalme, lo de en medio saldría dos veces.
       antes: (() => {
         const vivos = getMessages(id, 300);
@@ -273,7 +273,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       events: listEvents(id, 200),
       appointments: listAppointments({ userId: id, limit: 20 }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })),
       replyWindow: replyWindow(id),
-      propuesta: propuestaDe(id), // lo que aiva dejó listo aquí, si hay
+      propuesta: propuestaDe(id), // lo que XENCRM dejó listo aquí, si hay
 
       number: contactNumber(contact), // para escribirle o llamarlo desde el tablero
       presentes: quienesEstan(id), // quién más está metido aquí ahora mismo
@@ -675,7 +675,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const slug = business.business.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     return c.body(JSON.stringify(exportDictionary(), null, 2) + '\n', 200, {
       'content-type': 'application/json; charset=utf-8',
-      'content-disposition': `attachment; filename="diccionario-${slug || 'aiva'}.json"`,
+      'content-disposition': `attachment; filename="diccionario-${slug || 'xencrm'}.json"`,
     });
   });
   app.post('/admin/api/dictionary/import', async (c) => {
@@ -717,7 +717,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   /**
    * La configuración del negocio: nombre, asistente, marca, zona horaria y citas. Se edita aquí —y por lo tanto
-   * desde la consola, que sirve este tablero— en vez de a mano en `aiva.config.json`.
+   * desde la consola, que sirve este tablero— en vez de a mano en `xencrm.config.json`.
    *
    * 🪤 Se lee al arrancar, así que guardar deja el archivo listo pero el proceso sigue con lo viejo hasta que
    * reinicie. Por eso se devuelve lo que corre, lo que está guardado y si hay quien lo levante al reiniciar.
@@ -767,7 +767,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * negocio le sirve saber por qué su asistente pasó conversaciones al equipo.
    *
    * 🪤 Cambiarlo va bajo `motores/`, y no por casualidad: la consola reserva todo lo que empieza por `motores` y
-   * `clave` a quien administra aiva. El tope decide cuánto se gasta, igual que los motores y la llave, y eso no es
+   * `clave` a quien administra XENCRM. El tope decide cuánto se gasta, igual que los motores y la llave, y eso no es
    * de la operación del negocio. Se aplica al instante, sin reiniciar.
    */
   app.get('/admin/api/presupuesto', (c) => c.json(presupuesto()));
@@ -786,7 +786,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * tablero: el negocio tiene que saber qué pasa con las conversaciones de sus clientes. Con `?dias=` dice cuántas
    * tocaría con esos días, sin tocar nada: es lo que la consola enseña antes de guardar.
    *
-   * 🪤 Cambiarla, solo quien administra aiva: la consola deja pasar a `retencion` solo para leer. Borra datos de
+   * 🪤 Cambiarla, solo quien administra xencrm: la consola deja pasar a `retencion` solo para leer. Borra datos de
    * clientes, y eso no se decide desde la operación del día.
    */
   const retencion = (dias?: number) => {
@@ -809,7 +809,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * Los proveedores de IA (src/proveedores.ts): conectar OpenAI, Claude, Apple, Ollama, LM Studio o una API
    * compatible desde Configuración › Modelos de IA.
    *
-   * 🪤 Van bajo `motores/` a propósito, como el tope: la consola reserva `motores` a quien administra aiva (un asesor
+   * 🪤 Van bajo `motores/` a propósito, como el tope: la consola reserva `motores` a quien administra XENCRM (un asesor
    * no llega ni para leer) y el candado no deja leerlo. Y una llave NUNCA sale por aquí: solo si está puesta y una
    * pista. Lo guardado se aplica al reiniciar, y cada respuesta lo dice (`hayQueReiniciar`).
    */
@@ -1099,11 +1099,11 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     return c.json(channelCards());
   });
 
-  /** Lo que aiva dejó listo y espera a una persona. */
+  /** Lo que XENCRM dejó listo y espera a una persona. */
   app.get('/admin/api/propuestas', (c) => c.json(propuestasPendientes()));
 
   /**
-   * Mandar lo propuesto. 🪤 Si el texto viene igual, lo manda AIVA (author bot): es suyo y del propio asistente
+   * Mandar lo propuesto. 🪤 Si el texto viene igual, lo manda XENCRM (author bot): es suyo y del propio asistente
    * no se aprende nada. Si alguien lo corrigió, lo manda esa persona y sí entra al aprendizaje, porque eso —lo
    * que una persona escribió de verdad— es lo que enseña cómo atiende este negocio.
    */
@@ -1298,7 +1298,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   /**
    * Cómo entra el equipo a este tablero: «fácil» (lo del día a día, sin puntajes ni motores) o «completo». Es del
-   * cliente y lo cambia solo quien administra aiva (el candado de más arriba frena a los demás); con el modo fácil
+   * cliente y lo cambia solo quien administra XENCRM (el candado de más arriba frena a los demás); con el modo fácil
    * puesto, nadie más se sale de él (channels/candado.ts).
    */
   app.put('/admin/api/tablero/modo', async (c) => {
@@ -1318,9 +1318,9 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
    * crm/respaldo.ts—, así que se puede guardar o mandar sin miedo.
    */
   const dondeVive = () => ({
-    slug: (process.env.AIVA_SLUG ?? business.business.name).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    slug: (process.env.XENCRM_SLUG ?? business.business.name).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     nombre: business.business.name,
-    config: resolve(process.env.AIVA_CONFIG || 'aiva.config.json'),
+    config: resolve(process.env.XENCRM_CONFIG || 'xencrm.config.json'),
     perfil: business.profileFile,
     diccionario: business.dictionaryFile,
     catalogo: business.sources.productsFile,
@@ -1547,7 +1547,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       // Lo que el bot no supo y prometió verificar: el cliente espera la respuesta del equipo.
       verifications: listVerifications('pendiente').map((v) => ({ ...v, window: replyWindow(v.userId) })),
       public: publicStatus(),
-      // Lo que aiva dejó listo en un grupo: ahí no hay conversación en el tablero donde pueda aparecer, así que
+      // Lo que XENCRM dejó listo en un grupo: ahí no hay conversación en el tablero donde pueda aparecer, así que
       // su sitio es este. Las de una conversación normal salen dentro de ella.
       enGrupos: propuestasPendientes()
         .filter((p) => p.grupo)
@@ -1582,8 +1582,8 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   );
 
   /**
-   * Que aiva acompañe cuando la lleva una persona: lo que el cliente pregunte y aiva sepa, queda redactado encima
-   * del cajón de quien atiende. Es del negocio, no de quien administra aiva: cuesta una llamada al modelo por
+   * Que XENCRM acompañe cuando la lleva una persona: lo que el cliente pregunte y XENCRM sepa, queda redactado encima
+   * del cajón de quien atiende. Es del negocio, no de quien administra xencrm: cuesta una llamada al modelo por
    * mensaje mientras alguien la lleva, y eso lo decide quien paga.
    */
   app.put('/admin/api/agent/sugiere', async (c) => {
@@ -1659,7 +1659,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   // ── Modo prueba ───────────────────────────────────────────────────────────
   //
-  // Para una demostración en vivo: que aiva conteste solo a unos chats y a nadie más. Ver `crm/modo-prueba.ts`
+  // Para una demostración en vivo: que XENCRM conteste solo a unos chats y a nadie más. Ver `crm/modo-prueba.ts`
   // para por qué caduca sola y por qué una lista vacía significa apagado.
   app.get('/admin/api/prueba', (c) => {
     const p = pruebaActiva();
@@ -1788,13 +1788,13 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   });
 
   /**
-   * Lo que aiva sabe del negocio y no le cuenta a nadie. Va por su propia puerta a propósito: mezclarlo con
+   * Lo que XENCRM sabe del negocio y no le cuenta a nadie. Va por su propia puerta a propósito: mezclarlo con
    * `/knowledge` sería invitar a que algún día se sirvan juntos.
    */
   app.get('/admin/api/interno', (c) => c.json(notasInternas()));
 
   /**
-   * Que aiva escriba lo que entendió del negocio. Devuelve un BORRADOR y no guarda nada: quien lo lea decide
+   * Que XENCRM escriba lo que entendió del negocio. Devuelve un BORRADOR y no guarda nada: quien lo lea decide
    * qué es cierto. Un retrato equivocado guardado solo sería peor que no tener ninguno.
    */
   app.post('/admin/api/interno/retrato', async (c) => {

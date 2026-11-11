@@ -82,7 +82,7 @@ if (!env.webEnabled && !channelOn('whatsapp')) {
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
   process.on(sig, () => {
-    console.log(`\n[aiva] ${sig}, cerrando...`);
+    console.log(`\n[xencrm] ${sig}, cerrando...`);
     apple.stop();
     process.exit(0);
   });

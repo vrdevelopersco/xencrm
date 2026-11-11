@@ -12,7 +12,7 @@
 //     a las nueve no son 34 horas de mala atención: son diez minutos. Sin esto, cualquier acuerdo de servicio
 //     sale incumplido los lunes y el número deja de mirarse. Se puede pedir el tiempo corrido, pero el que vale
 //     para juzgar es el hábil.
-//  3. **Quién contestó importa.** Aiva respondiendo en cuatro segundos y una persona en veinte minutos son dos
+//  3. **Quién contestó importa.** Xen respondiendo en cuatro segundos y una persona en veinte minutos son dos
 //     cosas distintas y se miran por separado; mezclarlas esconde justo lo que hay que ver.
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
@@ -20,7 +20,7 @@ import { getDb } from '../rag/store.js';
 const DIA = 86400_000;
 
 /** Quién cerró la espera. */
-export type Quien = 'aiva' | 'persona';
+export type Quien = 'xencrm' | 'persona';
 
 export interface Espera {
   userId: string;
@@ -120,7 +120,7 @@ interface FilaMensaje {
 
 /**
  * Reconstruye las esperas a partir de los mensajes. Una espera empieza cuando el cliente escribe sin tener
- * respuesta pendiente y termina cuando alguien —Aiva o una persona— contesta.
+ * respuesta pendiente y termina cuando alguien —Xen o una persona— contesta.
  */
 export function esperas(opts: { desde?: number; userId?: string; ahora?: number } = {}): Espera[] {
   const ahora = opts.ahora ?? Date.now();
@@ -160,7 +160,7 @@ export function esperas(opts: { desde?: number; userId?: string; ahora?: number 
     abierta.hasta = m.ts;
     abierta.ms = m.ts - abierta.desde;
     abierta.msHabiles = msHabiles(abierta.desde, m.ts, horario);
-    abierta.quien = m.author === 'human' ? 'persona' : 'aiva';
+    abierta.quien = m.author === 'human' ? 'persona' : 'xencrm';
     abierta.por = m.author === 'human' ? m.by : null;
     out.push(abierta);
     abierta = null;
@@ -223,7 +223,7 @@ export function resumenTiempos(opts: { desde?: number; acuerdoMin?: number; ahor
     respondidas: respondidas.length,
     medianaMs: percentil(tiempos, 50),
     p90Ms: percentil(tiempos, 90),
-    porQuien: { aiva: de('aiva'), persona: de('persona') },
+    porQuien: { xencrm: de('xencrm'), persona: de('persona') },
     personas: [...porPersona.entries()]
       .map(([nombre, v]) => ({ nombre, n: v.length, medianaMs: percentil(v, 50) }))
       .sort((a, b) => a.medianaMs - b.medianaMs),

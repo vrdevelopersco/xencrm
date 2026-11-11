@@ -11,17 +11,17 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-guia-'));
-const base = JSON.parse(readFileSync(new URL('../../aiva.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
-const archivoConfig = join(dir, 'aiva.config.json');
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-guia-'));
+const base = JSON.parse(readFileSync(new URL('../../xencrm.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+const archivoConfig = join(dir, 'xencrm.config.json');
 // Agenda citas, pero sin días ni franjas escritos: corre con el horario de ejemplo.
 const escribirConfig = (citas: Record<string, unknown>) =>
   writeFileSync(archivoConfig, JSON.stringify({ ...base, profileFile: join(dir, 'perfil.json'), appointments: citas }));
 escribirConfig({ enabled: true, service: 'visita' });
 writeFileSync(join(dir, '.env'), '');
 Object.assign(process.env, {
-  AIVA_CONFIG: archivoConfig,
-  AIVA_ENV_FILE: join(dir, '.env'),
+  XENCRM_CONFIG: archivoConfig,
+  XENCRM_ENV_FILE: join(dir, '.env'),
   DB_PATH: join(dir, 'data', 'prueba.db'),
   ADMIN_TOKEN: 'token-del-tablero-de-prueba-0123456789',
   PUBLIC_URL: 'https://prueba.invalid',

@@ -67,8 +67,8 @@ function pasoPerfil(): PasoGuia {
 
 // 🪤 Lo que ofrece y lo que cuesta son DOS pasos, y solo el primero es obligatorio. Con uno solo («productos con
 // precio»), una financiera o un servicio de soporte —que no venden nada con precio de lista— nunca tenían la guía
-// completa: aiva es multicliente, y lo que se exige para empezar es que el asistente tenga de qué hablar. El
-// precio mejora el embudo (cuánto vale cada prospecto), pero sin él aiva atiende igual.
+// completa: XENCRM es multicliente, y lo que se exige para empezar es que el asistente tenga de qué hablar. El
+// precio mejora el embudo (cuánto vale cada prospecto), pero sin él XENCRM atiende igual.
 function pasoCatalogo(): PasoGuia {
   const { productos, informacion } = estadoDelCatalogo();
   return {
@@ -156,7 +156,7 @@ function pasoCitas(): PasoGuia | null {
   if (!business.appointments.enabled) return null;
   let escrito = true;
   try {
-    const crudo = JSON.parse(readFileSync(resolve(process.env.AIVA_CONFIG || 'aiva.config.json'), 'utf8')) as {
+    const crudo = JSON.parse(readFileSync(resolve(process.env.XENCRM_CONFIG || 'xencrm.config.json'), 'utf8')) as {
       appointments?: { days?: unknown[]; hours?: unknown[] };
       sedes?: { hours?: unknown[] }[];
     };

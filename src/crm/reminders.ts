@@ -77,7 +77,7 @@ export function reminderText(appt: Appointment, contact: Contact | null, now = D
 /** Por qué no se puede enviar solo; null si se puede. */
 function manualReason(c: Contact | null): string | null {
   if (!c) return 'El contacto ya no existe.';
-  // 🪤 «Solo escuchar» es modo aprendizaje: aiva mira cómo atiende el negocio y no le escribe al cliente. Un
+  // 🪤 «Solo escuchar» es modo aprendizaje: XENCRM mira cómo atiende el negocio y no le escribe al cliente. Un
   // recordatorio automático lo rompería justo donde más se nota — el cliente recibiría un mensaje de un robot
   // en una conversación que hasta ahora llevaba una persona. Se recuerda igual, pero a través del equipo.
   if (soloEscucha(c.channel as ChannelId)) return 'El canal está en solo escuchar: XENCRM no le escribe al cliente. Mándaselo tú.';

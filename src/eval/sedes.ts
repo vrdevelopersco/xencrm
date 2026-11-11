@@ -10,10 +10,10 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-sedes-'));
-const base = JSON.parse(readFileSync(new URL('../../aiva.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-sedes-'));
+const base = JSON.parse(readFileSync(new URL('../../xencrm.config.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
 writeFileSync(
-  join(dir, 'aiva.config.json'),
+  join(dir, 'xencrm.config.json'),
   JSON.stringify({
     ...base,
     timezone: 'America/Bogota',
@@ -26,9 +26,9 @@ writeFileSync(
 );
 writeFileSync(join(dir, '.env'), '');
 Object.assign(process.env, {
-  AIVA_CONFIG: join(dir, 'aiva.config.json'),
-  AIVA_ENV_FILE: join(dir, '.env'),
-  DB_PATH: join(dir, 'data', 'aiva.db'),
+  XENCRM_CONFIG: join(dir, 'xencrm.config.json'),
+  XENCRM_ENV_FILE: join(dir, '.env'),
+  DB_PATH: join(dir, 'data', 'xencrm.db'),
   WHATSAPP_ENABLED: 'false',
   // El calendario del dueño, ninguno; el de la sede del sur, uno de mentira (ver «Calendarios por sede»).
   CALENDAR_BUSY_ICS: '',
@@ -61,7 +61,7 @@ const antes = uso();
 let n = 0;
 /**
  * Un cliente con nombre y número: lo que se prueba aquí es la sede, no esos pasos. 🪤 Cada uno con SU número: con el
- * mismo, aiva los toma por la misma persona (crm/merge.ts) y les ofrece gestionar la cita del primero.
+ * mismo, XENCRM los toma por la misma persona (crm/merge.ts) y les ofrece gestionar la cita del primero.
  */
 const cliente = (opts: { nombre?: string | null } = {}) => {
   const u = `test:sedes-${++n}`;
@@ -218,7 +218,7 @@ console.log('— Lo que una sede tiene y la otra no');
 console.log('— Editarlas desde El negocio');
 {
   const { ajustesDe, guardar } = await import('../ajustes.js');
-  const enDisco = () => JSON.parse(readFileSync(join(dir, 'aiva.config.json'), 'utf8')) as { sedes: { id: string; nombre: string }[] };
+  const enDisco = () => JSON.parse(readFileSync(join(dir, 'xencrm.config.json'), 'utf8')) as { sedes: { id: string; nombre: string }[] };
   const base = ajustesDe();
   const [norte, sur] = base.sedes!;
   guardar({ ...base, sedes: [norte, sur, { id: '', nombre: 'Sede Centro', direccion: 'Calle 1 # 2-3', apodos: [] }] });

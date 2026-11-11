@@ -7,8 +7,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-importar-'));
-process.env.DB_PATH = join(dir, 'aiva.db');
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-importar-'));
+process.env.DB_PATH = join(dir, 'xencrm.db');
 
 const { importarChat, taparSecretos, quitar, cuantas, PREFIJO } = await import('../crm/importar.js');
 const { ordenDeFechas } = await import('../crm/historial.js');

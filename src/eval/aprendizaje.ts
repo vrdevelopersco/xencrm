@@ -6,8 +6,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-aprendizaje-'));
-process.env.DB_PATH = join(dir, 'aiva.db');
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-aprendizaje-'));
+process.env.DB_PATH = join(dir, 'xencrm.db');
 
 const { exportarAprendizaje, restaurarAprendizaje, revisarAprendizaje, VERSION_APRENDIZAJE } = await import('../crm/aprendizaje.js');
 const { guardarImportados, decidirTema, resumenImportado } = await import('../crm/historial.js');

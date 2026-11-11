@@ -43,7 +43,7 @@ const PRICES: Record<string, { input: number; cached: number; output: number; wr
   'text-embedding-3-large': { input: 0.13, cached: 0.13, output: 0 },
   // Claude, consultado el 2026-10-22 en platform.claude.com/docs/en/about-claude/pricing. Guardar en la caché de 5
   // minutos cuesta 1,25 × la entrada; leerla, 0,1 × en Haiku y 0,05 × en Sonnet y Opus 5.5. Haiku 5.5 sube de
-  // tarifa con prompts de más de 100.000 tokens; aiva no manda nada ni cerca de eso.
+  // tarifa con prompts de más de 100.000 tokens; XENCRM no manda nada ni cerca de eso.
   'claude-haiku-5-5': { input: 0.1, cached: 0.01, write: 0.125, output: 0.5 },
   'claude-sonnet-5-5': { input: 2, cached: 0.1, write: 2.5, output: 10 },
   'claude-opus-5-5': { input: 4, cached: 0.2, write: 5, output: 20 },

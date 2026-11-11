@@ -47,15 +47,15 @@ const utc = (ms: number) => new Date(ms).toISOString().replace(/[-:]/g, '').repl
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const host = () => {
   try {
-    return env.publicUrl ? new URL(env.publicUrl).host : 'aiva.local';
+    return env.publicUrl ? new URL(env.publicUrl).host : 'xencrm.local';
   } catch {
-    return 'aiva.local';
+    return 'xencrm.local';
   }
 };
 export const customerTitle = (a: Appointment) => `${cap(a.service)} · ${business.business.name}`;
 
 function vevent(a: Appointment, audience: 'team' | 'customer'): string[] {
-  const lines = ['BEGIN:VEVENT', `UID:aiva-appt-${a.id}@${host()}`, `DTSTAMP:${utc(Date.now())}`, `DTSTART:${utc(a.startsAt)}`, `DTEND:${utc(a.endsAt)}`];
+  const lines = ['BEGIN:VEVENT', `UID:xencrm-appt-${a.id}@${host()}`, `DTSTAMP:${utc(Date.now())}`, `DTSTART:${utc(a.startsAt)}`, `DTEND:${utc(a.endsAt)}`];
   if (audience === 'team') {
     // Para el equipo: quién viene y qué busca, con el enlace a la conversación.
     const c = getContact(a.userId);
@@ -155,7 +155,7 @@ const html = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': 
 
 /**
  * Página que abre el cliente desde WhatsApp: su cita y un botón por calendario.
- * Sigue el tema del sistema a propósito: es una utilidad de calendario, no una pieza de marca (aiva todavía no
+ * Sigue el tema del sistema a propósito: es una utilidad de calendario, no una pieza de marca (XENCRM todavía no
  * tiene la piel de cada cliente). Cuando la tenga, esta página debe usarla fija, como toda superficie de marca.
  */
 export function customerPage(a: Appointment): string {

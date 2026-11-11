@@ -116,7 +116,7 @@ export function olvidarTodo(): void {
 /**
  * Lo que lleva gastado esta demostración, en dinero.
  *
- * Sale del registro propio de aiva, no de OpenAI: la API de OpenAI solo deja leer el gasto con una clave de
+ * Sale del registro propio de XENCRM, no de OpenAI: la API de OpenAI solo deja leer el gasto con una clave de
  * Admin (`sk-admin-…`), y una de proyecto —la que usa un cliente— no puede, por muchos permisos que se le den.
  * Da igual: aquí está desglosado por tarea y por modelo, que es más de lo que daría allá.
  */

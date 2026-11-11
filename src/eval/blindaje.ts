@@ -1,6 +1,6 @@
 // Pruebas del blindaje contra quien desarma la aplicación desde fuera: pnpm test:blindaje
 //
-// Sale del estándar de seguridad de HRC (~/proyectos/AUDITORIA-SEGURIDAD.md) medido contra aiva en producción
+// Sale del estándar de seguridad de HRC (~/proyectos/AUDITORIA-SEGURIDAD.md) medido contra XENCRM en producción
 // el 2026-11-07: sin una cabecera en la portada, el código entero del tablero y de la consola servido a quien no
 // había entrado, /_salud contando versión y clientes sin token, la dirección de quien llama tomada de lo que él
 // mismo escribe, y un freno de intentos que olvidaba todo en cada despliegue.
@@ -10,7 +10,7 @@
 // queda del código después de afinarlo. Lo que solo se ve en el servidor —que el alojamiento no pise una
 // cabecera— se mide con el verificador del estándar después de subir, no aquí.
 //
-// 🪤 Todo pasa en una carpeta temporal (AIVA_CLIENTES_DIR): el freno escribe en disco, y no puede ser en el de
+// 🪤 Todo pasa en una carpeta temporal (XENCRM_CLIENTES_DIR): el freno escribe en disco, y no puede ser en el de
 // los clientes de verdad.
 import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -18,11 +18,11 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-blindaje-'));
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-blindaje-'));
 const clientesDir = join(dir, 'clientes');
 mkdirSync(clientesDir, { recursive: true });
-process.env.AIVA_CLIENTES_DIR = clientesDir;
-process.env.DB_PATH = join(dir, 'aiva.db');
+process.env.XENCRM_CLIENTES_DIR = clientesDir;
+process.env.DB_PATH = join(dir, 'xencrm.db');
 process.env.CONSOLA_TOKEN = 'llave-maestra-de-prueba-0123456789';
 process.env.ADMIN_TOKEN = 'token-del-tablero-de-prueba-0123456789';
 writeFileSync(join(clientesDir, 'index.json'), JSON.stringify({ clientes: [{ slug: 'boutique', nombre: 'Boutique', puerto: 39911, host: '', prioridad: 'alta', desde: '2026-01-01' }] }));
@@ -70,14 +70,14 @@ check('…pero lo de servicio no se abre nunca', borde.cerradoDesdeFuera('/_serv
 // 🪤 Medido en producción: el alojamiento AÑADE la dirección de verdad a la que mande el navegador. La primera la
 // escribe quien llama.
 const cadena = { 'x-forwarded-for': '203.0.113.8, 179.33.208.232, 10.0.0.1' };
-check('AIVA_IP=primera vuelve a lo de antes', borde.direccionDeQuienLlama(cadena, 'primera') === '203.0.113.8');
+check('XENCRM_IP=primera vuelve a lo de antes', borde.direccionDeQuienLlama(cadena, 'primera') === '203.0.113.8');
 // 🪤 La cadena tal como llegó a producción el 2026-11-07 mandando una dirección inventada (203.0.113.8): lo del
 // navegador queda antes y la de verdad (179.33.208.232) es la última. Sin regla, esa.
 const medida = { 'x-forwarded-for': '203.0.113.8, 179.33.208.232, 203.0.113.8, 179.33.208.232,179.33.208.232' };
 check('🪤 sin regla, la última: la que pone el alojamiento (medido en producción)', borde.direccionDeQuienLlama(medida, undefined) === '179.33.208.232'
   && borde.direccionDeQuienLlama({ 'x-forwarded-for': '203.0.113.8, 198.51.100.7, 179.33.208.232, 203.0.113.8, 198.51.100.7, 179.33.208.232,179.33.208.232' }, '') === '179.33.208.232',
   'el primer elemento lo escribe quien llama: con él se esquivan el freno de intentos y la lista de la libreta');
-check('AIVA_IP=0 es la última; AIVA_IP=1, la anterior', borde.direccionDeQuienLlama(cadena, '0') === '10.0.0.1' && borde.direccionDeQuienLlama(cadena, '1') === '179.33.208.232');
+check('XENCRM_IP=0 es la última; XENCRM_IP=1, la anterior', borde.direccionDeQuienLlama(cadena, '0') === '10.0.0.1' && borde.direccionDeQuienLlama(cadena, '1') === '179.33.208.232');
 check('y con más saltos que direcciones, la primera (no revienta)', borde.direccionDeQuienLlama(cadena, '9') === '203.0.113.8' && borde.direccionDeQuienLlama({}, '1') === '');
 const limpias = borde.sinSuplantar({ 'cf-connecting-ip': '1.1.1.1', 'X-Real-IP': '2.2.2.2', forwarded: 'for=3.3.3.3', 'true-client-ip': '4.4.4.4', 'x-forwarded-for': '5.5.5.5, 6.6.6.6', cookie: 'a=1' }, '6.6.6.6');
 check('🪤 hacia adentro pasa UNA dirección, la decidida, y ninguna de las que se pueden inventar',
@@ -93,10 +93,10 @@ check('🪤 y nada en línea sin huella: ni guiones ni manejadores', !/script-sr
 for (const directiva of ["default-src 'self'", "object-src 'none'", "base-uri 'none'", "frame-ancestors 'none'", "form-action 'self'", "connect-src 'self'"]) {
   check(`la CSP dice ${directiva}`, csp.includes(directiva), csp);
 }
-const txt = borde.securityTxt('aiva.ejemplo.co', undefined, '2026-11-07');
+const txt = borde.securityTxt('xencrm.ejemplo.co', undefined, '2026-11-07');
 const vence = Date.parse(/Expires: (\S+)/.exec(txt)?.[1] ?? '');
 check('security.txt dice a quién escribir y vence dentro de un año (RFC 9116)',
-  /^Contact: mailto:\S+@\S+/m.test(txt) && vence > Date.parse('2026-11-07') && vence <= Date.parse('2026-11-07') + 366 * 864e5 && /Canonical: https:\/\/aiva\.ejemplo\.co\/\.well-known\/security\.txt/.test(txt), txt);
+  /^Contact: mailto:\S+@\S+/m.test(txt) && vence > Date.parse('2026-11-07') && vence <= Date.parse('2026-11-07') + 366 * 864e5 && /Canonical: https:\/\/xencrm\.ejemplo\.co\/\.well-known\/security\.txt/.test(txt), txt);
 
 // ---------- El lanzador: que todo salga por el borde ----------
 const fuente = leer('src/paquete.ts');
@@ -108,13 +108,13 @@ check('el lanzador carga el borde de lo compilado, y el ZIP lo lleva ahí', /req
 check('sirve security.txt', /camino === '\/\.well-known\/security\.txt'/.test(arranque) && /borde\.securityTxt\(/.test(arranque));
 check('cierra lo de adentro de cada cliente antes de repartir', /if \(prefijo && borde\.cerradoDesdeFuera\(ruta, process\.env\)\)/.test(arranque)
   && arranque.indexOf('borde.cerradoDesdeFuera(ruta') < arranque.indexOf('const intentar = (quedan)'));
-check('🪤 y hacia adentro va la dirección decidida, no la que escribió quien llama', /borde\.sinSuplantar\(cabeceras, borde\.direccionDeQuienLlama\(cabeceras, process\.env\.AIVA_IP\)\)/.test(arranque));
+check('🪤 y hacia adentro va la dirección decidida, no la que escribió quien llama', /borde\.sinSuplantar\(cabeceras, borde\.direccionDeQuienLlama\(cabeceras, process\.env\.XENCRM_IP\)\)/.test(arranque));
 const salud = arranque.slice(arranque.indexOf("if (camino === '/_salud')"));
 check('🪤 /_salud sin token solo dice que está en pie', /if \(!conToken\) \{[\s\S]{0,300}JSON\.stringify\(\{ ok: true \}\)/.test(salud)
   && salud.indexOf('if (!conToken)') < salud.indexOf('version:'), 'la versión le dice a quien hace reconocimiento qué fallos probar, y la lista de clientes, a quién');
-check('y con token enseña cómo llegó la petición, para fijar AIVA_IP', /tuPeticion: \{/.test(salud) && /xForwardedFor:/.test(salud));
+check('y con token enseña cómo llegó la petición, para fijar XENCRM_IP', /tuPeticion: \{/.test(salud) && /xForwardedFor:/.test(salud));
 check('las páginas del lanzador llevan su CSP', /'content-security-policy': CSP_PORTADA/.test(arranque) && /'content-security-policy': CSP_ARRANCANDO/.test(arranque));
-check('el ZIP se arma con lo servido afinado', /if \(process\.env\.AIVA_SIN_AFINAR !== '1'\) afinarLoServido\(join\(dir, 'public'\)\)/.test(fuente));
+check('el ZIP se arma con lo servido afinado', /if \(process\.env\.XENCRM_SIN_AFINAR !== '1'\) afinarLoServido\(join\(dir, 'public'\)\)/.test(fuente));
 
 // ---------- La consola: la puerta sin el código de adentro ----------
 const { Hono } = await import('hono');
@@ -133,7 +133,7 @@ if (partes) {
 }
 const guionApp = consolaHtml.slice(consolaHtml.indexOf('<script id="guion-app">'));
 check('🪤 la sesión ya no vive en el navegador: la consola no la guarda ni la manda a mano',
-  !/localStorage\.(setItem|getItem)\('aiva\.consola\.(sesion|token)'/.test(consolaHtml) && !/x-consola-sesion|x-consola-token/.test(guionApp),
+  !/localStorage\.(setItem|getItem)\('XENCRM\.consola\.(sesion|token)'/.test(consolaHtml) && !/x-consola-sesion|x-consola-token/.test(guionApp),
   'en el almacenamiento local la lee cualquier guion que llegue a correr en la página');
 // 🪤 También los que se arman dentro de una cadena de JavaScript (`'onerror="…"'`): el logo de cada cliente en la
 // consola llevaba uno así, y una búsqueda que pedía un espacio antes de `on` no lo vio. Lo vio la CSP, en Chrome.
@@ -155,18 +155,18 @@ const cspAnonima = anonima.headers.get('content-security-policy') ?? '';
 check('y su CSP trae la huella de lo que la puerta trae en línea', huellasServidas(htmlAnonima).every((h) => cspAnonima.includes(h)) && huellasServidas(htmlAnonima).length > 0, cspAnonima);
 const entro = await consola.request('/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '190.1.1.1' }, body: JSON.stringify({ usuario: 'ana', clave: 'clave-de-ana-1' }) });
 const galleta = entro.headers.get('set-cookie') ?? '';
-const sesion = /aiva_consola=([^;]*)/.exec(galleta)?.[1] ?? '';
+const sesion = /xencrm_consola=([^;]*)/.exec(galleta)?.[1] ?? '';
 check('entrar deja la sesión en una galleta HttpOnly, Strict', /HttpOnly/i.test(galleta) && /SameSite=Strict/i.test(galleta) && sesion.length > 20, galleta.replace(sesion, '…'));
 check('🪤 y el cuerpo no la trae', !JSON.stringify(await entro.json()).includes(sesion));
-const adentro = await consola.request('/consola', { headers: { cookie: `aiva_consola=${sesion}` } });
+const adentro = await consola.request('/consola', { headers: { cookie: `xencrm_consola=${sesion}` } });
 const htmlAdentro = await adentro.text();
 check('con sesión, /consola es la consola entera', htmlAdentro.includes('guion-app') && !htmlAdentro.includes('guion-puerta'));
 check('con su CSP propia', huellasServidas(htmlAdentro).every((h) => (adentro.headers.get('content-security-policy') ?? '').includes(h)));
-const salida = await consola.request('/api/salir', { method: 'POST', headers: { cookie: `aiva_consola=${sesion}` } });
+const salida = await consola.request('/api/salir', { method: 'POST', headers: { cookie: `xencrm_consola=${sesion}` } });
 const borrada = salida.headers.get('set-cookie') ?? '';
 check('🪤 al salir, la galleta se borra con los MISMOS atributos con que se puso', /Max-Age=0/i.test(borrada) && /HttpOnly/i.test(borrada) && /SameSite=Strict/i.test(borrada) && /Path=\//i.test(borrada),
   `${borrada} — borrar no hereda los atributos del alta (medido en producción: salía sin HttpOnly ni SameSite)`);
-check('y la sesión queda muerta en el servidor', (await consola.request('/api/yo', { headers: { cookie: `aiva_consola=${sesion}` } })).status === 401);
+check('y la sesión queda muerta en el servidor', (await consola.request('/api/yo', { headers: { cookie: `xencrm_consola=${sesion}` } })).status === 401);
 check('🪤 la llave maestra ya no vale en la dirección (queda en los registros del alojamiento)',
   (await consola.request(`/api/yo?token=${process.env.CONSOLA_TOKEN}`)).status === 401 && (await consola.request('/api/yo', { headers: { 'x-consola-token': process.env.CONSOLA_TOKEN! } })).status === 200);
 const conFallo = new Hono();

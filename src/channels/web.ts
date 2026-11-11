@@ -22,7 +22,7 @@ import { burbujaDe, paraCadenaJs, ventanaDe } from '../crm/chat-config.js';
 import { mountAdmin } from './admin.js';
 import { mountCalendar } from './calendar.js';
 import { channelOn } from './switches.js';
-import { preguntarAAiva } from '../crm/consulta.js';
+import { preguntarAXencrm } from '../crm/consulta.js';
 import { deDondeViene, direccionPermitida, libretaConfig } from '../crm/libreta-config.js';
 import { leerAdjunto, TOPE_ARCHIVO } from '../crm/adjuntos.js';
 import { irseSiQuedaHuerfano } from '../huerfano.js';
@@ -84,7 +84,7 @@ app.get('/_servicio', (c) => c.json(saludDelCliente()));
 const escaparHtml = (s: string): string =>
   s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch] ?? ch);
 
-// ---------- La libreta: preguntarle algo a aiva, sin pasar por el tablero ----------
+// ---------- La libreta: preguntarle algo a XENCRM, sin pasar por el tablero ----------
 //
 // 🪤 Dos cerraduras, y hacen falta las dos. Un endpoint que llama al modelo y no pide nada en un dominio
 // público se encuentra solo —los rastreadores prueban rutas todo el día— y quien lo encuentre gasta la clave
@@ -156,7 +156,7 @@ app.post('/libreta/:llave', async (c) => {
     }
   }
   try {
-    return c.json(await preguntarAAiva({ pregunta, antes, adjuntos }));
+    return c.json(await preguntarAXencrm({ pregunta, antes, adjuntos }));
   } catch (err) {
     return c.json({ error: (err as Error).message }, 502);
   }
@@ -268,7 +268,7 @@ mountAdmin(app);
 mountMeta(app);
 mountCalendar(app);
 
-// Logo del cliente cuando es un archivo local (aiva.config.json > brand.logo).
+// Logo del cliente cuando es un archivo local (xencrm.config.json > brand.logo).
 app.get('/brand/logo', (c) => {
   const logo = readLogo();
   if (!logo) return c.text('sin logo', 404);
@@ -340,7 +340,7 @@ app.get('/chat', (c) => {
       : '<span class="pulso"></span>En línea · si hace falta una persona, te escribe apenas abran';
 
   const cuerpo = prendido
-    ? `<div id="aiva-ventana"></div>\n<p class="pie">${escaparHtml(v.pie || 'Esta conversación queda guardada en este navegador.')}</p>\n<script src="widget.js" data-modo="ventana" async></script>`
+    ? `<div id="xencrm-ventana"></div>\n<p class="pie">${escaparHtml(v.pie || 'Esta conversación queda guardada en este navegador.')}</p>\n<script src="widget.js" data-modo="ventana" async></script>`
     : // No se deja una caja de texto que se traga los mensajes: se dice que está cerrado y por dónde sí llegan.
       // Lo que se ofrece es lo que el propio negocio escribió en «cómo contactar a una persona», que es lo
       // único que aquí se sabe de cierto; inventar un enlace a WhatsApp con un número que no tenemos sería
@@ -379,11 +379,11 @@ app.get('/chat', (c) => {
  * ECONNREFUSED. El sitio entero devolviendo «todavía está arrancando» y ni un error donde agarrarse.
  *
  * Un socket de archivo no depende de direcciones, ni de IPv4 contra IPv6, ni de reglas de red: si los dos
- * procesos ven la misma carpeta, se hablan. Solo se abre cuando el lanzador dice por dónde (AIVA_SOCK); a mano
+ * procesos ven la misma carpeta, se hablan. Solo se abre cuando el lanzador dice por dónde (XENCRM_SOCK); a mano
  * no sobra nada. Si falla, se avisa y se sigue: el puerto es la puerta principal, esta es la de servicio.
  */
 function abrirPuertaDeServicio(): void {
-  const ruta = process.env.AIVA_SOCK;
+  const ruta = process.env.XENCRM_SOCK;
   if (!ruta) return;
   try {
     rmSync(ruta, { force: true }); // el del arranque anterior, que si no, no deja abrir
@@ -413,9 +413,9 @@ export function startWeb() {
       irseSiQuedaHuerfano();
       resolve();
     };
-    // AIVA_BIND lo pone el lanzador (127.0.0.1): así este proceso no queda expuesto y, sobre todo, queda en una
+    // XENCRM_BIND lo pone el lanzador (127.0.0.1): así este proceso no queda expuesto y, sobre todo, queda en una
     // dirección conocida en vez de en la que el sistema decida por su cuenta.
-    const servidor = serve({ fetch: app.fetch, port: env.port, hostname: process.env.AIVA_BIND || undefined }, (info) => {
+    const servidor = serve({ fetch: app.fetch, port: env.port, hostname: process.env.XENCRM_BIND || undefined }, (info) => {
       const base = env.publicUrl || `http://localhost:${info.port}`;
       console.log(`[web] escuchando en http://localhost:${info.port}`);
       console.log(`[web] demo: ${base}/   widget: <script src="${base}/widget.js" async></script>`);

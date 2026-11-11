@@ -61,7 +61,7 @@ export const DEFECTOS: General = {
   ventana: { titulo: '', pie: '', cerradaDice: '' },
 };
 
-const carpeta = (): string => process.env.AIVA_CLIENTES_DIR || join(process.cwd(), 'clientes');
+const carpeta = (): string => process.env.XENCRM_CLIENTES_DIR || join(process.cwd(), 'clientes');
 const archivo = (): string => join(carpeta(), 'general.json');
 
 const texto = (v: unknown, tope = 400): string => (typeof v === 'string' ? v.trim().slice(0, tope) : '');

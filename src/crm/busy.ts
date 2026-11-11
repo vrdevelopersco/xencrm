@@ -330,9 +330,9 @@ function occurrences(ev: VEvent, windowEnd: number): number[] {
   return out;
 }
 
-/** Intervalos ocupados de un iCalendar entre `from` y `to` (ms). Ignora cancelados, "libres" y las citas de aiva. */
+/** Intervalos ocupados de un iCalendar entre `from` y `to` (ms). Ignora cancelados, "libres" y las citas de XENCRM. */
 export function busyFromIcs(text: string, from: number, to: number, opts: { includeOwn?: boolean } = {}): BusyInterval[] {
-  const events = readEvents(text).filter((e) => opts.includeOwn || !e.uid.startsWith('aiva-appt-'));
+  const events = readEvents(text).filter((e) => opts.includeOwn || !e.uid.startsWith('xencrm-appt-'));
   // Ocurrencias movidas o canceladas una por una (RECURRENCE-ID): la serie las omite.
   const overridden = new Map<string, Set<number>>();
   for (const e of events) {
@@ -378,7 +378,7 @@ export interface BusySource {
  * De dónde se leen: los de CALENDAR_BUSY_ICS bloquean todas las sedes —es el calendario del dueño, y si él está
  * ocupado no puede estar en ninguna—, y los de CALENDAR_BUSY_ICS_<SEDE> (CALENDAR_BUSY_ICS_NORTE) solo esa sede.
  *
- * 🪤 En el .env y no en aiva.config.json: son direcciones secretas —quien las tenga ve la agenda del dueño— y la
+ * 🪤 En el .env y no en xencrm.config.json: son direcciones secretas —quien las tenga ve la agenda del dueño— y la
  * configuración se respalda y se manda por correo.
  */
 const variableDe = (sede: string) => `CALENDAR_BUSY_ICS_${sede.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;

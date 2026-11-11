@@ -5,7 +5,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-proximo-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-proximo-')), 'xencrm.db');
 process.env.ADMIN_TOKEN = 'token-del-tablero-de-prueba-0123456789';
 const { touchUser, appendMessage } = await import('../agent/memory.js');
 const { getContact, updateContact, setHumanMode, setStage, etapaCon, listEvents } = await import('../crm/contacts.js');

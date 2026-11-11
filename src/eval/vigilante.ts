@@ -6,8 +6,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-vigilante-'));
-process.env.DB_PATH = join(dir, 'aiva.db');
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-vigilante-'));
+process.env.DB_PATH = join(dir, 'xencrm.db');
 
 const { avisar, aQuienAvisar, loQueHayQueAvisar, olvidarAvisados } = await import('../crm/vigilante.js');
 const { registerSender } = await import('../crm/outbox.js');

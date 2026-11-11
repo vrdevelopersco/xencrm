@@ -5,7 +5,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-series-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-series-')), 'xencrm.db');
 process.env.TZ = 'Europe/London'; // el servidor en otra zona: es justo lo que no debe notarse
 const { nuevasPorDia, actividadPorHora, semanaContraSemana } = await import('../crm/series.js');
 const { getDb } = await import('../rag/store.js');

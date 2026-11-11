@@ -7,7 +7,7 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-ficha-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-ficha-')), 'xencrm.db');
 process.env.ADMIN_TOKEN = 'token-del-tablero-de-prueba-0123456789';
 const { business } = await import('../config.js');
 const { touchUser, appendMessage } = await import('../agent/memory.js');
@@ -59,9 +59,9 @@ check('🪤 el análisis no pisa lo escrito a mano (si no, cada análisis deshac
 console.log('— El servidor');
 const app = new Hono();
 mountAdmin(app as never);
-const T = { 'x-admin-token': process.env.ADMIN_TOKEN!, 'content-type': 'application/json', 'x-aiva-quien': 'Bryan' };
+const T = { 'x-admin-token': process.env.ADMIN_TOKEN!, 'content-type': 'application/json', 'x-xencrm-quien': 'Bryan' };
 const pedir = (ruta: string, init: { method?: string; body?: unknown; rol?: string } = {}) =>
-  app.request(`/admin/api${ruta}`, { method: init.method ?? 'GET', headers: init.rol ? { ...T, 'x-aiva-rol': init.rol } : T, body: init.body === undefined ? undefined : JSON.stringify(init.body) });
+  app.request(`/admin/api${ruta}`, { method: init.method ?? 'GET', headers: init.rol ? { ...T, 'x-xencrm-rol': init.rol } : T, body: init.body === undefined ? undefined : JSON.stringify(init.body) });
 const id = 'wa:573001234567@s.whatsapp.net', enc = encodeURIComponent(id);
 touchUser(id, 'whatsapp', 'Andrés Peña');
 appendMessage(id, 'user', 'hola, ¿tienen trajes para boda?', 'consulta');
@@ -121,7 +121,7 @@ check('lo que no tiene, no sale', tablero.contactoHtml({ data: { correo: 'a@b.co
 check('🪤 lo que escribió alguien no se cuela como HTML', !tablero.contactoHtml({ data: { facebook: '<img onerror=x>' } }, fila).includes('<img'));
 const form = tablero.camposFichaHtml({ data: { correo: 'a@b.co', contacto_por: 'Facebook', [stats.ficha.delNegocio[0]!.k]: 'lo captado' } }, 'f-x-', { borrador: true });
 check('«Corregir datos» trae correo, WhatsApp, Instagram, Facebook y por dónde llegó', ['correo', 'whatsapp', 'instagram', 'facebook'].every((k) => form.includes(`id="f-x-${k}" data-borrador`)) && /<select id="f-x-contacto_por">[\s\S]*<option selected>Facebook<\/option>/.test(form));
-check('y lo que captó aiva, escrito y corregible', form.includes('Lo que contó') && form.includes(`id="f-x-${stats.ficha.delNegocio[0]!.k}" data-borrador value="lo captado"`));
+check('y lo que captó XENCRM, escrito y corregible', form.includes('Lo que contó') && form.includes(`id="f-x-${stats.ficha.delNegocio[0]!.k}" data-borrador value="lo captado"`));
 check('el de «Nuevo contacto» trae solo lo de contacto, sin WhatsApp (el teléfono ya es su WhatsApp)', (() => { const n = tablero.camposFichaHtml({ data: {} }, 'nv-x-', { soloContacto: true, sin: { whatsapp: 1 } }); return n.includes('nv-x-instagram') && !n.includes('nv-x-whatsapp') && !n.includes('Lo que contó'); })());
 campos['f-x-correo'] = { value: ' a@b.co ' }; campos['f-x-instagram'] = { value: '@ana' };
 check('lo escrito se lee para guardarlo', JSON.stringify(tablero.leerFicha('f-x-')) === '{"correo":"a@b.co","instagram":"@ana"}', JSON.stringify(tablero.leerFicha('f-x-')));

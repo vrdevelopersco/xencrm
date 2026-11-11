@@ -5,15 +5,15 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const dir = mkdtempSync(join(tmpdir(), 'aiva-etapas-'));
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-etapas-'));
 // Un negocio de soporte, con la plantilla que se ofrece al dar de alta un cliente.
 const { configDePlantilla } = await import('../clientes.js');
 const plantilla = configDePlantilla('soporte');
 (plantilla.business as Record<string, unknown>).name = 'Financiera del Caribe';
-const configPath = join(dir, 'aiva.config.json');
+const configPath = join(dir, 'xencrm.config.json');
 writeFileSync(configPath, JSON.stringify(plantilla, null, 2));
-process.env.AIVA_CONFIG = configPath;
-process.env.DB_PATH = join(dir, 'aiva.db');
+process.env.XENCRM_CONFIG = configPath;
+process.env.DB_PATH = join(dir, 'xencrm.db');
 
 const { touchUser, appendMessage } = await import('../agent/memory.js');
 const { getContact, updateContact, setStage, STAGES, STAGE_LABELS, primeraEtapa, etapaCon, rolDe, estaCerrada } = await import('../crm/contacts.js');

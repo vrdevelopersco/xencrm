@@ -5,7 +5,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-alta-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-alta-')), 'xencrm.db');
 const { touchUser, appendMessage } = await import('../agent/memory.js');
 const { darDeAlta, direccionDe } = await import('../crm/alta.js');
 const { getContact, listContacts, primeraEtapa, STAGE_DEFS } = await import('../crm/contacts.js');

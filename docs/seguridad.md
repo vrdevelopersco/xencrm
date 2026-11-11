@@ -1,6 +1,6 @@
-# Seguridad de aiva
+# Seguridad de XENCRM
 
-aiva atiende a varios negocios a la vez, con conversaciones de sus clientes finales dentro. Lo que hay que
+XENCRM atiende a varios negocios a la vez, con conversaciones de sus clientes finales dentro. Lo que hay que
 proteger, por orden:
 
 1. Que **un negocio no vea lo de otro**.
@@ -12,7 +12,7 @@ proteger, por orden:
 La batería vive en `src/eval/seguridad.ts` y se corre con `pnpm test:seguridad` (va también dentro de
 `pnpm test`). Hace las peticiones contra la aplicación de verdad, el mismo camino que un navegador, no contra
 las funciones por dentro: lo que se quiere probar es el guardia, y el guardia vive en el middleware. Todo ocurre
-en una carpeta temporal con clientes inventados (`AIVA_CLIENTES_DIR`), así que no toca ni los clientes reales ni
+en una carpeta temporal con clientes inventados (`XENCRM_CLIENTES_DIR`), así que no toca ni los clientes reales ni
 el archivo de usuarios.
 
 ## Lo que quedó probado
@@ -28,8 +28,8 @@ test:blindaje`, y su sección más abajo: «El blindaje».
   no da de alta clientes, y al editar «lo mío» no se asciende ni se asigna clientes ajenos.
 - **El admin de un cliente** maneja a su gente y a nadie más: no crea super-admins, no reparte clientes ajenos, no
   toca a quien atiende además otro negocio ni al super-admin («no existe», igual que un usuario inventado), no se
-  entera de qué otros clientes tiene aiva y no se baja ni se desactiva a sí mismo (`test:usuarios`).
-- **Lo de quien administra aiva** (motores, clave de OpenAI, tope de gasto y encender la retención) se frena en las
+  entera de qué otros clientes tiene XENCRM y no se baja ni se desactiva a sí mismo (`test:usuarios`).
+- **Lo de quien administra XENCRM** (motores, clave de OpenAI, tope de gasto y encender la retención) se frena en las
   dos puertas al cliente: `/api/c/<slug>/…` y `/c/<slug>/admin/api/…`.
 - **Retención**: el negocio ve la suya pero no la cambia; encenderla, que anonimiza o borra conversaciones, es solo
   del super-admin. Al anonimizar, ni el nombre ni el teléfono quedan en ninguna tabla de la base (`test:retencion`
@@ -66,7 +66,7 @@ Salió de cuatro revisiones en paralelo del código y de probarlo en un navegado
 | **La llave maestra se guardaba en el navegador** | Al entrar con ella quedaba en el almacenamiento local, que lee cualquier script del origen. Ya no se guarda: la sesión alcanza para todo. | `public/consola.html` |
 | **Fórmulas en el CSV** | El nombre lo pone el cliente desde WhatsApp, y Excel ejecuta lo que empieza por `=`, `+`, `-` o `@`. Un prospecto con `=HYPERLINK(…)` de nombre se llevaba la fila cuando el dueño abría el archivo. | `src/crm/export.ts` |
 | **Cambiar la clave no echaba a nadie** | A una cuenta comprometida se le cambiaba la clave y quien había entrado seguía dentro hasta doce horas: lo contrario de lo que uno cree que acaba de hacer. | `src/consola-usuarios.ts` |
-| **Lo de quien administra aiva pasaba por la segunda puerta** | El freno para motores, clave y retención estaba solo en `/api/c/<slug>/…`. Por `/c/<slug>/admin/api/…`, la que usa el tablero abierto desde la consola, cualquiera con un cliente asignado cambiaba los motores, ponía una clave de OpenAI o encendía la retención que borra conversaciones. La clave no se podía leer (sale tapada), pero sí reemplazar. **Comprobado pasando** y comprobado frenado (2026-10-16). Ahora las dos puertas usan la misma función. | `src/consola.ts` (`vedado`) |
+| **Lo de quien administra XENCRM pasaba por la segunda puerta** | El freno para motores, clave y retención estaba solo en `/api/c/<slug>/…`. Por `/c/<slug>/admin/api/…`, la que usa el tablero abierto desde la consola, cualquiera con un cliente asignado cambiaba los motores, ponía una clave de OpenAI o encendía la retención que borra conversaciones. La clave no se podía leer (sale tapada), pero sí reemplazar. **Comprobado pasando** y comprobado frenado (2026-10-16). Ahora las dos puertas usan la misma función. | `src/consola.ts` (`vedado`) |
 | **Un respaldo malo dejaba al cliente sin arrancar** | La configuración se escribía sin comprobar. Si quedaba rota, el proceso no volvía a levantar —y con un supervisor detrás, reiniciándose para siempre—. Ahora se valida ya compuesta y antes de escribir. | `src/crm/respaldo.ts` |
 | **Identificador de conversación adivinable en MCP** | Sin identificador se usaba `anon-<reloj>`, adivinable dentro del mismo segundo: quien lo adivinara retomaba la conversación de otro con su historial dentro del contexto del modelo. | `src/mcp/server.ts` |
 | **Mensajes sin tope por MCP** | El chat del sitio corta en 2000 caracteres; por MCP no había corte, así que un mensaje enorme entraba entero al modelo y lo pagaba el cliente. | `src/mcp/server.ts` |
@@ -88,7 +88,7 @@ Nada de esto es explotable hoy por un desconocido, pero conviene tenerlo escrito
   que, por diseño, se pega en Google Calendar o en Outlook.
 - **La dirección de quien llama depende del alojamiento.** Medido el 2026-11-07 en producción (`/_salud` ›
   `tuPeticion`): lo que mande el navegador en `x-forwarded-for` queda siempre antes, y el último elemento es la
-  dirección de verdad. Eso es lo que usa el enrutador por defecto (`AIVA_IP=0`), y lo único que pasa hacia adentro.
+  dirección de verdad. Eso es lo que usa el enrutador por defecto (`XENCRM_IP=0`), y lo único que pasa hacia adentro.
   Si el alojamiento cambia su cadena, hay que volver a medir: mandar una dirección inventada y mirar dónde queda.
   🪤 **Si algún día se pone Cloudflare delante** (es la vía para el WAF), la lectura cambia el MISMO día: hoy
   `borde.cjs` tira `cf-connecting-ip` porque cualquiera la puede mandar; con Cloudflare, esa pasa a ser la buena,
@@ -111,8 +111,8 @@ Nada de esto es explotable hoy por un desconocido, pero conviene tenerlo escrito
 
 ## El blindaje (2026-11-07)
 
-Se midió aiva en producción con el verificador del estándar de HRC (`~/proyectos/AUDITORIA-SEGURIDAD.md`), que
-nació de una auditoría externa de HRC-Check, y se miró además lo que se aprende de aiva sin entrar. El usuario lo
+Se midió XENCRM en producción con el verificador del estándar de HRC (`~/proyectos/AUDITORIA-SEGURIDAD.md`), que
+nació de una auditoría externa de HRC-Check, y se miró además lo que se aprende de XENCRM sin entrar. El usuario lo
 pidió así: «blindarme ante ingeniería inversa necia». Antes: la portada **7 MAL** y la consola **5 MAL**. En el ZIP,
 antes de subir: la portada **0 MAL**. En producción, con el verificador ya corregido: portada y consola **9 OK · 1
 MAL**; el MAL es el `server: hcdn` del alojamiento, que desde aquí no se quita. Pruebas en `pnpm test:blindaje`; el

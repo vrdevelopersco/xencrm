@@ -126,7 +126,7 @@ export function motoresDe(): Motores {
     modeloGeneral: env.openaiModel,
     modeloClaudeGeneral: env.anthropicModel,
     asignables: ASIGNABLES,
-    puedeReiniciarse: Boolean(process.env.AIVA_SUPERVISADO || process.env.pm_id),
+    puedeReiniciarse: Boolean(process.env.XENCRM_SUPERVISADO || process.env.pm_id),
   };
 }
 
@@ -225,7 +225,7 @@ export interface ClaveDelCliente {
  * 🪤 Apagar NO puede ser dejar `OPENAI_API_KEY=` vacía: una cadena vacía SÍ está definida, así que el cliente
  * dejaría de heredar la de la casa y se quedaría sin ninguna. Y tampoco puede ser borrarla, porque entonces hay
  * que volver a pegarla para encenderla —y una clave que se pega a mano cada vez se acaba pegando mal justo el
- * día que importa—. Así que se aparca con otro nombre, que aiva no lee, y encender es devolverla a su sitio.
+ * día que importa—. Así que se aparca con otro nombre, que XENCRM no lee, y encender es devolverla a su sitio.
  */
 const PARQUEADA = 'OPENAI_API_KEY_APAGADA';
 
@@ -237,7 +237,7 @@ const pistaDe = (k: string): string => (k.length < 12 ? '' : `${k.slice(0, 7)}�
  * a la vez. La pregunta no es qué clave se está usando, es de quién es.
  */
 function delArchivo(clave: string): string {
-  const archivo = process.env.AIVA_ENV_FILE || '.env';
+  const archivo = process.env.XENCRM_ENV_FILE || '.env';
   try {
     return (
       readFileSync(archivo, 'utf8')

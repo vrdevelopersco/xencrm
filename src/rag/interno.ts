@@ -1,8 +1,8 @@
-// Lo que aiva sabe del negocio y NO le cuenta a nadie.
+// Lo que XENCRM sabe del negocio y NO le cuenta a nadie.
 //
 // El catálogo y la información del negocio (`product`, `knowledge`) existen para contestarle a un cliente. Esto
 // es lo contrario: con qué proveedor trabajan, qué margen manejan, qué cliente da problemas, qué producto no
-// quieren empujar, qué pasó la última vez que subieron los precios. Sirve para que aiva ayude al EQUIPO —a
+// quieren empujar, qué pasó la última vez que subieron los precios. Sirve para que XENCRM ayude al EQUIPO —a
 // decidir, a revisar lo que se va a mandar, a avisar de que algo no cuadra— y no puede salir por una
 // conversación.
 //
@@ -16,7 +16,7 @@ export interface NotaInterna {
   id: string;
   titulo: string;
   contenido: string;
-  /** De dónde salió: escrita a mano, o deducida por aiva y confirmada por alguien. */
+  /** De dónde salió: escrita a mano, o deducida por XENCRM y confirmada por alguien. */
   origen: string;
   actualizado: number;
 }

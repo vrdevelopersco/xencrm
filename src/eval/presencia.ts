@@ -5,7 +5,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-presencia-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-presencia-')), 'xencrm.db');
 const { entrar, salir, quienesEstan, otrosQueEstan, DURACION_MS } = await import('../crm/presencia.js');
 const { touchUser } = await import('../agent/memory.js');
 

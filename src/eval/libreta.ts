@@ -1,12 +1,12 @@
 // Pruebas de la libreta: quién puede abrirla. pnpm test:libreta
 //
-// Esto no prueba que aiva conteste bien —eso es el modelo—, prueba la cerradura. Es la única puerta del sistema
+// Esto no prueba que XENCRM conteste bien —eso es el modelo—, prueba la cerradura. Es la única puerta del sistema
 // que no pide sesión, así que lo único que la separa de internet es lo que se comprueba aquí.
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-process.env.AIVA_CLIENTES_DIR = mkdtempSync(join(tmpdir(), 'aiva-libreta-'));
+process.env.XENCRM_CLIENTES_DIR = mkdtempSync(join(tmpdir(), 'xencrm-libreta-'));
 const { libretaConfig, guardarLibretaConfig, deDondeViene, direccionPermitida } = await import('../crm/libreta-config.js');
 
 let fail = 0;
@@ -98,19 +98,19 @@ check('y una llave que no vale es 404, no 403', /if \(!abierta\(c\)\) return c\.
 // 🪤 Se prueba la REGLA de la clave, no el navegador: en producción todos los clientes viven en el mismo
 // dominio (…/dunor/, …/confia/) y comparten almacenamiento. Con una clave fija, la libreta de un negocio
 // enseñaría las preguntas que se hicieron sobre otro, que en un CRM multicliente es de lo peor que puede pasar.
-const claveDe = (ruta: string) => 'aiva.libreta.' + ruta.replace(/\/libreta\/.*$/, '');
+const claveDe = (ruta: string) => 'xencrm.libreta.' + ruta.replace(/\/libreta\/.*$/, '');
 check('🪤 cada cliente guarda su hilo aparte', claveDe('/dunor/libreta/LLAVE') !== claveDe('/confia/libreta/LLAVE'));
-check('y la clave lleva el cliente dentro', claveDe('/dunor/libreta/LLAVE') === 'aiva.libreta./dunor');
+check('y la clave lleva el cliente dentro', claveDe('/dunor/libreta/LLAVE') === 'xencrm.libreta./dunor');
 // Cambiar la llave es una acción de seguridad —se hace cuando uno teme que se filtró— y no tiene por qué
 // costarle a nadie lo que llevaba escrito en su propio navegador.
 check('cambiar la llave no borra el hilo de nadie', claveDe('/dunor/libreta/VIEJA') === claveDe('/dunor/libreta/NUEVA'));
 
 // Y que la página de verdad use esa misma regla, no una parecida.
 const pagina = readFileSync(new URL('../../public/libreta.html', import.meta.url), 'utf8');
-check('la página arma la clave igual', /aiva\.libreta\.' \+ location\.pathname\.replace\(\/\\\/libreta/.test(pagina), 'revisa CLAVE en public/libreta.html');
+check('la página arma la clave igual', /xencrm\.libreta\.' \+ location\.pathname\.replace\(\/\\\/libreta/.test(pagina), 'revisa CLAVE en public/libreta.html');
 check('🪤 y caduca el hilo por fecha', /DIAS \* 86400000/.test(pagina), 'el hilo tiene que caducar solo');
 check('«Empezar de nuevo» borra en vez de recargar', /removeItem\(CLAVE\)/.test(pagina) && !/limpiar'\)\.onclick = function \(\) \{ location\.reload/.test(pagina));
 
-rmSync(process.env.AIVA_CLIENTES_DIR!, { recursive: true, force: true });
+rmSync(process.env.XENCRM_CLIENTES_DIR!, { recursive: true, force: true });
 console.log(fail ? `\n${fail} fallos` : '\ntodo ok');
 process.exit(fail ? 1 : 0);

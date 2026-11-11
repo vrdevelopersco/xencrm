@@ -4,8 +4,8 @@
 import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-const dir = mkdtempSync(join(tmpdir(), 'aiva-perfil-'));
-process.env.DB_PATH = join(dir, 'aiva.db');
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-perfil-'));
+process.env.DB_PATH = join(dir, 'xencrm.db');
 const { business } = await import('../config.js');
 const originalName = business.business.name;
 business.profileFile = join(dir, 'profile.json');

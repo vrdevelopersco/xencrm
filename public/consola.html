@@ -764,12 +764,24 @@ dialog .burbuja .who{color:var(--muted)}
 </dialog>
 
 <script id="guion-puerta">
+// XENCRM: las llaves que el navegador guardó cuando esto se llamaba aiva («aiva.…») se mudan una vez a «xencrm.…».
+(function deAivaAXencrm() {
+  try {
+    var viejas = [];
+    for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('ai' + 'va.') === 0) viejas.push(k); }
+    viejas.forEach(function (k) {
+      var nueva = 'xencrm.' + k.slice(5);
+      if (localStorage.getItem(nueva) === null) localStorage.setItem(nueva, localStorage.getItem(k));
+      localStorage.removeItem(k);
+    });
+  } catch (e) { /* sin almacenamiento, no hay nada que mudar */ }
+})();
 // La puerta: lo único que se le sirve a quien no ha entrado (ver partirLaConsola en src/consola.ts).
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   // Lo que guardaban las versiones de antes. La sesión ya no vive en el navegador: va en una galleta que ningún
   // guion de la página puede leer.
-  try { localStorage.removeItem('aiva.consola.sesion'); localStorage.removeItem('aiva.consola.token'); } catch (e) {}
+  try { localStorage.removeItem('xencrm.consola.sesion'); localStorage.removeItem('xencrm.consola.token'); } catch (e) {}
   // 🪤 La galleta es SameSite=Strict: llegando por un enlace desde otro sitio (un correo, WhatsApp) el navegador no
   // la manda con esa primera página, y el servidor sirve la puerta aunque la sesión siga viva. Desde aquí sí viaja:
   // se pregunta y, si vale, se entra sin volver a escribir la clave.
@@ -788,7 +800,7 @@ dialog .burbuja .who{color:var(--muted)}
           try {
             return t ? JSON.parse(t) : {};
           } catch (e) {
-            console.error('[aiva] /api/entrar contestó ' + r.status + ':', t.slice(0, 200));
+            console.error('[xencrm] /api/entrar contestó ' + r.status + ':', t.slice(0, 200));
             // 502/503 al entrar casi siempre es que acaban de subir una versión y todavía está levantando. Se
             // dice así, que es lo que pasa, en vez de enseñar un número que no significa nada para quien entra.
             return { error: r.status === 502 || r.status === 503
@@ -798,7 +810,7 @@ dialog .burbuja .who{color:var(--muted)}
         });
       })
       .catch(function (e) {
-        console.error('[aiva] no se pudo hablar con el servidor al entrar:', e);
+        console.error('[xencrm] no se pudo hablar con el servidor al entrar:', e);
         return { error: 'No se pudo hablar con el servidor.' };
       });
   }
@@ -845,7 +857,7 @@ dialog .burbuja .who{color:var(--muted)}
   // queda a medias y no hay ni un rastro de qué pasó.
   addEventListener('unhandledrejection', function (e) {
     if (e.reason && e.reason.sesion) return; // la sesión vencida ya se avisa en su sitio
-    console.error('[aiva] error sin atrapar:', e.reason);
+    console.error('[xencrm] error sin atrapar:', e.reason);
   });
 
   // 🪤 Lo único que puede sacar a alguien de la consola es que su sesión ya no valga (401). Nada más: ni un 404
@@ -871,21 +883,21 @@ dialog .burbuja .who{color:var(--muted)}
           try {
             return t ? JSON.parse(t) : {};
           } catch (e) {
-            console.error('[aiva] ' + path + ' contestó ' + r.status + ' y no es JSON:', t.slice(0, 200));
+            console.error('[xencrm] ' + path + ' contestó ' + r.status + ' y no es JSON:', t.slice(0, 200));
             return { error: 'El servidor contestó ' + r.status + ' en ' + path + '. Puede estar a medio actualizar.' };
           }
         });
       });
   }
   // 🪤 Entrar y salir tenían que BORRAR lo que había pintado: al salir de super-admin y entrar como alguien de un
-  // solo cliente, esa persona alcanzaba a ver unos segundos la lista de todos los clientes de aiva. Ahora entrar y
+  // solo cliente, esa persona alcanzaba a ver unos segundos la lista de todos los clientes de XENCRM. Ahora entrar y
   // salir vuelven a pedir la página entera (la puerta o la consola, ver partirLaConsola), y no queda nada de antes.
   function entrar() { $('app').hidden = false; }
   // Lo que se arma después de entrar. Si algo de esto falla, se dice y se queda uno adentro: la sesión es válida.
   function armarLaPantalla() {
     return sesionLista().catch(function (e) {
       if (e && e.sesion) return;
-      console.error('[aiva] entré pero no pude armar la pantalla:', e);
+      console.error('[xencrm] entré pero no pude armar la pantalla:', e);
       $('resumen').textContent = 'Entraste, pero algo falló al armar la pantalla. ' + ((e && e.message) || 'Mira la consola del navegador.');
     });
   }
@@ -927,7 +939,7 @@ dialog .burbuja .who{color:var(--muted)}
       $('tab-equipo').hidden = !puedeEquipo;
       $('tab-config').hidden = !esSuper;
       cargarTodo(); cargarPendientes();
-      ver(localStorage.getItem('aiva.consola.vista') || 'atender');
+      ver(localStorage.getItem('xencrm.consola.vista') || 'atender');
     });
   }
   // Mi cuenta: cada quien se cambia lo suyo sin pedirle nada al super-admin. Con la llave maestra no hay cuenta
@@ -1632,7 +1644,7 @@ dialog .burbuja .who{color:var(--muted)}
       // diagnosticar: entrabas, se caía cualquier cosa aquí adentro y volvías al login sin saber por qué.
       // La sesión solo la cierra api() con un 401; lo demás se dice y se queda uno adentro.
       if (e && e.sesion) return;
-      console.error('[aiva] no se pudo pintar la lista de clientes:', e);
+      console.error('[xencrm] no se pudo pintar la lista de clientes:', e);
       $('resumen').textContent = 'No se pudo cargar la lista de clientes. ' + ((e && e.message) || 'Mira la consola del navegador.');
     });
   }
@@ -1791,11 +1803,11 @@ dialog .burbuja .who{color:var(--muted)}
    * cada uno: lo que pongas para uno manda sobre tu nombre de cuenta y no se contagia a los demás.
    *
    * 🪤 Lo que NO se hace es caer al nombre del ASISTENTE de ese cliente cuando no hay nada puesto. Eso hacía que
-   * quien atiende se llamara «Aiva» en todos los clientes a la vez y parecía que los perfiles se cruzaban.
+   * quien atiende se llamara «Xen» en todos los clientes a la vez y parecía que los perfiles se cruzaban.
    */
   function comoFirmo(slug) {
     try {
-      var propio = slug && localStorage.getItem('aiva.consola.quien.' + slug);
+      var propio = slug && localStorage.getItem('xencrm.consola.quien.' + slug);
       if (propio) return propio;
     } catch (e) { /* sin almacenamiento, se usa la cuenta */ }
     return yo ? yo.nombre : 'Llave maestra';
@@ -1811,8 +1823,8 @@ dialog .burbuja .who{color:var(--muted)}
     // Si firmas distinto de tu nombre de cuenta, queda anotado PARA ESTE CLIENTE y no toca a los demás.
     var quien = $('quien').value.trim() || comoFirmo(p.slug);
     try {
-      if (yo && quien === yo.nombre) localStorage.removeItem('aiva.consola.quien.' + p.slug);
-      else localStorage.setItem('aiva.consola.quien.' + p.slug, quien);
+      if (yo && quien === yo.nombre) localStorage.removeItem('xencrm.consola.quien.' + p.slug);
+      else localStorage.setItem('xencrm.consola.quien.' + p.slug, quien);
     } catch (e) { /* sin almacenamiento, se firma igual */ }
     $('enviar').disabled = true;
     $('msg2').textContent = 'Enviando…';
@@ -1827,10 +1839,10 @@ dialog .burbuja .who{color:var(--muted)}
     }).catch(function () { $('enviar').disabled = false; $('msg2').textContent = 'No se pudo enviar.'; });
   }
   // Avisar cuando entra algo nuevo de los clientes que atiendes: sonido corto y el número en el título.
-  var vistos = null, sonar = localStorage.getItem('aiva.consola.sonido') !== 'no';
+  var vistos = null, sonar = localStorage.getItem('xencrm.consola.sonido') !== 'no';
   $('sonido').onclick = function () {
     sonar = !sonar;
-    localStorage.setItem('aiva.consola.sonido', sonar ? 'si' : 'no');
+    localStorage.setItem('xencrm.consola.sonido', sonar ? 'si' : 'no');
     $('sonido').textContent = sonar ? '🔔' : '🔕';
   };
   $('sonido').textContent = sonar ? '🔔' : '🔕';
@@ -1889,7 +1901,7 @@ dialog .burbuja .who{color:var(--muted)}
     $('tab-clientes').classList.toggle('on', cual === 'clientes');
     $('tab-equipo').classList.toggle('on', cual === 'equipo');
     $('tab-config').classList.toggle('on', cual === 'config');
-    localStorage.setItem('aiva.consola.vista', cual);
+    localStorage.setItem('xencrm.consola.vista', cual);
   }
   $('tab-atender').onclick = function () { ver('atender'); cargarPendientes(); };
   $('tab-clientes').onclick = function () { ver('clientes'); cargarTodo(); };
@@ -1903,7 +1915,7 @@ dialog .burbuja .who{color:var(--muted)}
   // pantalla lo dice en cada sección en vez de darlo por sabido: lo que un negocio haya decidido en su propio
   // tablero le gana a esto, siempre, y aquí no se le pisa nada a nadie.
   var GEN = null;
-  var SECCION = localStorage.getItem('aiva.consola.config') || 'burbuja';
+  var SECCION = localStorage.getItem('xencrm.consola.config') || 'burbuja';
   var SECCIONES = [
     ['burbuja', 'Burbuja del sitio'],
     ['ventana', 'Ventana de chat'],
@@ -1932,7 +1944,7 @@ dialog .burbuja .who{color:var(--muted)}
     Array.prototype.forEach.call($('config-nav').querySelectorAll('button'), function (b) {
       b.onclick = function () {
         SECCION = b.dataset.s;
-        localStorage.setItem('aiva.consola.config', SECCION);
+        localStorage.setItem('xencrm.consola.config', SECCION);
         pintarConfig();
       };
     });
@@ -2108,7 +2120,7 @@ dialog .burbuja .who{color:var(--muted)}
       // Y cuánto puede gastar. Va justo debajo de quién paga porque es la misma pregunta: cuánto cuesta este cliente.
       '<div class="clave" id="tp-' + esc(slug) + '"><div class="small muted">Cargando el tope…</div></div>' +
       // Y qué pasa con las conversaciones viejas. Va con el tope porque es igual de suyo: lo decide quien administra
-      // aiva, y el negocio solo lo ve.
+      // XENCRM, y el negocio solo lo ve.
       '<div class="clave" id="rt-' + esc(slug) + '"><div class="small muted">Cargando la retención…</div></div>' +
       '<div class="small muted" style="margin:10px 0 2px">Lo que corre ahora. Guardar deja el archivo listo, pero hace falta reiniciar ese cliente para que lo tome.</div>' +
       (d.roles || []).map(function (r) {
@@ -2440,7 +2452,7 @@ dialog .burbuja .who{color:var(--muted)}
 
   // ── La libreta ────────────────────────────────────────────────────────────
   //
-  // Una puerta aparte para preguntarle algo a aiva sin entrar al tablero. Aquí se decide quién puede abrirla, y
+  // Una puerta aparte para preguntarle algo a XENCRM sin entrar al tablero. Aquí se decide quién puede abrirla, y
   // son dos cosas a la vez: una llave larga en la dirección y desde qué direcciones de internet se acepta.
   //
   // 🪤 Las dos hacen falta y la pantalla lo dice en grande, porque la tentación es poner la llave, ver que
@@ -2702,7 +2714,7 @@ dialog .burbuja .who{color:var(--muted)}
               '<div class="small muted">También entra a tus conversaciones. Lo maneja quien administra XENCRM.</div></div>';
           }
           // A sí mismo, el admin de un cliente no se cambia el rol, los clientes ni si sigue activo: se quedaría
-          // por fuera y de ahí solo lo saca quien administra aiva. El servidor lo frena igual.
+          // por fuera y de ahí solo lo saca quien administra XENCRM. El servidor lo frena igual.
           var propio = soyYo(u) && !esSuper;
           return '<div class="card" data-u="' + esc(u.usuario) + '">' +
             '<div class="fila"><span class="nombre">' + esc(u.nombre) + '</span><span class="chip">' + esc(u.usuario) + '</span>' +

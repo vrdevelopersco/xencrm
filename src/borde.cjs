@@ -16,7 +16,7 @@ const { createHash } = require('node:crypto');
  *
  * HSTS para que el navegador no vuelva a intentar por http (ahí una galleta o una clave viajan a la vista).
  * `nosniff` para que un archivo no se interprete como algo distinto de lo que dice ser. `no-referrer` para que la
- * dirección de esta página no viaje a los sitios que se abren desde aquí. Y ningún permiso del aparato: aiva no
+ * dirección de esta página no viaje a los sitios que se abren desde aquí. Y ningún permiso del aparato: XENCRM no
  * usa la cámara, el micrófono ni la ubicación, y una página que no los pide no se los puede dar a un guion ajeno.
  */
 const DE_SIEMPRE = {
@@ -135,7 +135,7 @@ function cerradoDesdeFuera(ruta, env) {
  * `F, R, F, R,R`; mandando `F1, F2`, `F1, F2, R, F1, F2, R,R`. Lo que mande el navegador queda siempre ANTES, y el
  * último elemento es siempre la dirección de verdad: lo pone el último servidor del alojamiento.
  *
- * `AIVA_IP` dice cuántos saltos desde la derecha: un número (0 = el último, que es lo medido y lo de por defecto)
+ * `XENCRM_IP` dice cuántos saltos desde la derecha: un número (0 = el último, que es lo medido y lo de por defecto)
  * o `primera` para volver a lo de antes. 🪤 Si algún día se pone Cloudflare delante, esto cambia ese mismo día:
  * ver docs/seguridad.md.
  */

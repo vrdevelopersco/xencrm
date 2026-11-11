@@ -1,6 +1,6 @@
 # Arquitectura
 
-Para quien va a cambiar el código. El README explica qué hace aiva y cómo configurarlo; aquí está cómo está hecho
+Para quien va a cambiar el código. El README explica qué hace XENCRM y cómo configurarlo; aquí está cómo está hecho
 y por qué.
 
 ## Principios
@@ -134,7 +134,7 @@ significado y solo se guardan si con eso las reglas ya entienden. Aceptar un tem
 como dato *por confirmar*: el historial pone la pregunta, el negocio pone la respuesta de hoy. La regla y el
 porqué, en [`aprender-del-historial.md`](aprender-del-historial.md).
 
-**El embudo es del negocio.** `crm.stages` en `aiva.config.json` define las etapas: id, nombre y **papel**
+**El embudo es del negocio.** `crm.stages` en `xencrm.config.json` define las etapas: id, nombre y **papel**
 (`inicio`, `activo`, `interes`, `cita`, `ganado`, `perdido`). El código nunca usa los nombres —pregunta por el
 papel (`etapaCon('ganado')`, `rolDe(stage)`, `estaCerrada`)—, así que una financiera puede ir "Nuevo → En revisión
 → Con un asesor → Resuelto" sin tocar una línea. Un negocio sin `cita` simplemente no agenda: el flujo de citas se
@@ -144,15 +144,15 @@ está en la configuración cae a la primera, sin romperse.
 
 **Plantillas de alta** (`plantillas/`): `citas` (boutique, consultorio: termina en cita agendada), `soporte`
 (financiera, posventa: consultas y reclamos) y `cotizacion` (impresión industrial: cotizar, producir, entregar).
-Cada una trae su embudo, si agenda citas y qué datos capturar; se mezclan sobre `aiva.config.example.json` al dar
+Cada una trae su embudo, si agenda citas y qué datos capturar; se mezclan sobre `xencrm.config.example.json` al dar
 de alta un cliente. Es la primera pregunta del alta, porque de ahí sale cómo trabaja ese CRM.
 
 **Los vectores de búsqueda** (`llm/embeddings.ts`) salen de Ollama (`bge-m3`, local y gratis, pide ~3 GB) o de
 OpenAI (`text-embedding-3-small`, $0.02 por millón de tokens), según `EMBED_ENGINE`. Con OpenAI desaparece la
-única dependencia pesada, que es lo que permite correr aiva en una máquina chica o en un hosting de apps. **Al
+única dependencia pesada, que es lo que permite correr XENCRM en una máquina chica o en un hosting de apps. **Al
 cambiar de motor hay que reindexar** (`pnpm ingest`): los vectores de dos modelos no se comparan.
 
-**Desplegar en una plataforma de apps** (`pnpm paquete`): arma un `.zip` con todo aiva compilado a JavaScript.
+**Desplegar en una plataforma de apps** (`pnpm paquete`): arma un `.zip` con todo XENCRM compilado a JavaScript.
 Adentro, `arranque.js` levanta **un proceso por cliente** —cada uno con su base, su WhatsApp y su configuración— y
 pone delante un enrutador que reparte por la ruta: `/confia/...` va al proceso de CONFIA sin el prefijo, y el resto
 a la consola. Así un solo despliegue y un solo dominio atienden a todos los clientes sin mezclar sus datos. Dos
@@ -162,7 +162,7 @@ esas plataformas cambia en cada actualización. Ningún secreto viaja en el `.zi
 
 **Varios clientes en una máquina.** Un proceso por cliente, no una base compartida: son negocios distintos (una
 boutique, una financiera, una litografía) y lo que no se mezcla no se puede filtrar. Cada uno vive en
-`clientes/<slug>/` con su `aiva.config.json`, su `.env` (puerto, base, carpeta de WhatsApp, token, dominio), su
+`clientes/<slug>/` con su `xencrm.config.json`, su `.env` (puerto, base, carpeta de WhatsApp, token, dominio), su
 base, su diccionario y su perfil; lo compartido de la máquina (claves de OpenAI, URL de Ollama) queda una sola vez
 en el `.env` de la raíz y lo heredan todos, porque `config.ts` carga primero el del cliente y después el de la
 raíz sin pisar lo ya definido. `pnpm cliente` da de alta, lista, y genera el `ecosystem.config.cjs` de pm2 (una
@@ -246,21 +246,21 @@ queda a nombre de `borrado`. `import_messages` no entra: la primera pasada se lo
 
 | Capa | Archivo | Quién la edita |
 |---|---|---|
-| El negocio y cómo atiende | `aiva.config.json` (`AIVA_CONFIG` elige otro) | quien instala (`pnpm onboard`) |
-| La máquina y los secretos | `.env` (`AIVA_ENV_FILE` elige otro) | quien instala; las credenciales de Meta, también el tablero |
+| El negocio y cómo atiende | `xencrm.config.json` (`XENCRM_CONFIG` elige otro) | quien instala (`pnpm onboard`) |
+| La máquina y los secretos | `.env` (`XENCRM_ENV_FILE` elige otro) | quien instala; las credenciales de Meta, también el tablero |
 | Lo que el dueño confirma | `profileFile` | el tablero (Perfil) |
-| Nombre, asistente, marca, hora, citas y sedes | `aiva.config.json` | el tablero (El negocio) — se aplica **al reiniciar** |
+| Nombre, asistente, marca, hora, citas y sedes | `xencrm.config.json` | el tablero (El negocio) — se aplica **al reiniciar** |
 | Lo que el negocio enseña | `dictionaryFile` | el tablero (Diccionario, Frases que no entendimos) |
 | Canales encendidos | tabla `settings` | el tablero (Canales) |
 
 Precedencia:
 
-- El nombre, la descripción, el sitio y el contacto humano del perfil pisan los de `aiva.config.json`. Si un
+- El nombre, la descripción, el sitio y el contacto humano del perfil pisan los de `xencrm.config.json`. Si un
   campo del perfil está vacío, vale el de la configuración.
 - Una variable del proceso pisa la de `.env`.
 - Guardar desde el tablero aplica al instante: el perfil y el diccionario en memoria, y las credenciales de Meta en
   el canal en marcha. Los archivos se guardan con copia del anterior (`.anterior.json`).
-- 🪤 **Menos la configuración del negocio** (`El negocio`): `aiva.config.json` se lee **una vez, al arrancar**.
+- 🪤 **Menos la configuración del negocio** (`El negocio`): `xencrm.config.json` se lee **una vez, al arrancar**.
   Guardar deja el archivo listo y el tablero avisa que hay cambios sin aplicar; se aplican al reiniciar ese
   cliente. Por eso `ajustes.ts` valida contra el mismo esquema con el que se lee al arrancar: lo que se guarde
   tiene que poder levantar el proceso.
@@ -268,7 +268,7 @@ Precedencia:
 ## Varios clientes
 
 Un **proceso por cliente**, no una base compartida con `tenant_id`: son negocios distintos y lo que no se mezcla
-no se puede filtrar. Cada uno tiene su `aiva.config.json`, su base, su WhatsApp y su `ADMIN_TOKEN`.
+no se puede filtrar. Cada uno tiene su `xencrm.config.json`, su base, su WhatsApp y su `ADMIN_TOKEN`.
 
 La **consola** (`src/consola.ts`) no guarda nada propio: le pregunta a cada instancia por su API con el token de
 ese cliente. De ahí salen los tickets y la bandeja única.
@@ -278,12 +278,12 @@ al pasar cada petición. Tres detalles que lo hacen funcionar:
 
 1. El tablero calcula solo dónde vive (`BASE` sale de la ruta), así que servido ahí sus llamadas caen en
    `/c/<slug>/admin/api/...` y vuelven a pasar por la consola. No hubo que tocarlo.
-2. La sesión viaja en una **galleta** (`aiva_consola`, HttpOnly, 12 h) además de la cabecera: una navegación
+2. La sesión viaja en una **galleta** (`xencrm_consola`, HttpOnly, 12 h) además de la cabecera: una navegación
    normal y un `EventSource` no pueden poner cabeceras.
-3. La consola le deja una **marca** a la página al pasarla (`window.AIVA_CONSOLA`). Sin eso el tablero, al no
+3. La consola le deja una **marca** a la página al pasarla (`window.XENCRM_CONSOLA`). Sin eso el tablero, al no
    encontrar un token en el navegador, enseñaba su pantalla de token aunque no hiciera falta ninguno.
-4. Cada petición lleva **quién y con qué rol**, sacados de la sesión y nunca del navegador: `x-aiva-quien` (el
-   nombre, para la historia de cada ficha) y `x-aiva-rol` (`super`, `admin` o `asesor`). Con el modo fácil puesto,
+4. Cada petición lleva **quién y con qué rol**, sacados de la sesión y nunca del navegador: `x-xencrm-quien` (el
+   nombre, para la historia de cada ficha) y `x-xencrm-rol` (`super`, `admin` o `asesor`). Con el modo fácil puesto,
    el cliente usa el rol para el candado (`channels/candado.ts`): quien no es super-admin solo hace lo del día a
    día. El token a secas no lleva rol y no tiene candado.
 
@@ -316,7 +316,7 @@ no entra a los otros ni sabiéndose la dirección.
     leer y lo que costó guardar: con mensajes más espaciados que 5 minutos, la caché sale más cara que no tenerla.
   - **Tope:** cuenta para el mismo tope que OpenAI (`DE_PAGO`).
   - **Probarlo de titular:** `pnpm test:scenarios --engine=anthropic`, con la llave en
-    `~/aiva-credenciales/anthropic.txt`.
+    `~/xencrm-credenciales/anthropic.txt`.
 - **Consumo**: cada llamada se registra con su costo según la tarifa de `usage.ts`. `pnpm usage` y el tablero lo
   muestran; `pnpm replay` proyecta el costo por 1.000 conversaciones.
 - **Tope de gasto** (`crm/presupuesto.ts`): USD al mes por cliente, en `settings` (`presupuesto.topeUsdMes`) o, si
@@ -391,7 +391,7 @@ turno sin pasar el id por ninguna firma. Al terminar, `conTraza` guarda el turno
 - La huella del prompt son ocho caracteres del SHA-256 de las reglas: no dice qué cambió, pero sí si dos
   respuestas salieron del mismo prompt.
 
-**La versión** (`src/version.ts`) sale de `AIVA_VERSION`, del `version.json` que deja `pnpm paquete` en la raíz
+**La versión** (`src/version.ts`) sale de `XENCRM_VERSION`, del `version.json` que deja `pnpm paquete` en la raíz
 del paquete o de git, con `+cambios` si hay cosas sin commitear. La dicen `/_salud` de cada cliente, la del
 lanzador, la fila de cada cliente en la consola y cada turno guardado.
 
@@ -462,7 +462,7 @@ derivan de él (`notifications.ts`). Cada canal registra cómo entregar un mensa
 
 Reglas para probar sin romper nada:
 
-- Las pruebas que escriben usan una base, un archivo o un `.env` temporales (`DB_PATH`, `AIVA_ENV_FILE` y el
+- Las pruebas que escriben usan una base, un archivo o un `.env` temporales (`DB_PATH`, `XENCRM_ENV_FILE` y el
   archivo del perfil o del diccionario en una carpeta temporal). Las que usan la base real trabajan con contactos
   `test:` y los borran al terminar.
 - **Nunca se escriben hechos de prueba en la información real del cliente.**
@@ -470,9 +470,9 @@ Reglas para probar sin romper nada:
   de la base y de la configuración:
 
   ```bash
-  sqlite3 data/aiva.db ".backup /tmp/aiva-prueba/aiva.db"
-  # copia aiva.config.json a /tmp/aiva-prueba y apunta dictionaryFile y profileFile a copias allí
-  AIVA_CONFIG=/tmp/aiva-prueba/aiva.config.json DB_PATH=/tmp/aiva-prueba/aiva.db PORT=3100 WHATSAPP_ENABLED=false npx tsx src/index.ts
+  sqlite3 data/xencrm.db ".backup /tmp/xencrm-prueba/xencrm.db"
+  # copia xencrm.config.json a /tmp/xencrm-prueba y apunta dictionaryFile y profileFile a copias allí
+  XENCRM_CONFIG=/tmp/xencrm-prueba/xencrm.config.json DB_PATH=/tmp/xencrm-prueba/xencrm.db PORT=3100 WHATSAPP_ENABLED=false npx tsx src/index.ts
   ```
 
 ### Lo que las pruebas no cogen

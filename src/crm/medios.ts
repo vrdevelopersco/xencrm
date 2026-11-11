@@ -5,7 +5,7 @@
 // consulta de la conversación, infla el respaldo y no se puede servir por partes. Aquí los archivos son
 // archivos: la base solo guarda a cuál apunta cada mensaje.
 //
-// 🪤 La carpeta es la DEL CLIENTE, hermana de su base. Cada cliente de aiva corre en su propio proceso con su
+// 🪤 La carpeta es la DEL CLIENTE, hermana de su base. Cada cliente de XENCRM corre en su propio proceso con su
 // propia carpeta, así que el aislamiento no hay que programarlo: es la misma frontera que ya separa sus
 // conversaciones. Poner los medios en un sitio común sería abrir un agujero entre inquilinos para ahorrarse una
 // variable.

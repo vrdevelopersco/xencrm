@@ -14,13 +14,13 @@ const check = (name: string, ok: boolean, detail = '') => {
 };
 
 // Un cliente de mentira, con todo lo suyo.
-const dir = mkdtempSync(join(tmpdir(), 'aiva-respaldo-'));
+const dir = mkdtempSync(join(tmpdir(), 'xencrm-respaldo-'));
 mkdirSync(join(dir, 'conocimiento'), { recursive: true });
 mkdirSync(join(dir, 'catalogo'), { recursive: true });
 const donde = {
   slug: 'boutique',
   nombre: 'Boutique de prueba',
-  config: join(dir, 'aiva.config.json'),
+  config: join(dir, 'xencrm.config.json'),
   perfil: join(dir, 'profile.json'),
   diccionario: join(dir, 'dictionary.json'),
   catalogo: join(dir, 'catalogo', 'productos.json'),
@@ -28,7 +28,7 @@ const donde = {
 };
 writeFileSync(donde.config, JSON.stringify({
   business: { name: 'Boutique de prueba', description: 'Alquiler de trajes', siteUrl: 'https://ejemplo.co', humanContact: 'escríbenos' },
-  agent: { name: 'Aiva', style: 'cálido' },
+  agent: { name: 'Xen', style: 'cálido' },
   brand: { color: '#C5A47E', logo: '/Users/alguien/su-maquina/marca/logo.png', favicon: 'https://ejemplo.co/fav.png' },
   dictionaryFile: '/Users/alguien/su-maquina/dictionary.json',
   profileFile: '/Users/alguien/su-maquina/profile.json',
@@ -52,12 +52,12 @@ check('y una URL https se guarda tal cual', (r.config.brand as Record<string, un
 check('ni ningún secreto', !/token|api[_-]?key|clave/i.test(comoTexto), comoTexto.slice(0, 200));
 
 // --- restaurar ---
-const otroDir = mkdtempSync(join(tmpdir(), 'aiva-restaurar-'));
+const otroDir = mkdtempSync(join(tmpdir(), 'xencrm-restaurar-'));
 mkdirSync(join(otroDir, 'conocimiento'), { recursive: true });
 const destino = {
   slug: 'boutique',
   nombre: 'Otra cosa',
-  config: join(otroDir, 'aiva.config.json'),
+  config: join(otroDir, 'xencrm.config.json'),
   perfil: join(otroDir, 'profile.json'),
   diccionario: join(otroDir, 'dictionary.json'),
   catalogo: join(otroDir, 'catalogo', 'productos.json'),

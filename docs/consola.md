@@ -1,6 +1,6 @@
 # La consola: varios clientes en una máquina
 
-Guía para quien opera aiva —no para el equipo del negocio, que usa el tablero (ese está en
+Guía para quien opera XENCRM —no para el equipo del negocio, que usa el tablero (ese está en
 [`guia-del-tablero.md`](guia-del-tablero.md)). Aquí está cómo se monta un cliente nuevo, cómo se atiende a todos
 desde una sola pantalla y quién ve qué.
 
@@ -161,7 +161,7 @@ consola, que es de donde se vino.
 
 | Rol | Para quién | Qué puede |
 |---|---|---|
-| **Super-admin** | Quien administra aiva | Ve y atiende todos los clientes, da de alta y de baja, y maneja a todo el equipo. Es el único que toca motores, la clave de OpenAI, el tope de gasto y la retención. |
+| **Super-admin** | Quien administra XENCRM | Ve y atiende todos los clientes, da de alta y de baja, y maneja a todo el equipo. Es el único que toca motores, la clave de OpenAI, el tope de gasto y la retención. |
 | **Admin del cliente** | El dueño o el gerente de un negocio | Atiende sus clientes y, en **Equipo**, maneja a la gente de ellos: crea asesores y otros admins de su negocio, les cambia la clave, los desactiva o los quita. |
 | **Asesor** | Quien atiende el chat | Atiende sus clientes y nada más. No ve Equipo. |
 
@@ -187,7 +187,7 @@ Dentro de **Ver más › Quién entra a este cliente** está todo lo de ese nego
 - El rol de cada quien se cambia ahí mismo (admin del cliente o asesor). Es el rol de la persona, así que vale en
   todos los clientes que atiende.
 
-**La clave de alguien no se puede ver.** aiva guarda su huella, no la clave; ni el super-admin la puede leer. Si
+**La clave de alguien no se puede ver.** XENCRM guarda su huella, no la clave; ni el super-admin la puede leer. Si
 nadie sabe cuál es, se le pone una nueva. La que propone la consola son doce letras y números sin los que se
 confunden (`i`, `l`, `o`, `0`, `1`), sacados del azar del navegador. Se ve una sola vez, en un mensaje listo para
 copiar y mandar por WhatsApp o por correo (la dirección de la consola, el usuario y la clave), y al cerrar se borra
@@ -226,7 +226,7 @@ Desde su fila, en **⋯ › Dar de baja**. Lo que pasa:
    tendría nada que ver al entrar— y queda listado en Equipo para reasignarlo o quitarlo.
 
 La confirmación dice cuántas personas lo atienden antes de que decidas. Lo que **no** hace es apagar su instancia:
-eso se hace con `pm2 stop aiva-<slug>`, a propósito.
+eso se hace con `pm2 stop xencrm-<slug>`, a propósito.
 
 ## Lo que hay que mirar de vez en cuando
 
@@ -241,7 +241,7 @@ En **Configuración › Motores**, al abrir un cliente, debajo de quién paga, e
 dólares. Lo ve y lo cambia solo el super-admin, como los motores y la clave: decide cuánto se gasta, y eso no es de
 la operación del negocio. El negocio sí ve en su tablero cuánto lleva del tope. Se aplica al instante.
 
-Al 80 % avisa. Al 90 % lo específico lo contesta el modelo de responder, que es el barato. Al 100 % aiva deja de
+Al 80 % avisa. Al 90 % lo específico lo contesta el modelo de responder, que es el barato. Al 100 % XENCRM deja de
 usar la IA de pago hasta el mes siguiente: lo que se resuelve sin IA sigue y lo demás le llega al equipo, que
 recibe el aviso por la campana, la consola y WhatsApp. El detalle está en el README, en "Consumo de IA".
 
@@ -286,7 +286,7 @@ levantar (el arranque del paquete o pm2), el botón **Reiniciar ahora**. Donde n
 dejaría al cliente sin atender a nadie.
 
 Nada se guarda sin validar contra el mismo esquema con el que se lee al arrancar, y antes de pisar el archivo se
-deja una copia en `aiva.config.json.anterior`. Una actualización del despliegue tampoco pisa lo editado: si el
+deja una copia en `xencrm.config.json.anterior`. Una actualización del despliegue tampoco pisa lo editado: si el
 cliente ya tiene su configuración en los datos, manda esa; la que trae el paquete solo se usa la primera vez.
 
 ## Cuentas

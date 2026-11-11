@@ -63,7 +63,7 @@ const REASONING_BUDGET = 4000;
 // espaciadas (la normal dura minutos). Si la API (u otra compatible, vía OPENAI_BASE_URL) no los acepta, se omiten.
 const noRetention = new Set<string>();
 let noCacheKey = false;
-const slug = business.business.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'aiva';
+const slug = business.business.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'xencrm';
 
 export async function openaiChat(input: OpenAIChatInput, motor: MotorCompatible = 'openai'): Promise<string> {
   const p = compatibleDe(motor);

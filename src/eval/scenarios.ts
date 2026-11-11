@@ -1,14 +1,14 @@
 // Batería de escenarios por cliente: pnpm test:scenarios [--only=texto] [--engine=router|ollama|apple|openai|anthropic] [--keep]
-// Lee los escenarios de `evalFile` en aiva.config.json y verifica intención, motor, enlaces y límites.
+// Lee los escenarios de `evalFile` en xencrm.config.json y verifica intención, motor, enlaces y límites.
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 const engineArg = process.argv.find((a) => a.startsWith('--engine='))?.split('=')[1];
 if (engineArg) process.env.LLM_ENGINE = engineArg;
-// Probar a Claude de titular necesita su llave. Sale de ~/aiva-credenciales/anthropic.txt si no viene en el entorno.
+// Probar a Claude de titular necesita su llave. Sale de ~/xencrm-credenciales/anthropic.txt si no viene en el entorno.
 // 🪤 NO del .env de la raíz: de ahí la leería cualquier prueba, y una prueba no sale a internet ni gasta.
 if (engineArg === 'anthropic' && !process.env.ANTHROPIC_API_KEY) {
-  const archivo = join(homedir(), 'aiva-credenciales', 'anthropic.txt');
+  const archivo = join(homedir(), 'xencrm-credenciales', 'anthropic.txt');
   if (existsSync(archivo)) process.env.ANTHROPIC_API_KEY = readFileSync(archivo, 'utf8').trim();
 }
 

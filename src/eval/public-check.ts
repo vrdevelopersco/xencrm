@@ -3,7 +3,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'aiva-public-')), 'aiva.db');
+process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'xencrm-public-')), 'xencrm.db');
 const { env } = await import('../config.js');
 const { INSTANCE, checkPublicUrl } = await import('../channels/public-check.js');
 const { onEvent } = await import('../crm/events.js');

@@ -1,10 +1,10 @@
 # XENCRM · CRM conversacional con IA para WhatsApp
 
-**XENCRM es la siguiente generación de aiva**: el mismo motor —agente de IA, citas, puntaje, traspaso a una
-persona— con una interfaz rehecha para trabajar como un CRM de mensajería. Esta carpeta nació como copia de aiva
-para ver en qué puede convertirse; lo que cambia y por qué está en [`docs/xencrm.md`](docs/xencrm.md).
+**XENCRM es la siguiente generación del CRM conversacional de HRC** (hasta noviembre de 2026 se llamó aiva): el
+mismo motor —agente de IA, citas, puntaje, traspaso a una persona— con una interfaz rehecha para trabajar como un
+CRM de mensajería. Lo que cambia y por qué está en [`docs/xencrm.md`](docs/xencrm.md).
 
-Qué cambia frente a aiva:
+Qué cambia en esta generación:
 
 - **Una sola piel.** La interfaz del modo fácil es la de todos, con identidad propia (bruma verde agua, tinta verde
   petróleo, el acento teal y el violeta solo para lo que dice la IA). El modo fácil sigue existiendo, pero ya no
@@ -22,12 +22,12 @@ Ollama y Apple Foundation Models). Convierte cada conversación en un prospecto 
 **análisis de sentimiento**, **datos capturados**, **citas agendadas con recordatorio** y **traspaso a una persona
 del equipo**, desde un tablero en vivo. Lo que no sabe no lo inventa: lo verifica con el equipo y lo aprende.
 
-> **Lo que conserva el nombre de aiva, a propósito.** Los identificadores técnicos siguen como estaban para no
-> romper los datos ni los despliegues de los clientes que ya existen: las variables `AIVA_*`, el archivo
-> `aiva.config.json`, la base `data/aiva.db` y sus respaldos `aiva-*.db`, la galleta `aiva_consola`, las cabeceras
-> `x-aiva-*`, las llaves `aiva.*` del navegador, los procesos `aiva-<cliente>` de pm2 y la herramienta MCP
-> `ask_aiva`. Tampoco cambia el nombre del asistente de cada cliente (`agent.name`): es el que ya conocen sus
-> clientes. Los clientes nuevos arrancan con «Xen».
+> **El renombre es completo.** Todo dice XENCRM, también lo de adentro: las variables `XENCRM_*`, el archivo
+> `xencrm.config.json`, la base `data/xencrm.db` y sus respaldos `xencrm-*.db`, la galleta `xencrm_consola`, las
+> cabeceras `x-xencrm-*`, las llaves `xencrm.*` del navegador (las viejas se mudan solas la primera vez), los procesos
+> `xencrm-<cliente>` de pm2 y la herramienta MCP `ask_xencrm`. Una instalación que venga de antes se migra con
+> `node herramientas/migrar-a-xencrm.mjs` (dice qué haría; con `--aplicar` lo hace, con respaldo). El nombre del
+> asistente lo pone cada negocio (`agent.name`); el de fábrica es «Xen».
 
 Nació como asistente de compras y hoy es un CRM conversacional **multicliente**: cada negocio corre en su propia
 instancia —su base, su WhatsApp, su token, su dominio— y se operan todos desde una consola (`pnpm consola`), donde
@@ -128,7 +128,7 @@ XENCRM no está amarrado a un negocio: todo lo propio de cada cliente vive en su
 
 | Dónde | Qué va | Ejemplos |
 |---|---|---|
-| `aiva.config.json` | El negocio y cómo atiende | nombre, descripción, sitio, moneda, país e indicativo telefónico (`phoneCountryCode`, `phoneLocalDigits`), contacto humano; nombre y estilo del agente, su objetivo y lo que dice cuando no sabe algo (`agent.verifyPhrase`); fuentes (catálogo, información, páginas); zona horaria; agenda de citas (servicio, lugar, días, franjas, `askPhone`, `askEmail`); **sedes**, si atiende en varios sitios; campos que captura el análisis (`crm.fields`); archivo del **diccionario** (`dictionaryFile`) y del **perfil** (`profileFile`); **marca** (`brand.color`, `brand.logo`); escenarios y datos de demostración |
+| `xencrm.config.json` | El negocio y cómo atiende | nombre, descripción, sitio, moneda, país e indicativo telefónico (`phoneCountryCode`, `phoneLocalDigits`), contacto humano; nombre y estilo del agente, su objetivo y lo que dice cuando no sabe algo (`agent.verifyPhrase`); fuentes (catálogo, información, páginas); zona horaria; agenda de citas (servicio, lugar, días, franjas, `askPhone`, `askEmail`); **sedes**, si atiende en varios sitios; campos que captura el análisis (`crm.fields`); archivo del **diccionario** (`dictionaryFile`) y del **perfil** (`profileFile`); **marca** (`brand.color`, `brand.logo`); escenarios y datos de demostración |
 | `.env` | La máquina y los secretos | motores y modelos por rol, claves de OpenAI y Meta, puerto, `PUBLIC_URL`, token del tablero, calendarios del dueño, tope de gasto inicial (`TOPE_USD_MES`) |
 | Tablero › Perfil | Lo que el dueño confirma de su negocio | dirección, horarios, zona, contacto, pagos y abono, precios, políticas y datos propios (tallas, tiempos…) |
 | Tablero › Canales | Lo que se decide en el día a día | encender o apagar el chat web, WhatsApp (con su QR), WhatsApp oficial y MCP, sin reiniciar; credenciales de WhatsApp oficial |
@@ -137,7 +137,7 @@ El **diccionario** es lo que cada cliente le enseña a XENCRM sin tocar código:
 con su información (palabras que los disparan y con qué se busca), los verbos con que su gente
 pregunta por lo que ofrece y las **expresiones** propias de sus clientes, que se leen como otra cosa
 antes de aplicar las reglas (fechas, temas y el flujo de la cita), sin importar tildes ni mayúsculas.
-Vive en su propio archivo (`dictionaryFile` en `aiva.config.json`; el de
+Vive en su propio archivo (`dictionaryFile` en `xencrm.config.json`; el de
 DUNOR es `examples/dunor/dictionary.json`):
 
 ```json
@@ -176,7 +176,7 @@ archivo (`profileFile`; el de DUNOR es `examples/dunor/profile.json`), se guarda
 aplica al instante.
 
 - Lo confirmado va en la información fija del prompt y en la búsqueda; si contradice otra información, vale el perfil.
-- El nombre, la descripción, el sitio y el contacto humano del perfil reemplazan los de `aiva.config.json`.
+- El nombre, la descripción, el sitio y el contacto humano del perfil reemplazan los de `xencrm.config.json`.
 - Lo vacío queda **por confirmar**: el bot no lo supone. Si le preguntan, dice la frase de verificación y la
   pregunta llega a Hoy › Por verificar.
 - Las notas para el equipo ("el sitio muestra un número y los botones otro") se ven en el formulario, pero no
@@ -192,7 +192,7 @@ lo prueba con 500 colores). `data-color` en el `<script>` del chat lo cambia sol
 `pnpm onboard` pregunta la marca.
 
 Un cliente por proceso: para varios clientes, una carpeta, un `.env` y un puerto por cada uno
-(`pnpm onboard` arma los dos archivos, desde cero o desde un ejemplo). `AIVA_CONFIG` y `DB_PATH`
+(`pnpm onboard` arma los dos archivos, desde cero o desde un ejemplo). `XENCRM_CONFIG` y `DB_PATH`
 permiten usar otro archivo de configuración y otra base desde la misma carpeta (por ejemplo, una
 copia para pruebas que no toquen el diccionario ni los datos reales).
 
@@ -229,7 +229,7 @@ la nueva y solo después cancela la anterior. Si solo dice "sobre mi cita", preg
 cambiarla o cancelarla. El equipo recibe aviso cuando un cliente cancela o mueve su cita.
 
 **Varias sedes.** Un negocio que atiende en varios sitios con un mismo número las pone en `sedes` de su
-`aiva.config.json`. Cada sede tiene su nombre, su dirección, cómo la llama la gente y, si hace falta, sus propios días,
+`xencrm.config.json`. Cada sede tiene su nombre, su dirección, cómo la llama la gente y, si hace falta, sus propios días,
 franjas y cupo; lo que no diga lo hereda de `appointments`:
 
 ```json
@@ -434,7 +434,7 @@ pnpm typecheck
 
 Las pruebas que escriben usan una base, un `.env` y archivos temporales, o contactos `test:` que se borran al
 terminar: nunca tocan la información real del cliente. La lista completa y cómo levantar un servidor aislado
-(`AIVA_CONFIG`, `DB_PATH`, `AIVA_ENV_FILE`) están en [`docs/arquitectura.md`](docs/arquitectura.md#pruebas).
+(`XENCRM_CONFIG`, `DB_PATH`, `XENCRM_ENV_FILE`) están en [`docs/arquitectura.md`](docs/arquitectura.md#pruebas).
 
 ## Motores
 
@@ -474,7 +474,7 @@ reducen memoria. En el Mac Mini dedicado no hace falta.
 
 ```bash
 pnpm add -g pm2
-pm2 start "pnpm start" --name aiva --cwd /ruta/a/aiva
+pm2 start "pnpm start" --name XENCRM --cwd /ruta/a/xencrm
 pm2 save && pm2 startup
 ```
 
@@ -482,7 +482,7 @@ pm2 save && pm2 startup
 `VACUUM INTO` a `data/backups/` (`BACKUP_DIR`) y conserva las últimas 14 (`BACKUP_KEEP`). Las copias solo las lee
 el dueño del equipo (600) y no van al repositorio: tienen datos de clientes. El tablero (Agente › Respaldo de la
 base) muestra el último y tiene "Respaldar ahora". Conviene que también queden fuera del equipo (Time Machine o
-similar). Para restaurar: detener XENCRM, copiar el respaldo elegido sobre `data/aiva.db` y arrancar.
+similar). Para restaurar: detener XENCRM, copiar el respaldo elegido sobre `data/xencrm.db` y arrancar.
 Pruebas: `pnpm test:backup`.
 
 **Retención de conversaciones.** Las conversaciones que llevan mucho tiempo quietas se pueden anonimizar o borrar

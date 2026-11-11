@@ -50,7 +50,7 @@ type Mensaje = { role: 'user' | 'assistant'; content: Bloque[] };
  * La conversación como la acepta Claude: solo `user` y `assistant`, alternados, empezando por `user` y sin
  * textos vacíos.
  *
- * 🪤 Las tres cosas las rechaza con un 400, y las tres pasan en aiva: el negocio puede escribir primero (un
+ * 🪤 Las tres cosas las rechaza con un 400, y las tres pasan en xencrm: el negocio puede escribir primero (un
  * seguimiento, un recordatorio), el cliente manda tres mensajes seguidos antes de que nadie conteste, y un
  * adjunto sin texto deja el contenido vacío. Se juntan los seguidos en uno y, si arranca el negocio, se dice.
  */

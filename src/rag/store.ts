@@ -4,13 +4,13 @@ import { dirname } from 'node:path';
 import { env } from '../config.js';
 
 /**
- * Lo que aiva sabe, por audiencia.
+ * Lo que XENCRM sabe, por audiencia.
  *
  * `product` y `knowledge` son lo que se le puede CONTAR a un cliente: el catálogo y la información del negocio
  * —qué hace cada programa, cómo funciona el proceso, qué incluye—. Esa parte hace falta y mucho: sin ella, el
  * asistente de un negocio de software no sabe explicar su propio producto.
  *
- * 🪤 `interno` es lo contrario: lo que aiva necesita saber para ayudar AL EQUIPO y no debe salir nunca por una
+ * 🪤 `interno` es lo contrario: lo que XENCRM necesita saber para ayudar AL EQUIPO y no debe salir nunca por una
  * conversación. Con qué proveedor trabajan, qué margen manejan, qué cliente da problemas, qué producto no
  * quieren empujar. Va aparte porque la diferencia no es de tema, es de a quién se le puede decir.
  */
@@ -262,7 +262,7 @@ function migrate(d: DatabaseSync) {
   // había que recorrer todos los contactos en cada mensaje.
   addUser('number', 'TEXT');
   // Quién del equipo está a cargo del cliente. Aparte de human_by, que se vacía cuando vuelve a contestar el
-  // asistente: el cliente sigue siendo de alguien aunque hoy lo atienda aiva (crm/contacts.ts, setResponsable).
+  // asistente: el cliente sigue siendo de alguien aunque hoy lo atienda XENCRM (crm/contacts.ts, setResponsable).
   addUser('responsable', 'TEXT');
   d.exec('CREATE INDEX IF NOT EXISTS users_number ON users(number)');
   const appts = cols('appointments');
