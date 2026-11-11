@@ -1,0 +1,47 @@
+{
+  "_ayuda": "Diccionario del negocio para XENCRM: temas que se responden con la información del negocio.",
+  "topics": [
+    {
+      "keywords": [
+        "sla",
+        "tiempo de respuesta",
+        "cuanto se demoran",
+        "cuánto tardan"
+      ],
+      "query": "soporte y SLA por plan"
+    },
+    {
+      "keywords": [
+        "plan basico",
+        "plan pro",
+        "enterprise",
+        "planes de soporte"
+      ],
+      "query": "planes de soporte"
+    },
+    {
+      "keywords": [
+        "mantenimiento",
+        "ventana",
+        "actualizacion",
+        "version nueva"
+      ],
+      "query": "mantenimientos y actualizaciones"
+    },
+    {
+      "keywords": [
+        "demo",
+        "demostracion",
+        "prueba gratis"
+      ],
+      "query": "demo de producto"
+    }
+  ],
+  "offerVerbs": [
+    "venden",
+    "tienen",
+    "hacen",
+    "desarrollan",
+    "integran"
+  ]
+}

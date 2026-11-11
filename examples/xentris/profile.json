@@ -1,0 +1,34 @@
+{
+  "identity": {
+    "name": "XENTRIS LLC",
+    "description": "Firma de software: aplicaciones para empresas (punto de venta, operación en campo e inventario), desarrollo a la medida y soporte con SLA: actualizaciones mensuales, mantenimientos programados con aviso y tickets con tiempos garantizados según el plan.",
+    "siteUrl": "https://xentris.example",
+    "city": "Medellín"
+  },
+  "contact": {
+    "whatsapp": "",
+    "phone": "",
+    "email": "soporte@xentris.example",
+    "instagram": "",
+    "human": "escríbenos a soporte@xentris.example o pide aquí que te pasemos con el equipo."
+  },
+  "service": {
+    "address": "",
+    "hours": "lunes a viernes, 8:00 a. m. a 6:00 p. m. (Enterprise: críticos 24/7)",
+    "area": "Colombia y Latinoamérica, remoto",
+    "appointmentOnly": false
+  },
+  "payments": {
+    "methods": "transferencia, tarjeta de crédito o débito automático",
+    "deposit": ""
+  },
+  "prices": "Las licencias dependen de sucursales, usuarios y plan: las cotiza el equipo comercial.",
+  "policies": "Los tiempos de soporte son los del plan de cada cliente (ver Soporte y SLA).",
+  "extras": [
+    {
+      "title": "Implementación",
+      "text": "De 1 a 3 semanas según el número de sucursales."
+    }
+  ],
+  "notes": {}
+}

@@ -1,0 +1,19 @@
+[
+  {
+    "name": "empresa interesada en POS y demo",
+    "turns": [
+      {
+        "text": "hola",
+        "expect": {
+          "intent": "saludo"
+        }
+      },
+      {
+        "text": "tienen punto de venta para 3 sucursales?",
+        "expect": {
+          "intent": "compra"
+        }
+      }
+    ]
+  }
+]

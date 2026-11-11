@@ -1,0 +1,373 @@
+[
+ {
+  "id": "573104440001",
+  "name": "Valentina Ríos",
+  "stage": "demo_agendada",
+  "sentiment": "positivo",
+  "lastMinutesAgo": 35,
+  "unread": 0,
+  "summary": "Gerente de Café Aroma (4 sucursales); quiere XENTRIS POS con inventario; demo agendada.",
+  "data": {
+   "producto": "XENTRIS POS",
+   "empresa": "Café Aroma",
+   "usuarios": "4 sucursales",
+   "plazo": "enero"
+  },
+  "signals": {
+   "interes": 3,
+   "quiere_cita": true,
+   "pidio_precio": true,
+   "urgencia": "media"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Hola, tenemos 4 cafeterías y buscamos un punto de venta con inventario, ¿ustedes lo tienen?"
+   },
+   {
+    "role": "assistant",
+    "text": "¡Hola, Valentina! Sí: XENTRIS POS maneja caja, facturación electrónica e inventario por sucursal, y se integra con XENTRIS Stock. ¿Te muestro todo en una demo de 45 minutos?"
+   },
+   {
+    "role": "user",
+    "text": "Sí, ¿el jueves en la mañana?"
+   },
+   {
+    "role": "assistant",
+    "text": "¡Listo! Te agendé la demo el jueves a las 10:00 a. m. por videollamada. Te mando el enlace por aquí."
+   }
+  ],
+  "appointmentInHours": 40
+ },
+ {
+  "id": "573104440002",
+  "name": "Andrés Mejía",
+  "stage": "evaluando",
+  "sentiment": "neutral",
+  "lastMinutesAgo": 180,
+  "unread": 1,
+  "summary": "Coordinador de Logística Norte; 25 técnicos en campo; compara XENTRIS Field con otra opción; pidió precio.",
+  "data": {
+   "producto": "XENTRIS Field",
+   "empresa": "Logística Norte",
+   "usuarios": "25 técnicos",
+   "plazo": "este trimestre"
+  },
+  "signals": {
+   "interes": 2,
+   "pidio_precio": true,
+   "tiene_objecion": true,
+   "objecion": "Le parece caro",
+   "urgencia": "media"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "¿Cuánto cuesta XENTRIS Field para 25 técnicos?"
+   },
+   {
+    "role": "assistant",
+    "text": "El valor depende de los usuarios y el plan de soporte: lo cotiza el equipo comercial. ¿Te paso con ellos o prefieres ver una demo primero?"
+   },
+   {
+    "role": "user",
+    "text": "Estamos viendo otra app que es más barata, pásame la cotización"
+   }
+  ]
+ },
+ {
+  "id": "573104440003",
+  "name": "Laura Gómez",
+  "stage": "ganado",
+  "sentiment": "positivo",
+  "lastMinutesAgo": 4320,
+  "unread": 0,
+  "summary": "Ferretería El Tornillo compró XENTRIS POS + Stock para 2 sucursales con soporte Pro.",
+  "data": {
+   "producto": "XENTRIS POS + Stock",
+   "empresa": "Ferretería El Tornillo",
+   "usuarios": "2 sucursales",
+   "plan_soporte": "Pro"
+  },
+  "signals": {
+   "interes": 3,
+   "urgencia": "baja"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Ya firmamos, ¿cuándo empieza la implementación?"
+   },
+   {
+    "role": "assistant",
+    "text": "¡Bienvenidos! La implementación arranca el lunes; el equipo te escribe hoy con el plan."
+   }
+  ],
+  "tickets": [
+   {
+    "asunto": "No imprime la factura en la sucursal 2",
+    "tipo": "incidente",
+    "prioridad": "alta",
+    "estado": "en_progreso",
+    "producto": "XENTRIS POS",
+    "haceHoras": 5,
+    "primeraRespuestaEnMin": 40,
+    "resueltoEnHoras": null,
+    "asignado": "Laura"
+   },
+   {
+    "asunto": "Crear usuario para la nueva cajera",
+    "tipo": "solicitud",
+    "prioridad": "baja",
+    "estado": "resuelto",
+    "producto": "XENTRIS POS",
+    "haceHoras": 30,
+    "primeraRespuestaEnMin": 120,
+    "resueltoEnHoras": 6,
+    "asignado": "Bryan"
+   }
+  ]
+ },
+ {
+  "id": "573104440004",
+  "name": "Camilo Duarte",
+  "stage": "ganado",
+  "sentiment": "negativo",
+  "lastMinutesAgo": 50,
+  "unread": 2,
+  "summary": "Distribuidora Duarte (Enterprise): XENTRIS Field no sincroniza desde la actualización; 40 técnicos afectados; molesto.",
+  "data": {
+   "producto": "XENTRIS Field",
+   "empresa": "Distribuidora Duarte",
+   "usuarios": "40 técnicos",
+   "plan_soporte": "Enterprise"
+  },
+  "signals": {
+   "interes": 2,
+   "urgencia": "alta",
+   "tiene_objecion": true,
+   "objecion": "Falla después de la actualización"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Desde la actualización de anoche la app de campo no sincroniza, tengo 40 técnicos parados"
+   },
+   {
+    "role": "assistant",
+    "text": "Entiendo la urgencia, Camilo. Ya lo reporté como crítico a soporte y te escriben en minutos."
+   },
+   {
+    "role": "user",
+    "text": "Necesito una respuesta YA, esto nos está costando plata"
+   }
+  ],
+  "humanMode": true,
+  "humanBy": "Bryan",
+  "humanSinceMinutesAgo": 30,
+  "tickets": [
+   {
+    "asunto": "XENTRIS Field no sincroniza después de la actualización 4.12",
+    "tipo": "incidente",
+    "prioridad": "critica",
+    "estado": "abierto",
+    "producto": "XENTRIS Field",
+    "haceHoras": 1.5,
+    "primeraRespuestaEnMin": null,
+    "resueltoEnHoras": null,
+    "asignado": "Bryan"
+   }
+  ]
+ },
+ {
+  "id": "573104440005",
+  "name": "Sofía Herrera",
+  "stage": "ganado",
+  "sentiment": "positivo",
+  "lastMinutesAgo": 8640,
+  "unread": 0,
+  "summary": "Clínica Vida (Enterprise) con app a la medida; pide la ventana del mantenimiento de diciembre.",
+  "data": {
+   "producto": "Desarrollo a la medida",
+   "empresa": "Clínica Vida",
+   "plan_soporte": "Enterprise"
+  },
+  "signals": {
+   "interes": 2,
+   "urgencia": "baja"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "¿Cuándo es el mantenimiento de diciembre? Necesitamos avisar a los médicos"
+   },
+   {
+    "role": "assistant",
+    "text": "Está programado para el sábado 13 de diciembre de 11:00 p. m. a 2:00 a. m.; te confirmo la ventana con el equipo."
+   }
+  ],
+  "tickets": [
+   {
+    "asunto": "Confirmar ventana del mantenimiento de diciembre",
+    "tipo": "mantenimiento",
+    "prioridad": "media",
+    "estado": "esperando_cliente",
+    "producto": "Desarrollo a la medida",
+    "haceHoras": 20,
+    "primeraRespuestaEnMin": 15,
+    "resueltoEnHoras": null,
+    "asignado": "Laura"
+   }
+  ]
+ },
+ {
+  "id": "573104440006",
+  "name": "Mateo Castaño",
+  "stage": "calificado",
+  "sentiment": "neutral",
+  "lastMinutesAgo": 95,
+  "unread": 1,
+  "summary": "Tienda de ropa con 1 local; pregunta si XENTRIS POS sirve con datáfono.",
+  "data": {
+   "producto": "XENTRIS POS",
+   "empresa": "Moda Castaño",
+   "usuarios": "1 local"
+  },
+  "signals": {
+   "interes": 1,
+   "urgencia": "baja"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "¿El POS funciona con mi datáfono?"
+   },
+   {
+    "role": "assistant",
+    "text": "Sí, se integra con los datáfonos más usados. ¿Qué marca tienes?"
+   }
+  ]
+ },
+ {
+  "id": "573104440007",
+  "name": "Paula Restrepo",
+  "stage": "perdido",
+  "sentiment": "neutral",
+  "lastMinutesAgo": 17280,
+  "unread": 0,
+  "summary": "Agencia de viajes; eligió otra solución por precio.",
+  "data": {
+   "producto": "Desarrollo a la medida",
+   "empresa": "Viajes Paula",
+   "motivo_perdida": "Precio"
+  },
+  "signals": {
+   "interes": 1,
+   "tiene_objecion": true,
+   "objecion": "Precio",
+   "urgencia": "baja"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Gracias, al final nos vamos con otro proveedor más barato"
+   },
+   {
+    "role": "assistant",
+    "text": "Entendido, Paula. Quedamos atentos si más adelante lo necesitan."
+   }
+  ]
+ },
+ {
+  "id": "573104440008",
+  "name": "Juan Pablo Ochoa",
+  "stage": "ganado",
+  "sentiment": "neutral",
+  "lastMinutesAgo": 240,
+  "unread": 1,
+  "summary": "Supermercados Ochoa (Básico): el reporte de ventas diario llega vacío.",
+  "data": {
+   "producto": "XENTRIS POS",
+   "empresa": "Supermercados Ochoa",
+   "usuarios": "6 cajas",
+   "plan_soporte": "Básico"
+  },
+  "signals": {
+   "interes": 1,
+   "urgencia": "media"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "El reporte de ventas de ayer llegó vacío"
+   },
+   {
+    "role": "assistant",
+    "text": "Gracias por avisar, Juan Pablo. Lo pasé a soporte con tu plan Básico: te responden dentro de 8 horas hábiles."
+   }
+  ],
+  "tickets": [
+   {
+    "asunto": "Reporte diario de ventas llega vacío",
+    "tipo": "incidente",
+    "prioridad": "media",
+    "estado": "abierto",
+    "producto": "XENTRIS POS",
+    "haceHoras": 4,
+    "primeraRespuestaEnMin": null,
+    "resueltoEnHoras": null
+   }
+  ]
+ },
+ {
+  "id": "573104440009",
+  "name": "Daniela Pardo",
+  "stage": "nuevo",
+  "sentiment": null,
+  "lastMinutesAgo": 8,
+  "unread": 1,
+  "summary": null,
+  "data": {},
+  "signals": null,
+  "messages": [
+   {
+    "role": "user",
+    "text": "Buenas, quiero información de sus aplicaciones"
+   }
+  ]
+ },
+ {
+  "id": "573104440010",
+  "name": "Ricardo Lozano",
+  "stage": "evaluando",
+  "sentiment": "positivo",
+  "lastMinutesAgo": 1560,
+  "unread": 0,
+  "summary": "Constructora Lozano; 60 obreros; quiere XENTRIS Field con fotos y firmas; pidió propuesta.",
+  "data": {
+   "producto": "XENTRIS Field",
+   "empresa": "Constructora Lozano",
+   "usuarios": "60",
+   "plazo": "febrero"
+  },
+  "signals": {
+   "interes": 3,
+   "pidio_precio": true,
+   "urgencia": "media"
+  },
+  "messages": [
+   {
+    "role": "user",
+    "text": "Necesitamos que los capataces suban fotos y firmas de avance de obra, ¿se puede?"
+   },
+   {
+    "role": "assistant",
+    "text": "Sí: XENTRIS Field toma fotos, firmas y funciona sin señal. ¿Te preparo una propuesta para 60 usuarios?"
+   },
+   {
+    "role": "user",
+    "text": "Sí, por favor"
+   }
+  ]
+ }
+]

@@ -747,6 +747,8 @@
   ICONS.fijado = '<path d="M9 4h6l-1 6 3 3H7l3-3z"/><path d="M12 13v8"/>';
   ICONS.reciente = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>';
   ICONS.menu = '<path d="M4 6h16M4 12h16M4 18h16"/>';
+  ICONS.ticket = '<path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M13 6v12" stroke-dasharray="2 2"/>';
+  ICONS.llave = '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>';
   ICONS.areas = '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/>';
   var MENU_FACIL = [
     { grupo: 'Mi trabajo', items: [{ view: 'today', lbl: 'Inicio', ic: 'inicio' }, { view: 'inbox', lbl: 'Bandeja omnicanal', ic: 'inbox', n: 'fx-n-inbox' }, { view: 'seguimientos', lbl: 'Lista de trabajo', ic: 'volver' }, { view: 'calendar', lbl: 'Citas', ic: 'citas', n: 'fx-n-citas' }] },
@@ -754,10 +756,34 @@
     { grupo: 'Ventas', items: [{ view: 'embudo', lbl: 'Embudo', ic: 'embudo' }, { view: 'pipeline', lbl: 'Tratos', ic: 'kanban' }, { view: 'ventas', lbl: 'Ventas', ic: 'dolar' }] },
     { grupo: 'Rendimiento', items: [{ view: 'kpis', lbl: 'KPIs y metas', ic: 'objetivo' }, { view: 'optimizacion', lbl: 'Optimización de ventas', ic: 'rayo' }, { view: 'analysis', lbl: 'Analítica', ic: 'analitica' }] }
   ];
+  /**
+   * Servicio, como Dynamics 365 Customer Service: lo que se le debe a quien ya es cliente (sus tickets, el SLA de su
+   * plan, los mantenimientos y las actualizaciones). La Bandeja y los Contactos también están aquí: el soporte entra
+   * por la misma bandeja. Sin contadores (sus id son de Ventas: repetirlos rompería getElementById).
+   */
+  var MENU_SERVICIO = [
+    { grupo: 'Mi trabajo', items: [{ view: 'inbox', lbl: 'Bandeja omnicanal', ic: 'inbox' }, { view: 'tickets', lbl: 'Tickets', ic: 'ticket' }] },
+    { grupo: 'Clientes', items: [{ view: 'clientes', lbl: 'Contactos', ic: 'contacto' }, { view: 'kam', lbl: 'Cuentas clave', ic: 'estrella' }] },
+    { grupo: 'Servicio', items: [{ view: 'sla', lbl: 'SLA', ic: 'escudo' }, { view: 'mantenimientos', lbl: 'Mantenimientos y actualizaciones', ic: 'llave' }] }
+  ];
   /** Las áreas de la suite. Configuración no lleva lista fija: sale de CFG_CLIENTE según quién entró. */
-  var AREAS_SUITE = [{ id: 'ventas', lbl: 'Ventas', ic: 'kanban', dice: 'Contactos, tratos y rendimiento' }, { id: 'config', lbl: 'Configuración', ic: 'sliders', dice: 'El negocio, el asistente y los canales' }];
-  /** En qué área vive cada pantalla: lo que no es de configuración, es de Ventas. */
-  function areaDeVista(view) { return CFG_VIEWS[view] ? 'config' : 'ventas'; }
+  var AREAS_SUITE = [
+    { id: 'ventas', lbl: 'Ventas', ic: 'kanban', dice: 'Contactos, tratos y rendimiento', inicio: 'today' },
+    { id: 'servicio', lbl: 'Servicio', ic: 'escudo', dice: 'Tickets, SLA y mantenimientos', inicio: 'tickets' },
+    { id: 'config', lbl: 'Configuración', ic: 'sliders', dice: 'El negocio, el asistente y los canales' }
+  ];
+  var VISTAS_DE_AREA = { ventas: {}, servicio: {} };
+  MENU_FACIL.forEach(function (g) { g.items.forEach(function (x) { VISTAS_DE_AREA.ventas[x.view] = 1; }); });
+  MENU_SERVICIO.forEach(function (g) { g.items.forEach(function (x) { VISTAS_DE_AREA.servicio[x.view] = 1; }); });
+  /**
+   * En qué área vive cada pantalla. Si la que se abre está también en el área de ahora (la Bandeja, Contactos), se
+   * queda en ella: cambiar de área por abrir la Bandeja desde Servicio desorientaría.
+   */
+  function areaDeVista(view) {
+    if (CFG_VIEWS[view]) return 'config';
+    if (state.area !== 'config' && VISTAS_DE_AREA[state.area] && VISTAS_DE_AREA[state.area][view]) return state.area;
+    return VISTAS_DE_AREA.servicio[view] && !VISTAS_DE_AREA.ventas[view] ? 'servicio' : 'ventas';
+  }
   state.area = 'ventas';
   // 🪤 Va aquí arriba y no junto a pintarRecientes: armarMenuFacil() corre en cuanto se define, y una `var` de más
   // abajo todavía valdría undefined (el arranque se caía entero).
@@ -774,6 +800,9 @@
         // Recientes y Fijados: lo que uno estaba mirando, a un clic. Se pliegan como en Dynamics.
         '<div class="mapa-plegable" id="mapa-recientes"></div><div class="mapa-plegable" id="mapa-fijados"></div>' +
         MENU_FACIL.map(function (g) { return '<div class="fx-grupo">' + esc(g.grupo) + '</div><ul>' + g.items.map(itemMapa).join('') + '</ul>'; }).join('') +
+      '</div>' +
+      '<div class="mapa-area" data-area="servicio" hidden>' +
+        MENU_SERVICIO.map(function (g) { return '<div class="fx-grupo">' + esc(g.grupo) + '</div><ul>' + g.items.map(itemMapa).join('') + '</ul>'; }).join('') +
       '</div>' +
       '<div class="mapa-area" data-area="config" hidden></div>';
     iconos(nav);
@@ -843,8 +872,11 @@
         cerrar(false);
         ponerArea(id);
         // Al entrar a un área se abre su primera pantalla, como en Dynamics; volver a Ventas lleva a Inicio.
+        // Servicio abre en Tickets (no en la Bandeja, que comparte con Ventas).
+        var area = AREAS_SUITE.filter(function (x) { return x.id === id; })[0] || {};
         var primera = document.querySelector('#nav-fx [data-area="' + id + '"] [data-view]');
-        if (primera && areaDeVista(state.view) !== id) go(primera.getAttribute('data-view'));
+        var destino = area.inicio || (primera && primera.getAttribute('data-view'));
+        if (destino && !(VISTAS_DE_AREA[id] && VISTAS_DE_AREA[id][state.view]) && !(id === 'config' && CFG_VIEWS[state.view])) go(destino);
       };
     });
     document.addEventListener('click', function (e) { if (!pop.hidden && !pop.contains(e.target) && e.target !== b) cerrar(false); });
@@ -987,6 +1019,9 @@
       kam: ['Cuentas clave', 'Los clientes que más importan: quién los lleva, cómo están y qué sigue.'],
       kpis: ['KPIs y metas', 'Cómo va el negocio contra sus metas, y cada quien del equipo.'],
       optimizacion: ['Optimización de ventas', 'Dónde se pierden ventas y qué hacer distinto, con los datos de verdad.'],
+      tickets: ['Tickets', 'Lo que reportan los clientes, con el reloj de su SLA corriendo.'],
+      sla: ['SLA', 'Si se está cumpliendo lo prometido a cada plan: respuesta, solución, actualizaciones y mantenimientos.'],
+      mantenimientos: ['Mantenimientos y actualizaciones', 'Lo que se va a tocar, a quién afecta y si se avisó a tiempo.'],
       modelos: ['Modelos de IA', 'Conecta los proveedores de IA y elige cuál hace cada cosa.'],
       help: ['Ayuda', 'Lo esencial del tablero en dos minutos.']
     }[view];
@@ -7717,6 +7752,12 @@
   });
   alAbrir('optimizacion', cargarOptimizacion);
   // (fin de XEN · Optimización de ventas)
+
+  // ===== XEN · Tickets y SLA: lo nuevo del agente de Tickets y SLA (alAbrir('tickets', …), alAbrir('sla', …)) =====
+  // (fin de XEN · Tickets y SLA)
+
+  // ===== XEN · Mantenimientos y actualizaciones: lo nuevo de su agente (alAbrir('mantenimientos', …)) =====
+  // (fin de XEN · Mantenimientos y actualizaciones)
 
   // ===== XEN · Modelos de IA: lo nuevo del agente de Modelos =====
   // Configuración › Modelos de IA: conectar los proveedores (src/proveedores.ts) y decir cuál hace cada rol

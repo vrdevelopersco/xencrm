@@ -13,6 +13,8 @@ import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
 import { computeScore, type Signals } from './analyzer.js';
 import { getContact, purgeContact } from './contacts.js';
+import { sembrarTicketsDe, type TicketDemo } from './tickets-demo.js';
+import { quitarServicioDemo, sembrarServicio } from './servicio-demo.js';
 
 export const PREFIJO = 'wa:seed-';
 
@@ -39,6 +41,8 @@ export interface ContactoDemo {
   signals: Partial<Signals> | null;
   appointmentInHours?: number;
   messages: MensajeDemo[];
+  /** Los tickets de soporte de este contacto (Servicio › Tickets). Formato en docs/xencrm.md › «Servicio». */
+  tickets?: TicketDemo[];
 }
 
 /** Cuántas conversaciones de demostración hay ahora mismo. */
@@ -54,6 +58,7 @@ export function quitar(): number {
     purgeContact(id); // mensajes, análisis, eventos y citas de esa ficha
     db.prepare('DELETE FROM users WHERE id = ?').run(id);
   }
+  quitarServicioDemo(); // los mantenimientos y actualizaciones de ejemplo (no son de una ficha)
   return ids.length;
 }
 
@@ -161,7 +166,10 @@ export function cargar(opts: { archivo?: string | null; now?: number } = {}): nu
     if (sd.humanMode) {
       db.prepare('INSERT INTO events (user_id, ts, type, payload) VALUES (?, ?, ?, ?)').run(userId, humanSince, 'human_on', JSON.stringify({ by: 'bot' }));
     }
+    sembrarTicketsDe(userId, sd.tickets ?? [], now);
     cuenta++;
   }
+  // Lo de Servicio que no es de una ficha (mantenimientos, actualizaciones): de `servicio.json`, junto a la semilla.
+  sembrarServicio(archivo, now);
   return cuenta;
 }

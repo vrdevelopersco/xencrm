@@ -3258,6 +3258,12 @@ dialog.perdida input{width:100%}
 }
 /* (fin de XEN · Optimización de ventas) */
 
+/* ---------- XEN · Tickets y SLA (agente de Tickets y SLA) ---------- */
+/* (fin de XEN · Tickets y SLA) */
+
+/* ---------- XEN · Mantenimientos y actualizaciones (agente de Mantenimientos) ---------- */
+/* (fin de XEN · Mantenimientos y actualizaciones) */
+
 /* ===== fin de la piel de XENCRM ===== */
 </style>
 </head>
@@ -3759,6 +3765,28 @@ dialog.perdida input{width:100%}
       <div id="pal-res" role="listbox"></div>
       <div class="pal-pie"><kbd>↑</kbd><kbd>↓</kbd> moverse · <kbd>Enter</kbd> abrir · <kbd>Esc</kbd> cerrar</div>
     </dialog>
+
+    <!-- ===== XEN · el área Servicio (Dynamics 365 Customer Service): cada pantalla la llena su agente ===== -->
+    <section class="view" id="view-tickets">
+      <div class="topbar"><h1>Tickets</h1><span class="grow"></span></div>
+      <!-- XEN · Tickets y SLA: el marcado de Tickets va aquí -->
+      <div class="pad" id="xt-tickets"></div>
+      <!-- (fin de XEN · Tickets) -->
+    </section>
+
+    <section class="view" id="view-sla">
+      <div class="topbar"><h1>SLA</h1><span class="grow"></span></div>
+      <!-- XEN · Tickets y SLA: el marcado del SLA va aquí -->
+      <div class="pad" id="xs-sla"></div>
+      <!-- (fin de XEN · SLA) -->
+    </section>
+
+    <section class="view" id="view-mantenimientos">
+      <div class="topbar"><h1>Mantenimientos y actualizaciones</h1><span class="grow"></span></div>
+      <!-- XEN · Mantenimientos y actualizaciones: el marcado va aquí -->
+      <div class="pad" id="xu-mant"></div>
+      <!-- (fin de XEN · Mantenimientos y actualizaciones) -->
+    </section>
 
     <!-- ===== XEN · las pantallas de la suite (Dynamics 365): cada una la llena su agente ===== -->
     <section class="view" id="view-embudo">

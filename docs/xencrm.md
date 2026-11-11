@@ -164,7 +164,30 @@ nombre no cambia el color). `test:bandeja` vigila que se definan una sola vez y 
 Pruebas nuevas: `test:bandeja`, `test:contactos`, `test:sentimiento`, `test:modelos`. Batería completa al unir:
 2794 bien, 0 fallas.
 
-## La suite (2026-11-11, segunda ronda)
+## Servicio y el ejemplo de XENTRIS LLC (2026-11-11, tercera ronda)
+
+El ejemplo de XENCRM deja de ser DUNOR (una boutique) y pasa a ser **XENTRIS LLC**, una firma de software: vende
+aplicaciones (XENTRIS POS, Field y Stock), desarrollo a la medida y **soporte con SLA** (actualizaciones mensuales,
+mantenimientos programados con aviso, tickets con tiempos garantizados por plan). Está en `examples/xentris/` y es la
+configuración de la raíz. El embudo: Nuevo → Calificado → Evaluando → Demo agendada → Ganado · Perdido.
+
+**El área Servicio** (como Dynamics 365 Customer Service), al lado de Ventas y Configuración: Mi trabajo (Bandeja,
+**Tickets**) · Clientes (Contactos, Cuentas clave) · Servicio (**SLA**, **Mantenimientos y actualizaciones**).
+
+Lo que comparten las pantallas de Servicio (el contrato):
+
+- **El plan de soporte** de cada cliente vive en la ficha, en `data.plan_soporte` (un dato captado de XENTRIS que el
+  equipo corrige a mano): `Básico`, `Pro` o `Enterprise` (sin importar tildes ni mayúsculas). Sin plan, no hay SLA
+  comprometido, y se dice así.
+- **Tickets en la semilla**: cada contacto de `seed.json` puede traer `tickets: [{ asunto, tipo
+  (incidente·solicitud·actualizacion·mantenimiento), prioridad (critica·alta·media·baja), estado
+  (abierto·en_progreso·esperando_cliente·resuelto·cerrado), producto, haceHoras, primeraRespuestaEnMin|null,
+  resueltoEnHoras|null, asignado }]`. Los siembra `crm/tickets-demo.ts`.
+- **`servicio.json`**, junto a la semilla: `{ mantenimientos: [{ titulo, producto, inicioEnHoras (negativo: ya
+  pasó), duracionMin, avisoHorasAntes, planes[], estado }], actualizaciones: [{ version, producto, haceDias | enDias,
+  notas, estado (publicada·planeada) }] }`. Lo siembra `crm/servicio-demo.ts`.
+
+
 
 Sobre el mapa de Dynamics, cuatro pantallas nuevas, hechas en paralelo y unidas en `xencrm`. Todas se calculan en el
 servidor sobre lo guardado, **sin modelo y sin red**, y lo que no se sabe se dice («—», «Sin precios», «poca

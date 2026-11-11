@@ -1,0 +1,72 @@
+{
+ "_ayuda": "Mantenimientos y actualizaciones de la demostración (Servicio). Formato en docs/xencrm.md › «Servicio».",
+ "mantenimientos": [
+  {
+   "titulo": "Migración de la base de XENTRIS POS",
+   "producto": "XENTRIS POS",
+   "inicioEnHoras": 60,
+   "duracionMin": 120,
+   "avisoHorasAntes": 72,
+   "planes": [
+    "Básico",
+    "Pro",
+    "Enterprise"
+   ],
+   "estado": "programado"
+  },
+  {
+   "titulo": "Ventana mensual de Clínica Vida",
+   "producto": "Desarrollo a la medida",
+   "inicioEnHoras": 768,
+   "duracionMin": 180,
+   "avisoHorasAntes": 168,
+   "planes": [
+    "Enterprise"
+   ],
+   "estado": "programado"
+  },
+  {
+   "titulo": "Cambio de servidores de XENTRIS Field",
+   "producto": "XENTRIS Field",
+   "inicioEnHoras": -30,
+   "duracionMin": 90,
+   "avisoHorasAntes": 20,
+   "planes": [
+    "Básico",
+    "Pro",
+    "Enterprise"
+   ],
+   "estado": "hecho"
+  }
+ ],
+ "actualizaciones": [
+  {
+   "version": "4.12",
+   "producto": "XENTRIS Field",
+   "haceDias": 1,
+   "notas": "Sincronización más rápida y fotos comprimidas.",
+   "estado": "publicada"
+  },
+  {
+   "version": "7.3",
+   "producto": "XENTRIS POS",
+   "haceDias": 18,
+   "notas": "Factura electrónica 2.1 y cierre de caja por turno.",
+   "estado": "publicada"
+  },
+  {
+   "version": "2.5",
+   "producto": "XENTRIS Stock",
+   "haceDias": 46,
+   "notas": "Alertas de vencimiento por lote.",
+   "estado": "publicada"
+  },
+  {
+   "version": "7.4",
+   "producto": "XENTRIS POS",
+   "enDias": 12,
+   "notas": "Propinas y división de cuenta.",
+   "estado": "planeada"
+  }
+ ]
+}

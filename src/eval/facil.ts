@@ -35,7 +35,7 @@ const funcion = (nombre: string): string => {
 };
 
 console.log('— El menú es el de la muestra');
-const menu = js.slice(js.indexOf('var MENU_FACIL = ['), js.indexOf('function areaDeVista('));
+const menu = js.slice(js.indexOf('var MENU_FACIL = ['), js.indexOf('var MENU_SERVICIO = ['));
 const grupos = [...menu.matchAll(/grupo: '([^']+)', items: \[([^\]]*)\]/g)].map((g) => ({ grupo: g[1], items: [...g[2]!.matchAll(/view: '([a-z]+)', lbl: '([^']+)'/g)].map((m) => [m[1], m[2]]) }));
 check('el mapa de Dynamics 365: Mi trabajo, Clientes, Ventas, Rendimiento', grupos.map((g) => g.grupo).join(',') === 'Mi trabajo,Clientes,Ventas,Rendimiento', grupos.map((g) => g.grupo).join(','));
 check('Mi trabajo: Inicio, Bandeja omnicanal, Lista de trabajo, Citas', grupos[0]?.items.map((x) => x[1]).join(',') === 'Inicio,Bandeja omnicanal,Lista de trabajo,Citas');
@@ -68,9 +68,14 @@ const lee: Record<string, string[]> = {
   kpis: ['kpis', 'metas'],
   // XEN · Optimización de ventas
   optimizacion: ['optimizacion'],
+  // XEN · Tickets y SLA
+  tickets: ['contacts'],
+  sla: ['stats'],
+  // XEN · Mantenimientos y actualizaciones
+  mantenimientos: ['contacts'],
   // (fin de las pantallas de la suite)
 };
-for (const v of vistas) {
+for (const v of [...vistas, 'tickets', 'sla', 'mantenimientos']) {
   for (const rol of ['admin', 'asesor']) {
     const frenadas = (lee[v] ?? []).filter((r) => frenoDelCandado(r, 'GET', rol, 'facil') !== null);
     check(`${v} (${rol}, modo fácil): lee todo lo que pinta`, Boolean(lee[v]) && !frenadas.length, frenadas.join(', ') || 'sin lista de lo que lee');
