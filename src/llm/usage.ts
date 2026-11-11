@@ -50,8 +50,11 @@ const PRICES: Record<string, { input: number; cached: number; output: number; wr
   'claude-haiku-4-5': { input: 1, cached: 0.1, write: 1.25, output: 5 },
 };
 
-/** Los motores que cobran. Los de la máquina (Ollama, Apple) cuestan 0 y no tienen tope. */
-const DE_PAGO = new Set(['openai', 'anthropic']);
+/**
+ * Los motores que cobran. Los de la máquina (Ollama, Apple, LM Studio) cuestan 0 y no tienen tope. El compatible
+ * cuenta como de pago aunque no se sepa su precio: su total sale «sin precio» en vez de en cero.
+ */
+const DE_PAGO = new Set(['openai', 'anthropic', 'compat']);
 
 /** El nombre del modelo sin la fecha de la versión: «gpt-5.4-2026-03-05» y «claude-haiku-4-5-20251001» cobran como su familia. */
 const familia = (model: string) => model.replace(/-\d{4}-\d{2}-\d{2}$/, '').replace(/-\d{8}$/, '');

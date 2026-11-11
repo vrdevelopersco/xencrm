@@ -1,8 +1,9 @@
-// Capa de motores: Ollama (local), Apple Foundation Models (local), OpenAI (nube) y Claude (nube, de respaldo)
-// detrás de una misma interfaz.
+// Capa de motores: Ollama (local), Apple Foundation Models (local), LM Studio (local, compatible con OpenAI),
+// OpenAI (nube), otra API compatible con OpenAI (nube) y Claude (nube, también de respaldo) detrás de una misma
+// interfaz.
 import { chat, checkOllama, type ChatMessage } from './ollama.js';
 import { apple, AppleError, type SchemaSpec } from './apple.js';
-import { openaiChat, openaiEffort, openaiModel, probeOpenAI } from './openai.js';
+import { openaiChat, openaiEffort, openaiModel, probeCompatible, probeOpenAI } from './openai.js';
 import { anthropicChat, anthropicModel, probeAnthropic } from './anthropic.js';
 import { EngineError } from './errors.js';
 import { env } from '../config.js';
@@ -10,17 +11,30 @@ import { emitEvent } from '../crm/events.js';
 import type { Task } from './usage.js';
 import { agotado, TopeAlcanzado } from '../crm/presupuesto.js';
 
-export type Engine = 'ollama' | 'apple' | 'openai' | 'anthropic';
-/** Los que se le pueden asignar a un rol desde la consola. */
-export const ENGINES: Engine[] = ['ollama', 'apple', 'openai'];
+export type Engine = 'ollama' | 'apple' | 'openai' | 'anthropic' | 'lmstudio' | 'compat';
 /**
- * Los que no tienen rol y solo entran cuando falla el de un rol: Claude. Van detrás de los de la máquina, que no
- * cuestan. 🪤 No se ofrecen en la consola a propósito: un respaldo que alguien pone de titular deja de ser respaldo,
- * y entonces no queda nadie detrás.
+ * La cadena de respaldo, en orden: primero los de la máquina, que no cuestan (Ollama, Apple, LM Studio), luego los
+ * de pago. Un motor sin configurar nunca está disponible, así que no entra: a quien no los usa no le cambia nada.
+ */
+export const ENGINES: Engine[] = ['ollama', 'apple', 'lmstudio', 'openai', 'compat'];
+/**
+ * Claude va al final de todo, detrás incluso de los de pago: es el respaldo de la nube, y basta con su llave
+ * para que esté.
  */
 export const RESPALDOS: Engine[] = ['anthropic'];
-/** Los que cobran, y por eso cuentan para el tope de gasto (crm/presupuesto.ts). */
-const DE_PAGO = new Set<Engine>(['openai', 'anthropic']);
+/**
+ * Los que se pueden poner a hacer un rol (Configuración › Modelos de IA y la consola).
+ *
+ * 🪤 Claude está aquí aunque sea el respaldo. Antes no se ofrecía —«un respaldo que alguien pone de titular deja
+ * de ser respaldo»—, pero eso solo pasa si TODOS los roles van con él: si Claude hace un rol, ese rol cae en los
+ * motores de los otros roles (`fallbackOrder`), y los demás roles siguen teniendo a Claude detrás. Pedirlo con
+ * todos los roles en Claude se avisa en la pantalla, no se prohíbe.
+ */
+export const ASIGNABLES: Engine[] = [...ENGINES, 'anthropic'];
+/** Los que cobran, y por eso cuentan para el tope de gasto (crm/presupuesto.ts). El compatible, por si acaso. */
+const DE_PAGO = new Set<Engine>(['openai', 'anthropic', 'compat']);
+/** Los que hablan como OpenAI y usan su cliente (openai.ts). */
+const COMPATIBLES = new Set<Engine>(['openai', 'lmstudio', 'compat']);
 export type Role = 'light' | 'heavy' | 'gate' | 'analysis';
 
 export interface GenerateInput {
@@ -77,6 +91,8 @@ export const ROLES: Role[] = ['light', 'heavy', 'gate', 'analysis'];
 
 /** El modelo con el que un motor de la nube atiende un rol; undefined en los de la máquina, que tienen uno solo. */
 export function modeloDe(e: Engine, role?: Role): string | undefined {
+  if (e === 'lmstudio') return env.lmstudioModel || undefined;
+  if (e === 'compat') return env.compatModel || undefined;
   return e === 'openai' ? openaiModel(role) : e === 'anthropic' ? anthropicModel(role) : undefined;
 }
 
@@ -110,7 +126,7 @@ export function fallbackOrder(preferred: Engine): Engine[] {
   const seen = new Set<Engine>();
   const out: Engine[] = [];
   const sinPagar = agotado();
-  for (const e of [preferred, roleEngine('heavy'), roleEngine('light'), ...ENGINES, ...RESPALDOS]) {
+  for (const e of [preferred, roleEngine('heavy'), roleEngine('light'), ...ENGINES, ...RESPALDOS] as Engine[]) {
     if (seen.has(e)) continue;
     seen.add(e);
     if (sinPagar && DE_PAGO.has(e)) continue;
@@ -123,7 +139,7 @@ export function fallbackOrder(preferred: Engine): Engine[] {
 
 /** Un motor de la máquina que esté contestando: no cuesta, así que no tiene tope. */
 export function motorSinCosto(): Engine | null {
-  return (['ollama', 'apple'] as const).find((e) => isAvailable(e)) ?? null;
+  return (['ollama', 'apple', 'lmstudio'] as const).find((e) => isAvailable(e)) ?? null;
 }
 
 /** Se llegó al tope de gasto y no hay un motor de la máquina que conteste: lo que necesita IA no se puede hacer. */
@@ -136,15 +152,29 @@ const state: Record<Engine, { available: boolean; retryAt: number; reason?: stri
   apple: { available: false, retryAt: 0 },
   openai: { available: false, retryAt: 0 },
   anthropic: { available: false, retryAt: 0 },
+  lmstudio: { available: false, retryAt: 0 },
+  compat: { available: false, retryAt: 0 },
 };
 
 /** Se cayó hace menos de un minuto (ver markDown). */
 const enfriando = (e: Engine): boolean => !state[e].available && state[e].retryAt > Date.now();
 
 function enginesInUse(): Set<Engine> {
-  if (env.llmEngine !== 'router') return new Set([env.llmEngine]);
-  return new Set([env.lightEngine, env.heavyEngine, env.gateEngine, env.analysisEngine]);
+  if (env.llmEngine !== 'router') return new Set<Engine>([env.llmEngine]);
+  return new Set<Engine>([env.lightEngine, env.heavyEngine, env.gateEngine, env.analysisEngine]);
 }
+
+/** LM Studio o el compatible, con lo que CORRE: disponible si contesta y sirve el modelo nombrado. */
+async function probarCompatible(e: 'lmstudio' | 'compat'): Promise<{ available: boolean; reason?: string }> {
+  const url = e === 'lmstudio' ? env.lmstudioUrl : env.compatUrl;
+  const modelo = e === 'lmstudio' ? env.lmstudioModel : env.compatModel;
+  if (!url) return { available: false, reason: 'sin configurar' };
+  if (!modelo) return { available: false, reason: 'falta elegir el modelo' };
+  const p = await probeCompatible(url, e === 'compat' ? env.compatApiKey : '', modelo);
+  return { available: p.ok, reason: p.reason };
+}
+/** Se configuró a propósito: sin esto, sondear LM Studio en un servidor sería preguntarle a localhost por nada. */
+const configurado = (e: 'lmstudio' | 'compat'): boolean => (e === 'lmstudio' ? Boolean(process.env.LMSTUDIO_URL || env.lmstudioModel) : Boolean(env.compatUrl));
 
 /**
  * Prueba UN motor ahora mismo, lo esté usando alguien o no.
@@ -170,6 +200,7 @@ export async function probarMotor(engine: Engine): Promise<{ available: boolean;
     const p = await probeAnthropic(ROLES.map(anthropicModel));
     return { available: p.ok, reason: p.reason };
   }
+  if (engine === 'lmstudio' || engine === 'compat') return probarCompatible(engine);
   const o = await checkOllama();
   return {
     available: o.ok && !o.missing.includes(env.chatModel),
@@ -199,6 +230,13 @@ export async function probeEngines(): Promise<Record<Engine, { available: boolea
   } else {
     state.openai = { available: false, retryAt: 0, reason: 'sin OPENAI_API_KEY' };
   }
+  for (const e of ['lmstudio', 'compat'] as const) {
+    if (inUse.has(e) || configurado(e)) {
+      const p = await probarCompatible(e);
+      // Como Claude: si está configurado y no contestó al arrancar, se vuelve a probar en un minuto.
+      state[e] = { available: p.available, retryAt: !p.available && inUse.has(e) ? Date.now() + COOLDOWN_MS : 0, reason: p.reason };
+    } else state[e] = { available: false, retryAt: 0, reason: 'sin configurar' };
+  }
   const c = await claude;
   // 🪤 Con llave y sin respuesta, se vuelve a probar en un minuto en vez de darlo por perdido hasta el próximo
   // reinicio: un respaldo que se apaga para siempre por un tropiezo de red al arrancar no respalda nada.
@@ -225,7 +263,7 @@ function markUp(e: Engine) {
 /** Errores que indican que el motor no está operativo (no errores de una petición concreta). */
 function isOutage(e: Engine, err: unknown): boolean {
   if (e === 'apple') return err instanceof AppleError && ['not_installed', 'unavailable', 'crashed', 'timeout'].includes(err.code);
-  if (e === 'openai') return err instanceof EngineError && ['not_configured', 'network', 'auth', 'server', 'sin_saldo'].includes(err.code);
+  if (COMPATIBLES.has(e)) return err instanceof EngineError && ['not_configured', 'network', 'auth', 'server', 'sin_saldo'].includes(err.code);
   if (e === 'anthropic') return err instanceof EngineError && ['not_configured', 'network', 'auth', 'server', 'sin_saldo', 'sin_modelo'].includes(err.code);
   return err instanceof Error && /conectar con Ollama|fetch failed|ECONNREFUSED|not found/i.test(err.message);
 }
@@ -319,7 +357,7 @@ export async function generate(engine: Engine, input: GenerateInput): Promise<st
         { role: 'system', content: turn },
         { role: 'user', content: input.userText },
       ];
-      out = await openaiChat({ messages, temperature: input.temperature, maxTokens: input.maxTokens ?? 350, model: openaiModel(input.role), effort: openaiEffort(input.role), usage });
+      out = await openaiChat({ messages, temperature: input.temperature, maxTokens: input.maxTokens ?? 350, model: openaiModel(input.role), effort: openaiEffort(input.role), usage }, aCompatible(engine));
     }
     markUp(engine);
     return out;
@@ -362,7 +400,7 @@ export async function classify(engine: Engine, input: ClassifyInput): Promise<st
       out =
         engine === 'ollama'
           ? await chat({ model: env.gateModel, messages, temperature: 0, numPredict: 300, format: toJsonSchema(input.schema), usage })
-          : await openaiChat({ messages, maxTokens: 300, schema: input.schema, model: openaiModel(input.role), effort: openaiEffort(input.role), usage });
+          : await openaiChat({ messages, maxTokens: 300, schema: input.schema, model: openaiModel(input.role), effort: openaiEffort(input.role), usage }, aCompatible(engine));
     }
     markUp(engine);
     return out;
@@ -380,6 +418,18 @@ function toJsonSchema(spec: SchemaSpec): Record<string, unknown> {
   return { type: 'object', properties, required: spec.properties.map((p) => p.name) };
 }
 
+/** El motor de openai.ts que toca: openai, lmstudio o compat. Lo que no es de esos tres no llega aquí. */
+function aCompatible(e: Engine): 'openai' | 'lmstudio' | 'compat' {
+  return e === 'lmstudio' || e === 'compat' ? e : 'openai';
+}
+
 export function engineStatus(): Record<Engine, { available: boolean; reason?: string }> {
-  return { ollama: { ...state.ollama }, apple: { ...state.apple }, openai: { ...state.openai }, anthropic: { ...state.anthropic } };
+  return {
+    ollama: { ...state.ollama },
+    apple: { ...state.apple },
+    openai: { ...state.openai },
+    anthropic: { ...state.anthropic },
+    lmstudio: { ...state.lmstudio },
+    compat: { ...state.compat },
+  };
 }

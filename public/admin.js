@@ -443,6 +443,9 @@
     { view: 'profile', ic: 'store', lbl: 'Perfil del negocio' },
     { view: 'negocio', ic: 'sliders', lbl: 'El negocio' },
     { view: 'agent', ic: 'bot', lbl: 'El asistente', soloCompleto: true },
+    // Qué proveedores de IA están conectados y cuál hace cada rol. Solo quien administra XENCRM: decide a quién se
+    // le factura, y la consola cierra `motores/` a los demás (consola.ts, SOLO_SUPER).
+    { view: 'modelos', ic: 'chispa', lbl: 'Modelos de IA', soloSuper: true },
     { view: 'channels', ic: 'plug', lbl: 'Canales' },
     { view: 'knowledge', ic: 'book', lbl: 'Lo que sabe' },
     // 🪤 Solo para quien administra, y es por RUIDO, no por secreto. Quien atiende todo el día no necesita ver
@@ -585,7 +588,7 @@
   // mandó la muestra de cómo lo quería (Nexora) y las tres están en su menú: son del que vende, no del que
   // administra aiva. El servidor las abre igual (channels/candado.ts).
   var SOLO_COMPLETO_VISTAS = { agent: 1, trazas: 1 };
-  var VISTAS_DE_QUIEN_ADMINISTRA = { guia: 1, profile: 1, negocio: 1, agent: 1, channels: 1, knowledge: 1, trazas: 1 };
+  var VISTAS_DE_QUIEN_ADMINISTRA = { guia: 1, profile: 1, negocio: 1, agent: 1, channels: 1, knowledge: 1, trazas: 1, modelos: 1 };
   var FILTROS_COMPLETOS = /^(human|archived|stage:)/;
   function modoMio() { try { return localStorage.getItem(LLAVE('modo')) || ''; } catch (e) { return ''; } }
   function modoDelEquipo() {
@@ -653,7 +656,7 @@
   // ---------- el panel de la sección ----------
   // 🪤 Solo aparece donde tiene algo que decir. Un panel vacío a la izquierda «para que se vea simétrico» es
   // espacio robado a lo único que importa en esta pantalla, que es la conversación.
-  var CFG_VIEWS = { guia: 1, agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1 };
+  var CFG_VIEWS = { guia: 1, agent: 1, channels: 1, knowledge: 1, help: 1, trazas: 1, modelos: 1 };
   // 🪤 En las pantallas de configuración el panel decía lo mismo que el título de la página, dos veces en la
   // misma fila. Aquí dice el ÁREA —dónde estás— y la lista de abajo dice la pantalla: cada uno aporta algo.
   var TITULOS = { today: 'Hoy', inbox: 'Conversaciones', calendar: 'Calendario', pipeline: 'Clientes', clientes: 'Clientes', ventas: 'Análisis', seguimientos: 'Clientes', analysis: 'Análisis', agent: 'Configuración', channels: 'Configuración', knowledge: 'Configuración', help: 'Configuración', trazas: 'Configuración', guia: 'Configuración' };
@@ -820,6 +823,7 @@
       pipeline: ['Tratos', 'Cada contacto en su etapa del embudo: arrastra la tarjeta o usa «Mover…».'],
       ventas: ['Ventas', 'Lo que se vendió y lo que se perdió, con el porqué.'],
       seguimientos: ['Seguimientos', 'A quién hay que escribirle y por qué.'],
+      modelos: ['Modelos de IA', 'Conecta los proveedores de IA y elige cuál hace cada cosa.'],
       help: ['Ayuda', 'Lo esencial del tablero en dos minutos.']
     }[view];
     var barra = document.querySelector('#view-' + view + ' > .topbar');
@@ -5680,6 +5684,325 @@
   // (fin de XEN · Analítica y sentimiento)
 
   // ===== XEN · Modelos de IA: lo nuevo del agente de Modelos =====
+  // Configuración › Modelos de IA: conectar los proveedores (src/proveedores.ts) y decir cuál hace cada rol
+  // (src/motores.ts). Es de quien administra XENCRM: la consola cierra `motores/` a los demás.
+  //
+  // 🪤 Una llave solo viaja de ida: se pega, el servidor la comprueba contra su proveedor y la guarda, y lo que vuelve
+  // es una pista («sk-proj…f2a9»). El campo se vacía en cuanto se guardó: una llave que se queda en la página acaba
+  // en una captura de pantalla.
+  //
+  // 🪤 Lo guardado se aplica al REINICIAR, como en la consola. La pantalla lo dice arriba, fijo, y cada proveedor
+  // tocado queda «Sin probar» hasta entonces. Fingir que ya corre haría pensar que contesta lo nuevo.
+  ICONS.nube = '<path d="M17.5 19H9a7 7 0 1 1 6.7-9h1.8a4.5 4.5 0 1 1 0 9z"/>';
+  ICONS.chip = '<rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>';
+  TITULOS.modelos = 'Configuración';
+  var XM = { datos: null, motores: null, pruebas: {}, cambiando: {}, quitando: {}, reinicio: false, cargando: false };
+  var XM_ESTADO = {
+    conectado: ['Conectado', 'ok'], sin_llave: ['Sin llave', 'falta'], sin_configurar: ['Sin configurar', 'neutro'],
+    no_disponible: ['No disponible', 'mal'], sin_probar: ['Sin probar', 'neutro']
+  };
+  var XM_CORTO = { openai: 'OpenAI', anthropic: 'Claude', apple: 'Apple', ollama: 'Ollama', lmstudio: 'LM Studio', compat: 'API compatible' };
+  function xmProv(id) { return ((XM.datos && XM.datos.proveedores) || []).filter(function (p) { return p.id === id; })[0] || null; }
+  function xmNombreRol(rol) { var r = ((XM.datos && XM.datos.roles) || []).filter(function (x) { return x.rol === rol; })[0]; return r ? r.nombre : rol; }
+
+  function cargarModelos() {
+    if (XM.cargando) return;
+    XM.cargando = true;
+    var provs = $('xm-provs'), roles = $('xm-roles');
+    provs.setAttribute('aria-busy', 'true'); roles.setAttribute('aria-busy', 'true');
+    // Cargando: la forma de lo que viene (seis tarjetas, cuatro filas), para que nada salte al llegar.
+    if (!XM.datos) {
+      provs.innerHTML = [1, 2, 3, 4, 5, 6].map(function () { return '<div class="xm-prov xm-esq" aria-hidden="true"><i></i><i></i><i></i></div>'; }).join('');
+      roles.innerHTML = [1, 2, 3, 4].map(function () { return '<div class="xm-rol xm-esq" aria-hidden="true"><i></i><i></i></div>'; }).join('');
+    }
+    Promise.all([api('/motores/proveedores'), api('/motores')]).then(function (r) {
+      XM.cargando = false;
+      var d = r[0], m = r[1];
+      provs.removeAttribute('aria-busy'); roles.removeAttribute('aria-busy');
+      if (!d || d.error) { xmError(d && d.error); return; }
+      XM.datos = d;
+      XM.motores = m && !m.error ? m : null;
+      xmPintarAviso();
+      xmPintarProveedores();
+      xmPintarRoles(m && m.error);
+    }).catch(function () { XM.cargando = false; provs.removeAttribute('aria-busy'); roles.removeAttribute('aria-busy'); xmError(); });
+  }
+  function xmError(porque) {
+    $('xm-provs').innerHTML = '<div class="xm-vacio" role="alert"><b>No pude cargar los proveedores.</b><span>' +
+      esc(porque || 'Revisa la conexión con el servidor.') + '</span><button class="btn sm" type="button" id="xm-otra-vez">Volver a intentar</button></div>';
+    $('xm-roles').innerHTML = '';
+    $('xm-otra-vez').onclick = cargarModelos;
+  }
+
+  function xmPintarAviso() {
+    var pendiente = XM.reinicio || (XM.datos.proveedores || []).some(function (p) { return p.pendiente; });
+    $('xm-aviso').classList.toggle('pendiente', pendiente);
+    var puede = Boolean(XM.datos.puedeReiniciarse);
+    $('xm-reiniciar').hidden = !(pendiente && puede);
+    $('xm-aviso-sub').textContent = pendiente
+      ? (puede ? 'Tienes cambios guardados que todavía no corren.' : 'Tienes cambios guardados que todavía no corren. Aquí nadie lo volvería a levantar: reinícialo tú desde el panel del alojamiento.')
+      : 'Hasta entonces sigue contestando lo de ahora.';
+  }
+  $('xm-reiniciar').onclick = function () {
+    var b = $('xm-reiniciar');
+    b.disabled = true; b.textContent = 'Reiniciando…';
+    // 🪤 El servidor se muere a propósito, así que la petición puede cortarse sin respuesta: eso no es un error.
+    api('/config/restart', { method: 'POST' }).catch(function () {}).then(function () {
+      setTimeout(function () {
+        XM.reinicio = false; XM.pruebas = {}; XM.datos = null;
+        b.disabled = false; b.textContent = 'Reiniciar ahora';
+        cargarModelos();
+        toast('Arriba otra vez, con lo nuevo.', null, { icono: 'check' });
+      }, 6000);
+    });
+  };
+
+  function xmTarjeta(p) {
+    var est = XM_ESTADO[p.estado] || ['—', 'neutro'];
+    var prueba = XM.pruebas[p.id];
+    var donde = p.deMaquina ? 'En la máquina · sin costo por uso' : 'En la nube · cobra por uso';
+    var marcas = [];
+    if (p.respaldo) marcas.push('<span class="chip xm-chip-respaldo">Respaldo de todos los roles</span>');
+    if (p.enUso && p.enUso.length) marcas.push('<span class="chip xm-chip-uso">Hace: ' + esc(p.enUso.map(xmNombreRol).join(', ')) + '</span>');
+    var campos = '';
+    if (p.id === 'compat') {
+      campos += '<label class="xm-campo"><span>Nombre</span><input type="text" name="nombre" value="' + esc(p.nombrePropio || '') + '" placeholder="Por ejemplo, OpenRouter" maxlength="40" autocomplete="off" spellcheck="false"></label>';
+    }
+    if (p.url) {
+      campos += '<label class="xm-campo"><span>Dirección</span><input type="url" name="url" value="' + esc(p.url.valor || '') + '" placeholder="' + esc(p.url.porDefecto || 'https://…/v1') + '" autocomplete="off" spellcheck="false" inputmode="url"></label>';
+    }
+    if (p.llave) {
+      if (p.llave.puesta && !XM.cambiando[p.id]) {
+        campos += '<div class="xm-campo xm-llave"><span>Llave</span><div class="xm-llave-fila"><code class="xm-pista">' + esc(p.llave.pista || 'puesta') + '</code>' +
+          (p.llave.deLaCasa ? '<span class="xm-casa">la de la casa</span>' : '') +
+          '<button class="btn sm" type="button" data-acc="cambiar">Cambiar llave</button>' +
+          (p.llave.deLaCasa ? '' : (XM.quitando[p.id]
+            ? '<button class="btn sm danger" type="button" data-acc="quitar-si">Sí, quitar la llave</button><button class="btn sm" type="button" data-acc="quitar-no">No</button>'
+            : '<button class="btn sm" type="button" data-acc="quitar">Quitar</button>')) +
+          '</div></div>';
+      } else {
+        var ph = p.llave.empiezaPor ? 'Pega la llave (empieza por ' + p.llave.empiezaPor + ')' : (p.llave.obligatoria ? 'Pega la llave' : 'Pega la llave, si la pide');
+        campos += '<label class="xm-campo"><span>Llave' + (p.llave.obligatoria ? '' : ' <em>(opcional)</em>') + '</span><input type="password" name="llave" placeholder="' + esc(ph) + '" autocomplete="new-password" spellcheck="false"></label>';
+      }
+    }
+    if (p.modelo) {
+      if (p.modelo.editable) {
+        var lista = prueba && prueba.modelos && prueba.modelos.length ? prueba.modelos : [];
+        campos += '<label class="xm-campo"><span>Modelo</span><input type="text" name="modelo" value="' + esc(p.modelo.valor || '') + '" placeholder="' +
+          esc(lista.length ? 'Elige uno de la lista' : 'Prueba la conexión para ver los que hay') + '" list="xm-dl-' + p.id + '" autocomplete="off" spellcheck="false"></label>' +
+          '<datalist id="xm-dl-' + p.id + '">' + lista.map(function (m) { return '<option value="' + esc(m) + '"></option>'; }).join('') + '</datalist>';
+      } else {
+        campos += '<div class="xm-campo xm-dato"><span>Modelo</span><code>' + esc(p.modelo.valor || '—') + '</code></div>';
+      }
+    }
+    var editable = Boolean(p.url || p.llave || (p.modelo && p.modelo.editable));
+    var res = prueba ? xmTextoPrueba(prueba) : '';
+    return '<article class="xm-prov" data-id="' + p.id + '" data-tono="' + est[1] + '" aria-labelledby="xm-n-' + p.id + '">' +
+      '<header class="xm-prov-cab">' +
+        '<span class="xm-glifo" aria-hidden="true"><i class="ic" data-ic="' + (p.deMaquina ? 'chip' : 'nube') + '"></i></span>' +
+        '<div class="xm-prov-nom"><h3 id="xm-n-' + p.id + '">' + esc(p.nombre) + '</h3><span class="xm-donde">' + esc(donde) + '</span></div>' +
+        '<span class="xm-estado" data-tono="' + est[1] + '"><i aria-hidden="true"></i>' + esc(est[0]) + '</span>' +
+      '</header>' +
+      '<p class="xm-que">' + esc(p.queEs) + '</p>' +
+      (marcas.length ? '<div class="xm-marcas">' + marcas.join('') + '</div>' : '') +
+      (p.porque ? '<p class="xm-porque">' + esc(p.porque) + '</p>' : '') +
+      '<form class="xm-form" novalidate>' + campos +
+        '<div class="xm-acc">' +
+          (editable ? '<button class="btn primary sm" type="submit">Guardar</button>' : '') +
+          '<button class="btn sm" type="button" data-acc="probar">Probar conexión</button>' +
+          '<span class="xm-res" role="status" aria-live="polite">' + res + '</span>' +
+        '</div>' +
+      '</form>' +
+    '</article>';
+  }
+  function xmTextoPrueba(r) {
+    if (!r) return '';
+    if (r.ok) return '<span class="xm-bien"><i class="ic" data-ic="check"></i>Contesta' + (r.modelos && r.modelos.length ? ' · ' + r.modelos.length + (r.modelos.length === 1 ? ' modelo' : ' modelos') : '') + '</span>';
+    // Contesta pero falta algo (el modelo, uno de los roles): ámbar, no rojo. No está roto; está a medio conectar.
+    return '<span class="' + (r.contesta ? 'xm-medio' : 'xm-mal') + '"><i class="ic" data-ic="alerta"></i>' + esc(r.porque || 'No contesta') + '</span>';
+  }
+  function xmPintarProveedores() {
+    $('xm-provs').innerHTML = (XM.datos.proveedores || []).map(xmTarjeta).join('');
+    iconos($('xm-provs'));
+    $('xm-provs').querySelectorAll('.xm-prov').forEach(xmEnganchar);
+  }
+  /** Repinta UNA tarjeta, con un mensaje en su línea de estado si hace falta, y devuelve el foco adonde se pida. */
+  function xmRepintar(id, mensaje, foco) {
+    var vieja = $('xm-provs').querySelector('.xm-prov[data-id="' + id + '"]'), p = xmProv(id);
+    if (!vieja || !p) return;
+    var caja = document.createElement('div');
+    caja.innerHTML = xmTarjeta(p);
+    var nueva = caja.firstChild;
+    vieja.replaceWith(nueva);
+    if (mensaje !== undefined) nueva.querySelector('.xm-res').innerHTML = mensaje;
+    iconos(nueva);
+    xmEnganchar(nueva);
+    var f = foco && nueva.querySelector(foco);
+    if (f) f.focus();
+  }
+  function xmMensaje(caja, html) { caja.querySelector('.xm-res').innerHTML = html; iconos(caja.querySelector('.xm-res')); }
+  function xmEnganchar(caja) {
+    var id = caja.getAttribute('data-id'), form = caja.querySelector('form');
+    form.onsubmit = function (e) {
+      e.preventDefault();
+      var p = xmProv(id), cuerpo = {}, campo;
+      if ((campo = form.querySelector('[name=url]')) && campo.value.trim() !== (p.url.valor || '')) cuerpo.url = campo.value;
+      if ((campo = form.querySelector('[name=modelo]')) && campo.value.trim() !== (p.modelo.valor || '')) cuerpo.modelo = campo.value;
+      if ((campo = form.querySelector('[name=nombre]')) && campo.value.trim() !== (p.nombrePropio || '')) cuerpo.nombre = campo.value;
+      if ((campo = form.querySelector('[name=llave]')) && campo.value.trim()) cuerpo.llave = campo.value;
+      if (!Object.keys(cuerpo).length) { xmMensaje(caja, '<span class="xm-nada">No cambiaste nada.</span>'); return; }
+      var boton = form.querySelector('[type=submit]');
+      boton.disabled = true;
+      xmMensaje(caja, cuerpo.llave ? 'Comprobando la llave…' : 'Guardando…');
+      api('/motores/proveedores/' + id, { method: 'PUT', body: cuerpo }).then(function (r) {
+        boton.disabled = false;
+        // 🪤 Si falla, lo escrito se queda (dirección, modelo, nombre y la llave) para corregirlo: es trabajo de quien
+        // lo pegó. Solo se va cuando se guardó.
+        if (!r || r.error) { xmMensaje(caja, '<span class="xm-mal"><i class="ic" data-ic="alerta"></i>' + esc((r && r.error) || 'No se pudo guardar.') + '</span>'); return; }
+        var llave = form.querySelector('[name=llave]'); if (llave) llave.value = '';
+        XM.datos.proveedores = XM.datos.proveedores.map(function (x) { return x.id === id ? r.proveedor : x; });
+        XM.cambiando[id] = false; delete XM.pruebas[id];
+        XM.reinicio = XM.reinicio || Boolean(r.hayQueReiniciar);
+        xmPintarAviso();
+        xmRepintar(id, '<span class="xm-bien"><i class="ic" data-ic="check"></i>Guardado. Se aplica al reiniciar.</span>', '[data-acc=probar]');
+        xmPintarRoles();
+      }).catch(function () { boton.disabled = false; xmMensaje(caja, '<span class="xm-mal">Sin respuesta del servidor. Vuelve a intentar.</span>'); });
+    };
+    caja.querySelectorAll('[data-acc]').forEach(function (b) {
+      b.onclick = function () {
+        var acc = b.getAttribute('data-acc');
+        if (acc === 'cambiar') { XM.cambiando[id] = true; XM.quitando[id] = false; xmRepintar(id, undefined, '[name=llave]'); return; }
+        if (acc === 'quitar') { XM.quitando[id] = true; xmRepintar(id, undefined, '[data-acc=quitar-no]'); return; }
+        if (acc === 'quitar-no') { XM.quitando[id] = false; xmRepintar(id, undefined, '[data-acc=quitar]'); return; }
+        if (acc === 'quitar-si') {
+          b.disabled = true;
+          api('/motores/proveedores/' + id + '/llave', { method: 'DELETE' }).then(function (r) {
+            XM.quitando[id] = false;
+            if (!r || r.error) { xmRepintar(id, '<span class="xm-mal">' + esc((r && r.error) || 'No se pudo quitar.') + '</span>'); return; }
+            XM.datos.proveedores = XM.datos.proveedores.map(function (x) { return x.id === id ? r.proveedor : x; });
+            XM.reinicio = true; delete XM.pruebas[id];
+            xmPintarAviso();
+            xmRepintar(id, '<span class="xm-bien">Llave quitada. Se aplica al reiniciar.</span>', '[data-acc=probar]');
+          });
+          return;
+        }
+        if (acc === 'probar') {
+          b.disabled = true;
+          xmMensaje(caja, 'Probando…');
+          api('/motores/proveedores/' + id + '/probar', { method: 'POST' }).then(function (r) {
+            b.disabled = false;
+            if (!r || r.error) { xmMensaje(caja, '<span class="xm-mal">' + esc((r && r.error) || 'No se pudo probar.') + '</span>'); return; }
+            XM.pruebas[id] = r;
+            // La lista de modelos llega aquí: el campo del modelo la ofrece para elegir en vez de escribir de memoria.
+            var modelo = caja.querySelector('[name=modelo]');
+            if (modelo && r.modelos && r.modelos.length) {
+              var dl = $('xm-dl-' + id);
+              if (dl) dl.innerHTML = r.modelos.map(function (m) { return '<option value="' + esc(m) + '"></option>'; }).join('');
+              modelo.placeholder = 'Elige uno de la lista';
+            }
+            xmMensaje(caja, xmTextoPrueba(r));
+          }).catch(function () { b.disabled = false; xmMensaje(caja, '<span class="xm-mal">Sin respuesta del servidor. Vuelve a intentar.</span>'); });
+        }
+      };
+    });
+  }
+
+  // ---- Qué modelo hace cada cosa ----
+  function xmModeloDe(motor, r) {
+    var m = XM.motores, p = xmProv(motor);
+    if (motor === 'openai') return { k: 'modelo', valor: r.modelo || '', ph: m.modeloGeneral || 'el general', editable: true };
+    if (motor === 'anthropic') return { k: 'modeloClaude', valor: r.modeloClaude || '', ph: m.modeloClaudeGeneral || 'el general', editable: true };
+    if (motor === 'apple') return { valor: '', ph: 'Apple tiene uno solo', editable: false };
+    var fijo = p && p.modelo ? p.modelo.valor : '';
+    return { valor: fijo, ph: fijo ? '' : 'Elígelo arriba, en ' + (XM_CORTO[motor] || motor), editable: false };
+  }
+  function xmOpciones(puesto) {
+    return (XM.motores.asignables || []).map(function (mo) {
+      var p = xmProv(mo), est = p ? XM_ESTADO[p.estado] : null;
+      var nota = p && p.estado !== 'conectado' && est ? ' — ' + est[0].toLowerCase() : '';
+      return '<option value="' + mo + '"' + (mo === puesto ? ' selected' : '') + '>' + esc((XM_CORTO[mo] || mo) + nota) + '</option>';
+    }).join('');
+  }
+  function xmCampoModelo(rol, motor, r) {
+    var c = xmModeloDe(motor, r);
+    return '<input type="text" data-k="' + (c.k || '') + '" value="' + esc(c.valor) + '" placeholder="' + esc(c.ph) + '"' + (c.editable ? '' : ' disabled') +
+      ' aria-label="Modelo de ' + esc(xmNombreRol(rol)) + '" autocomplete="off" spellcheck="false">';
+  }
+  function xmPintarRoles(fallo) {
+    var caja = $('xm-roles');
+    if (!XM.motores) {
+      caja.innerHTML = '<div class="xm-vacio"><b>No pude leer qué hace cada rol.</b><span>' + esc(fallo || 'Vuelve a intentar en un momento.') + '</span></div>';
+      return;
+    }
+    var m = XM.motores, meta = XM.datos.roles || [];
+    caja.innerHTML =
+      (m.reparto && m.reparto !== 'router'
+        ? '<p class="xm-nota">Ahora <b>' + esc(XM_CORTO[m.reparto] || m.reparto) + '</b> hace todo (LLM_ENGINE). Al guardar, cada rol pasa a usar el suyo.</p>' : '') +
+      m.roles.map(function (r) {
+        var d = meta.filter(function (x) { return x.rol === r.rol; })[0] || { nombre: r.rol, queHace: '' };
+        return '<div class="xm-rol" data-rol="' + r.rol + '">' +
+          '<div class="xm-rol-que"><b>' + esc(d.nombre) + '</b><span>' + esc(d.queHace) + '</span>' +
+            (d.cuidado ? '<span class="xm-cuidado"><i class="ic" data-ic="alerta"></i>' + esc(d.cuidado) + '</span>' : '') + '</div>' +
+          '<label class="xm-campo"><span>Proveedor</span><select data-k="motor">' + xmOpciones(r.motor) + '</select></label>' +
+          '<div class="xm-campo"><span aria-hidden="true">Modelo</span><span class="xm-modelo">' + xmCampoModelo(r.rol, r.motor, r) + '</span></div>' +
+        '</div>';
+      }).join('') +
+      '<p class="xm-nota xm-todo-claude" id="xm-todo-claude" hidden><i class="ic" data-ic="alerta"></i>Con Claude en todos los roles no queda respaldo en la nube detrás: si Claude falla, solo contesta lo que haya en la máquina.</p>' +
+      '<div class="xm-acc"><button class="btn primary" type="button" id="xm-guardar-roles">Guardar</button><span class="xm-res" id="xm-roles-res" role="status" aria-live="polite"></span></div>';
+    iconos(caja);
+    caja.querySelectorAll('.xm-rol').forEach(function (fila) {
+      var sel = fila.querySelector('[data-k=motor]'), rol = fila.getAttribute('data-rol');
+      sel.onchange = function () {
+        var r = m.roles.filter(function (x) { return x.rol === rol; })[0];
+        fila.querySelector('.xm-modelo').innerHTML = xmCampoModelo(rol, sel.value, r);
+        xmTodoClaude();
+      };
+    });
+    xmTodoClaude();
+    $('xm-guardar-roles').onclick = xmGuardarRoles;
+  }
+  function xmTodoClaude() {
+    var sels = Array.prototype.slice.call($('xm-roles').querySelectorAll('[data-k=motor]'));
+    $('xm-todo-claude').hidden = !(sels.length && sels.every(function (s) { return s.value === 'anthropic'; }));
+  }
+  function xmGuardarRoles() {
+    var m = XM.motores, cambios = [];
+    $('xm-roles').querySelectorAll('.xm-rol').forEach(function (fila) {
+      var rol = fila.getAttribute('data-rol'), r = m.roles.filter(function (x) { return x.rol === rol; })[0];
+      var motor = fila.querySelector('[data-k=motor]').value, campo = fila.querySelector('.xm-modelo input');
+      var c = { rol: rol };
+      if (motor !== r.motor) c.motor = motor;
+      if (campo && !campo.disabled && campo.getAttribute('data-k')) {
+        var k = campo.getAttribute('data-k'), antes = k === 'modeloClaude' ? r.modeloClaude || '' : r.modelo || '';
+        if (campo.value.trim() !== antes) c[k] = campo.value.trim();
+      }
+      // Solo lo que cambió: guardar sondea cada proveedor nombrado, y uno que no se tocó no tiene por qué frenar al resto.
+      if (Object.keys(c).length > 1) cambios.push(c);
+    });
+    var res = $('xm-roles-res'), boton = $('xm-guardar-roles');
+    var cuerpo = { roles: cambios };
+    if (m.reparto && m.reparto !== 'router') cuerpo.reparto = 'router';
+    if (!cambios.length && !cuerpo.reparto) { res.innerHTML = '<span class="xm-nada">No cambiaste nada.</span>'; return; }
+    boton.disabled = true;
+    res.textContent = 'Comprobando que cada proveedor conteste…';
+    api('/motores', { method: 'PUT', body: cuerpo }).then(function (r) {
+      boton.disabled = false;
+      if (!r || r.error) { res.innerHTML = '<span class="xm-mal"><i class="ic" data-ic="alerta"></i>' + esc((r && r.error) || 'No se pudo guardar.') + '</span>'; iconos(res); return; }
+      XM.reinicio = XM.reinicio || Boolean(r.hayQueReiniciar);
+      xmPintarAviso();
+      res.innerHTML = '<span class="xm-bien"><i class="ic" data-ic="check"></i>Guardado. Se aplica al reiniciar.</span>';
+      iconos(res);
+    }).catch(function () { boton.disabled = false; res.textContent = 'Sin respuesta del servidor. Vuelve a intentar.'; });
+  }
+  // Se carga al abrirse la pantalla. 🪤 Va por la clase `active` de la vista y no por go(): así entra igual desde el
+  // engranaje, desde el panel de Configuración o desde el menú del celular, sin una línea más en el enrutador.
+  (function vigilarModelos() {
+    var vista = $('view-modelos');
+    if (!vista || typeof MutationObserver === 'undefined') return;
+    new MutationObserver(function () {
+      if (vista.classList.contains('active')) cargarModelos();
+    }).observe(vista, { attributes: true, attributeFilter: ['class'] });
+  })();
   // (fin de XEN · Modelos de IA)
 
   boot();

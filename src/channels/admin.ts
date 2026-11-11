@@ -5,7 +5,7 @@ import type { Hono } from 'hono';
 import type { HttpBindings } from '@hono/node-server';
 import { streamSSE } from 'hono/streaming';
 import { business, env } from '../config.js';
-import { engineStatus, roleLabel } from '../llm/engines.js';
+import { engineStatus, roleLabel, ROLES } from '../llm/engines.js';
 import { countDocs, getDb } from '../rag/store.js';
 import { borrarNotaInterna, guardarNotaInterna, notasInternas } from '../rag/interno.js';
 import { retratoDelNegocio } from '../rag/retrato.js';
@@ -36,7 +36,8 @@ import { cuantas as cuantasImportadas, importarChat, importarMensajes, quitar as
 import { armar as armarRespaldo, restaurar as restaurarRespaldo, revisar as revisarRespaldo } from '../crm/respaldo.js';
 import { join, resolve } from 'node:path';
 import { ajustesDe, ajustesEnDisco, alDia, comoSeLee, guardar as guardarAjustes, puedeReiniciarse, ZONAS_HORARIAS } from '../ajustes.js';
-import { apagarClaveDelCliente, claveDelCliente, encenderClaveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente } from '../motores.js';
+import { apagarClaveDelCliente, claveDelCliente, CUIDADO, encenderClaveDelCliente, guardarMotores, motoresDe, ponerClaveDelCliente, quitarClaveDelCliente, ROL_NOMBRE, ROL_QUE_HACE } from '../motores.js';
+import { esProveedor, guardarProveedor, probarProveedor, proveedores, quitarLlave } from '../proveedores.js';
 import { ponerTope, presupuesto } from '../crm/presupuesto.js';
 import { frenoDelCandado } from './candado.js';
 import { aplicarFicha, camposEditables, CAMPOS_DE_CONTACTO } from '../crm/ficha.js';
@@ -801,6 +802,52 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'no pude guardar la retención' }, 400);
     }
+  });
+
+  /**
+   * Los proveedores de IA (src/proveedores.ts): conectar OpenAI, Claude, Apple, Ollama, LM Studio o una API
+   * compatible desde Configuración › Modelos de IA.
+   *
+   * 🪤 Van bajo `motores/` a propósito, como el tope: la consola reserva `motores` a quien administra aiva (un asesor
+   * no llega ni para leer) y el candado no deja leerlo. Y una llave NUNCA sale por aquí: solo si está puesta y una
+   * pista. Lo guardado se aplica al reiniciar, y cada respuesta lo dice (`hayQueReiniciar`).
+   */
+  app.get('/admin/api/motores/proveedores', (c) =>
+    c.json({
+      proveedores: proveedores(),
+      // Cómo se llama cada rol y qué hace, para elegir sin adivinar (los mismos textos de la consola).
+      roles: ROLES.map((rol) => ({ rol, nombre: ROL_NOMBRE[rol], queHace: ROL_QUE_HACE[rol], ...(CUIDADO[rol] ? { cuidado: CUIDADO[rol] } : {}) })),
+      puedeReiniciarse: motoresDe().puedeReiniciarse,
+    }),
+  );
+
+  app.put('/admin/api/motores/proveedores/:id', async (c) => {
+    const id = c.req.param('id');
+    if (!esProveedor(id)) return c.json({ error: 'ese proveedor no existe' }, 404);
+    try {
+      const b = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+      const texto = (k: string) => (typeof b[k] === 'string' ? (b[k] as string) : undefined);
+      return c.json({ ok: true, ...(await guardarProveedor(id, { llave: texto('llave'), url: texto('url'), modelo: texto('modelo'), nombre: texto('nombre') })) });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'no pude guardarlo' }, 400);
+    }
+  });
+
+  app.delete('/admin/api/motores/proveedores/:id/llave', (c) => {
+    const id = c.req.param('id');
+    if (!esProveedor(id)) return c.json({ error: 'ese proveedor no existe' }, 404);
+    try {
+      return c.json({ ok: true, ...quitarLlave(id) });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'no pude quitarla' }, 400);
+    }
+  });
+
+  // Prueba lo guardado sin gastar: pregunta qué modelos hay, no genera nada.
+  app.post('/admin/api/motores/proveedores/:id/probar', async (c) => {
+    const id = c.req.param('id');
+    if (!esProveedor(id)) return c.json({ error: 'ese proveedor no existe' }, 404);
+    return c.json(await probarProveedor(id));
   });
 
   app.put('/admin/api/motores/tope', async (c) => {

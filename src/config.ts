@@ -36,6 +36,10 @@ const list = (v: string | undefined) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
+/** Los motores que se pueden nombrar en el `.env`. `lmstudio` y `compat` son APIs compatibles con OpenAI. */
+type MotorConf = 'ollama' | 'apple' | 'openai' | 'anthropic' | 'lmstudio' | 'compat';
+const MOTORES_CONF: MotorConf[] = ['ollama', 'apple', 'openai', 'anthropic', 'lmstudio', 'compat'];
+
 export const env = {
   ollamaUrl: (process.env.OLLAMA_URL ?? 'http://localhost:11434').replace(/\/$/, ''),
   chatModel: process.env.CHAT_MODEL || 'gemma4:e4b',
@@ -73,9 +77,9 @@ export const env = {
   historyTurns: num(process.env.HISTORY_TURNS, 8),
 
   // Motores por rol. 'router' reparte por tipo de turno entre LIGHT_ENGINE y HEAVY_ENGINE;
-  // LLM_ENGINE=ollama|apple|openai fuerza uno solo para todo. `anthropic` también vale aquí, pero es para probar a
-  // Claude con las frases de siempre (pnpm test:scenarios --engine=anthropic): en el día a día Claude es el respaldo.
-  llmEngine: (['router', 'ollama', 'apple', 'openai', 'anthropic'].includes(process.env.LLM_ENGINE ?? '') ? process.env.LLM_ENGINE : 'router') as
+  // LLM_ENGINE=ollama|apple|openai|lmstudio|compat fuerza uno solo para todo. `anthropic` también vale aquí: Claude
+  // se puede poner a hacer un rol (Configuración › Modelos de IA) y sigue siendo el respaldo de los demás.
+  llmEngine: (MOTORES_CONF.includes((process.env.LLM_ENGINE ?? '') as MotorConf) || process.env.LLM_ENGINE === 'router' ? process.env.LLM_ENGINE : 'router') as
     | 'router'
     | MotorConf,
   lightEngine: engineName(process.env.LIGHT_ENGINE, 'apple'),
@@ -121,6 +125,18 @@ export const env = {
     analysis: process.env.ANTHROPIC_MODEL_ANALYSIS || '',
   },
 
+  // LM Studio: un servidor local compatible con OpenAI (Developer › Start server). No pide llave y sirve el modelo
+  // que esté cargado, que hay que nombrar (LMSTUDIO_MODEL). Corre en la máquina, así que no cuesta: va con los de
+  // la máquina en la cadena de respaldo, antes que los de pago.
+  lmstudioUrl: (process.env.LMSTUDIO_URL || 'http://localhost:1234/v1').replace(/\/$/, ''),
+  lmstudioModel: process.env.LMSTUDIO_MODEL || '',
+  // Cualquier otra API compatible con OpenAI (OpenRouter, Groq, Together, un vLLM propio…): su URL, su llave (si la
+  // pide) y su modelo. Se trata como de pago: no se sabe lo que cobra, así que con el tope alcanzado no entra.
+  compatUrl: (process.env.COMPAT_URL || '').replace(/\/$/, ''),
+  compatApiKey: process.env.COMPAT_API_KEY || '',
+  compatModel: process.env.COMPAT_MODEL || '',
+  compatNombre: process.env.COMPAT_NOMBRE || '',
+
   // Tablero de administración
   adminToken: process.env.ADMIN_TOKEN || '',
 
@@ -130,10 +146,8 @@ export const env = {
   calendarBusyIcs: list(process.env.CALENDAR_BUSY_ICS),
 };
 
-type MotorConf = 'ollama' | 'apple' | 'openai' | 'anthropic';
-
 function engineName(v: string | undefined, def: MotorConf): MotorConf {
-  return v === 'ollama' || v === 'apple' || v === 'openai' || v === 'anthropic' ? v : def;
+  return MOTORES_CONF.includes(v as MotorConf) ? (v as MotorConf) : def;
 }
 
 // ---------- Configuración del negocio (aiva.config.json) ----------

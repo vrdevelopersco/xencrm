@@ -11,7 +11,8 @@
 import { env } from './config.js';
 import { quitarEnvValues, setEnvValues } from './envfile.js';
 import { readFileSync } from 'node:fs';
-import { ENGINES, ROLES, engineStatus, probarMotor, type Engine, type Role } from './llm/engines.js';
+import { ASIGNABLES, ROLES, engineStatus, type Engine, type Role } from './llm/engines.js';
+import { sondearGuardado } from './proveedores.js';
 
 /** Cómo se llama cada rol para quien no escribió el programa. */
 export const ROL_NOMBRE: Record<Role, string> = {
@@ -48,6 +49,8 @@ export interface MotorDeRol {
   motor: Engine;
   /** El modelo de OpenAI de ese rol. Vacío = el general (OPENAI_MODEL). Solo cuenta si el motor es openai. */
   modelo: string;
+  /** El modelo de Claude de ese rol (ANTHROPIC_MODEL_<ROL>). Vacío = el general. Cuenta si el motor es anthropic. */
+  modeloClaude: string;
   /** Esfuerzo de razonamiento. Vacío = el que traiga el modelo. */
   esfuerzo: string;
 }
@@ -60,11 +63,25 @@ export interface Motores {
   disponibles: Record<Engine, { available: boolean; reason?: string }>;
   /** El modelo general de OpenAI, para los roles que no tienen uno propio. */
   modeloGeneral: string;
+  /** Y el de Claude. */
+  modeloClaudeGeneral: string;
+  /** Los motores que se pueden poner en un rol. */
+  asignables: Engine[];
   /** Si hay quien lo vuelva a levantar: sin eso, reiniciar deja al cliente sin atender a nadie. */
   puedeReiniciarse: boolean;
 }
 
 const ESFUERZOS = ['', 'none', 'minimal', 'low', 'medium', 'high'];
+
+/** Cómo se llama cada motor en un mensaje para quien no escribió el programa. */
+const NOMBRE_MOTOR: Partial<Record<Engine, string>> = {
+  ollama: 'Ollama',
+  apple: 'Apple',
+  openai: 'OpenAI',
+  anthropic: 'Claude',
+  lmstudio: 'LM Studio',
+  compat: 'la API compatible',
+};
 
 const VAR_MOTOR: Record<Role, string> = {
   light: 'LIGHT_ENGINE',
@@ -77,6 +94,12 @@ const VAR_MODELO: Record<Role, string> = {
   heavy: 'OPENAI_MODEL_HEAVY',
   gate: 'OPENAI_MODEL_GATE',
   analysis: 'OPENAI_MODEL_ANALYSIS',
+};
+const VAR_MODELO_CLAUDE: Record<Role, string> = {
+  light: 'ANTHROPIC_MODEL_LIGHT',
+  heavy: 'ANTHROPIC_MODEL_HEAVY',
+  gate: 'ANTHROPIC_MODEL_GATE',
+  analysis: 'ANTHROPIC_MODEL_ANALYSIS',
 };
 const VAR_ESFUERZO: Record<Role, string> = {
   light: 'OPENAI_EFFORT_LIGHT',
@@ -96,17 +119,20 @@ export function motoresDe(): Motores {
       rol,
       motor: delRol(rol),
       modelo: env.openaiRoleModels[rol],
+      modeloClaude: env.anthropicRoleModels[rol],
       esfuerzo: env.openaiRoleEffort[rol],
     })),
     disponibles: engineStatus(),
     modeloGeneral: env.openaiModel,
+    modeloClaudeGeneral: env.anthropicModel,
+    asignables: ASIGNABLES,
     puedeReiniciarse: Boolean(process.env.AIVA_SUPERVISADO || process.env.pm_id),
   };
 }
 
 export interface CambioMotores {
   reparto?: 'router' | Engine;
-  roles?: { rol: Role; motor?: Engine; modelo?: string; esfuerzo?: string }[];
+  roles?: { rol: Role; motor?: Engine; modelo?: string; modeloClaude?: string; esfuerzo?: string }[];
 }
 
 /** Preguntarle a un motor si respondería. Entra por parámetro para que la prueba decida qué contesta. */
@@ -120,7 +146,7 @@ export type Sondeo = (motor: Engine) => Promise<{ available: boolean; reason?: s
  * cliente sin atender a nadie hasta que alguien entre por ssh a deshacerlo — y como solo se ve al reiniciar,
  * nadie relaciona una cosa con la otra. Antes de escribir nada se dice que no y por qué.
  */
-export async function guardarMotores(cambio: CambioMotores, sondeo: Sondeo = probarMotor): Promise<{ motores: Motores; hayQueReiniciar: boolean }> {
+export async function guardarMotores(cambio: CambioMotores, sondeo: Sondeo = sondearGuardado): Promise<{ motores: Motores; hayQueReiniciar: boolean }> {
   const valores: Record<string, string> = {};
   // Se sondea de verdad, y no se mira `engineStatus()`, por el círculo cerrado que explica `probarMotor()`: ahí
   // Apple sale como no disponible porque nadie lo usa, así que nunca se podría empezar a usar. Y se guarda el
@@ -131,10 +157,10 @@ export async function guardarMotores(cambio: CambioMotores, sondeo: Sondeo = pro
   // una prueba que pasa o falla según dónde se corra, que es una prueba que no dice nada.
   const sondeado = new Map<Engine, { available: boolean; reason?: string }>();
   const comprobar = async (motor: Engine, donde: string) => {
-    if (!ENGINES.includes(motor)) throw new Error(`"${motor}" no es un motor que yo conozca`);
+    if (!ASIGNABLES.includes(motor)) throw new Error(`"${motor}" no es un motor que yo conozca`);
     if (!sondeado.has(motor)) sondeado.set(motor, await sondeo(motor));
     const e = sondeado.get(motor)!;
-    if (!e.available) throw new Error(`${donde}: ${motor} no responde aquí${e.reason ? ` (${e.reason})` : ''}. No lo guardo: dejaría al cliente sin contestar.`);
+    if (!e.available) throw new Error(`${donde}: ${NOMBRE_MOTOR[motor] ?? motor} no responde aquí${e.reason ? ` (${e.reason.replace(/\.$/, '')})` : ''}. No lo guardo: dejaría al cliente sin contestar.`);
   };
 
   if (cambio.reparto !== undefined) {
@@ -156,6 +182,12 @@ export async function guardarMotores(cambio: CambioMotores, sondeo: Sondeo = pro
       if (/[\s#"']/.test(m)) throw new Error(`El modelo de ${ROL_NOMBRE[r.rol]} no puede llevar espacios ni comillas`);
       if (m.length > 80) throw new Error(`El modelo de ${ROL_NOMBRE[r.rol]} es demasiado largo`);
       valores[VAR_MODELO[r.rol]] = m;
+    }
+    if (r.modeloClaude !== undefined) {
+      const m = r.modeloClaude.trim();
+      if (/[\s#"']/.test(m)) throw new Error(`El modelo de Claude de ${ROL_NOMBRE[r.rol]} no puede llevar espacios ni comillas`);
+      if (m.length > 80) throw new Error(`El modelo de Claude de ${ROL_NOMBRE[r.rol]} es demasiado largo`);
+      valores[VAR_MODELO_CLAUDE[r.rol]] = m;
     }
     if (r.esfuerzo !== undefined) {
       if (!ESFUERZOS.includes(r.esfuerzo)) throw new Error(`"${r.esfuerzo}" no es un esfuerzo válido`);
