@@ -5,6 +5,7 @@
 import { getDb } from '../rag/store.js';
 import { addEvent, contactNumber, getContact, ponerNumerosAlDia, STAGES, type Contact, type Stage } from './contacts.js';
 import { emitEvent } from './events.js';
+import { unirCuentasClave } from './cuentas-clave.js';
 
 const TABLES = ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses', 'llm_usage'];
 
@@ -59,6 +60,8 @@ export function mergeContacts(keepId: string, dropId: string, by?: string): Cont
   db.exec('BEGIN');
   try {
     for (const t of TABLES) db.prepare(`UPDATE ${t} SET user_id = ? WHERE user_id = ?`).run(keepId, dropId);
+    // 🪤 La cuenta clave no va en TABLES: su llave es la ficha, y si las dos lo eran, mover la de la otra chocaría.
+    unirCuentasClave(keepId, dropId);
     const data = { ...drop.data, ...keep.data }; // lo de la ficha que se conserva manda
     const tags = [...new Set([...keep.tags, ...drop.tags])];
     const notes = [keep.notes, drop.notes].map((n) => n.trim()).filter(Boolean).join('\n');

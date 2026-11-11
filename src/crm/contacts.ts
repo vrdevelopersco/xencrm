@@ -373,7 +373,8 @@ export function deleteContact(id: string): boolean {
   if (!c) return false;
   db.exec('BEGIN');
   try {
-    for (const t of ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses', 'llm_usage']) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(id);
+    // cuentas_clave: una ficha borrada no sigue siendo cuenta clave de nadie (crm/cuentas-clave.ts).
+    for (const t of ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses', 'llm_usage', 'cuentas_clave']) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(id);
     db.prepare('DELETE FROM users WHERE id = ?').run(id);
     db.exec('COMMIT');
   } catch (err) {
@@ -386,7 +387,7 @@ export function deleteContact(id: string): boolean {
 
 export function purgeContact(userId: string) {
   const db = getDb();
-  for (const t of ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses']) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(userId);
+  for (const t of ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses', 'cuentas_clave']) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(userId);
   db.prepare(
     "UPDATE users SET name = NULL, phone = NULL, stage = 'nuevo', stage_locked = 0, score = 0, score_factors = '[]', sentiment = NULL, human_mode = 0, data = '{}', tags = '[]', notes = '', summary = NULL, unread = 0, last_message_at = NULL WHERE id = ?",
   ).run(userId);

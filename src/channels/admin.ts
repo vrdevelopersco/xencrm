@@ -84,6 +84,7 @@ import type { Contact } from '../crm/contacts.js';
 import { cabecerasDeSiempre, paginaConCsp, soloDesdeAqui } from '../cabeceras.js';
 import { contextoDelPaso, proximoPaso } from '../crm/proximo.js';
 import { guardarFijados, leerFijados, reemplazarEnFijados } from '../crm/fijados.js';
+import { esCuentaClave, marcarCuentaClave, notaDeCuenta, panelKam } from '../crm/cuentas-clave.js';
 import { sentimiento } from '../crm/sentimiento.js';
 
 /**
@@ -242,6 +243,25 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     }
   });
 
+  // Las cuentas clave (KAM): el panel entero (cuentas, salud con su porqué, candidatas) y marcar/quitar con su plan.
+  // Ver crm/cuentas-clave.ts. Marcar es del día a día de quien vende: el candado lo deja (channels/candado.ts).
+  app.get('/admin/api/cuentas-clave', (c) => c.json(panelKam()));
+  app.put('/admin/api/contacts/:id/cuenta-clave', async (c) => {
+    const id = c.req.param('id');
+    const body = (await c.req.json().catch(() => ({}))) as { on?: unknown; nota?: unknown };
+    if (!getContact(id)) return c.json({ error: 'esa ficha no existe' }, 404);
+    if (body.on === undefined && body.nota === undefined) return c.json({ error: 'falta qué cambiar: on (marcar o quitar) o nota (el plan de cuenta)' }, 400);
+    const por = quienHace(c);
+    try {
+      let cuenta = esCuentaClave(id);
+      if (body.on !== undefined) cuenta = marcarCuentaClave(id, body.on === true, por);
+      if (body.nota !== undefined) cuenta = notaDeCuenta(id, body.nota, por);
+      return c.json({ cuenta });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  });
+
   // Dar de alta a alguien a mano: el que llegó por el local, por una llamada o con una tarjeta. Lo delicado
   // —qué dirección se le pone para que no nazca duplicada— está en crm/alta.ts, con sus pruebas.
   app.post('/admin/api/contacts', async (c) => {
@@ -283,6 +303,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       // Qué ha pasado con esta persona: si volvió, si vino a sus citas, si se le fue una venta. Ver crm/historia.ts.
       historia: (() => { const h = historiaDe(id, { etapa: contact.stage }); return { ...h, frase: enUnaFrase(h) }; })(),
       valor: valorDe(contact),
+      cuentaClave: esCuentaClave(id), // si es cuenta clave (KAM): quién la marcó, desde cuándo y su plan
     });
   });
 

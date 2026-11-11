@@ -22,6 +22,8 @@ const PUEDE_CAMBIAR: Array<[string, RegExp]> = [
   ['POST', /^contacts\/leidas$/],
   ['PATCH', /^contacts\/[^/]+$/],
   ['POST', /^contacts\/[^/]+\/(archive|snooze|merge|notas|human|presencia|reply|adjunto)$/],
+  // Marcar una cuenta clave y escribir su plan: es de quien vende, como asignar o anotar (crm/cuentas-clave.ts).
+  ['PUT', /^contacts\/[^/]+\/cuenta-clave$/],
   ['DELETE', /^contacts\/[^/]+\/notas\/[^/]+$/],
   ['POST', /^contacts\/[^/]+\/mensajes\/[^/]+\/reintentar$/],
   ['POST', /^appointments$/],
