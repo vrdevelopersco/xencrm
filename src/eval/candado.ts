@@ -132,7 +132,7 @@ check('🪤 ninguna puerta abre lo de quien administra: go() lo frena aunque lle
 const vistas = /var VISTAS_DE_QUIEN_ADMINISTRA = \{([^}]*)\}/.exec(js)?.[1] ?? '';
 check('y esas son la configuración y lo avanzado', ['guia', 'profile', 'negocio', 'agent', 'channels', 'knowledge', 'trazas'].every((v) => new RegExp(`\\b${v}: 1`).test(vistas)), vistas);
 check('🪤 Analítica, Ventas y Seguimientos no: están en el menú del modo fácil', ['analysis', 'ventas', 'seguimientos'].every((v) => !new RegExp(`\\b${v}: 1`).test(vistas)), vistas);
-check('el «Ver todo lo de aiva» de Inicio es solo para quien puede verlo', /\(mandaEnElModo\(\) \? '<button class="fx-todo" type="button" id="hoy-ver-todo">/.test(funcion('pintarResumenDelDia')));
+check('el «Ver todo XENCRM» de Inicio es solo para quien puede verlo, y solo en el modo fácil', /\(esFacil\(\) && mandaEnElModo\(\) \? '<button class="fx-todo" type="button" id="hoy-ver-todo">/.test(funcion('pintarResumenDelDia')));
 check('los avisos del sistema no le llegan a quien no puede atenderlos', /function avisoParaMi/.test(js) && /list\.filter\(avisoParaMi\)/.test(js) && /if \(!avisoParaMi\(n\)\) return;/.test(js));
 check('🪤 ni la guía de inicio de Hoy, que es toda de configuración (bryan, por ser admin, la veía)', /if \(!esAdmin\(\) \|\| enCandado\(\)\) return helpBanner\(\);/.test(funcion('bannerDeHoy')));
 check('la Ayuda no manda a pantallas cerradas', /enCandado\(\) && VISTAS_DE_QUIEN_ADMINISTRA\[x\.s\.view\]/.test(js) && /q\[2\] === 'candado' && enCandado\(\)/.test(js));

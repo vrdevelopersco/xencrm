@@ -597,7 +597,10 @@
   function enCandado() { return !mandaEnElModo() && modoDelEquipo() === 'facil'; }
   function aplicarModo() {
     var facil = esFacil();
-    mudarParaElFacil(facil);
+    // XENCRM: la piel del fácil es la de todos (data-piel="xen" viene en el <html>), así que lo que se muda para ella
+    // se queda mudado en los dos modos. El modo solo decide qué se esconde y si hay candado.
+    document.documentElement.setAttribute('data-piel', 'xen');
+    mudarParaElFacil(true);
     document.documentElement.setAttribute('data-modo', facil ? 'facil' : 'completo');
     document.documentElement.setAttribute('data-manda', mandaEnElModo() ? 'si' : 'no');
     document.documentElement.setAttribute('data-candado', enCandado() ? 'si' : 'no');
@@ -619,7 +622,7 @@
     var nuevo = esFacil() ? 'completo' : 'facil';
     try { localStorage.setItem(LLAVE('modo'), nuevo); } catch (e) {}
     trasCambiarDeModo(aplicarModo());
-    toast(nuevo === 'facil' ? 'Modo fácil: lo del día a día. Lo demás vuelve con este mismo botón.' : 'Ahora ves todo lo de aiva');
+    toast(nuevo === 'facil' ? 'Modo fácil: lo del día a día. Lo demás vuelve con este mismo botón.' : 'Ahora ves todo XENCRM');
   };
   $('modo-equipo-btn').onclick = function () {
     var nuevo = modoDelEquipo() === 'facil' ? 'completo' : 'facil';
@@ -717,9 +720,12 @@
   // ---------- el menú del modo fácil ----------
   // 🪤 Es el de Nexora, la muestra que mandó DUNOR: dos grupos y cada pantalla con su puerta, sin pestañas
   // adentro. Las mismas pantallas del completo —ninguna nueva—: lo que cambia es cómo se llega a ellas.
+  // XENCRM habla como un CRM de mensajería (SendPulse): la bandeja es la «Bandeja omnicanal» —todos los canales en
+  // un solo sitio— y cada persona en su etapa es un «trato». Mismas pantallas y mismas rutas; cambian el orden y
+  // los nombres (ver el glosario en docs/xencrm.md).
   var MENU_FACIL = [
-    { grupo: 'Principal', items: [{ view: 'today', lbl: 'Inicio', ic: 'inicio' }, { view: 'analysis', lbl: 'Analítica', ic: 'analitica' }, { view: 'inbox', lbl: 'Inbox', ic: 'inbox', n: 'fx-n-inbox' }] },
-    { grupo: 'CRM', items: [{ view: 'clientes', lbl: 'Contactos', ic: 'contacto' }, { view: 'calendar', lbl: 'Citas', ic: 'citas', n: 'fx-n-citas' }, { view: 'pipeline', lbl: 'Pipeline', ic: 'kanban' }, { view: 'ventas', lbl: 'Ventas', ic: 'dolar' }, { view: 'seguimientos', lbl: 'Seguimientos', ic: 'reloj' }] }
+    { grupo: 'Principal', items: [{ view: 'today', lbl: 'Inicio', ic: 'inicio' }, { view: 'inbox', lbl: 'Bandeja omnicanal', ic: 'inbox', n: 'fx-n-inbox' }, { view: 'analysis', lbl: 'Analítica', ic: 'analitica' }] },
+    { grupo: 'CRM', items: [{ view: 'clientes', lbl: 'Contactos', ic: 'contacto' }, { view: 'pipeline', lbl: 'Tratos', ic: 'kanban' }, { view: 'calendar', lbl: 'Citas', ic: 'citas', n: 'fx-n-citas' }, { view: 'ventas', lbl: 'Ventas', ic: 'dolar' }, { view: 'seguimientos', lbl: 'Seguimientos', ic: 'reloj' }] }
   ];
   (function armarMenuFacil() {
     var nav = $('nav-fx');
@@ -811,7 +817,7 @@
       analysis: ['Analítica', 'Cómo llega la gente, a qué horas escribe y cuánto se tarda en contestar.'],
       clientes: ['Contactos', 'Todas las personas que han hablado con ' + biz + '.'],
       calendar: ['Citas', 'La agenda de ' + biz + ': haz clic en un hueco libre para agendar.'],
-      pipeline: ['Pipeline', 'Mueve a cada persona entre etapas: arrastra la tarjeta o usa «Mover…».'],
+      pipeline: ['Tratos', 'Cada contacto en su etapa del embudo: arrastra la tarjeta o usa «Mover…».'],
       ventas: ['Ventas', 'Lo que se vendió y lo que se perdió, con el porqué.'],
       seguimientos: ['Seguimientos', 'A quién hay que escribirle y por qué.'],
       help: ['Ayuda', 'Lo esencial del tablero en dos minutos.']
@@ -1636,7 +1642,8 @@
       sections.forEach(function (s, i) { s.tono = TONOS[i] || ''; });
       // 🪤 En el modo fácil solo sale lo que tiene algo. Nueve recuadros, siete diciendo «nada pendiente», es lo
       // que hacía sentir a aiva complicado: hay que leerlos todos para descubrir que no hay que hacer nada.
-      var facil = esFacil();
+      // XENCRM: Inicio es el de la piel para todos, y esta es su fila de «lo que espera a alguien».
+      var facil = true;
       var visibles = facil ? sections.filter(function (s) { return s.n > 0; }) : sections;
       $('today').innerHTML = down + bannerDeHoy() + visibles.map(function (s) {
         return '<div class="panel" data-tono="' + s.tono + '"><h3>' + esc(s.t) + '<span class="chip">' + s.n + '</span></h3>' +
@@ -1745,7 +1752,7 @@
       '<div class="fx-caja">' + (pend.length
         ? pend.map(function (s) { return '<button data-tono="' + s.tono + '"><span>' + esc(s.t) + '</span><b>' + s.n + '</b></button>'; }).join('')
         : '<div class="nada">Nada pendiente por ahora.</div>') + '</div>' +
-      (mandaEnElModo() ? '<button class="fx-todo" type="button" id="hoy-ver-todo">Estás en el modo fácil · Ver todo lo de aiva</button>' : '');
+      (esFacil() && mandaEnElModo() ? '<button class="fx-todo" type="button" id="hoy-ver-todo">Estás en el modo fácil · Ver todo XENCRM</button>' : '');
     iconos($('fx-resumen'));
     $('fx-resumen').querySelectorAll('[data-tono]').forEach(function (b) {
       b.onclick = function () {
@@ -1836,7 +1843,7 @@
   }
   if ($('fx-serie-dias')) $('fx-serie-dias').onchange = function () { FX.dias = Number($('fx-serie-dias').value) || 7; cargarSerieFacil(); };
   var fxResize;
-  window.addEventListener('resize', function () { clearTimeout(fxResize); fxResize = setTimeout(function () { if (esFacil() && state.view === 'today') dibujarSerieFacil(); }, 150); });
+  window.addEventListener('resize', function () { clearTimeout(fxResize); fxResize = setTimeout(function () { if (state.view === 'today') dibujarSerieFacil(); }, 150); });
 
   // Dónde está cada persona hoy: una barra por etapa, en el orden del embudo del negocio.
   function pintarEtapasFacil(s) {
@@ -4418,7 +4425,7 @@
   // arriba a la vista. Pero es un diálogo modal, y lo de fuera no responde: un clic en «Citas» no hacía nada. Aquí
   // ese clic cierra la ficha y sigue hasta donde iba.
   $('dlg-perfil').addEventListener('click', function (e) {
-    if (!esFacil() || e.target !== $('dlg-perfil')) return;
+    if (e.target !== $('dlg-perfil')) return;
     var caja = $('dlg-perfil').getBoundingClientRect();
     if (e.clientX >= caja.left && e.clientX <= caja.right && e.clientY >= caja.top && e.clientY <= caja.bottom) return;
     $('dlg-perfil').close();
@@ -5388,6 +5395,22 @@
       cuadros + horas + dias + '</svg>' +
       '<div class="leyenda"><span class="muted">Lo más cargado: ' + a.max + (a.max === 1 ? ' mensaje' : ' mensajes') + ' en una hora · ' + a.total + ' en 14 días</span></div>';
   }
+
+
+  // ===== XEN · Inicio: lo nuevo del agente de Inicio (lo de antes sigue en su sitio) =====
+  // (fin de XEN · Inicio)
+
+  // ===== XEN · Bandeja omnicanal: lo nuevo del agente de la bandeja =====
+  // (fin de XEN · Bandeja omnicanal)
+
+  // ===== XEN · Contactos, ficha y tratos: lo nuevo del agente de Contactos =====
+  // (fin de XEN · Contactos, ficha y tratos)
+
+  // ===== XEN · Analítica y sentimiento: lo nuevo del agente de Analítica =====
+  // (fin de XEN · Analítica y sentimiento)
+
+  // ===== XEN · Modelos de IA: lo nuevo del agente de Modelos =====
+  // (fin de XEN · Modelos de IA)
 
   boot();
 })();

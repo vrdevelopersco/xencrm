@@ -38,8 +38,8 @@ console.log('— El menú es el de la muestra');
 const menu = js.slice(js.indexOf('var MENU_FACIL = ['), js.indexOf('(function armarMenuFacil()'));
 const grupos = [...menu.matchAll(/grupo: '([^']+)', items: \[([^\]]*)\]/g)].map((g) => ({ grupo: g[1], items: [...g[2]!.matchAll(/view: '([a-z]+)', lbl: '([^']+)'/g)].map((m) => [m[1], m[2]]) }));
 check('dos grupos, como Nexora: Principal y CRM', grupos.map((g) => g.grupo).join(',') === 'Principal,CRM', JSON.stringify(grupos));
-check('Principal: Inicio, Analítica, Inbox', grupos[0]?.items.map((x) => x[1]).join(',') === 'Inicio,Analítica,Inbox');
-check('CRM: Contactos, Citas, Pipeline, Ventas, Seguimientos', grupos[1]?.items.map((x) => x[1]).join(',') === 'Contactos,Citas,Pipeline,Ventas,Seguimientos');
+check('Principal: Inicio, Bandeja omnicanal, Analítica (el vocabulario de un CRM de mensajería)', grupos[0]?.items.map((x) => x[1]).join(',') === 'Inicio,Bandeja omnicanal,Analítica');
+check('CRM: Contactos, Tratos, Citas, Ventas, Seguimientos', grupos[1]?.items.map((x) => x[1]).join(',') === 'Contactos,Tratos,Citas,Ventas,Seguimientos');
 const vistas = grupos.flatMap((g) => g.items.map((x) => x[0]!));
 check('🪤 cada puerta lleva a una pantalla que existe (ninguna nueva: son las de siempre)', vistas.every((v) => html.includes(`id="view-${v}"`)), vistas.join(','));
 const cerradas = /var VISTAS_DE_QUIEN_ADMINISTRA = \{([^}]*)\}/.exec(js)?.[1] ?? '';
@@ -109,7 +109,7 @@ const mudanzas = [...mudar.matchAll(/\['([a-z-]+)', '([a-z-]+)'/g)].map((m) => [
 check('el buscador de Contactos y los controles del calendario', mudanzas.map((m) => m[0]).join(',') === 'cli-q,cal-prev,cal-next,cal-today,cal-label,cal-sede,cal-seg', mudanzas.join(' '));
 check('todo lo que se muda y su destino existen', mudanzas.every(([a, b]) => html.includes(`id="${a}"`) && html.includes(`id="${b}"`)));
 check('🪤 se muda, no se copia: un solo buscador (dos se desincronizan)', (html.match(/id="cli-q"/g) ?? []).length === 1 && !/cloneNode/.test(mudar));
-check('lo llama aplicarModo, así que también vuelve al quitar el modo en vivo', /function aplicarModo\(\) \{\s*var facil = esFacil\(\);\s*mudarParaElFacil\(facil\);/.test(js));
+check('🪤 XENCRM: lo llama aplicarModo siempre con la piel puesta, así que quitar el modo fácil no lo devuelve al completo', /function aplicarModo\(\) \{[\s\S]{0,400}?mudarParaElFacil\(true\);/.test(js));
 // La mudanza de verdad, con un documento de juguete: va, vuelve al mismo sitio y vuelve a ir.
 type Nodo = { id: string; parentNode: Nodo | null; hijos: Nodo[]; previousSibling: Nodo | null; nextSibling: Nodo | null; firstChild: Nodo | null; insertBefore(n: Nodo, ref: Nodo | null): void; appendChild(n: Nodo): void };
 const nodo = (id: string): Nodo => {
@@ -138,11 +138,13 @@ check('🪤 y al volver al completo, cada una en su sitio exacto (no al final de
 correr(true); correr(false); correr(false);
 check('ir y volver varias veces no deja nada fuera de lugar', orden() === antes && !herr.hijos.length && !izq.hijos.length, orden());
 
-console.log('— El completo no cambia');
-const bloque = html.slice(html.indexOf('/* ===== Modo fácil: el aspecto de Nexora ===== */'), html.indexOf('/* ===== fin del modo fácil ===== */'));
-check('el modo fácil tiene su bloque de estilos', bloque.length > 1000);
-// Cada regla del bloque, sin los @media que solo la envuelven: o va detrás de :root[data-modo="facil"], o es de una
-// pieza que solo existe en el fácil (fx-, nav-fx, solo-facil). Una regla suelta de aquí cambiaría también el completo.
+console.log('— La piel de XENCRM vive en su bloque, y el modo fácil ya no la cambia');
+// XENCRM: la piel del fácil es la de todos. Va detrás de :root[data-piel="xen"] (que el <html> trae puesto) y el modo
+// fácil solo esconde lo avanzado. Una regla suelta de aquí se le escaparía a la piel y tocaría lo de antes.
+const bloque = html.slice(html.indexOf('/* ===== XENCRM: la piel de todos'), html.indexOf('/* ===== fin de la piel de XENCRM ===== */'));
+check('la piel tiene su bloque de estilos', bloque.length > 1000);
+check('y el <html> la trae puesta de fábrica', /<html lang="es" data-theme="light" data-piel="xen">/.test(html) && /setAttribute\('data-piel', 'xen'\)/.test(js));
+check('🪤 el modo fácil no cambia el aspecto: dentro del bloque no hay ni una regla por data-modo', !/data-modo/.test(bloque.replace(/\/\*[\s\S]*?\*\//g, '')));
 const sinComentarios = bloque.replace(/\/\*[\s\S]*?\*\//g, '');
 const selectores: string[] = [];
 const recorrer = (css: string) => {
@@ -159,13 +161,13 @@ const recorrer = (css: string) => {
   }
 };
 recorrer(sinComentarios);
-const sueltos = selectores.filter((sel) => !/^:root\[data-modo="facil"\]/.test(sel) && !/^:root:not\(\[data-modo="facil"\]\)/.test(sel) && !/^[.#](fx-|nav-fx|solo-facil)/.test(sel));
-check(`🪤 ninguna de sus ${selectores.length} reglas toca el completo`, selectores.length > 100 && !sueltos.length, sueltos.slice(0, 8).join(' | '));
-check('lo del fácil no se ve en el completo', /:root:not\(\[data-modo="facil"\]\) \.solo-facil\{display:none!important\}/.test(html));
+const sueltos = selectores.filter((sel) => !/^:root\[data-piel="xen"\]/.test(sel) && !/^:root:not\(\[data-piel="xen"\]\)/.test(sel) && !/^[.#](fx-|nav-fx|solo-facil)/.test(sel));
+check(`🪤 ninguna de sus ${selectores.length} reglas se sale de la piel`, selectores.length > 100 && !sueltos.length, sueltos.slice(0, 8).join(' | '));
+check('lo de la piel solo se ve con la piel puesta', /:root:not\(\[data-piel="xen"\]\) \.solo-facil\{display:none!important\}/.test(html));
 const conClaseFacil = [...html.matchAll(/<[a-z]+\b[^>]*class="([^"]*\bfx-[^"]*)"[^>]*>/g)].map((m) => m[0]);
 check('y todo lo de la piel nueva lleva solo-facil o vive dentro de algo que lo lleva', /class="fx-marca solo-facil"/.test(html) && /class="nav-fx solo-facil"/.test(html) && /class="fx-top solo-facil"/.test(html) && /class="fx-kpis solo-facil"/.test(html), String(conClaseFacil.length));
-check('la letra del fácil (Inter) se pide junto a la del completo, en un solo enlace', /family=Figtree:[^"]*&family=Inter:/.test(html));
-check('y tiene sus colores para el tema oscuro', /:root\[data-modo="facil"\]\[data-theme=dark\]\{/.test(bloque));
+check('las dos letras de XENCRM (Bricolage Grotesque para títulos, Figtree para leer) en un solo enlace', /family=Bricolage\+Grotesque:[^"]*&family=Figtree:/.test(html));
+check('y tiene sus colores para el tema oscuro', /:root\[data-piel="xen"\]\[data-theme=dark\]\{/.test(bloque));
 
 console.log('— Las piezas de la barra de arriba abren lo que ya había');
 const delYo = [...html.matchAll(/data-yo="([a-z-]+)"/g)].map((m) => m[1]!);
