@@ -14,7 +14,12 @@ aiva no cambió: su último checkpoint, el del 10-nov, sigue valiendo para ~/pro
 identidad propia y el vocabulario de un CRM de mensajería; Inicio con el copiloto XEN; la Bandeja omnicanal; Contactos,
 la ficha, Tratos y Citas al estilo SendPulse; Analítica con el sentimiento por emojis y la voz «por desarrollar»;
 Configuración › Modelos de IA (OpenAI, Anthropic, Apple FM, Ollama, LM Studio y cualquier compatible con OpenAI); y el
-renombre a XENCRM de la consola, la portada, el README y los textos. Batería: 2794 bien, 0 fallas.
+renombre a XENCRM de la consola, la portada, el README y los textos. Batería de entonces: 2794 bien, 0 fallas.
+
+**La suite (segunda ronda)**: el menú se ordena como Dynamics 365 (Mi trabajo · Clientes · Ventas · Rendimiento, con
+el cambio de área a Configuración) y hay cuatro pantallas nuevas: Embudo (con el filtrado y las vistas guardadas en
+Contactos y Tratos), KPIs y metas, Cuentas clave (KAM) y Optimización de ventas. Detalle en `xencrm.md` › «La suite».
+Batería: 3069 bien, 0 fallas.
 
 **Cómo verlo en local, sin tocar nada real**: una base aparte y sin llaves —
 `DB_PATH=<carpeta temporal>/demo.db PORT=3711 ADMIN_TOKEN=<inventado> OPENAI_API_KEY= ANTHROPIC_API_KEY=

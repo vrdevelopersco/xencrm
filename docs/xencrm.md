@@ -164,9 +164,34 @@ nombre no cambia el color). `test:bandeja` vigila que se definan una sola vez y 
 Pruebas nuevas: `test:bandeja`, `test:contactos`, `test:sentimiento`, `test:modelos`. Batería completa al unir:
 2794 bien, 0 fallas.
 
+## La suite (2026-11-11, segunda ronda)
+
+Sobre el mapa de Dynamics, cuatro pantallas nuevas, hechas en paralelo y unidas en `xencrm`. Todas se calculan en el
+servidor sobre lo guardado, **sin modelo y sin red**, y lo que no se sabe se dice («—», «Sin precios», «poca
+evidencia»), nunca un cero inventado.
+
+| Pantalla | Qué hace | Ruta y archivo |
+|---|---|---|
+| **Embudo** | Cuántos llegaron a cada etapa (de la historia de cambios de etapa), qué parte pasa a la siguiente, cuántos hay hoy y cuánto valen; «Aquí se quedan más» con 3 o más; dónde se caen los perdidos y por qué. Tocar una etapa abre Tratos filtrado | `GET /admin/api/embudo` · `crm/embudo.ts` |
+| **Filtrado** | En Contactos, Tratos y Embudo: vistas del sistema con su número (Todos, Abiertos, Mis tratos, Sin asignar, Calientes, Con cita, Ganados y Perdidos este mes), panel Filtros (etapa, asignado, canal, temperatura en completo, valor, última actividad, dato captado), condiciones como píldoras con ×, y **Guardar vista** (hasta 20, en el navegador de cada quien). Tratos gana Tablero \| Lista | en el tablero |
+| **KPIs y metas** | Diez KPIs del periodo (7 · 30 · 90 días) contra el anterior; metas por semana o mes con su barra, la raya del ritmo de hoy y «A tiempo / Atrasada / Cumple»; «Por persona» (lo ganado es de quien tiene asignado el contacto; las respuestas, de quien las escribió; el agente de IA en su fila). Las metas solo las cambia quien administra | `GET /admin/api/kpis`, `GET/PUT /admin/api/metas` (settings `kpis.metas`) · `crm/kpis.ts` |
+| **Cuentas clave** (KAM) | La marca de cuenta clave con su plan de cuenta (quién y cuándo), en tarjetas con KAM, valor, último trato, ánimo e interés y la **salud** (Sana · Atención · En riesgo) con su porqué; las candidatas con sus razones; la estrella en la ficha. Marcar y el plan entran en lo que el candado deja cambiar (es del que vende) | `GET /admin/api/cuentas-clave`, `PUT /admin/api/contacts/:id/cuenta-clave` · tabla `cuentas_clave` · `crm/cuentas-clave.ts` |
+| **Optimización de ventas** | Catorce reglas fijas: dónde se caen, estancados, seguimientos, lo que el asistente prometió verificar, quien quiere comprar y está molesto, respuestas fuera del acuerdo, si contestar rápido vende más, motivos de pérdida, objeciones, horas y canales… Cada hallazgo con su cifra y su base («6 de 15»), por qué importa, qué hacer y su botón; la tabla de estancados con «Retomar» | `GET /admin/api/optimizacion` · `crm/optimizacion.ts`, `crm/resultados.ts` |
+
+- 🪤 **Tres cálculos de «cuándo se cerró un trato»**: KPIs, Ventas/Optimización y el Embudo lo tenían cada uno.
+  KPIs y Ventas usan ahora `cuandoPasoA` (`crm/resultados.ts`); el Embudo lee la historia de una vez y, sin
+  historia, dice «no se sabe» en vez de usar la última visita (a propósito).
+- 🪤 **En una tabla, el `max-width` de una celda no limita nada**: Contactos se cortaba a 1440 en cuanto había
+  valores. Se limita lo de adentro de cada celda y, por debajo de 1600 px, la columna Datos se va.
+- Pruebas nuevas: `test:embudo`, `test:kpis`, `test:kam`, `test:optimizacion`. Batería completa: 3069 bien, 0 fallas.
+
 ### Lo que queda abierto
 
 - La ficha como página no tiene «⋯»: el menú contextual de siempre cae debajo del diálogo.
+- Cuentas clave no se actualiza en vivo (se recarga al abrirla y tras cada acción); sus umbrales de 21 y 45 días están
+  fijos; quitar y volver a marcar reinicia el «desde».
+- KPIs: la asistencia cuenta solo citas pasadas y marcadas (las sin marcar se dicen aparte).
+- Optimización: la regla de horario cuenta por horas enteras.
 - El aviso de nota del panel (`chat-nota`) sigue además de la pestaña «Nota interna»: las pruebas de borradores lo
   vigilan. Unificarlo es lo siguiente en la bandeja.
 - El modelo de Ollama no se cambia desde Modelos de IA (`CHAT_MODEL` es de toda la máquina).

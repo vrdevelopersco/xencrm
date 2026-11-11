@@ -9,6 +9,23 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-11-11
 
+### La suite, como Dynamics 365: mapa, embudo, filtrado, KPIs, cuentas clave y optimización · `0e8d3fc` … `e7e9f22`
+El usuario: «Organiza el menú como Dynamics 365. Embudo, filtrado, suite completa CRM, optimización de ventas, KPIs,
+panel KAM… XenCRM quiero que precisamente evolucione».
+- **El mapa** (`0e8d3fc`): Recientes y Fijados arriba; Mi trabajo, Clientes, Ventas y Rendimiento; el cambio de área
+  (Ventas ⇄ Configuración) abajo; el ≡ que lo contrae. 🪤 Dos fallos que salieron en Chrome: armar el menú antes de
+  declarar lo que estaba plegado (una `var` de más abajo, el arranque entero se caía) y el ícono del ≡ definido
+  después de la primera pasada de íconos (el botón salía vacío).
+- **Cuatro agentes en paralelo** sobre esos cimientos: Cuentas clave (`c300e73`), KPIs y metas (`439942d`),
+  Optimización de ventas (`b663de7`) y Embudo y filtrado (`6df15f6`). Una sola unión chocó, en `admin.ts`: el de
+  Optimización había movido `/ventas` y `/seguimientos` a `crm/resultados.ts` y el del Embudo puso su ruta encima
+  del cuerpo viejo. Los worktrees volvieron a nacer sobre `main`; cada agente se movió a `0e8d3fc` porque se le dijo.
+- **Al integrar**: una sola regla para «cuándo se cerró» (`7207639`); Contactos cortado a 1440 y el ícono invisible
+  de «Abrir chat» (`e7e9f22`).
+- Comprobado: batería completa 3069 bien, 0 fallas; `tsc` limpio; las quince pantallas en Chrome, como administrador,
+  a 1440 (claro y oscuro) y a 390, sin errores de JavaScript ni desborde. Capturas en
+  `capturas/xencrm-next-evolution/`.
+
 ### Renombre completo: también lo de adentro dice XENCRM · `cc2bc9a`
 El primer renombre dejó a propósito los nombres internos (variables, archivos, galleta, cabeceras) para no romper
 datos ni despliegues. El usuario lo corrigió: «reemplaza todo a xencrm, ya que es una evolución del mismo». Ahora
