@@ -6931,6 +6931,180 @@
   // (fin de XEN · Panel KAM)
 
   // ===== XEN · Optimización de ventas: lo nuevo del agente de optimización (alAbrir('optimizacion', …)) =====
+  // Dónde se pierden ventas y qué hacer distinto (la idea de los «insights» de Dynamics 365), pero SIN modelo: el
+  // servidor aplica reglas fijas sobre los datos de verdad (crm/optimizacion.ts) y aquí solo se pintan. Ninguna
+  // frase se inventa en el navegador, y cada cifra lleva su base («2 de 5»).
+  //
+  // 🪤 No lleva el violeta de la IA: esto no lo dice ningún modelo, son reglas. El violeta en una pantalla de reglas
+  // haría creer que XENCRM «opina», y la gente le daría a estas cifras el crédito (o la desconfianza) equivocado.
+  var XO = { dias: 30, datos: null, pide: 0 };
+  try { XO.dias = [7, 30, 90].indexOf(Number(localStorage.getItem(LLAVE('xo.dias')))) >= 0 ? Number(localStorage.getItem(LLAVE('xo.dias'))) : 30; } catch (e) {}
+  var XO_PRIORIDAD = {
+    alta: { t: 'alta', ic: 'alerta', uno: 'urge', varios: 'urgen' },
+    media: { t: 'media', ic: 'objetivo', uno: 'importa', varios: 'importan' },
+    baja: { t: 'baja', ic: 'analitica', uno: 'para tener en cuenta', varios: 'para tener en cuenta' }
+  };
+  /** Las pantallas de configuración no se abren con el candado: el botón no ofrece una puerta cerrada. */
+  function xoPuedeIr(ir) { return Boolean(ir) && !(ir.soloAdmin && enCandado()); }
+  function xoEsqueleto() {
+    return '<div class="xo-resumen xo-esq" aria-hidden="true"><i></i><i></i></div>' +
+      '<div class="xo-hallazgos">' + [1, 2, 3].map(function () { return '<div class="xo-h xo-esq" aria-hidden="true"><i></i><i></i><i></i></div>'; }).join('') + '</div>' +
+      '<span class="sr-only">Buscando dónde se pierden ventas…</span>';
+  }
+  function pintarDiasOptimizacion() {
+    Array.prototype.forEach.call(($('xo-dias') || { children: [] }).children, function (b) {
+      var on = Number(b.getAttribute('data-d')) === XO.dias;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+  function xoError(caja, porque) {
+    caja.innerHTML = '<div class="xo-vacio xo-error" role="alert"><b>No se pudo revisar dónde se pierden ventas</b><span>' + esc(porque) +
+      ' No se cambió nada.</span><button class="btn" type="button" id="xo-reintentar">Volver a intentar</button></div>';
+    $('xo-reintentar').onclick = cargarOptimizacion;
+  }
+  function cargarOptimizacion() {
+    var caja = $('xo-opt');
+    if (!caja) return;
+    pintarDiasOptimizacion();
+    var pide = ++XO.pide;
+    caja.setAttribute('aria-busy', 'true');
+    // Cargando: la forma de lo que viene. Si ya había datos del mismo periodo, se quedan mientras llega lo nuevo.
+    if (!XO.datos || XO.datos.dias !== XO.dias) caja.innerHTML = xoEsqueleto();
+    api('/optimizacion?dias=' + XO.dias).then(function (d) {
+      if (pide !== XO.pide) return; // llegó tarde: ya se pidió otro periodo
+      caja.setAttribute('aria-busy', 'false');
+      if (!d || d.error) { xoError(caja, (d && d.error) || 'El servidor no contestó.'); return; }
+      XO.datos = d;
+      pintarOptimizacion(d);
+    }, function () {
+      if (pide !== XO.pide) return;
+      caja.setAttribute('aria-busy', 'false');
+      xoError(caja, 'Sin conexión con el servidor.');
+    });
+  }
+  function xoHallazgo(h) {
+    var p = XO_PRIORIDAD[h.prioridad] || XO_PRIORIDAD.baja;
+    var accion = xoPuedeIr(h.ir)
+      ? '<button class="btn sm" type="button" data-xo-ir="' + esc(h.id) + '">' + esc(h.ir.etiqueta) + '<i class="ic" data-ic="derecha"></i></button>'
+      : '<span class="xo-solo-admin">Esto lo hace quien administra XENCRM.</span>';
+    return '<article class="xo-h p-' + esc(h.prioridad) + (h.evidencia === 'poca' ? ' poca' : '') + '" aria-labelledby="xo-t-' + esc(h.id) + '">' +
+      '<div class="xo-h-cab"><span class="xo-pri p-' + esc(h.prioridad) + '"><i class="ic" data-ic="' + p.ic + '"></i>Prioridad ' + p.t + '</span>' +
+        (h.evidencia === 'poca' ? '<span class="xo-poca" title="Hay pocos datos: tómalo como una pista, no como una conclusión">Poca evidencia</span>' : '') + '</div>' +
+      '<h3 id="xo-t-' + esc(h.id) + '">' + esc(h.titulo) + '</h3>' +
+      '<p class="xo-cifra"><b>' + esc(h.cifra) + '</b><span>' + esc(h.base) + '</span></p>' +
+      '<p class="xo-porque"><span class="xo-rot">Por qué importa</span>' + esc(h.porQue) + '</p>' +
+      '<div class="xo-hacer"><i class="ic" data-ic="check"></i><p><span class="xo-rot">Qué hacer</span>' + esc(h.queHacer) + '</p></div>' +
+      '<div class="xo-h-pie">' + accion + '</div>' +
+    '</article>';
+  }
+  function xoEstancados(d) {
+    var l = d.estancados || [];
+    var cab = '<div class="xo-sec-cab"><div><h2 id="xo-est-t" tabindex="-1">Tratos estancados</h2><p>Abiertos y sin actividad hace ' + d.umbral.diasEstancado +
+      ' días o más, sin cita por delante y sin posponer. Primero los que valen más; después, por puntaje.</p></div>' +
+      (d.estancadosTotal ? '<span class="xo-cuenta" aria-label="' + d.estancadosTotal + ' estancados">' + d.estancadosTotal + '</span>' : '') + '</div>';
+    if (!l.length) {
+      return '<section class="xo-sec" id="xo-estancados" aria-labelledby="xo-est-t">' + cab +
+        '<div class="xo-vacio xo-bien"><b>Ningún trato está estancado</b><span>Todos los abiertos se movieron en los últimos ' + d.umbral.diasEstancado + ' días, tienen cita o los dejaron «por ahora».</span></div></section>';
+    }
+    return '<section class="xo-sec" id="xo-estancados" aria-labelledby="xo-est-t">' + cab +
+      '<div class="envoltura xo-tabla-caja"><table class="tz-tabla xo-tabla"><thead><tr><th>Contacto</th><th>Etapa</th><th class="num">Sin actividad</th><th>En la etapa desde</th><th>Lo lleva</th><th class="num">Valor</th><th><span class="sr-only">Acción</span></th></tr></thead><tbody>' +
+      l.map(function (x) {
+        var nombre = nameOf({ id: x.id, name: x.nombre, channel: x.canal });
+        return '<tr>' +
+          '<td class="xo-quien" data-th="Contacto">' + avatarHtml(nombre, x.id, 'sm') + '<div class="xo-quien-txt"><button class="quien" type="button" data-id="' + esc(x.id) + '">' + esc(nombre) + '</button>' +
+            (x.resumen ? '<span class="dato" title="' + esc(x.resumen) + '">' + esc(x.resumen) + '</span>' : '') + '</div></td>' +
+          '<td data-th="Etapa"><span class="chip stage-' + esc(x.rol || 'inicio') + '">' + esc(x.titulo) + '</span></td>' +
+          '<td class="num" data-th="Sin actividad"><b>' + x.diasSinActividad + '</b> ' + (x.diasSinActividad === 1 ? 'día' : 'días') + '</td>' +
+          '<td data-th="En la etapa desde">' + esc(new Date(x.enEtapaDesde).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })) + '</td>' +
+          '<td data-th="Lo lleva">' + (x.quien ? esc(x.quien) : '<span class="muted">Sin asignar</span>') + '</td>' +
+          '<td class="num" data-th="Valor">' + (x.valor ? esc(plataCorta(x.valor)) : '<span class="muted" title="Sin precio: ni puesto a mano ni en el catálogo">—</span>') + '</td>' +
+          '<td class="xo-acc"><button class="btn sm primary" type="button" data-xo-retomar="' + esc(x.id) + '" aria-label="Retomar a ' + esc(nombre) + '">Retomar</button></td>' +
+        '</tr>';
+      }).join('') + '</tbody></table></div>' +
+      (d.estancadosTotal > l.length ? '<p class="xo-nota">Se ven los ' + l.length + ' primeros de ' + d.estancadosTotal + '.</p>' : '') +
+      '</section>';
+  }
+  function pintarOptimizacion(d) {
+    var caja = $('xo-opt');
+    if (d.sinDatos) {
+      caja.innerHTML = '<div class="xo-vacio"><b>Todavía no hay de qué sacar conclusiones</b><span>Esta pantalla mira las conversaciones, los tratos y cómo terminan. ' +
+        'En cuanto entren las primeras, aquí aparecen dónde se caen los tratos, los que se quedaron quietos y qué hacer con cada cosa.</span>' +
+        '<button class="btn" type="button" id="xo-a-bandeja">Ir a la bandeja</button></div>';
+      $('xo-a-bandeja').onclick = function () { go('inbox'); };
+      return;
+    }
+    var r = d.resumen, hs = d.hallazgos || [];
+    var partes = ['alta', 'media', 'baja'].filter(function (k) { return r[k]; }).map(function (k) {
+      var p = XO_PRIORIDAD[k];
+      return '<span class="xo-pri p-' + k + '"><i class="ic" data-ic="' + p.ic + '"></i>' + r[k] + ' ' + (r[k] === 1 ? p.uno : p.varios) + '</span>';
+    }).join('');
+    var firmes = r.hallazgos - r.pocaEvidencia;
+    var frase = !hs.length ? 'Nada que corregir con lo que hay'
+      : !firmes ? (r.hallazgos === 1 ? 'Una pista, con pocos datos todavía' : r.hallazgos + ' pistas, con pocos datos todavía')
+      : (firmes === 1 ? 'Una cosa para vender más' : firmes + ' cosas para vender más');
+    var imp = d.impacto && d.impacto.estancados;
+    var impacto = imp
+      ? '<div class="xo-impacto"><span class="xo-rot">En juego</span><b>' + esc(plataCorta(imp.valor)) + '</b><span>en ' + imp.conValor + (imp.conValor === 1 ? ' trato estancado con precio' : ' tratos estancados con precio') +
+        (imp.cuantos > imp.conValor ? ' (de ' + imp.cuantos + ' estancados)' : '') + '</span></div>'
+      // Sin precio no hay cifra: decir «$0» sería decir que no vale nada.
+      : (d.estancadosTotal ? '<div class="xo-impacto sin"><span class="xo-rot">En juego</span><b>Sin cifra</b><span>Ningún trato estancado tiene precio: no se puede decir cuánto vale.</span></div>' : '');
+    caja.innerHTML =
+      '<section class="xo-resumen" aria-labelledby="xo-frase">' +
+        '<span class="xo-resumen-ic" aria-hidden="true"><i class="ic" data-ic="rayo"></i></span>' +
+        '<div class="xo-resumen-txt"><h2 id="xo-frase">' + esc(frase) + '</h2>' +
+          '<p>Con lo que pasó en los últimos ' + d.dias + ' días. Reglas fijas sobre tus datos, sin IA: cada cifra dice sobre cuántos se contó.</p>' +
+          (partes ? '<div class="xo-resumen-pri">' + partes + '</div>' : '') + '</div>' +
+        impacto +
+      '</section>' +
+      (hs.length
+        ? '<div class="xo-hallazgos">' + hs.map(xoHallazgo).join('') + '</div>'
+        : '<div class="xo-vacio xo-bien"><b>Nada que corregir con lo que hay</b><span>Ninguna regla encontró algo que pida cambiar. Con más conversaciones (o un periodo más largo) puede salir algo que hoy no se ve.</span></div>') +
+      xoEstancados(d) +
+      '<details class="xo-como"><summary>Cómo se decide cada cosa</summary><ul>' +
+        '<li>Dónde se caen: la etapa que menos gente deja pasar a la siguiente, con al menos ' + d.umbral.baseEmbudo + ' que llegaron a ella; sale si pasa menos del ' + Math.round(d.umbral.pasoBajo * 100) + ' %.</li>' +
+        '<li>Estancados: tratos abiertos sin actividad en ' + d.umbral.diasEstancado + ' días o más, sin cita por delante y sin posponer.</li>' +
+        '<li>Velocidad: hacen falta ' + d.umbral.cerradosVelocidad + ' tratos cerrados con tiempo de respuesta medido (' + d.umbral.grupoVelocidad + ' rápidos y ' + d.umbral.grupoVelocidad + ' lentos) para comparar.</li>' +
+        '<li>Acuerdo de servicio: con ' + d.umbral.respondidas + ' respuestas o más, sale si el ' + Math.round(d.umbral.fueraDeAcuerdo * 100) + ' % o más tardó de más.</li>' +
+        '<li>Motivos de pérdida: con ' + d.umbral.perdidas + ' perdidos o más. Objeciones: las que se repiten ' + d.umbral.objecion + ' veces o más.</li>' +
+        '<li>Horas: con ' + d.umbral.mensajesHoras + ' mensajes o más. Canales: con ' + d.umbral.porCanal + ' contactos o más en cada uno.</li>' +
+      '</ul></details>';
+    iconos(caja);
+    Array.prototype.forEach.call(caja.querySelectorAll('[data-xo-ir]'), function (b) {
+      b.onclick = function () {
+        var h = hs.filter(function (x) { return x.id === b.getAttribute('data-xo-ir'); })[0];
+        if (!h) return;
+        if (h.ir.vista === 'optimizacion' && h.ir.filtro === 'estancados') {
+          // 🪤 Se desplaza SOLO la caja de esta pantalla. scrollIntoView mueve también los contenedores de afuera
+          // (aunque tengan overflow:hidden) y corría el marco entero de la aplicación hacia arriba: en el celular
+          // quedaba media pantalla vacía debajo y la barra de arriba fuera de la vista.
+          var sec = $('xo-estancados');
+          if (sec) {
+            caja.scrollTo({ top: sec.getBoundingClientRect().top - caja.getBoundingClientRect().top + caja.scrollTop - 8, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+            $('xo-est-t').focus({ preventScroll: true });
+          }
+          return;
+        }
+        go(h.ir.vista, h.ir.filtro ? { filter: h.ir.filtro } : undefined);
+      };
+    });
+    var ids = (d.estancados || []).map(function (x) { return x.id; });
+    Array.prototype.forEach.call(caja.querySelectorAll('.xo-tabla .quien[data-id]'), function (b) {
+      b.onclick = function () { abrirPerfil(b.dataset.id, ids); };
+    });
+    // Retomar: la conversación, como «Escribirle» en la Lista de trabajo.
+    Array.prototype.forEach.call(caja.querySelectorAll('[data-xo-retomar]'), function (b) {
+      b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-xo-retomar')); };
+    });
+  }
+  if ($('xo-dias')) Array.prototype.forEach.call($('xo-dias').children, function (b) {
+    b.onclick = function () {
+      XO.dias = Number(b.getAttribute('data-d')) || 30;
+      try { localStorage.setItem(LLAVE('xo.dias'), String(XO.dias)); } catch (e) {}
+      cargarOptimizacion();
+    };
+  });
+  alAbrir('optimizacion', cargarOptimizacion);
   // (fin de XEN · Optimización de ventas)
 
   // ===== XEN · Modelos de IA: lo nuevo del agente de Modelos =====
