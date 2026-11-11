@@ -822,7 +822,7 @@
       { grupo: 'El negocio', vistas: { guia: 1, profile: 1, negocio: 1 } },
       { grupo: 'El asistente y la IA', vistas: { agent: 1, modelos: 1, knowledge: 1 } },
       { grupo: 'Canales', vistas: { channels: 1 } },
-      { grupo: 'Sistema', vistas: { trazas: 1, help: 1 } }
+      { grupo: 'Sistema', vistas: { reglas: 1, trazas: 1, help: 1 } }
     ];
     var usadas = {};
     var html = grupos.map(function (g) {
