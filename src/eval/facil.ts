@@ -65,7 +65,7 @@ const lee: Record<string, string[]> = {
   // XEN · Panel KAM
   kam: ['cuentas-clave'],
   // XEN · KPIs y metas
-  kpis: ['stats', 'series'],
+  kpis: ['kpis', 'metas'],
   // XEN · Optimización de ventas
   optimizacion: ['stats'],
   // (fin de las pantallas de la suite)

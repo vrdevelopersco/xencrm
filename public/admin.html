@@ -2716,6 +2716,119 @@ dialog.perdida input{width:100%}
 /* (fin de XEN · Embudo y filtrado) */
 
 /* ---------- XEN · KPIs y metas (agente de KPIs) ---------- */
+/* Los objetivos de Dynamics 365: arriba el periodo (un control segmentado) y «Editar metas»; las tarjetas con la cifra
+   en la letra display, la comparación en palabras y la meta con su barra y la raya del ritmo («donde debería ir hoy»);
+   abajo, por persona, una tabla que en el celular se vuelve tarjetas. Todo con los tokens de la piel. */
+/* 🪤 El panel se desplaza por dentro (flex:1 y min-height:0, como Analítica). Sin esto la pantalla, que es larga,
+   estiraba el documento entero: el menú se iba con ella y al abrir el editor quedaba una franja gris abajo. */
+:root[data-piel="xen"] #xp-kpis{flex:1 1 auto;min-height:0;overflow:auto;gap:20px}
+:root[data-piel="xen"] .xp-barra{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px}
+:root[data-piel="xen"] .xp-barra .grow{flex:1}
+:root[data-piel="xen"] .xp-periodo{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-hover)}
+:root[data-piel="xen"] .xp-periodo button{min-height:34px;padding:0 14px;border:0;border-radius:8px;background:none;color:var(--fx-t2);font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background var(--fx-t-rapido),color var(--fx-t-rapido)}
+:root[data-piel="xen"] .xp-periodo button:hover{color:var(--fx-t0)}
+:root[data-piel="xen"] .xp-periodo button[aria-pressed="true"]{background:var(--fx-panel);color:var(--fx-t0);box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] .xp-contra{margin:0;font-size:13.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] #xp-editar .ic{width:16px;height:16px;flex:0 0 16px;color:var(--fx-acento-t)}
+:root[data-piel="xen"] #xp-editar[hidden]{display:none}
+/* Las tarjetas: la cifra manda; debajo, de dónde sale, contra qué se compara y la meta (abajo del todo, alineada). */
+:root[data-piel="xen"] .xp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+:root[data-piel="xen"] .xp-kpi{display:flex;flex-direction:column;gap:6px;min-width:0;padding:16px 18px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] .xp-kpi-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+:root[data-piel="xen"] .xp-kpi h3{margin:0;font-size:13.5px;font-weight:600;line-height:1.35;color:var(--fx-t2)}
+:root[data-piel="xen"] .xp-ver{display:inline-grid;place-items:center;width:32px;height:32px;flex:0 0 32px;margin:-6px -8px 0 0;border:0;border-radius:8px;background:none;color:var(--fx-t3);cursor:pointer}
+:root[data-piel="xen"] .xp-ver:hover{background:var(--fx-hover);color:var(--fx-acento-t)}
+:root[data-piel="xen"] .xp-ver .ic{width:16px;height:16px;flex:0 0 16px;color:currentColor}
+:root[data-piel="xen"] .xp-cifra{margin:0;font-family:var(--fx-display);font-optical-sizing:auto;font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-.02em;color:var(--fx-t0);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+:root[data-piel="xen"] .xp-cifra.larga{font-size:24px}
+:root[data-piel="xen"] .xp-cifra.sin{font-size:24px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xp-detalle{margin:0;font-size:12.5px;line-height:1.45;color:var(--fx-t2)}
+:root[data-piel="xen"] .xp-cmp{margin:0;font-size:12.5px;font-weight:650;line-height:1.4}
+:root[data-piel="xen"] .xp-cmp.bien{color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xp-cmp.mal{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xp-cmp.neutro{font-weight:500;color:var(--fx-t2)}
+:root[data-piel="xen"] .xp-meta{display:flex;flex-direction:column;gap:7px;margin-top:auto;padding-top:10px;border-top:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .xp-meta-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xp-meta-cab b{font-weight:650;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xp-estado{flex:0 0 auto;padding:2px 8px;border-radius:var(--fx-r-pill);font-size:11.5px;font-weight:700;background:var(--fx-hover);color:var(--fx-t2)}
+:root[data-piel="xen"] .xp-estado.bien{background:var(--fx-verde-s);color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xp-estado.urge{background:var(--fx-ambar-s);color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xp-pista{position:relative;height:8px;border-radius:var(--fx-r-pill);background:var(--fx-hover)}
+:root[data-piel="xen"] .xp-pista i{display:block;height:100%;border-radius:var(--fx-r-pill);background:var(--fx-acento)}
+:root[data-piel="xen"] .xp-pista i.urge{background:var(--fx-ambar)}
+:root[data-piel="xen"] .xp-pista i.neutro{background:var(--fx-t4)}
+/* La raya del ritmo: dónde debería ir la barra hoy. Es una marca, no un color: se lee igual sin distinguir tonos. */
+:root[data-piel="xen"] .xp-ritmo{position:absolute;top:-4px;width:3px;height:16px;margin-left:-1.5px;border-radius:2px;background:var(--fx-t1);box-shadow:0 0 0 2px var(--fx-panel)}
+:root[data-piel="xen"] .xp-meta-pie{margin:0;font-size:12px;line-height:1.45;color:var(--fx-t2)}
+:root[data-piel="xen"] .xp-poner{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;min-height:32px;margin-top:auto;padding:0 10px;border:1px dashed var(--fx-t4);border-radius:8px;background:none;color:var(--fx-acento-t);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+:root[data-piel="xen"] .xp-poner:hover{border-style:solid;border-color:var(--fx-acento);background:var(--fx-suave)}
+:root[data-piel="xen"] .xp-poner .ic{width:14px;height:14px;flex:0 0 14px;color:currentColor}
+:root[data-piel="xen"] .xp-sin-meta{margin:auto 0 0;font-size:12px;color:var(--fx-t3)}
+/* Cargando: la forma de las tarjetas y de la tabla, para que nada salte al llegar. */
+:root[data-piel="xen"] .xp-esq{min-height:172px;gap:14px;box-shadow:none}
+:root[data-piel="xen"] .xp-esq i,:root[data-piel="xen"] .xp-esq-tabla i{display:block;height:12px;border-radius:6px;background:var(--fx-hover);animation:xp-brillo 1.2s ease-in-out infinite}
+:root[data-piel="xen"] .xp-esq i:nth-child(1){width:55%}
+:root[data-piel="xen"] .xp-esq i:nth-child(2){width:42%;height:30px}
+:root[data-piel="xen"] .xp-esq i:nth-child(3){width:75%}
+:root[data-piel="xen"] .xp-esq-tabla{display:flex;flex-direction:column;gap:14px;padding:20px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel)}
+:root[data-piel="xen"] .xp-esq-tabla i{height:16px}
+@keyframes xp-brillo{50%{opacity:.45}}
+:root[data-piel="xen"] .xp-error,:root[data-piel="xen"] .xp-vacio{grid-column:1/-1;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:20px 22px;border-radius:var(--fx-r-xl);font-size:14px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xp-error{border:1px solid var(--fx-borde);border-left:4px solid var(--fx-rojo);background:var(--fx-panel)}
+:root[data-piel="xen"] .xp-vacio{border:1px dashed var(--fx-t4);background:color-mix(in srgb,var(--fx-panel) 60%,transparent)}
+:root[data-piel="xen"] .xp-error b,:root[data-piel="xen"] .xp-vacio b{font-size:15px;font-weight:650;color:var(--fx-t0)}
+:root[data-piel="xen"] .xp-error .btn{margin-top:6px}
+/* El editor de metas: en la página, no en una ventana, para ver las tarjetas mientras se escriben. */
+:root[data-piel="xen"] .xp-editor{display:flex;flex-direction:column;gap:16px;padding:20px 22px;border:1px solid var(--fx-borde);border-top:3px solid var(--fx-acento);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-sm)}
+:root[data-piel="xen"] .xp-editor[hidden]{display:none}
+:root[data-piel="xen"] .xp-editor-cab h2,:root[data-piel="xen"] .xp-sec-cab h2{margin:0;font-size:17px;font-weight:650;color:var(--fx-t0)}
+:root[data-piel="xen"] .xp-editor-cab p,:root[data-piel="xen"] .xp-sec-cab p{max-width:78ch;margin:4px 0 0;font-size:13.5px;line-height:1.5;color:var(--fx-t2)}
+:root[data-piel="xen"] .xp-campos{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px 18px}
+:root[data-piel="xen"] .xp-campo{min-width:0}
+:root[data-piel="xen"] .xp-campo label{display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--fx-t1)}
+:root[data-piel="xen"] .xp-campo-fila{display:flex;align-items:center;gap:8px}
+:root[data-piel="xen"] .xp-campo-fila input{flex:1 1 auto;min-width:0;font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xp-campo-fila select{flex:0 0 auto;width:auto}
+:root[data-piel="xen"] .xp-unidad{flex:0 0 auto;font-size:12.5px;white-space:nowrap;color:var(--fx-t2)}
+:root[data-piel="xen"] .xp-campo input[aria-invalid="true"]{border-color:var(--fx-rojo-t);box-shadow:0 0 0 1px var(--fx-rojo-t)}
+:root[data-piel="xen"] .xp-campo-err{margin:5px 0 0;font-size:12.5px;line-height:1.4;color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xp-campo-err:empty{display:none}
+:root[data-piel="xen"] .xp-editor-pie{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+:root[data-piel="xen"] .xp-editor-msg{font-size:13px;color:var(--fx-t2)}
+/* Por persona: el tablero de rendimiento del equipo. El agente de IA va aparte, abajo, con el violeta de la IA. */
+:root[data-piel="xen"] .xp-personas{display:flex;flex-direction:column;gap:12px}
+/* 🪤 position:relative: el <caption class="sr-only"> va en absoluto, y sin un ancestro posicionado se colocaba
+   respecto de la página y la estiraba 240 px por debajo (salía una franja gris al abrir el editor). */
+:root[data-piel="xen"] .xp-tabla-caja{position:relative;overflow:auto;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] .xp-tabla{width:100%;border-collapse:separate;border-spacing:0;font-size:14px}
+:root[data-piel="xen"] .xp-tabla th,:root[data-piel="xen"] .xp-tabla td{padding:12px 16px;border-bottom:1px solid var(--fx-borde-2);text-align:left;white-space:nowrap;vertical-align:middle}
+:root[data-piel="xen"] .xp-tabla thead th{font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--fx-t2);background:var(--fx-panel)}
+:root[data-piel="xen"] .xp-tabla .num{text-align:right;font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xp-tabla tbody th{font-weight:600;color:var(--fx-t1)}
+:root[data-piel="xen"] .xp-tabla tbody tr:last-child>*{border-bottom:0}
+:root[data-piel="xen"] .xp-tabla tbody tr:hover>*{background:var(--fx-fila)}
+:root[data-piel="xen"] .xp-quien{display:inline-flex;align-items:center;gap:10px;min-width:0}
+:root[data-piel="xen"] .xp-quien small{display:block;font-size:11.5px;font-weight:600;color:var(--fx-ia-t)}
+:root[data-piel="xen"] .xp-ia{display:inline-grid;place-items:center;width:24px;height:24px;flex:0 0 24px;border-radius:var(--fx-r-pill);background:var(--fx-ia-s);color:var(--fx-ia-t)}
+:root[data-piel="xen"] .xp-ia .ic{width:14px;height:14px;color:currentColor}
+:root[data-piel="xen"] .xp-tabla .xp-agente>*{background:color-mix(in srgb,var(--fx-ia-s) 45%,var(--fx-panel))}
+:root[data-piel="xen"] .xp-na{color:var(--fx-t3)}
+:root[data-piel="xen"] .xp-nota{margin:0;font-size:12.5px;line-height:1.5;color:var(--fx-t2)}
+@media (max-width:720px){
+  :root[data-piel="xen"] .xp-periodo{display:flex;width:100%}
+  :root[data-piel="xen"] .xp-periodo button{flex:1 1 0;min-height:40px}
+  :root[data-piel="xen"] #xp-editar{width:100%}
+  :root[data-piel="xen"] .xp-cifra{font-size:28px}
+  :root[data-piel="xen"] .xp-tabla thead{display:none}
+  :root[data-piel="xen"] .xp-tabla,:root[data-piel="xen"] .xp-tabla tbody,:root[data-piel="xen"] .xp-tabla tr,:root[data-piel="xen"] .xp-tabla th,:root[data-piel="xen"] .xp-tabla td{display:block}
+  :root[data-piel="xen"] .xp-tabla tr{padding:12px 16px;border-bottom:1px solid var(--fx-borde-2)}
+  :root[data-piel="xen"] .xp-tabla tbody th,:root[data-piel="xen"] .xp-tabla td{padding:3px 0;border:0;white-space:normal}
+  :root[data-piel="xen"] .xp-tabla tbody th{padding-bottom:8px}
+  :root[data-piel="xen"] .xp-tabla td{display:flex;justify-content:space-between;gap:12px}
+  :root[data-piel="xen"] .xp-tabla td::before{content:attr(data-l);font-size:13px;color:var(--fx-t2);text-align:left}
+  :root[data-piel="xen"] .xp-tabla tr.xp-agente{background:color-mix(in srgb,var(--fx-ia-s) 45%,var(--fx-panel))}
+}
+@media (prefers-reduced-motion:reduce){:root[data-piel="xen"] .xp-esq i,:root[data-piel="xen"] .xp-esq-tabla i{animation:none}:root[data-piel="xen"] .xp-periodo button{transition:none}}
 /* (fin de XEN · KPIs y metas) */
 
 /* ---------- XEN · Panel KAM (agente de cuentas clave) ---------- */
@@ -3377,7 +3490,30 @@ dialog.perdida input{width:100%}
     <section class="view" id="view-kpis">
       <div class="topbar"><h1>KPIs y metas</h1><span class="grow"></span></div>
       <!-- XEN · KPIs y metas: el marcado va aquí -->
-      <div class="pad" id="xp-kpis"></div>
+      <!-- Los objetivos de Dynamics 365, con los datos de XENCRM: arriba el periodo (contra el anterior igual de largo)
+           y, para quien administra, las metas; las tarjetas de cada KPI con su meta del mes o de la semana; abajo,
+           por persona, solo lo que se puede atribuir de verdad. Lo pinta pintarKpis() en admin.js. -->
+      <div class="pad" id="xp-kpis">
+        <div class="xp-barra">
+          <div class="xp-periodo" role="group" aria-label="Qué periodo ver">
+            <button type="button" data-dias="7" aria-pressed="false">7 días</button>
+            <button type="button" data-dias="30" aria-pressed="true">30 días</button>
+            <button type="button" data-dias="90" aria-pressed="false">90 días</button>
+          </div>
+          <p class="xp-contra" id="xp-contra"></p>
+          <span class="grow"></span>
+          <button type="button" class="btn" id="xp-editar" hidden aria-expanded="false" aria-controls="xp-editor"><i class="ic" data-ic="objetivo"></i>Editar metas</button>
+        </div>
+        <form class="xp-editor" id="xp-editor" hidden novalidate aria-labelledby="xp-editor-t"></form>
+        <div class="xp-grid" id="xp-grid" aria-busy="true"></div>
+        <section class="xp-personas" aria-labelledby="xp-personas-t">
+          <div class="xp-sec-cab">
+            <h2 id="xp-personas-t">Por persona</h2>
+            <p>Lo ganado y lo vendido es de quien tiene asignado el contacto; las respuestas, de quien las escribió.</p>
+          </div>
+          <div id="xp-tabla"></div>
+        </section>
+      </div>
       <!-- (fin de XEN · KPIs y metas) -->
     </section>
 
