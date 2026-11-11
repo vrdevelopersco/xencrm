@@ -2279,9 +2279,25 @@
   }
   function loadPipeline(focusId) {
     pintarSedesPip();
+    xfPintarBarra('pipeline');
+    // Las vistas «este mes» necesitan cuándo se cerró cada trato (la historia de etapas): se pide junto.
+    xfCargarHistoria();
     api('/contacts?limit=2000').then(function (todos) {
-      var list = todos.filter(deLaSede);
+      if (!Array.isArray(todos)) { toast('No se pudieron cargar los tratos: ' + ((todos && todos.error) || 'sin respuesta del servidor')); return; }
+      state.pipeTodos = todos;
+      pintarPipeline(focusId);
+    });
+  }
+  /** El tablero (o la lista) con lo que ya llegó: cambiar de vista o de filtro no vuelve a pedir nada. */
+  function pintarPipeline(focusId) {
+    var todos = state.pipeTodos || [];
+    xfPintarBarra('pipeline');
+    (function () {
+      var list = todos.filter(deLaSede).filter(xfFiltro('pipeline'));
       state.pipeLista = list;
+      xfPintarVistas('pipeline', todos.filter(deLaSede));
+      if (xfE('pipeline').modo === 'lista') { $('board').hidden = true; $('xf-pipeline-lista').hidden = false; xfPintarListaTratos(list); pintarCifrasEmbudo(list); return; }
+      $('board').hidden = false; $('xf-pipeline-lista').hidden = true;
       pintarCifrasEmbudo(list);
       // Al redibujar (también por un evento en vivo) el foco no se pierde: vuelve a la misma tarjeta.
       var active = document.activeElement && document.activeElement.closest ? document.activeElement.closest('#board .card') : null;
@@ -2346,7 +2362,7 @@
       // Después de mover con «Mover…», el foco sigue a la tarjeta en su nueva columna.
       var moved = focusId && $('board').querySelector('.card[data-id="' + (window.CSS && CSS.escape ? CSS.escape(focusId) : focusId) + '"] .card-open');
       if (moved) { moved.focus(); moved.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
-    });
+    })();
   }
   function moveCard(id, stage) {
     if (!id || !stage) return;
@@ -4163,8 +4179,12 @@
   var GRUPOS_CLI = [
     { g: 'todos', t: 'Todos', es: function () { return true; } },
     { g: 'mios', t: 'Míos', es: esMia, hay: function () { return Boolean(state.name); } },
+    // XENCRM (Dynamics 365): los grupos son las VISTAS del sistema de Contactos. Las que guarda cada quien se suman
+    // detrás (xfGruposClientes), y los filtros van encima de la vista elegida: un solo estado, `cli.grupo` + `cli.cond`.
+    { g: 'sinasignar', t: 'Sin asignar', es: xfSinAsignar },
     { g: 'calientes', t: '🔥 Calientes', es: esCaliente },
     { g: 'prospecto', t: 'Prospectos', es: function (c) { return grupoDe(c) === 'prospecto'; } },
+    { g: 'concita', t: 'Con cita', es: xfConCita },
     { g: 'cliente', t: 'Clientes', es: function (c) { return grupoDe(c) === 'cliente'; } },
     { g: 'perdido', t: 'Perdidos', es: function (c) { return grupoDe(c) === 'perdido'; } },
   ];
@@ -4182,31 +4202,33 @@
   };
 
   function renderClientes() {
-    var grupos = GRUPOS_CLI.filter(function (g) { return !g.hay || g.hay(); });
+    var grupos = xfGruposClientes();
+    var pasa = function (c) { return xfCumple(c, xfE('clientes').cond, xfCtx()); };
     if (!grupos.some(function (g) { return g.g === cli.grupo; })) cli.grupo = 'todos';
     var g = grupos.find(function (x) { return x.g === cli.grupo; });
     // Mientras carga la primera vez, los grupos van sin número: «0» diría que no hay nadie, y no se sabe todavía.
     var sinCuenta = (cli.cargando || cli.error) && !cli.lista.length;
     $('cli-filtros').innerHTML = grupos.map(function (x) {
-      var n = sinCuenta ? '' : cli.lista.filter(x.es).length;
-      return '<button data-g="' + x.g + '" class="' + (x.g === cli.grupo ? 'on' : '') + '" aria-pressed="' + (x.g === cli.grupo) + '">' + esc(x.t) + '<span class="cuenta">' + n + '</span></button>';
+      var n = sinCuenta ? '' : cli.lista.filter(function (c) { return x.es(c) && pasa(c); }).length;
+      return '<button data-g="' + esc(x.g) + '" class="' + (x.g === cli.grupo ? 'on' : '') + (x.guardada ? ' xf-guardada' : '') + '" aria-pressed="' + (x.g === cli.grupo) + '">' + esc(x.t) + '<span class="cuenta">' + n + '</span></button>';
     }).join('');
     Array.prototype.forEach.call($('cli-filtros').querySelectorAll('button'), function (b) {
-      b.onclick = function () { cli.grupo = b.dataset.g; renderClientes(); };
+      b.onclick = function () { cli.grupo = b.dataset.g; xfGuardar('clientes'); renderClientes(); };
     });
+    xfPintarBarra('clientes');
     // Modo fácil: los mismos grupos, con su número, en un desplegable.
     if ($('fx-cli-grupo')) $('fx-cli-grupo').innerHTML = grupos.map(function (x) {
       return '<option value="' + x.g + '"' + (x.g === cli.grupo ? ' selected' : '') + '>' + esc(x.t.replace(/^\S+\s(?=\S)/, function (m) { return /\w/.test(m) ? m : ''; })) + ' (' + cli.lista.filter(x.es).length + ')</option>';
     }).join('');
 
     var orden = cli.orden || 'puntaje', al = cli.al || 1;
-    var list = cli.lista.filter(g.es).sort(function (a, b) { return al * ORDEN_CLI[orden](a, b); });
+    var list = cli.lista.filter(function (c) { return g.es(c) && pasa(c); }).sort(function (a, b) { return al * ORDEN_CLI[orden](a, b); });
     cli.ids = list.map(function (c) { return c.id; });
 
     // Los estados que no son «hay datos»: cargando, falló, nadie en absoluto, nadie con esa búsqueda o ese grupo.
     if (cli.error) { $('cli-tabla').innerHTML = estadoClientes('error'); enganchaEstadoClientes(); return; }
     if (!list.length) {
-      $('cli-tabla').innerHTML = cli.cargando ? estadoClientes('cargando') : estadoClientes(cli.q ? 'busqueda' : !cli.lista.length ? 'nadie' : 'grupo', g);
+      $('cli-tabla').innerHTML = cli.cargando ? estadoClientes('cargando') : estadoClientes(cli.q ? 'busqueda' : !cli.lista.length ? 'nadie' : xfHayCond('clientes') ? 'filtros' : 'grupo', g);
       enganchaEstadoClientes();
       return;
     }
@@ -6000,7 +6022,8 @@
       error: ['alerta', 'No se pudieron cargar los contactos', 'El servidor dijo: ' + cli.error + '. Vuelve a intentarlo en un momento.', 'reintentar', 'Volver a intentar'],
       nadie: ['contacto', 'Todavía no hay contactos', 'Llegan solos cuando alguien escribe por WhatsApp o por el chat del sitio. Si alguien llegó por el local o por una llamada, agrégalo a mano.', 'agregar', 'Agregar contacto'],
       busqueda: ['buscar', 'Nadie coincide con «' + cli.q + '»', 'Se busca por nombre, teléfono y lo que la persona escribió. Prueba con menos letras o con el número.', 'limpiar', 'Borrar la búsqueda'],
-      grupo: ['embudo', 'Nadie en «' + (g ? g.t.replace(/^[^\wÀ-ÿ]+\s*/, '') : '') + '» por ahora', 'Cuando alguien cumpla con este grupo, aparece aquí solo.', 'todos', 'Ver todos los contactos']
+      grupo: ['embudo', 'Nadie en «' + (g ? g.t.replace(/^[^\wÀ-ÿ]+\s*/, '') : '') + '» por ahora', 'Cuando alguien cumpla con este grupo, aparece aquí solo.', 'todos', 'Ver todos los contactos'],
+      filtros: ['embudo', 'Nadie cumple estos filtros', 'Hay ' + xfCuantasCond('clientes') + (xfCuantasCond('clientes') === 1 ? ' condición puesta' : ' condiciones puestas') + ' en «' + (g ? g.t.replace(/^[^\wÀ-ÿ]+\s*/, '') : '') + '». Quita alguna arriba, o todas de una vez.', 'quitar-filtros', 'Quitar los filtros']
     }[tipo];
     return '<div class="fx-ct-vacio' + (tipo === 'error' ? ' error' : '') + '" role="' + (tipo === 'error' ? 'alert' : 'status') + '"><span class="fx-ct-vacio-ic"><i class="ic" data-ic="' + caso[0] + '"></i></span><b>' + esc(caso[1]) + '</b><p>' + esc(caso[2]) + '</p>' +
       '<button class="btn sm' + (caso[3] === 'agregar' ? ' primary' : '') + '" type="button" data-estado="' + caso[3] + '">' + esc(caso[4]) + '</button></div>';
@@ -6016,6 +6039,7 @@
       else if (que === 'agregar') $('cli-nuevo').click();
       else if (que === 'limpiar') { $('cli-q').value = ''; cli.q = ''; loadClientes(); $('cli-q').focus(); }
       else if (que === 'todos') { cli.grupo = 'todos'; renderClientes(); }
+      else if (que === 'quitar-filtros') { xfE('clientes').cond = {}; xfGuardar('clientes'); renderClientes(); }
     };
   }
   // (fin de XEN · Contactos, ficha y tratos)
@@ -6369,6 +6393,593 @@
   // (fin de XEN · Analítica y sentimiento)
 
   // ===== XEN · Embudo y filtrado: lo nuevo del agente del embudo (se carga con alAbrir('embudo', …)) =====
+  // El filtrado de Dynamics 365, en las tres pantallas de la gente con trato —Contactos, Tratos y Embudo—: arriba la
+  // VISTA (las del sistema y las que guarda cada quien, cada una con su número) y encima de la vista, los FILTROS
+  // (etapa, asignado, canal, temperatura, valor, última actividad, un dato captado), que se ven como píldoras y se
+  // quitan con ×. Lo que se arma se puede guardar con nombre, y queda en el navegador de quien lo guardó.
+  //
+  // 🪤 Un solo estado por pantalla. En Contactos la vista ES el grupo de siempre (`cli.grupo`): los grupos pasaron
+  // a ser las vistas del sistema, y por eso no hay una segunda fila que diga otra cosa. En Tratos y Embudo vive en
+  // xfE(p). Nada se pide de nuevo al filtrar: se filtra lo que ya llegó.
+  //
+  // 🪤 La temperatura va con el puntaje: en el modo fácil no se ofrece, y si había quedado puesta, no cuenta.
+  //
+  // El Embudo cuenta hasta dónde LLEGÓ cada trato (la historia de cambios de etapa, crm/embudo.ts) y no solo dónde
+  // está hoy: así «de cada diez que llegan a Interesado, seis piden cita» sale de lo que pasó. Una ficha sin
+  // historia cuenta por su etapa de hoy, y la pantalla dice cuántas son en vez de repartirlas como si se supiera.
+  ICONS.filtros = '<path d="M3 5h18M6 12h12M10 19h4"/>';
+  ICONS.lista = '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>';
+  ICONS.guardar = '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>';
+  var XF_NOMBRE = { clientes: 'Contactos', pipeline: 'Tratos', embudo: 'Embudo' };
+  var XF_ACTIVIDAD = [['', 'Cualquiera'], ['hoy', 'Hoy'], ['7', 'En los últimos 7 días'], ['30', 'En los últimos 30 días'], ['mas30', 'Hace más de 30 días']];
+  var XF_TEMP = [['', 'Cualquiera'], ['caliente', 'Caliente'], ['tibio', 'Tibio'], ['frio', 'Frío']];
+  var XF_DIAS = [['7', 'en los últimos 7 días'], ['30', 'en los últimos 30 días'], ['90', 'en los últimos 90 días'], ['365', 'en el último año'], ['0', 'desde siempre']];
+  var XF_ESTADOS = {};
+  var XF_HIST = { pasos: null, etapas: null, cargando: false, error: '' };
+
+  function xfSinAsignar(c) { return !String(c.responsable || '').trim(); }
+  function xfConCita(c) { return rol(c.stage) === 'cita' || Boolean(c.proximo && c.proximo.tipo === 'cita'); }
+  function xfAbierto(c) { var r = rol(c.stage); return r !== 'ganado' && r !== 'perdido'; }
+  /** ¿Se cerró en este mes del calendario? Sale del evento que la cerró, no de la última vez que escribió. */
+  function xfEsteMes(id) {
+    var p = XF_HIST.pasos && XF_HIST.pasos[id];
+    if (!p || !p.cerro) return false;
+    var d = new Date(p.cerro), h = new Date();
+    return d.getFullYear() === h.getFullYear() && d.getMonth() === h.getMonth();
+  }
+  function xfCtx() { return { facil: esFacil(), ahora: Date.now() }; }
+  /** El estado de una pantalla (vista, filtros y lo demás), recuperado del navegador la primera vez. */
+  function xfE(p) {
+    if (XF_ESTADOS[p]) return XF_ESTADOS[p];
+    var e = { vista: 'todos', cond: {}, modo: 'tablero', dias: '90' };
+    try {
+      var g = JSON.parse(localStorage.getItem(LLAVE('xf.' + p)) || 'null');
+      if (g && typeof g === 'object') {
+        if (typeof g.vista === 'string') e.vista = g.vista;
+        if (g.cond && typeof g.cond === 'object') e.cond = g.cond;
+        if (g.modo === 'lista') e.modo = 'lista';
+        if (/^(7|30|90|365|0)$/.test(String(g.dias))) e.dias = String(g.dias);
+      }
+    } catch (er) { /* sin almacenamiento: se empieza de cero */ }
+    // En Contactos la vista es el grupo: se recupera solo si nadie eligió otro antes (las listas del riel lo hacen).
+    if (p === 'clientes' && cli.grupo === 'todos' && e.vista !== 'todos') cli.grupo = e.vista;
+    XF_ESTADOS[p] = e;
+    return e;
+  }
+  function xfVista(p) { return p === 'clientes' ? cli.grupo : xfE(p).vista; }
+  function xfGuardar(p) {
+    var e = xfE(p);
+    try { localStorage.setItem(LLAVE('xf.' + p), JSON.stringify({ vista: xfVista(p), cond: e.cond, modo: e.modo, dias: e.dias })); } catch (er) { /* sin almacenamiento: se olvida al cerrar */ }
+  }
+  function xfGuardadas(p) {
+    try { var l = JSON.parse(localStorage.getItem(LLAVE('vistas.' + p)) || '[]'); return Array.isArray(l) ? l.filter(function (v) { return v && v.id && v.nombre; }) : []; } catch (er) { return []; }
+  }
+  function xfPonerGuardadas(p, l) {
+    try { localStorage.setItem(LLAVE('vistas.' + p), JSON.stringify(l.slice(0, 20))); return true; } catch (er) { toast('No se pudo guardar la vista: este navegador no deja guardar nada.'); return false; }
+  }
+  /** Las vistas del sistema de cada pantalla: solo las que se calculan con datos de verdad. */
+  function xfVistasSistema(p) {
+    if (p === 'clientes') return GRUPOS_CLI.filter(function (g) { return !g.hay || g.hay(); }).map(function (g) { return { id: g.g, t: g.t, es: g.es }; });
+    return [
+      { id: 'todos', t: 'Todos los tratos', es: function () { return true; } },
+      { id: 'abiertos', t: 'Tratos abiertos', es: xfAbierto },
+      { id: 'mios', t: 'Mis tratos', es: esMia, hay: function () { return Boolean(state.name); } },
+      { id: 'sinasignar', t: 'Sin asignar', es: xfSinAsignar },
+      { id: 'calientes', t: '🔥 Calientes', es: esCaliente },
+      { id: 'concita', t: 'Con cita', es: xfConCita },
+      { id: 'ganados_mes', t: 'Ganados este mes', historia: true, es: function (c) { return rol(c.stage) === 'ganado' && xfEsteMes(c.id); } },
+      { id: 'perdidos_mes', t: 'Perdidos este mes', historia: true, es: function (c) { return rol(c.stage) === 'perdido' && xfEsteMes(c.id); } }
+    ].filter(function (v) { return !v.hay || v.hay(); });
+  }
+  /** Las del sistema y, detrás, las guardadas (su vista de abajo y sus filtros). */
+  function xfVistas(p) {
+    var sis = xfVistasSistema(p);
+    var porId = {};
+    sis.forEach(function (v) { porId[v.id] = v; });
+    return sis.concat(xfGuardadas(p).map(function (g) {
+      var base = porId[g.base] || sis[0];
+      return { id: 'v:' + g.id, t: g.nombre, guardada: g, es: function (c) { return base.es(c) && xfCumple(c, g.cond, xfCtx()); } };
+    }));
+  }
+  /** Los grupos de Contactos con las vistas guardadas detrás, en la forma de GRUPOS_CLI. */
+  function xfGruposClientes() {
+    xfE('clientes');
+    return xfVistas('clientes').map(function (v) { return { g: v.id, t: v.guardada ? '★ ' + v.t : v.t, es: v.es, guardada: Boolean(v.guardada) }; });
+  }
+  function xfVistaActual(p) {
+    var l = xfVistas(p), id = xfVista(p);
+    return l.filter(function (v) { return v.id === id; })[0] || l[0];
+  }
+  /** Vista + filtros de una pantalla, como una sola prueba por trato. */
+  function xfFiltro(p) {
+    var v = xfVistaActual(p), cond = xfE(p).cond, ctx = xfCtx();
+    return function (c) { return v.es(c) && xfCumple(c, cond, ctx); };
+  }
+  /**
+   * ¿Cumple las condiciones? Pura (test:embudo): no mira nada de fuera más que lo que se le pasa.
+   * Un valor que no se sabe no cumple «desde» ni «hasta»: no se sabe si cumple, y meterlo diría que sí.
+   */
+  function xfCumple(c, cond, ctx) {
+    if (!cond) return true;
+    ctx = ctx || {};
+    var norm = function (x) { return String(x == null ? '' : x).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); };
+    if (cond.etapas && cond.etapas.length && cond.etapas.indexOf(c.stage) < 0) return false;
+    if (cond.asignado) {
+      var r = norm(c.responsable);
+      if (cond.asignado === '__nadie' ? r : r !== norm(cond.asignado)) return false;
+    }
+    if (cond.canal && c.channel !== cond.canal) return false;
+    if (cond.temp && !ctx.facil && c.temperature !== cond.temp) return false;
+    var v = Number(c.valor) || 0;
+    if (cond.vmin != null && cond.vmin !== '' && !(v > 0 && v >= Number(cond.vmin))) return false;
+    if (cond.vmax != null && cond.vmax !== '' && !(v > 0 && v <= Number(cond.vmax))) return false;
+    if (cond.act) {
+      var ahora = ctx.ahora || Date.now(), t = c.lastMessageAt || c.lastSeen || 0, dia = 86400000;
+      var hoy = new Date(ahora);
+      hoy.setHours(0, 0, 0, 0);
+      if (cond.act === 'hoy' && t < hoy.getTime()) return false;
+      if (cond.act === '7' && ahora - t > 7 * dia) return false;
+      if (cond.act === '30' && ahora - t > 30 * dia) return false;
+      if (cond.act === 'mas30' && ahora - t <= 30 * dia) return false;
+    }
+    if (cond.datoK) {
+      var d = c.data && c.data[cond.datoK];
+      if (d === '' || d == null || typeof d === 'object') return false;
+      if (cond.datoV && norm(d).indexOf(norm(cond.datoV)) < 0) return false;
+    }
+    return true;
+  }
+  /** Las condiciones puestas, cada una con su texto (lo que dice la píldora) y cómo quitarla. */
+  function xfCondiciones(p) {
+    var c = xfE(p).cond, out = [];
+    if (c.etapas && c.etapas.length) out.push({ k: 'etapas', t: 'Etapa: ' + c.etapas.map(function (id) { return state.stageLabels[id] || id; }).join(', ') });
+    if (c.asignado) out.push({ k: 'asignado', t: 'Asignado a: ' + (c.asignado === '__nadie' ? 'nadie' : c.asignado) });
+    if (c.canal) out.push({ k: 'canal', t: 'Canal: ' + canalSolo(c.canal) });
+    if (c.temp && !esFacil()) out.push({ k: 'temp', t: 'Temperatura: ' + ({ caliente: 'caliente', tibio: 'tibio', frio: 'frío' }[c.temp] || c.temp) });
+    var hayMin = c.vmin != null && c.vmin !== '', hayMax = c.vmax != null && c.vmax !== '';
+    if (hayMin || hayMax) out.push({ k: 'valor', t: 'Valor: ' + (hayMin && hayMax ? 'entre ' + plataCorta(Number(c.vmin)) + ' y ' + plataCorta(Number(c.vmax)) : hayMin ? 'desde ' + plataCorta(Number(c.vmin)) : 'hasta ' + plataCorta(Number(c.vmax))) });
+    if (c.act) out.push({ k: 'act', t: 'Última actividad: ' + (XF_ACTIVIDAD.filter(function (x) { return x[0] === c.act; })[0] || ['', c.act])[1].toLowerCase() });
+    if (c.datoK) out.push({ k: 'dato', t: etiquetaDato(c.datoK) + ': ' + (c.datoV ? 'dice «' + c.datoV + '»' : 'con dato') });
+    return out;
+  }
+  function xfCuantasCond(p) { return xfCondiciones(p).length; }
+  function xfHayCond(p) { return xfCuantasCond(p) > 0; }
+  function xfQuitar(p, k) {
+    var c = xfE(p).cond;
+    if (k === 'valor') { delete c.vmin; delete c.vmax; } else if (k === 'dato') { delete c.datoK; delete c.datoV; } else delete c[k];
+  }
+  /** Volver a pintar lo que la pantalla muestra con lo que ya llegó (sin pedir nada). */
+  function xfRepintar(p) {
+    xfGuardar(p);
+    if (p === 'clientes') renderClientes();
+    else if (p === 'pipeline') { if (state.pipeTodos) pintarPipeline(); else xfPintarBarra('pipeline'); }
+    else if (p === 'embudo') pintarEmbudo();
+  }
+  function xfDatosDe(p) {
+    if (p === 'clientes') return cli.lista || [];
+    if (p === 'pipeline') return (state.pipeTodos || []).filter(deLaSede);
+    return (XE.contactos || []).filter(deLaSede);
+  }
+  /** La historia de etapas (cuándo se cerró cada trato): la usan las vistas «este mes» y el Embudo. */
+  function xfCargarHistoria(listo) {
+    if (XF_HIST.cargando && !listo) return;
+    XF_HIST.cargando = true;
+    api('/embudo').then(function (r) {
+      XF_HIST.cargando = false;
+      if (!r || r.error || !Array.isArray(r.tratos)) { XF_HIST.error = (r && r.error) || 'sin respuesta del servidor'; if (listo) listo(false); return; }
+      XF_HIST.error = '';
+      XF_HIST.pasos = {};
+      r.tratos.forEach(function (t) { XF_HIST.pasos[t.id] = t; });
+      XF_HIST.etapas = r.etapas;
+      if (listo) listo(true);
+      // Si ya se estaba mirando Tratos, las vistas «este mes» se cuentan con la historia que acaba de llegar.
+      else if (state.view === 'pipeline' && state.pipeTodos) pintarPipeline();
+    });
+  }
+
+  /** La fila de las vistas (Tratos y Embudo; en Contactos son los grupos de siempre), cada una con su número. */
+  function xfPintarVistas(p, datos) {
+    var caja = $('xf-' + p + '-vistas');
+    if (!caja || p === 'clientes') return;
+    var cond = xfE(p).cond, ctx = xfCtx(), act = xfVista(p);
+    var vistas = xfVistas(p);
+    if (!vistas.some(function (v) { return v.id === act; })) xfE(p).vista = act = vistas[0].id;
+    caja.innerHTML = vistas.map(function (v) {
+      // Mientras no llega la historia, las vistas «este mes» van sin número: «0» diría que no hubo ninguno.
+      var n = v.historia && !XF_HIST.pasos ? '' : datos.filter(function (c) { return v.es(c) && xfCumple(c, cond, ctx); }).length;
+      var on = v.id === act;
+      return '<button type="button" data-vista="' + esc(v.id) + '" class="' + (on ? 'on' : '') + (v.guardada ? ' xf-guardada' : '') + '" aria-pressed="' + on + '">' + esc((v.guardada ? '★ ' : '') + v.t) + '<span class="cuenta">' + n + '</span></button>';
+    }).join('');
+    caja.querySelectorAll('[data-vista]').forEach(function (b) {
+      b.onclick = function () { xfE(p).vista = b.getAttribute('data-vista'); xfRepintar(p); };
+    });
+  }
+  /**
+   * La barra de una pantalla: la fila de las vistas (salvo en Contactos), y debajo el botón Filtros con su panel,
+   * las condiciones como píldoras, Guardar vista y, según la pantalla, Tablero | Lista o el periodo.
+   */
+  function xfPintarBarra(p) {
+    var caja = $('xf-' + p);
+    if (!caja) return;
+    var e = xfE(p);
+    if (!caja.getAttribute('data-armada')) {
+      caja.setAttribute('data-armada', '1');
+      caja.innerHTML = (p === 'clientes' ? '' : '<div class="filters xf-vistas" id="xf-' + p + '-vistas" role="group" aria-label="Vistas de ' + XF_NOMBRE[p] + '"></div>') +
+        '<div class="xf-fila2">' +
+          '<div class="xf-caja-filtros"><button type="button" class="btn sm xf-btn-filtros" id="xf-' + p + '-btn" aria-expanded="false" aria-controls="xf-' + p + '-panel"><i class="ic" data-ic="filtros"></i>Filtros<span class="xf-n" id="xf-' + p + '-n"></span></button>' +
+            '<div class="xf-panel" id="xf-' + p + '-panel" role="dialog" aria-label="Filtros de ' + XF_NOMBRE[p] + '" hidden></div></div>' +
+          '<ul class="xf-chips" id="xf-' + p + '-chips" aria-label="Filtros puestos"></ul>' +
+          '<span class="grow"></span>' +
+          (p === 'pipeline' ? '<div class="xf-seg" role="group" aria-label="Cómo ver los tratos"><button type="button" data-modo="tablero"><i class="ic" data-ic="kanban"></i>Tablero</button><button type="button" data-modo="lista"><i class="ic" data-ic="lista"></i>Lista</button></div>' : '') +
+          (p === 'embudo' ? '<label class="xf-periodo"><span>Entraron</span><select id="xe-dias">' + XF_DIAS.map(function (d) { return '<option value="' + d[0] + '">' + esc(d[1]) + '</option>'; }).join('') + '</select></label>' : '') +
+          '<div class="xf-caja-guardar"><button type="button" class="btn sm" id="xf-' + p + '-guardar" aria-expanded="false" aria-controls="xf-' + p + '-form"><i class="ic" data-ic="guardar"></i>Guardar vista</button>' +
+            '<form class="xf-guardar" id="xf-' + p + '-form" hidden><label for="xf-' + p + '-nombre">Nombre de la vista</label><input type="text" id="xf-' + p + '-nombre" maxlength="40" autocomplete="off" placeholder="Ej.: Bodas de diciembre">' +
+            '<span class="xf-guardar-err" id="xf-' + p + '-err" role="alert"></span><div class="xf-guardar-acc"><button type="button" class="btn sm" data-cancelar>Cancelar</button><button type="submit" class="btn sm primary">Guardar</button></div></form></div>' +
+          '<button type="button" class="btn sm danger xf-borrar" id="xf-' + p + '-borrar" hidden>Eliminar vista</button>' +
+        '</div>';
+      iconos(caja);
+      xfEnganchar(p);
+    }
+    // Lo que cambia con cada filtro: el número del botón, las píldoras, Tablero | Lista, el periodo y «Eliminar».
+    var conds = xfCondiciones(p);
+    $('xf-' + p + '-n').textContent = conds.length ? String(conds.length) : '';
+    $('xf-' + p + '-btn').setAttribute('aria-label', conds.length ? 'Filtros: ' + conds.length + (conds.length === 1 ? ' puesto' : ' puestos') : 'Filtros');
+    $('xf-' + p + '-chips').innerHTML = conds.map(function (c) {
+      return '<li class="xf-chip"><span>' + esc(c.t) + '</span><button type="button" data-quitar="' + c.k + '" aria-label="Quitar el filtro «' + esc(c.t) + '»"><i class="ic" data-ic="cerrar"></i></button></li>';
+    }).join('') + (conds.length > 1 ? '<li><button type="button" class="linkbtn xf-limpiar" data-quitar="*">Quitar todos</button></li>' : '');
+    iconos($('xf-' + p + '-chips'));
+    $('xf-' + p + '-chips').querySelectorAll('[data-quitar]').forEach(function (b) {
+      b.onclick = function () {
+        var k = b.getAttribute('data-quitar');
+        if (k === '*') xfE(p).cond = {}; else xfQuitar(p, k);
+        xfRepintar(p);
+        // El foco no se pierde en la nada: vuelve al botón Filtros.
+        $('xf-' + p + '-btn').focus();
+      };
+    });
+    caja.querySelectorAll('[data-modo]').forEach(function (b) { var on = b.getAttribute('data-modo') === e.modo; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+    if (p === 'embudo' && $('xe-dias')) $('xe-dias').value = e.dias;
+    var actual = xfVistaActual(p);
+    $('xf-' + p + '-borrar').hidden = !(actual && actual.guardada);
+    if (actual && actual.guardada) $('xf-' + p + '-borrar').textContent = 'Eliminar «' + actual.t + '»';
+  }
+  function xfEnganchar(p) {
+    var btn = $('xf-' + p + '-btn'), panel = $('xf-' + p + '-panel'), gbtn = $('xf-' + p + '-guardar'), form = $('xf-' + p + '-form');
+    function cerrarPanel(devolver) { if (panel.hidden) return; panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); if (devolver) btn.focus(); }
+    function cerrarForm(devolver) { if (form.hidden) return; form.hidden = true; gbtn.setAttribute('aria-expanded', 'false'); if (devolver) gbtn.focus(); }
+    btn.onclick = function (ev) {
+      ev.stopPropagation();
+      if (!panel.hidden) { cerrarPanel(true); return; }
+      cerrarForm(false);
+      xfPintarPanel(p);
+      panel.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      var primero = panel.querySelector('input, select, button');
+      if (primero) primero.focus();
+    };
+    gbtn.onclick = function (ev) {
+      ev.stopPropagation();
+      if (!form.hidden) { cerrarForm(true); return; }
+      cerrarPanel(false);
+      form.hidden = false;
+      gbtn.setAttribute('aria-expanded', 'true');
+      $('xf-' + p + '-err').textContent = '';
+      $('xf-' + p + '-nombre').value = '';
+      $('xf-' + p + '-nombre').focus();
+    };
+    form.querySelector('[data-cancelar]').onclick = function () { cerrarForm(true); };
+    form.onsubmit = function (ev) {
+      ev.preventDefault();
+      var nombre = $('xf-' + p + '-nombre').value.trim().replace(/\s+/g, ' ');
+      // El nombre se queda escrito si algo falla: se corrige, no se vuelve a escribir.
+      if (!nombre) { $('xf-' + p + '-err').textContent = 'Ponle un nombre para encontrarla después.'; $('xf-' + p + '-nombre').focus(); return; }
+      var l = xfGuardadas(p);
+      if (l.some(function (v) { return v.nombre.toLowerCase() === nombre.toLowerCase(); })) { $('xf-' + p + '-err').textContent = 'Ya tienes una vista con ese nombre.'; $('xf-' + p + '-nombre').focus(); return; }
+      if (l.length >= 20) { $('xf-' + p + '-err').textContent = 'Ya tienes 20 vistas guardadas: elimina alguna antes.'; return; }
+      var actual = xfVistaActual(p);
+      // Lo que se guarda es lo que se ve: la vista de abajo (si era guardada, la suya) y todos los filtros juntos.
+      var base = actual.guardada ? actual.guardada.base : actual.id;
+      var cond = JSON.parse(JSON.stringify(actual.guardada ? actual.guardada.cond : {}));
+      var ahora = xfE(p).cond;
+      Object.keys(ahora).forEach(function (k) { cond[k] = ahora[k]; });
+      var nueva = { id: Date.now().toString(36), nombre: nombre, base: base, cond: cond };
+      l.push(nueva);
+      if (!xfPonerGuardadas(p, l)) return;
+      xfE(p).cond = {};
+      if (p === 'clientes') cli.grupo = 'v:' + nueva.id; else xfE(p).vista = 'v:' + nueva.id;
+      cerrarForm(false);
+      xfRepintar(p);
+      toast('Vista «' + nombre + '» guardada: está arriba, con las demás.');
+    };
+    $('xf-' + p + '-borrar').onclick = function () {
+      var actual = xfVistaActual(p);
+      if (!actual || !actual.guardada) return;
+      var g = actual.guardada;
+      xfPonerGuardadas(p, xfGuardadas(p).filter(function (v) { return v.id !== g.id; }));
+      if (p === 'clientes') cli.grupo = 'todos'; else xfE(p).vista = 'todos';
+      xfRepintar(p);
+      // Se puede deshacer: tocar el aviso la devuelve tal cual.
+      toast('Vista «' + g.nombre + '» eliminada. Toca aquí para deshacer.', function () {
+        var l = xfGuardadas(p);
+        if (!l.some(function (v) { return v.id === g.id; })) { l.push(g); xfPonerGuardadas(p, l); }
+        if (p === 'clientes') cli.grupo = 'v:' + g.id; else xfE(p).vista = 'v:' + g.id;
+        xfRepintar(p);
+      });
+    };
+    $('xf-' + p).querySelectorAll('[data-modo]').forEach(function (b) {
+      b.onclick = function () { xfE(p).modo = b.getAttribute('data-modo'); xfRepintar(p); };
+    });
+    if (p === 'embudo' && $('xe-dias')) $('xe-dias').onchange = function () { xfE('embudo').dias = $('xe-dias').value; xfRepintar('embudo'); };
+    // Escape cierra lo que se abrió y devuelve el foco a quien lo abrió; un clic fuera, también.
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Escape') return;
+      if (!panel.hidden) { ev.stopPropagation(); cerrarPanel(true); } else if (!form.hidden) { ev.stopPropagation(); cerrarForm(true); }
+    });
+    document.addEventListener('click', function (ev) {
+      if (!panel.hidden && !panel.contains(ev.target) && !btn.contains(ev.target)) cerrarPanel(false);
+      if (!form.hidden && !form.contains(ev.target) && !gbtn.contains(ev.target)) cerrarForm(false);
+    });
+  }
+  /** El panel de Filtros, con lo que hay de verdad en los datos de esa pantalla (canales, asignados, campos). */
+  function xfPintarPanel(p) {
+    var panel = $('xf-' + p + '-panel'), c = xfE(p).cond, datos = xfDatosDe(p);
+    var asignados = {}, canales = {}, campos = {};
+    datos.forEach(function (x) {
+      var r = String(x.responsable || '').trim();
+      if (r) asignados[r] = 1;
+      if (x.channel) canales[x.channel] = 1;
+      datosCapturados(x).forEach(function (k) { campos[k] = 1; });
+    });
+    if (state.name) asignados[state.name] = 1;
+    if (c.asignado && c.asignado !== '__nadie') asignados[c.asignado] = 1;
+    if (c.canal) canales[c.canal] = 1;
+    if (c.datoK) campos[c.datoK] = 1;
+    var opc = function (lista, sel) { return lista.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === (sel == null ? '' : String(sel)) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join(''); };
+    var id = function (k) { return 'xf-' + p + '-' + k; };
+    var etapas = (state.stages || []).map(function (e) {
+      var on = (c.etapas || []).indexOf(e.id) >= 0;
+      return '<label class="xf-etapa"><input type="checkbox" value="' + esc(e.id) + '"' + (on ? ' checked' : '') + '><i class="punto" data-rol="' + esc(e.rol || '') + '" aria-hidden="true"></i>' + esc(e.label) + '</label>';
+    }).join('');
+    panel.innerHTML =
+      '<div class="xf-panel-cab"><b>Filtros</b><span>Se aplican encima de la vista «' + esc(xfVistaActual(p).t.replace(/^[^\wÀ-ÿ]+\s*/, '')) + '».</span></div>' +
+      '<fieldset class="xf-campo xf-etapas"><legend>Etapa</legend>' + etapas + '</fieldset>' +
+      '<div class="xf-campo"><label for="' + id('asignado') + '">Asignado a</label><select id="' + id('asignado') + '" data-k="asignado">' +
+        opc([['', 'Cualquiera'], ['__nadie', 'Sin asignar']].concat(Object.keys(asignados).sort().map(function (n) { return [n, n]; })), c.asignado) + '</select></div>' +
+      '<div class="xf-campo"><label for="' + id('canal') + '">Canal</label><select id="' + id('canal') + '" data-k="canal">' +
+        opc([['', 'Cualquiera']].concat(Object.keys(canales).map(function (k) { return [k, canalSolo(k)]; })), c.canal) + '</select></div>' +
+      '<div class="xf-campo solo-completo"><label for="' + id('temp') + '">Temperatura</label><select id="' + id('temp') + '" data-k="temp">' + opc(XF_TEMP, c.temp) + '</select></div>' +
+      '<fieldset class="xf-campo xf-valor"><legend>Valor</legend><label><span>Desde</span><input type="number" min="0" step="any" inputmode="numeric" id="' + id('vmin') + '" data-k="vmin" value="' + esc(c.vmin == null ? '' : c.vmin) + '"></label>' +
+        '<label><span>Hasta</span><input type="number" min="0" step="any" inputmode="numeric" id="' + id('vmax') + '" data-k="vmax" value="' + esc(c.vmax == null ? '' : c.vmax) + '"></label><small>Los que no tienen valor no entran: no se sabe si cumplen.</small></fieldset>' +
+      '<div class="xf-campo"><label for="' + id('act') + '">Última actividad</label><select id="' + id('act') + '" data-k="act">' + opc(XF_ACTIVIDAD, c.act) + '</select></div>' +
+      '<fieldset class="xf-campo xf-dato"><legend>Un dato captado</legend><select id="' + id('datoK') + '" data-k="datoK" aria-label="Qué dato">' +
+        opc([['', 'Ninguno']].concat(Object.keys(campos).sort().map(function (k) { return [k, etiquetaDato(k)]; })), c.datoK) + '</select>' +
+        '<input type="text" id="' + id('datoV') + '" data-k="datoV" placeholder="que diga… (opcional)" aria-label="Qué debe decir el dato" value="' + esc(c.datoV || '') + '"' + (c.datoK ? '' : ' disabled') + '></fieldset>' +
+      '<div class="xf-panel-pie"><button type="button" class="btn sm" data-limpiar>Quitar los filtros</button><button type="button" class="btn sm primary" data-listo>Listo</button></div>';
+    var aplicar = function () { xfRepintar(p); };
+    panel.querySelectorAll('.xf-etapas input').forEach(function (i) {
+      i.onchange = function () {
+        var l = Array.prototype.filter.call(panel.querySelectorAll('.xf-etapas input'), function (x) { return x.checked; }).map(function (x) { return x.value; });
+        if (l.length) xfE(p).cond.etapas = l; else delete xfE(p).cond.etapas;
+        aplicar();
+      };
+    });
+    panel.querySelectorAll('select[data-k], input[data-k]').forEach(function (el) {
+      el.onchange = function () {
+        var k = el.getAttribute('data-k'), v = el.value.trim();
+        // Una cifra que no es cifra se dice junto al campo y no se aplica; lo escrito se queda para corregirlo.
+        if ((k === 'vmin' || k === 'vmax') && v !== '' && !(Number(v) >= 0)) { el.setCustomValidity('Escribe una cifra (solo números).'); el.reportValidity(); return; }
+        el.setCustomValidity('');
+        if (v === '') delete xfE(p).cond[k]; else xfE(p).cond[k] = (k === 'vmin' || k === 'vmax') ? Number(v) : v;
+        if (k === 'datoK') { $(id('datoV')).disabled = !v; if (!v) { delete xfE(p).cond.datoV; $(id('datoV')).value = ''; } }
+        aplicar();
+      };
+    });
+    panel.querySelector('[data-limpiar]').onclick = function () { xfE(p).cond = {}; aplicar(); xfPintarPanel(p); panel.querySelector('input, select').focus(); };
+    panel.querySelector('[data-listo]').onclick = function () { panel.hidden = true; $('xf-' + p + '-btn').setAttribute('aria-expanded', 'false'); $('xf-' + p + '-btn').focus(); };
+  }
+  /** Tratos en lista (Dynamics: la vista de cuadrícula): las columnas de un trato, ordenables con un clic. */
+  var XF_LISTA = { orden: 'vez', al: 1 };
+  function xfPintarListaTratos(list) {
+    var caja = $('xf-pipeline-lista');
+    if (!list.length) {
+      var hay = xfHayCond('pipeline');
+      caja.innerHTML = '<div class="fx-ct-vacio" role="status"><span class="fx-ct-vacio-ic"><i class="ic" data-ic="embudo"></i></span><b>' + (hay ? 'Ningún trato cumple estos filtros' : 'Ningún trato en esta vista por ahora') + '</b>' +
+        '<p>' + (hay ? 'Quita alguno de los filtros de arriba.' : 'Cuando alguien cumpla con la vista, aparece aquí solo.') + '</p>' +
+        '<button type="button" class="btn sm" data-ver-todos>' + (hay ? 'Quitar los filtros' : 'Ver todos los tratos') + '</button></div>';
+      iconos(caja);
+      caja.querySelector('[data-ver-todos]').onclick = function () { if (hay) xfE('pipeline').cond = {}; else xfE('pipeline').vista = 'todos'; xfRepintar('pipeline'); };
+      return;
+    }
+    var etapasEnOrden = Object.keys(state.stageLabels);
+    var ORD = {
+      nombre: function (a, b) { return nameOf(a).localeCompare(nameOf(b), 'es'); },
+      etapa: function (a, b) { return etapasEnOrden.indexOf(a.stage) - etapasEnOrden.indexOf(b.stage); },
+      valor: function (a, b) { return (b.valor || 0) - (a.valor || 0); },
+      vez: function (a, b) { return (b.lastMessageAt || 0) - (a.lastMessageAt || 0); }
+    };
+    var l = list.slice().sort(function (a, b) { return XF_LISTA.al * ORD[XF_LISTA.orden](a, b); });
+    var ids = l.map(function (c) { return c.id; });
+    var th = function (k, t, clase) {
+      var on = XF_LISTA.orden === k;
+      return '<th class="' + (clase || '') + '"' + (on ? ' aria-sort="' + (XF_LISTA.al === 1 ? 'descending' : 'ascending') + '"' : '') + '><button class="orden' + (on ? ' on' : '') + '" data-xf-orden="' + k + '">' + t + (on ? (XF_LISTA.al === 1 ? ' ↓' : ' ↑') : '') + '</button></th>';
+    };
+    var suma = 0, sinPrecio = 0;
+    l.forEach(function (c) { if (c.valor) suma += c.valor; else sinPrecio++; });
+    caja.innerHTML = '<table class="cli-tabla xf-tabla"><thead><tr>' + th('nombre', 'Trato') + th('etapa', 'Etapa') + '<th>Próximo paso</th><th>Asignado a</th>' + th('valor', 'Valor', 'num') + th('vez', 'Última actividad', 'num') + '</tr></thead><tbody>' +
+      l.map(function (c) {
+        return '<tr data-id="' + esc(c.id) + '"><td data-rot="Trato" class="fx-ct-quien"><div class="fx-ct-persona">' + avatarHtml(nameOf(c), c.id, 'sm') + '<div class="fx-ct-nom"><button class="quien" data-id="' + esc(c.id) + '">' + esc(nameOf(c)) + '</button><div class="dato">' + canalHtml(c.channel) + '</div></div></div></td>' +
+          '<td data-rot="Etapa">' + pastillaEtapa(c.stage) + '</td>' +
+          '<td data-rot="Próximo paso" class="proximo">' + pasoHtml(c.proximo) + '</td>' +
+          '<td data-rot="Asignado a">' + (c.responsable ? esc(c.responsable) : '<span class="fx-ct-sin">Sin asignar</span>') + '</td>' +
+          '<td data-rot="Valor" class="num">' + valorHtml(c) + '</td>' +
+          '<td data-rot="Última actividad" class="num dato">' + esc(c.lastMessageAt ? rel(c.lastMessageAt) : '—') + '</td></tr>';
+      }).join('') + '</tbody><tfoot><tr><td colspan="3">' + l.length + (l.length === 1 ? ' trato' : ' tratos') + '</td><td class="dato">' + (sinPrecio && suma ? sinPrecio + ' sin precio' : '') + '</td><td class="num">' + (suma ? '<span class="dato">Suma</span> <b>' + esc(plata(suma)) + '</b>' : '') + '</td><td></td></tr></tfoot></table>';
+    caja.querySelectorAll('[data-xf-orden]').forEach(function (b) {
+      b.onclick = function () { var k = b.getAttribute('data-xf-orden'); if (XF_LISTA.orden === k) XF_LISTA.al = -XF_LISTA.al; else { XF_LISTA.orden = k; XF_LISTA.al = 1; } xfPintarListaTratos(list); };
+    });
+    caja.querySelectorAll('tbody tr').forEach(function (tr) {
+      tr.onclick = function (ev) { if (ev.target.closest('a, select, input')) return; abrirPerfil(tr.getAttribute('data-id'), ids); };
+    });
+  }
+
+  // ---------- la pantalla Embudo ----------
+  var XE = { contactos: null, cargando: false, error: '' };
+  /**
+   * El embudo de una lista de tratos, pura (test:embudo). Por cada etapa del camino (todas menos perdido, en el
+   * orden del negocio): cuántos llegaron a ella o más allá, cuántos están ahí hoy y cuánto valen, y qué parte pasa
+   * a la siguiente. Los perdidos van aparte, por la etapa desde la que se cayeron.
+   */
+  function calcularEmbudo(lista, pasos, etapas) {
+    var camino = etapas.filter(function (e) { return e.rol !== 'perdido'; });
+    var idx = {}, rolDe = {};
+    camino.forEach(function (e, i) { idx[e.id] = i; });
+    etapas.forEach(function (e) { rolDe[e.id] = e.rol; });
+    var tramos = camino.map(function (e) { return { id: e.id, label: e.label, rol: e.rol, llegaron: 0, ahora: 0, valor: 0, sinPrecio: 0, perdidos: 0, pasan: null }; });
+    var perdidos = { total: 0, sinSaber: 0, motivos: [] }, motivos = {}, sinHistoria = 0, abiertos = 0, valorAbierto = 0, sinPrecioAbierto = 0, ganados = 0;
+    lista.forEach(function (c) {
+      var p = pasos && pasos[c.id];
+      var perdido = rolDe[c.stage] === 'perdido';
+      if (!p || !p.conHistoria) sinHistoria++;
+      // Hasta dónde llegó: lo que dice la historia; sin ella, la etapa de hoy; perdido y sin historia, solo entró.
+      var hasta = p && p.alcanzo != null && idx[p.alcanzo] != null ? idx[p.alcanzo] : (!perdido && idx[c.stage] != null ? idx[c.stage] : 0);
+      for (var i = 0; i <= hasta && i < tramos.length; i++) tramos[i].llegaron++;
+      if (perdido) {
+        perdidos.total++;
+        var desde = p && p.cayoDesde != null && idx[p.cayoDesde] != null ? idx[p.cayoDesde] : null;
+        if (desde == null) perdidos.sinSaber++; else tramos[desde].perdidos++;
+        var m = String((c.data && c.data.motivo_perdida) || '').trim();
+        if (m) motivos[m] = (motivos[m] || 0) + 1;
+        return;
+      }
+      var t = tramos[idx[c.stage]];
+      if (!t) return;
+      t.ahora++;
+      var v = Number(c.valor) || 0;
+      if (v > 0) t.valor += v; else t.sinPrecio++;
+      if (rolDe[c.stage] === 'ganado') ganados++;
+      else { abiertos++; if (v > 0) valorAbierto += v; else sinPrecioAbierto++; }
+    });
+    tramos.forEach(function (t, i) { var sig = tramos[i + 1]; t.pasan = sig && t.llegaron ? sig.llegaron / t.llegaron : null; });
+    // Dónde se quedan más: el paso con la menor proporción, entre los que tienen al menos tres que llegaron (con
+    // menos, un solo caso decide el porcentaje y la pantalla señalaría un problema que no existe).
+    var peor = null;
+    tramos.forEach(function (t, i) { if (t.pasan != null && t.llegaron >= 3 && t.pasan < 1 && (peor == null || t.pasan < tramos[peor].pasan)) peor = i; });
+    perdidos.motivos = Object.keys(motivos).map(function (k) { return { motivo: k, n: motivos[k] }; }).sort(function (a, b) { return b.n - a.n || a.motivo.localeCompare(b.motivo, 'es'); });
+    return { total: lista.length, tramos: tramos, peor: peor, perdidos: perdidos, sinHistoria: sinHistoria, abiertos: abiertos, valorAbierto: valorAbierto, sinPrecioAbierto: sinPrecioAbierto, ganados: ganados };
+  }
+  function xePct(x) { return x == null ? '—' : Math.round(x * 100) + ' %'; }
+  /** Un valor que se sabe, o lo que se sabe de él: nunca «$0» (cero diría que no vale nada). */
+  function xeValor(v, cuantos, sinPrecio) {
+    if (!cuantos) return '—';
+    if (!v) return 'Sin precios';
+    return plataCorta(v) + (sinPrecio ? ' · ' + sinPrecio + ' sin precio' : '');
+  }
+  function cargarEmbudo() {
+    xfPintarBarra('embudo');
+    XE.cargando = true;
+    XE.error = '';
+    if (!XE.contactos || !XF_HIST.pasos) pintarEmbudo();
+    var faltan = 2, falla = '';
+    var listo = function () { if (--faltan) return; XE.cargando = false; XE.error = falla; pintarEmbudo(); };
+    api('/contacts?limit=2000').then(function (l) {
+      if (Array.isArray(l)) XE.contactos = l; else falla = (l && l.error) || 'sin respuesta del servidor';
+      listo();
+    });
+    xfCargarHistoria(function (ok) { if (!ok) falla = falla || XF_HIST.error; listo(); });
+  }
+  alAbrir('embudo', cargarEmbudo);
+  function pintarEmbudo() {
+    var caja = $('xe-cuerpo');
+    if (!caja) return;
+    xfPintarBarra('embudo');
+    var todos = (XE.contactos || []).filter(deLaSede);
+    xfPintarVistas('embudo', todos);
+    if (XE.error && (!XE.contactos || !XF_HIST.pasos)) {
+      caja.innerHTML = '<div class="fx-ct-vacio error" role="alert"><span class="fx-ct-vacio-ic"><i class="ic" data-ic="alerta"></i></span><b>No se pudo armar el embudo</b><p>El servidor dijo: ' + esc(XE.error) + '. Vuelve a intentarlo en un momento.</p><button type="button" class="btn sm" data-xe="reintentar">Volver a intentar</button></div>';
+      iconos(caja);
+      caja.querySelector('[data-xe]').onclick = cargarEmbudo;
+      return;
+    }
+    if (!XE.contactos || !XF_HIST.pasos) {
+      // Cargando: la forma de lo que viene (cuatro cifras y el embudo que se angosta), para que nada salte al llegar.
+      caja.innerHTML = '<div class="xe-esq" aria-busy="true" aria-label="Cargando el embudo"><div class="xe-esq-cifras"><i></i><i></i><i></i><i></i></div>' +
+        '<div class="xe-esq-tramos">' + [100, 82, 64, 46, 30].map(function (w) { return '<i style="width:' + w + '%"></i>'; }).join('') + '</div></div>';
+      return;
+    }
+    var e = xfE('embudo'), dias = Number(e.dias) || 0, desde = dias ? Date.now() - dias * 86400000 : 0;
+    var lista = todos.filter(xfFiltro('embudo')).filter(function (c) { return !desde || (c.firstSeen || 0) >= desde; });
+    var etapas = XF_HIST.etapas || state.stages || [];
+    var periodo = (XF_DIAS.filter(function (d) { return d[0] === e.dias; })[0] || XF_DIAS[2])[1];
+    if (!todos.length) {
+      caja.innerHTML = '<div class="fx-ct-vacio" role="status"><span class="fx-ct-vacio-ic"><i class="ic" data-ic="embudo"></i></span><b>Todavía no hay tratos</b><p>Cada persona que escribe por WhatsApp o por el chat del sitio entra sola al embudo, en la primera etapa.</p><button type="button" class="btn sm" data-xe="bandeja">Ir a la Bandeja omnicanal</button></div>';
+      iconos(caja);
+      caja.querySelector('[data-xe]').onclick = function () { go('inbox'); };
+      return;
+    }
+    if (!lista.length) {
+      var hay = xfHayCond('embudo');
+      caja.innerHTML = '<div class="fx-ct-vacio" role="status"><span class="fx-ct-vacio-ic"><i class="ic" data-ic="embudo"></i></span><b>Ningún trato entró ' + esc(periodo) + (hay ? ' con estos filtros' : ' en esta vista') + '</b>' +
+        '<p>' + (dias ? 'Prueba con un periodo más largo' + (hay ? ' o quita algún filtro' : '') + '.' : 'Quita algún filtro o cambia de vista.') + '</p>' +
+        '<div class="xe-acc">' + (dias ? '<button type="button" class="btn sm" data-xe="siempre">Ver desde siempre</button>' : '') + (hay ? '<button type="button" class="btn sm" data-xe="limpiar">Quitar los filtros</button>' : '') +
+        (!dias && !hay ? '<button type="button" class="btn sm" data-xe="todos">Ver todos los tratos</button>' : '') + '</div></div>';
+      iconos(caja);
+      caja.querySelectorAll('[data-xe]').forEach(function (b) {
+        b.onclick = function () { var q = b.getAttribute('data-xe'); if (q === 'siempre') e.dias = '0'; if (q === 'limpiar') e.cond = {}; if (q === 'todos') e.vista = 'todos'; xfRepintar('embudo'); };
+      });
+      return;
+    }
+    var m = calcularEmbudo(lista, XF_HIST.pasos, etapas);
+    var max = Math.max(1, m.tramos.length ? m.tramos[0].llegaron : 1);
+    var perdidoIds = etapas.filter(function (x) { return x.rol === 'perdido'; }).map(function (x) { return x.id; });
+    var cifra = function (k, t, n, p) { return '<div class="xe-cifra" data-k="' + k + '"><span class="t">' + esc(t) + '</span><b class="n">' + esc(n) + '</b><span class="p">' + esc(p) + '</span></div>'; };
+    var sinMotivo = m.perdidos.total - m.perdidos.motivos.reduce(function (s, x) { return s + x.n; }, 0);
+    caja.innerHTML = '<div class="xe-cifras">' +
+        cifra('entraron', 'Entraron', String(m.total), periodo) +
+        cifra('abiertos', 'Siguen abiertos', String(m.abiertos), !m.abiertos ? 'Ninguno abierto' : !m.valorAbierto ? 'Sin precios' :
+          plataCorta(m.valorAbierto) + ' en juego' + (m.sinPrecioAbierto ? ' · ' + m.sinPrecioAbierto + ' sin precio' : '')) +
+        cifra('ganados', 'Ganados', String(m.ganados), xePct(m.total ? m.ganados / m.total : null) + ' de los que entraron') +
+        cifra('perdidos', 'Perdidos', String(m.perdidos.total), xePct(m.total ? m.perdidos.total / m.total : null) + ' de los que entraron') +
+      '</div>' +
+      ((XE.contactos || []).length >= 2000 ? '<p class="cli-resumen fx-ct-parcial" role="note">Se cuentan los 2.000 tratos con actividad más reciente.</p>' : '') +
+      '<div class="xe-fila">' +
+        '<section class="panel xe-caja" aria-labelledby="xe-t-embudo"><div class="xe-cab"><h2 id="xe-t-embudo">El embudo</h2><p>Cuántos llegaron a cada etapa (o más allá) y qué parte pasa a la siguiente. Toca una etapa para ver sus tratos.</p></div>' +
+        '<ol class="xe-tramos">' + m.tramos.map(function (t, i) {
+          var ancho = Math.max(6, Math.round(t.llegaron / max * 100));
+          var paso = t.pasan == null ? '' : '<div class="xe-paso' + (m.peor === i ? ' peor' : '') + '"><i class="ic" data-ic="abajo"></i><span><b>' + xePct(t.pasan) + '</b> pasa a ' + esc(m.tramos[i + 1].label) +
+            ' <span class="xe-de">(' + m.tramos[i + 1].llegaron + ' de ' + t.llegaron + ')</span></span>' + (m.peor === i ? '<span class="xe-alerta">Aquí se quedan más</span>' : '') + '</div>';
+          return '<li><button type="button" class="xe-tramo" data-stage="' + esc(t.id) + '" data-rol="' + esc(t.rol || '') + '" aria-label="' + esc(t.label + ': llegaron ' + t.llegaron + ', hoy ' + t.ahora + '. Ver sus tratos') + '">' +
+            '<span class="xe-et"><i class="punto" aria-hidden="true"></i><b>' + esc(t.label) + '</b><small>Llegaron ' + t.llegaron + '</small></span>' +
+            '<span class="xe-pista" aria-hidden="true"><span class="xe-barra" style="width:' + ancho + '%"></span></span>' +
+            '<span class="xe-ahora"><b>' + (t.ahora ? t.ahora + ' aquí hoy' : 'Nadie aquí hoy') + '</b><small>' + esc(xeValor(t.valor, t.ahora, t.sinPrecio)) + '</small></span>' +
+          '</button>' + paso + '</li>';
+        }).join('') + '</ol>' +
+        (m.sinHistoria ? '<p class="xe-nota">' + m.sinHistoria + (m.sinHistoria === 1 ? ' trato no tiene' : ' tratos no tienen') + ' historia de etapas (se importaron o vienen de antes): ' + (m.sinHistoria === 1 ? 'cuenta' : 'cuentan') + ' por la etapa en la que ' + (m.sinHistoria === 1 ? 'está' : 'están') + ' hoy.</p>' : '') +
+        '</section>' +
+        '<section class="panel xe-caja xe-caidas" aria-labelledby="xe-t-caidas"><div class="xe-cab"><h2 id="xe-t-caidas">Dónde se caen</h2><p>Los que se perdieron, por la etapa en la que estaban cuando se perdieron.</p></div>' +
+        (m.perdidos.total ? '<ul class="xe-caida-lista">' + m.tramos.filter(function (t) { return t.perdidos; }).sort(function (a, b) { return b.perdidos - a.perdidos; }).map(function (t) {
+            return '<li><span class="xe-caida-et"><i class="punto" data-rol="' + esc(t.rol || '') + '" aria-hidden="true"></i>' + esc(t.label) + '</span><span class="xe-caida-pista" aria-hidden="true"><i style="width:' + Math.round(t.perdidos / m.perdidos.total * 100) + '%"></i></span><b>' + t.perdidos + '</b></li>';
+          }).join('') +
+          (m.perdidos.sinSaber ? '<li class="xe-sin-saber"><span class="xe-caida-et">Sin saber dónde</span><span class="xe-caida-pista" aria-hidden="true"><i style="width:' + Math.round(m.perdidos.sinSaber / m.perdidos.total * 100) + '%"></i></span><b>' + m.perdidos.sinSaber + '</b></li>' : '') + '</ul>' +
+          (m.perdidos.sinSaber ? '<p class="xe-nota">De ' + (m.perdidos.sinSaber === 1 ? 'uno' : m.perdidos.sinSaber) + ' no se sabe en qué etapa estaba: ' + (m.perdidos.sinSaber === 1 ? 'no tiene' : 'no tienen') + ' historia de etapas.</p>' : '') +
+          '<h3 class="xe-sub">Por qué</h3>' + (m.perdidos.motivos.length ? '<ul class="xe-motivos">' + m.perdidos.motivos.slice(0, 4).map(function (x) { return '<li><span>' + esc(x.motivo) + '</span><b>' + x.n + '</b></li>'; }).join('') + '</ul>' : '') +
+          (sinMotivo ? '<p class="xe-nota">' + sinMotivo + (sinMotivo === 1 ? ' no dijo por qué.' : ' no dijeron por qué.') + '</p>' : '') +
+          (perdidoIds.length ? '<button type="button" class="btn sm" data-xe="perdidos">Ver los perdidos en Tratos</button>' : '')
+        : '<div class="xe-vacio-mini"><b>Ninguno se perdió</b><span>De los que entraron ' + esc(periodo) + ' en esta vista, ninguno está en una etapa de perdido.</span></div>') +
+        '</section>' +
+      '</div>';
+    iconos(caja);
+    caja.querySelectorAll('.xe-tramo').forEach(function (b) { b.onclick = function () { xfIrATratos([b.getAttribute('data-stage')]); }; });
+    var bp = caja.querySelector('[data-xe="perdidos"]');
+    if (bp) bp.onclick = function () { xfIrATratos(perdidoIds); };
+  }
+  /** Tocar una etapa del embudo abre Tratos con esa etapa como filtro (con todos los tratos, para no esconder nada). */
+  function xfIrATratos(etapas) {
+    var e = xfE('pipeline');
+    e.vista = 'todos';
+    e.cond = { etapas: etapas.slice() };
+    xfGuardar('pipeline');
+    go('pipeline');
+  }
   // (fin de XEN · Embudo y filtrado)
 
   // ===== XEN · KPIs y metas: lo nuevo del agente de KPIs (alAbrir('kpis', …)) =====
