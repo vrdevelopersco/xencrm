@@ -330,7 +330,8 @@ const SOLO_SUPER = /^(clave|motores)(\/|$)/;
 /**
  * Lo que el negocio puede ver pero solo cambia quien administra XENCRM. La retención borra (o anonimiza) datos de sus
  * clientes: el negocio tiene que saber que existe y cuándo pasó, pero encenderla no es de la operación del día. Las
- * metas (KPIs y metas) las pone quien administra: el equipo las ve —sabe a qué apunta— pero no se las cambia.
+ * metas (KPIs y metas) las pone quien administra: el equipo las ve —sabe a qué apunta— pero no se las cambia. (La
+ * configuración del SLA no va aquí: quién la cambia es configurable, y lo decide su ruta con el rol de la sesión.)
  */
 const SOLO_SUPER_CAMBIA = /^(retencion|metas)(\/|$)/;
 

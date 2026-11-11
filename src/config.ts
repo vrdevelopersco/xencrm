@@ -347,6 +347,47 @@ export const BusinessConfigSchema = z.object({
   evalFile: z.string().default('data/scenarios.json'),
   /** Datos de demostración (pnpm seed). */
   seedFile: z.string().optional(),
+  /**
+   * Servicio (Tickets, SLA, Mantenimientos). Cada parte trae su subclave; lo que no se dice sale de fábrica, y lo
+   * que se cambia desde el tablero manda sobre esto (crm/tickets.ts › configSla). `passthrough`: las subclaves de
+   * otras partes de Servicio no se pierden al leer esta.
+   */
+  servicio: z
+    .object({
+      /**
+       * Tickets y SLA (crm/tickets.ts). Todo opcional: las listas (planes, prioridades, tipos, estados) se reemplazan
+       * enteras; los objetivos se mezclan plan por plan y prioridad por prioridad. La coherencia (que la prioridad de
+       * fábrica exista, que haya un estado que cierre) la revisa crm/tickets.ts, igual que lo que llega del tablero.
+       */
+      sla: z
+        .object({
+          campoPlan: z.string().optional(),
+          campoProducto: z.string().optional(),
+          planes: z.array(z.object({ id: z.string(), nombre: z.string(), alias: z.array(z.string()).optional() })).optional(),
+          sinPlan: z.string().optional(),
+          prioridades: z.array(z.object({ id: z.string(), nombre: z.string(), tono: z.string().optional() })).optional(),
+          prioridadDeFabrica: z.string().optional(),
+          tipos: z.array(z.object({ id: z.string(), nombre: z.string() })).optional(),
+          tipoDeFabrica: z.string().optional(),
+          estados: z.array(z.object({ id: z.string(), nombre: z.string(), cierra: z.boolean().optional(), pausa: z.boolean().optional() })).optional(),
+          horario: z.object({ dias: z.array(z.number()).optional(), desde: z.string().optional(), hasta: z.string().optional() }).optional(),
+          objetivos: z
+            .record(z.string(), z.record(z.string(), z.object({ respuestaMin: z.number().optional(), solucionMin: z.number().optional(), reloj: z.enum(['habil', 'corrido']).optional() })))
+            .optional(),
+          riesgoPct: z.number().optional(),
+          primeraRespuesta: z.object({ delEquipo: z.boolean().optional(), aMano: z.boolean().optional(), alResolver: z.boolean().optional() }).optional(),
+          permisos: z
+            .object({
+              crear: z.enum(['equipo', 'admins', 'quien_administra']).optional(),
+              mover: z.enum(['equipo', 'admins', 'quien_administra']).optional(),
+              politicas: z.enum(['equipo', 'admins', 'quien_administra']).optional(),
+            })
+            .optional(),
+        })
+        .optional(),
+    })
+    .passthrough()
+    .optional(),
 });
 export type BusinessConfig = z.infer<typeof BusinessConfigSchema>;
 

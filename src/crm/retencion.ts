@@ -152,7 +152,9 @@ export function anonimizar(userId: string): string | null {
   try {
     for (const t of CON_TEXTO) if (existe(t)) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(userId);
     if (existe('grupo_gente')) db.prepare('DELETE FROM grupo_gente WHERE grupo = ? OR persona = ?').run(userId, userId);
-    // Las citas y los eventos son el embudo: se quedan, sin lo que se escribió en ellos.
+    // Las citas y los eventos son el embudo: se quedan, sin lo que se escribió en ellos. Los tickets, igual: son el
+    // cumplimiento del SLA y se quedan para contarlo, sin el asunto (que es texto sobre la persona).
+    if (existe('tickets')) db.prepare("UPDATE tickets SET user_id = ?, asunto = '' WHERE user_id = ?").run(nuevo, userId);
     db.prepare('UPDATE appointments SET user_id = ?, notes = \'\', reminder_note = NULL, customer_reply = NULL WHERE user_id = ?').run(nuevo, userId);
     db.prepare("UPDATE events SET user_id = ?, payload = '{}' WHERE user_id = ?").run(nuevo, userId);
     db.prepare('UPDATE llm_usage SET user_id = ? WHERE user_id = ?').run(nuevo, userId);
@@ -182,7 +184,7 @@ export function borrarDelTodo(userId: string): boolean {
   const medios = mediosDe(userId);
   db.exec('BEGIN');
   try {
-    for (const t of [...CON_TEXTO, 'appointments', 'events', 'turnos', 'origen']) if (existe(t)) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(userId);
+    for (const t of [...CON_TEXTO, 'appointments', 'events', 'turnos', 'origen', 'tickets']) if (existe(t)) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(userId);
     if (existe('grupo_gente')) db.prepare('DELETE FROM grupo_gente WHERE grupo = ? OR persona = ?').run(userId, userId);
     db.prepare("UPDATE llm_usage SET user_id = 'borrado' WHERE user_id = ?").run(userId);
     reemplazarEnFijados(userId, null);

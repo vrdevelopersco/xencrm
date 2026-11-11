@@ -7,7 +7,8 @@ import { addEvent, contactNumber, getContact, ponerNumerosAlDia, STAGES, type Co
 import { emitEvent } from './events.js';
 import { unirCuentasClave } from './cuentas-clave.js';
 
-const TABLES = ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses', 'llm_usage'];
+// tickets: los tickets de las dos fichas son de la misma persona, y su SLA se sigue contando (crm/tickets.ts).
+const TABLES = ['messages', 'analyses', 'events', 'appointments', 'verifications', 'misses', 'llm_usage', 'tickets'];
 
 /** Otras fichas que parecen la misma persona (mismo número, otro canal). */
 export function findDuplicates(id: string): { contact: Contact; reason: string }[] {

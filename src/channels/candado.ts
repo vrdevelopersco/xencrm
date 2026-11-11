@@ -24,6 +24,10 @@ const PUEDE_CAMBIAR: Array<[string, RegExp]> = [
   ['POST', /^contacts\/[^/]+\/(archive|snooze|merge|notas|human|presencia|reply|adjunto)$/],
   // Marcar una cuenta clave y escribir su plan: es de quien vende, como asignar o anotar (crm/cuentas-clave.ts).
   ['PUT', /^contacts\/[^/]+\/cuenta-clave$/],
+  // Abrir un ticket y moverlo (estado, prioridad, asignado, «respondido»): es atender al cliente (crm/tickets.ts). Las
+  // políticas del SLA no: son lo que se le promete a cada plan, y eso lo cambia quien administra.
+  ['POST', /^tickets$/],
+  ['PATCH', /^tickets\/\d+$/],
   ['DELETE', /^contacts\/[^/]+\/notas\/[^/]+$/],
   ['POST', /^contacts\/[^/]+\/mensajes\/[^/]+\/reintentar$/],
   ['POST', /^appointments$/],
