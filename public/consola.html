@@ -2042,7 +2042,7 @@ dialog.panel{border-radius:16px 0 0 16px}
     // sale dicho. Esconderlo haría pensar que no existe; ofrecerlo callando haría guardar algo que deja al
     // cliente mudo. Y guardar lo rechaza igual, sondeando de verdad en ese momento.
     var opciones = function (puesto) {
-      return ['ollama', 'apple', 'openai'].map(function (m) {
+      return (d.asignables || ['ollama', 'apple', 'openai']).map(function (m) { // XENCRM: también LM Studio, la API compatible y Claude
         var e = disp[m] || {};
         var nota = e.available ? '' : ' — no responde' + (e.reason ? ': ' + e.reason : '');
         return '<option value="' + m + '"' + (m === puesto ? ' selected' : '') + '>' + m + nota + '</option>';
