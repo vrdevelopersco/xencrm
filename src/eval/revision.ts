@@ -266,7 +266,7 @@ check('🪤 lo del día a día sí: Hoy, Conversaciones, Calendario y Clientes',
 check('Seguimientos, El asistente y Trazabilidad se esconden', /view: 'seguimientos', lbl: 'Seguimientos', soloCompleto: true/.test(js) && /view: 'agent'[^}]*soloCompleto: true/.test(js) && /view: 'trazas'[^}]*soloCompleto: true/.test(js));
 check('Perfil, Lo que sabe, Canales y la guía, no', ['profile', 'knowledge', 'channels', 'guia'].every((v) => new RegExp(`view: '${v}'`).test(js) && !new RegExp(`view: '${v}'[^}]*soloCompleto`).test(js)));
 check('el puntaje y su porqué se esconden; la etapa y quién está a cargo, no',
-  /fila\('¿Prospecto\?'[\s\S]*?'solo-completo'\)/.test(js) && /perfil-por solo-completo/.test(js) && /fila\('Etapa', '<select id="f-etapa"[^\n]*motivoHtml\(c, 'f-motivo'\)\)/.test(js) && /fila\('A cargo', responsableHtml\(c, 'f-resp'\)\)/.test(js));
+  /fila\('¿Prospecto\?'[\s\S]*?'solo-completo'\)/.test(js) && /perfil-por solo-completo/.test(js) && /fila\('Etapa', '<select id="f-etapa"[^\n]*motivoHtml\(c, 'f-motivo'\)\)/.test(js) && /fila\('Asignado a', responsableHtml\(c, 'f-resp'\)\)/.test(js));
 check('el «¿por qué?» de cada respuesta, también', /class="por-que solo-completo"/.test(js));
 check('🪤 el puntaje de la cabecera de la conversación también (su clase se reescribe al pintar)', /\$\('chat-temp'\)\.className = 'meta-line solo-completo'/.test(js) && /id="chat-temp"/.test(html));
 check('de las pastillas de puntaje queda solo «caliente»', /c\.temperature === 'caliente' \? '' : ' solo-completo'/.test(js));

@@ -357,8 +357,9 @@ check('la insignia de seguimientos gana a la cifra gris, que va en el mismo siti
 
 // El panel de la conversación es el perfil: primero quién es y qué quiere; el formulario, detrás de «Corregir».
 const panel = js.slice(js.indexOf('  function renderDetails() {'), js.indexOf('  // ---------- hoy ----------'));
+// XENCRM: «Lo que contó» se llama «Datos del contacto» (el glosario de docs/xencrm.md); la regla es la misma.
 check('el perfil al lado de la conversación dice qué quiere y lo que contó antes que nada editable',
-  panel.indexOf('ficha-quiere') > 0 && panel.indexOf('Lo que contó') > 0 && panel.indexOf('Lo que contó') < panel.indexOf('<summary>Corregir datos'));
+  panel.indexOf('ficha-quiere') > 0 && panel.indexOf('Datos del contacto') > 0 && panel.indexOf('Datos del contacto') < panel.indexOf('<summary>Corregir datos'));
 check('el formulario de la ficha vive detrás de «Corregir datos»', /<details class="corregir" data-k="corregir"><summary>Corregir datos<\/summary>[\s\S]*id="f-name"[\s\S]*id="del-btn"/.test(panel));
 check('🪤 repintar el perfil no borra lo que se estaba escribiendo', /var borradores = borradoresDelPerfil\(c\.id\)/.test(panel) && /devolverBorradores\(borradores\)/.test(panel) &&
   (panel.match(/data-borrador/g) || []).length >= 5, 'llega un análisis cada pocos segundos y repinta el panel entero');

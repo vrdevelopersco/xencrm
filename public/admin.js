@@ -906,29 +906,48 @@
     return api('/contacts' + (params.length ? '?' + params.join('&') : '')).then(function (list) {
       if (state.filter === 'unread') list = list.filter(function (c) { return c.unread > 0; });
       if (state.filter === 'mios') list = list.filter(esMia);
+      if (state.filter === 'sin-asignar') list = list.filter(sinAsignar);
       if ($('f-mios')) $('f-mios').hidden = !state.name;
       if (state.filter === 'hot') list = list.filter(function (c) { return c.score >= 60 || rol(c.stage) === 'cita'; });
       state.contacts = list; renderRows(); updateBadges(); pintarFiltroFacil();
     });
   }
-  // Modo fácil: los mismos filtros, en un desplegable como los de Nexora, y la cuenta debajo del título.
+  // La Bandeja omnicanal: un solo filtro (state.filter), enseñado en dos controles. Arriba, de quién son (Mías ·
+  // Sin asignar · Todas); abajo, «Todos los estados», que se arma con los botones de estado de #filters. Elegir un
+  // estado mira en todas (el segmentado vuelve a «Todas»); elegir Mías o Sin asignar deja el estado en «Todos».
+  // 🪤 Los de solo-completo se ofrecen solo fuera del modo fácil: escondidos como botón, no pueden volver por aquí.
+  var FILTROS_DE_QUIEN = { mios: 1, 'sin-asignar': 1 };
   function pintarFiltroFacil() {
     var sel = $('fx-filtro');
     if (!sel) return;
-    var opciones = Array.prototype.filter.call(document.querySelectorAll('#filters button[data-f]'), function (b) {
-      return !b.hidden && !b.classList.contains('solo-completo');
+    var facil = esFacil();
+    var opciones = Array.prototype.filter.call(document.querySelectorAll('#filters button.fx-estado[data-f]'), function (b) {
+      return !b.hidden && !(facil && b.classList.contains('solo-completo'));
     });
-    sel.innerHTML = opciones.map(function (b) {
+    var deQuien = FILTROS_DE_QUIEN[state.filter];
+    sel.innerHTML = '<option value="all"' + (deQuien || state.filter === 'all' ? ' selected' : '') + '>Todos los estados</option>' + opciones.map(function (b) {
       var f = b.getAttribute('data-f');
-      return '<option value="' + esc(f) + '"' + (f === state.filter ? ' selected' : '') + '>' + esc(f === 'all' ? 'Todas las conversaciones' : b.textContent) + '</option>';
+      return '<option value="' + esc(f) + '"' + (f === state.filter ? ' selected' : '') + '>' + esc(b.textContent) + '</option>';
     }).join('');
+    document.querySelectorAll('#filters .fx-asig button[data-f]').forEach(function (b) {
+      var f = b.getAttribute('data-f'), on = f === state.filter || (f === 'all' && !deQuien);
+      b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+    });
     var n = state.contacts.length;
     if ($('fx-inbox-n')) $('fx-inbox-n').textContent = n === 1 ? '1 conversación' : n + ' conversaciones';
   }
   if ($('fx-filtro')) $('fx-filtro').onchange = function () { setFilter($('fx-filtro').value); };
   function renderRows() {
     var el = $('rows');
-    if (!state.contacts.length) { el.innerHTML = '<div class="empty">Nada por aquí con este filtro.</div>'; return; }
+    if (!state.contacts.length) {
+      // Vacío con salida: qué filtro dejó la lista en cero y cómo volver a verlas todas.
+      var conFiltro = state.filter !== 'all' || state.q;
+      el.innerHTML = '<div class="empty fx-vacio-bandeja"><b>' + (conFiltro ? 'Nada por aquí con este filtro' : 'Todavía no hay conversaciones') + '</b>' +
+        '<span>' + (conFiltro ? 'Prueba con «Todas» o borra la búsqueda.' : 'Lo que escriban por WhatsApp o por el chat del sitio llega aquí.') + '</span>' +
+        (conFiltro ? '<button class="btn sm" type="button" id="fx-ver-todas">Ver todas</button>' : '') + '</div>';
+      if ($('fx-ver-todas')) $('fx-ver-todas').onclick = function () { if (state.q) { $('q').value = ''; state.q = ''; } setFilter('all'); };
+      return;
+    }
     el.innerHTML = state.contacts.map(function (c) {
       // 🪤 Dos líneas, no tres. El estado subía a su propia fila y una conversación ocupaba lo mismo que tres
       // de un chat normal: con doce en pantalla hay que bajar para ver quién lleva esperando. Las etiquetas se
@@ -947,21 +966,26 @@
       var texto = c.hit
         ? '<span class="snip hit"><span class="who">' + esc(c.hit.role === 'user' ? nameOf(c) : state.agentName || 'Aiva') + ':</span> ' + mark(c.hit.content, state.q) + '</span>'
         : '<span class="snip"' + (c.summary ? ' title="' + esc(c.summary) + '"' : '') + '>' + esc(c.recap || c.summary || '') + '</span>';
-      return '<div class="row' + (state.current === c.id ? ' sel' : '') + '" data-id="' + esc(c.id) + '">' +
-        // Modo fácil: las iniciales a la izquierda y, debajo del nombre, por dónde escribe y quién la tiene a cargo.
-        '<span class="fx-ini fx-ini-fila solo-facil" aria-hidden="true">' + esc(inicialesDe(nameOf(c))) + '</span>' +
-        '<div class="fx-canal solo-facil"><i></i>' + esc(canalSolo(c.channel)) + ' · ' + esc(c.responsable || 'Sin asignar') + '</div>' +
-        '<div class="name"><span class="n">' + esc(nameOf(c)) + '</span>' + (c.unread ? '<span class="unread">' + c.unread + '</span>' : '') + '</div>' +
+      // La fila de la Bandeja omnicanal: el avatar con la insignia de su canal, el nombre y la hora (en el acento
+      // si hay algo sin leer), y debajo lo que dijo con los no leídos en píldora. Las marcas que dicen algo van en
+      // su propio renglón, enteras: «La lleva…» cortado en «La lle…» no es una marca.
+      var canal = canalDeXen(c.channel);
+      return '<div class="row' + (state.current === c.id ? ' sel' : '') + (c.unread ? ' con-nuevos' : '') + '" data-id="' + esc(c.id) + '">' +
+        avatarXen(c, 'fx-av-fila solo-facil') +
+        '<div class="name"><span class="n">' + esc(nameOf(c)) + '</span><span class="sr-only"> · ' + esc(canal.t) + '</span></div>' +
         '<div class="time">' + rel(c.lastMessageAt) + '</div>' +
-        // Segunda línea: lo que dijo, y las marcas que de verdad marcan algo. Las etiquetas no se encogen —una
-        // etiqueta a medias no es una etiqueta—; lo que cede es el texto, que para eso lleva el resumen entero
-        // en el título.
-        '<div class="linea2">' + marcas + texto + '</div>' +
+        // Segunda línea: lo que dijo, y los no leídos al final. Lo que cede es el texto, que para eso lleva el
+        // resumen entero en el título.
+        '<div class="linea2">' + texto + (c.unread ? '<span class="unread" title="' + c.unread + ' sin leer">' + c.unread + '<span class="sr-only"> sin leer</span></span>' : '') + '</div>' +
+        (marcas || c.responsable ? '<div class="fx-marcas">' + marcas + (c.responsable ? '<span class="fx-asig-mini" title="Asignado a ' + esc(c.responsable) + '"><span aria-hidden="true">' + esc(inicialesDe(c.responsable)) + '</span><span class="sr-only">Asignado a ' + esc(c.responsable) + '</span></span>' : '') + '</div>' : '') +
         '</div>';
     }).join('');
     el.querySelectorAll('.row').forEach(function (r) {
       r.onclick = function () { openContact(r.getAttribute('data-id')); };
       r.oncontextmenu = function (e) { e.preventDefault(); abrirMenu(e.clientX, e.clientY, r.getAttribute('data-id')); };
+      // Con el teclado también: Tab llega a cada conversación y Enter (o espacio) la abre.
+      r.tabIndex = 0; r.setAttribute('role', 'button');
+      r.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openContact(r.getAttribute('data-id')); } };
     });
   }
   // Veredicto práctico: ¿es un prospecto o no? El detalle (factores, ánimo, urgencia) queda detrás de "Ver detalle".
@@ -1037,17 +1061,11 @@
     $('chat-temp').className = 'meta-line solo-completo' + (isStale(c) ? ' stale' : ''); $('chat-temp').title = isStale(c) ? 'Hay mensajes nuevos: el puntaje se recalcula en unos segundos' : '';
     var who = $('chat-who'); if (!who) { who = document.createElement('span'); who.id = 'chat-who'; who.className = 'chip who'; $('chat-temp').after(who); }
     who.hidden = !c.humanMode; who.textContent = c.humanMode ? 'La lleva ' + whoHas(c) + (c.humanSince ? ' · desde hace ' + rel(c.humanSince) : '') : '';
+    cajonDeLaConversacion(c);
     setMode(c.humanMode);
-    // Modo fácil: la cabecera de Nexora. Quién responde va dicho en palabras, no solo en el color de la pastilla.
-    if ($('fx-chat-ini')) {
-      var agente = state.agentName || 'Aiva';
-      $('fx-chat-ini').textContent = inicialesDe(nameOf(c));
-      $('fx-chat-nombre').textContent = nameOf(c);
-      $('fx-chat-linea').innerHTML = (d.number ? '<span>+' + esc(d.number) + '</span>' : '') + '<span>' + esc(canalSolo(c.channel)) + '</span>' +
-        '<span class="fx-pill ' + (c.humanMode ? 'humano' : 'ia') + '"><i class="ic" data-ic="escudo"></i>' + esc(c.humanMode ? 'La lleva ' + whoHas(c) : agente + ' responde') + '</span>';
-      iconos($('fx-chat-linea'));
-      $('fx-control').textContent = c.humanMode ? 'Pasar a ' + agente : 'Tomar control';
-    }
+    // La cabecera de la Bandeja omnicanal. Quién responde va dicho en palabras, no solo en el color de la pastilla:
+    // si contesta el agente de IA o si la automatización está en pausa y quién la lleva.
+    if ($('fx-chat-ini')) pintarCabeceraXen(d);
     pintarPropuesta(d.propuesta);
     var m = $('msgs');
     // 🪤 Primero lo que ya estaba conversado antes de que aiva entrara. Sin esto, el tablero enseñaba media
@@ -1060,7 +1078,7 @@
         + antes.map(burbujaDeAntes).join('')
         + '<div class="sysline">Desde aquí lo lleva aiva</div>'
       : '') + d.messages.map(bubble).join('');
-    if (c.humanMode) m.insertAdjacentHTML('beforeend', '<div class="sysline">' + esc(state.agentName || 'Aiva') + ' está en pausa: esta conversación la lleva ' + esc(whoHas(c)) + (c.humanSince ? ' desde hace ' + rel(c.humanSince) : '') + '.</div>');
+    if (c.humanMode) m.insertAdjacentHTML('beforeend', '<div class="sysline">' + esc(state.agentName || 'Aiva') + ' está en pausa: esta conversación la lleva ' + esc(whoHas(c)) + (c.humanSince ? desdeXen(c.humanSince) : '') + '.</div>');
     pintarAdjuntos(m);
     m.scrollTop = m.scrollHeight;
   }
@@ -1248,13 +1266,14 @@
     // conversación había que acordarse de mover un interruptor ANTES de tener nada que decir — y lo natural es
     // al revés: uno empieza a escribir. Ahora escribir es la señal, como contestar desde el teléfono.
     $('composer-hint').hidden = human;
-    $('composer-hint').innerHTML = 'Contesta ' + esc(state.agentName || 'Aiva') + '. <b>Si escribes aquí, se queda callada</b> en esta conversación.';
+    $('composer-hint').innerHTML = 'Responde ' + esc(state.agentName || 'Aiva') + '. <b>Si escribes aquí, la automatización se pausa</b> en esta conversación.';
     $('reply').hidden = false; $('send').hidden = !human;
     // 🪤 El botón de adjuntar solo donde el canal sabe entregarlo. Ofrecerlo en el chat del sitio sería prometer
     // algo que no pasa: el archivo quedaría en la conversación y el cliente no lo recibiría nunca.
     $('adj-btn').hidden = !human || !(state.detail && state.detail.llevaArchivos);
     $('reply').placeholder = human ? 'Escribe tu respuesta… (Enter envía, Shift+Enter salto)' : 'Escribe para tomar esta conversación…';
     if (human) $('reply').focus();
+    pintarCajon();
   }
   // En cuanto se escribe la primera letra, aiva se hace a un lado. No al enviar: mientras uno piensa la
   // respuesta, ella podría contestar primero y el cliente recibiría dos versiones de lo mismo.
@@ -1430,23 +1449,31 @@
     var appts = d.appointments.map(function (a) { return '<div class="appt ' + a.status + '"><span class="t">' + esc(a.label || '') + '</span><span class="grow small muted">' + esc(a.service) + ' · ' + esc(estadoCita(a.status)) + '</span></div>'; }).join('') || '<span class="muted small">Sin citas.</span>';
     var v = verdict(c), viejo = isStale(c);
     var sub = [channelIcon(c.channel), c.phone || '', h.frase || ''].filter(Boolean).join(' · ');
+    var canal = canalDeXen(c.channel), tel = d.number ? '+' + d.number : (c.phone || '');
     $('details').setAttribute('data-id', c.id);
     $('details').innerHTML =
       // En el celular el perfil tapa la conversación: sin esto, la única salida era el riel de abajo.
       '<button class="btn sm volver-chat" id="back-chat">‹ Volver a la conversación</button>' +
       '<div id="dup-panel"></div>' +
-      // Quién es. En el celular este panel se ve solo, sin la conversación al lado, así que dice el nombre.
-      '<div class="perfil-quien"><span class="ficha-ini" aria-hidden="true">' + esc(c.name ? inicialesDe(c.name) : '') + '</span>' +
-        '<div class="ficha-titulo"><b>' + esc(nameOf(c)) + '</b><div class="small muted">' + esc(sub) + '</div></div></div>' +
-      '<button class="linkbtn fx-360 solo-facil" type="button" id="fx-ficha">Abrir la ficha completa <i class="ic" data-ic="externo"></i></button>' +
+      // Quién es, como la ficha de contacto de un CRM de mensajería: el avatar grande con la insignia de su canal,
+      // el nombre con su lápiz (abre «Corregir datos»), el teléfono y las acciones. En el celular este panel se ve
+      // solo, sin la conversación al lado, así que dice el nombre.
+      '<div class="perfil-quien fx-cto">' + avatarXen(c, 'fx-av-cto') +
+        '<div class="ficha-titulo"><div class="fx-cto-nombre"><b>' + esc(nameOf(c)) + '</b>' +
+          '<button class="fx-lapiz" type="button" id="fx-lapiz" title="Corregir datos" aria-label="Corregir los datos de ' + esc(nameOf(c)) + '">' + svgXen('lapiz') + '</button></div>' +
+          '<div class="small muted fx-cto-sub">' + esc(tel ? tel + ' · ' + canal.t : sub) + '</div>' +
+          (h.frase ? '<div class="small muted">' + esc(h.frase) + '</div>' : '') + '</div></div>' +
+      '<div class="fx-cto-acciones">' +
+        '<button class="btn sm fx-360" type="button" id="fx-ficha">' + svgXen('externo') + 'Abrir la ficha completa</button>' +
+        (d.number
+          ? '<a class="btn sm fx-cto-ic" target="_blank" rel="noopener" href="https://wa.me/' + esc(d.number) + '" title="Escribirle por WhatsApp" aria-label="Escribirle por WhatsApp">' + svgXen('wa') + '</a>' +
+            '<a class="btn sm fx-cto-ic" href="tel:+' + esc(d.number) + '" title="Llamar" aria-label="Llamar a ' + esc(nameOf(c)) + '">' + svgXen('telefono') + '</a>'
+          : '') + '</div>' +
+      mediosXen(c) +
       (h.amago ? '<div class="pf-amago">⚠ Se le fue una venta: tuvo cita y no acabó en compra, y no tiene otra agendada.</div>' : '') +
-      (c.summary ? '<p class="ficha-quiere">' + esc(c.summary) + '</p>' : '<p class="ficha-quiere muted">Todavía no se sabe qué busca: se llena solo mientras conversa.</p>') +
       (c.notes ? '<div class="perfil-nota"><b>Nota fija</b> ' + esc(c.notes) + '</div>' : '') +
-      (d.number
-        ? '<div class="feed-row"><a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/' + esc(d.number) + '">Escribirle por WhatsApp</a>' +
-          '<a class="btn sm" href="tel:+' + esc(d.number) + '">Llamar</a></div>'
-        : '') +
-      '<dl class="det">' +
+      '<dl class="det fx-kv">' +
+        fila('Asignado a', responsableHtml(c, 'f-resp')) +
         // La etapa se cambia aquí mismo: es lo que más se toca, y no tiene por qué esperar a «Corregir datos».
         fila('Etapa', '<select id="f-etapa" aria-label="Etapa">' + etapas + '</select>' + motivoHtml(c, 'f-motivo')) +
         // «Nunca el número solo»: el veredicto primero y el puntaje de respaldo. El porqué, detrás de un clic.
@@ -1454,19 +1481,20 @@
           (viejo ? '<div class="small" style="color:var(--warn)">Hay mensajes nuevos: se recalcula solo.</div>' : ''), 'solo-completo') +
         fila('Próximo paso', pasoHtml(c.proximo)) +
         fila('Valor', valorHtml(c)) +
-        fila('A cargo', responsableHtml(c, 'f-resp')) +
         fila('La lleva', llevaHtml(c), 'solo-completo') +
-        (d.origen && d.origen.fuente ? fila('Llegó por', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : '')) + (d.origen.titular ? '<div class="small muted">«' + esc(d.origen.titular) + '»</div>' : ''), 'solo-completo') : '') +
+        (d.origen && d.origen.fuente ? fila('Origen', esc(d.origen.fuente + (d.origen.campana ? ' · ' + d.origen.campana : '')) + (d.origen.titular ? '<div class="small muted">«' + esc(d.origen.titular) + '»</div>' : ''), 'solo-completo') : '') +
         (variasSedes() && data.sede ? fila('Sede', esc(nombreSede(data.sede))) : '') +
-        contactoHtml(c, fila) +
+        (c.lastMessageAt ? fila('Última actividad', esc(rel(c.lastMessageAt) === 'ahora' ? 'ahora' : 'hace ' + rel(c.lastMessageAt))) : '') +
       '</dl>' +
+      // Lo que busca: lo resumió el agente de IA, por eso va en su violeta.
+      (c.summary ? '<p class="ficha-quiere">' + esc(c.summary) + '</p>' : '<p class="ficha-quiere muted">Todavía no se sabe qué busca: se llena solo mientras conversa.</p>') +
       '<details class="perfil-por solo-completo" data-k="por"><summary>Por qué ese puntaje</summary>' +
         '<ul class="factors">' + factors + '</ul>' +
         (c.sentiment ? '<div class="small muted" style="margin-top:6px">Ánimo: ' + sentIcon(c.sentiment) + (data.urgencia ? ' · urgencia ' + esc(data.urgencia) : '') + '</div>' : '') +
         '<div class="small muted" style="margin-top:6px">' + (c.scoreBase > c.score ? 'Llegó a ' + c.scoreBase + ' cuando hablaron. ' : '') + (c.scoreAt ? 'Calculado hace ' + rel(c.scoreAt) + '. ' : '') +
           '<button class="linkbtn" id="f-analyze">Volver a analizar</button></div>' +
       '</details>' +
-      '<div><h3>Lo que contó</h3>' + (capturados.length
+      '<div><h3>Datos del contacto</h3>' + (capturados.length
         ? '<dl class="det">' + capturados.map(function (k) { return fila(etiquetaDato(k), esc(data[k])); }).join('') + '</dl>'
         : '<span class="muted small">Todavía nada. Se llena solo mientras conversa.</span>') + '</div>' +
       '<div><h3>Citas</h3>' + appts + '</div>' +
@@ -1490,7 +1518,13 @@
     $('back-chat').onclick = function () { $('inbox').setAttribute('data-pane', 'chat'); };
     $('chat-ficha').onclick = function () { abrirPerfil(c.id); };
     $('fx-ficha').onclick = function () { abrirPerfil(c.id); };
-    iconos($('fx-ficha'));
+    // El lápiz abre «Corregir datos» y pone el cursor en el nombre.
+    $('fx-lapiz').onclick = function () {
+      var caja = $('details').querySelector('details[data-k="corregir"]');
+      if (caja) { caja.open = true; caja.scrollIntoView({ block: 'nearest', behavior: reducirMovimiento() ? 'auto' : 'smooth' }); }
+      if ($('f-name')) $('f-name').focus();
+    };
+    if ($('f-resp')) { $('f-resp').setAttribute('aria-label', 'Asignado a'); sinAsignarComoOpcion($('f-resp')); }
     $('chat-nota-ok').onclick = function () {
       var texto = $('chat-nota').value.trim();
       if (!texto) { $('chat-nota').focus(); return; }
@@ -5401,6 +5435,153 @@
   // (fin de XEN · Inicio)
 
   // ===== XEN · Bandeja omnicanal: lo nuevo del agente de la bandeja =====
+  // La bandeja de XENCRM, como la de un CRM de mensajería (SendPulse) y con la conversación de un cliente de
+  // WhatsApp de escritorio (ZapFast): todos los canales en una lista, la insignia del canal sobre cada avatar, y al
+  // lado la ficha del contacto. Lo de aquí son piezas; las pinta lo de siempre (renderRows, renderChat,
+  // renderDetails), que sigue siendo el dueño de los datos.
+
+  // Los dibujos que solo usa la bandeja. Propios, del mismo trazo que los demás (Lucide): ningún logo de marca.
+  ICONS.wa = '<path d="M3.5 20.5l1.4-4.2A8.5 8.5 0 1 1 8.2 19.4z"/><path d="M9.2 8.6c.2 2.9 2.9 5.6 5.8 5.8l1.1-1.4-1.9-1.1-.8.7a4 4 0 0 1-2.4-2.4l.7-.8-1.1-1.9z"/>';
+  ICONS.globo = '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/>';
+  ICONS.lapiz = '<path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/><path d="m15 5 4 4"/>';
+  ICONS.pausa = '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
+  ICONS.reanudar = '<path d="M7 4.5v15l12.5-7.5z"/>';
+  ICONS['candado-nota'] = '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>';
+  ICONS.instagram = '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>';
+  ICONS.facebook = '<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>';
+  ICONS.leidas = '<path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11.5 16.5l.5.5L22 7"/>';
+  iconos($('view-inbox'));
+  /** Un dibujo ya armado, para lo que se pinta muchas veces (las filas): sin pasar después por iconos(). */
+  function svgXen(nombre) {
+    return '<svg class="fx-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + (ICONS[nombre] || '') + '</svg>';
+  }
+  /** «desde hace 5 min», o «desde ahora» (no «desde hace ahora»). */
+  function desdeXen(ts) { var r = rel(ts); return r === 'ahora' ? ' desde ahora' : ' desde hace ' + r; }
+  function reducirMovimiento() { return Boolean(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  /** Por dónde escribe, dicho con palabras y con su insignia. */
+  function canalDeXen(ch) {
+    if (ch === 'whatsapp' || ch === 'meta') return { k: 'wa', t: 'WhatsApp', ic: 'wa' };
+    if (ch === 'web') return { k: 'web', t: 'Chat del sitio', ic: 'globo' };
+    return { k: 'otro', t: canalSolo(ch) || 'Otro canal', ic: 'burbuja' };
+  }
+  // «Sin asignar»: sin nadie en «Asignado a» (c.responsable), que es lo que pone quien la toma si no había nadie.
+  function sinAsignar(c) { return !String(c.responsable || '').trim(); }
+  /**
+   * El tono del avatar, el mismo siempre para el mismo nombre. Seis tonos propios (--fx-av-*), aparte de los de
+   * las etapas: un avatar rojo se leería «perdido». Medidos: ≥ 6:1 en claro y ≥ 7.9:1 en oscuro.
+   */
+  function tonoXen(nombre) {
+    var h = 0, t = String(nombre || '');
+    for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+    return 1 + (h % 6);
+  }
+  function avatarXen(c, clase) {
+    var canal = canalDeXen(c.channel);
+    return '<span class="fx-av ' + (clase || '') + ' av-' + tonoXen(nameOf(c)) + '" aria-hidden="true"><span class="fx-av-ini">' + esc(inicialesDe(nameOf(c))) + '</span>' +
+      '<i class="fx-canal-ins fx-canal-' + canal.k + '">' + svgXen(canal.ic) + '</i></span>';
+  }
+  function sinAsignarComoOpcion(sel) { var o = sel && sel.querySelector('option[value=""]'); if (o) o.textContent = 'Sin asignar'; }
+
+  /** La cabecera de la conversación: quién es, quién responde, a quién está asignada y pausar o reanudar. */
+  function pintarCabeceraXen(d) {
+    var c = d.contact, agente = state.agentName || 'Aiva', canal = canalDeXen(c.channel), ini = $('fx-chat-ini');
+    ini.className = 'fx-av fx-av-chat solo-facil av-' + tonoXen(nameOf(c));
+    ini.innerHTML = '<span class="fx-av-ini">' + esc(inicialesDe(nameOf(c))) + '</span><i class="fx-canal-ins fx-canal-' + canal.k + '">' + svgXen(canal.ic) + '</i>';
+    $('fx-chat-nombre').textContent = nameOf(c);
+    var estado = c.humanMode
+      ? '<span class="fx-pill humano">' + svgXen('pausa') + 'Automatización pausada · la lleva ' + esc(whoHas(c)) + '</span>'
+      : '<span class="fx-pill ia">' + svgXen('chispa') + 'Responde ' + esc(agente) + '</span>';
+    $('fx-chat-linea').innerHTML = estado + (d.number ? '<span>+' + esc(d.number) + '</span>' : '') + '<span>' + esc(canal.t) + '</span>';
+    // El puntaje de la cabecera (solo en el completo) va debajo del nombre, no suelto en la fila de botones.
+    var quien = $('fx-chat-nombre').parentNode;
+    if ($('chat-temp') && $('chat-temp').parentNode !== quien) quien.appendChild($('chat-temp'));
+    // Lo que se pausa es la automatización (el agente de IA): la persona sigue. Es el mismo interruptor Aiva/Tú.
+    $('fx-control').innerHTML = svgXen(c.humanMode ? 'reanudar' : 'pausa') + '<span>' + (c.humanMode ? 'Reanudar' : 'Pausar') + '<span class="fx-largo"> automatización</span></span>';
+    $('fx-control').setAttribute('aria-label', c.humanMode ? 'Reanudar automatización' : 'Pausar automatización');
+    $('fx-control').title = c.humanMode ? agente + ' vuelve a contestar esta conversación' : agente + ' deja de contestar aquí: contestas tú';
+    $('fx-control').classList.toggle('pausada', Boolean(c.humanMode));
+    // «Asignado a»: el mismo dato y el mismo guardado que la ficha de al lado (c.responsable). Dos controles, un dato.
+    $('fx-asignado-sel').innerHTML = responsableHtml(c, 'fx-asignado');
+    $('fx-asignado').setAttribute('aria-label', 'Asignado a');
+    sinAsignarComoOpcion($('fx-asignado'));
+    engancharResponsable($('fx-asignado'), c, function () { openContact(c.id); loadContacts(); });
+  }
+
+  /**
+   * Cómo contactarlo, con su ícono: correo, WhatsApp, Instagram, Facebook y por dónde llegó. Solo lo que hay. Los
+   * enlaces y el escape son los de contactoHtml: aquí solo cambia cómo se ven.
+   */
+  var ICONO_MEDIO = { correo: 'correo', whatsapp: 'wa', instagram: 'instagram', facebook: 'facebook', contacto_por: 'objetivo' };
+  function mediosXen(c) {
+    var defs = fichaDelNegocio().contacto;
+    var fila = function (etiqueta, html) {
+      var x = defs.filter(function (d) { return d.etiqueta === etiqueta; })[0], k = x ? x.k : '';
+      return '<li class="fx-medio"><span class="fx-medio-ic" aria-hidden="true">' + svgXen(ICONO_MEDIO[k] || 'burbuja') + '</span>' +
+        (k === 'contacto_por' ? '<span class="fx-medio-k">' + esc(etiqueta) + '</span> ' : '<span class="sr-only">' + esc(etiqueta) + ': </span>') +
+        '<span class="fx-medio-v">' + html + '</span></li>';
+    };
+    var lis = contactoHtml(c, fila) + '';
+    return lis ? '<ul class="fx-medios" aria-label="Cómo contactarlo">' + lis + '</ul>' : '';
+  }
+
+  // ---------- el cajón: «Enviar mensaje» · «Nota interna» ----------
+  // 🪤 La nota NO usa el cajón del mensaje: escribir en #reply toma la conversación (la automatización se pausa en
+  // cuanto se escribe la primera letra). Una nota no le llega al cliente y no tiene por qué callar al agente.
+  // 🪤 Lo escrito en una nota se queda con SU conversación: al pasar a otra, se guarda aparte y vuelve al volver.
+  // Llevarla a la siguiente sería anotarle algo a la persona equivocada.
+  var cajon = { modo: 'mensaje', notas: {}, de: null };
+  function cajonDeLaConversacion(c) {
+    if (cajon.de === c.id) return;
+    if (cajon.de) { var v = $('fx-nota').value; if (v.trim()) cajon.notas[cajon.de] = v; else delete cajon.notas[cajon.de]; }
+    cajon.de = c.id;
+    $('fx-nota').value = cajon.notas[c.id] || '';
+    cajon.modo = cajon.notas[c.id] ? 'nota' : 'mensaje';
+  }
+  function pintarCajon() {
+    var nota = cajon.modo === 'nota';
+    [['fx-tab-mensaje', !nota], ['fx-tab-nota', nota]].forEach(function (t) {
+      var b = $(t[0]); if (!b) return;
+      b.setAttribute('aria-selected', String(t[1])); b.tabIndex = t[1] ? 0 : -1; b.classList.toggle('on', t[1]);
+    });
+    $('composer').classList.toggle('en-nota', nota);
+    $('fx-nota').hidden = !nota; $('fx-nota-ok').hidden = !nota; $('fx-nota-aviso').hidden = !nota;
+    $('fx-cajon-ayuda').textContent = nota ? 'Enter guarda la nota · Shift+Enter, nueva línea' : 'Enter envía · Shift+Enter, nueva línea';
+  }
+  function cambiarCajon(modo, enfocar) {
+    cajon.modo = modo;
+    if (state.detail) setMode(state.detail.contact.humanMode); else pintarCajon();
+    if (enfocar) $(modo === 'nota' ? 'fx-nota' : 'reply').focus();
+  }
+  $('fx-tab-mensaje').onclick = function () { cambiarCajon('mensaje', true); };
+  $('fx-tab-nota').onclick = function () { cambiarCajon('nota', true); };
+  // Las pestañas, con las flechas (el patrón de pestañas de siempre): una sola parada de Tab.
+  [$('fx-tab-mensaje'), $('fx-tab-nota')].forEach(function (b) {
+    b.onkeydown = function (e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return;
+      e.preventDefault();
+      var aNota = e.key === 'End' || (e.key !== 'Home' && cajon.modo === 'mensaje');
+      cambiarCajon(aNota ? 'nota' : 'mensaje');
+      $(aNota ? 'fx-tab-nota' : 'fx-tab-mensaje').focus();
+    };
+  });
+  /** La nota interna va a la historia de la ficha por la misma ruta que «Guardar nota». Si falla, no se borra. */
+  function guardarNotaInterna() {
+    var c = state.detail && state.detail.contact;
+    if (!c) return;
+    var texto = $('fx-nota').value.trim();
+    if (!texto) { $('fx-nota').focus(); return; }
+    $('fx-nota-ok').disabled = true;
+    api('/contacts/' + encodeURIComponent(c.id) + '/notas', { method: 'POST', body: { texto: texto, por: state.name || '' } }).then(function (r) {
+      if (!r || r.error) { toast('No se pudo guardar la nota: ' + ((r && r.error) || 'sin respuesta')); return; }
+      if (cajon.de === c.id) $('fx-nota').value = '';
+      delete cajon.notas[c.id];
+      if (state.detail && state.detail.contact.id === c.id) { state.detail.events = r.events || state.detail.events; renderDetails(); }
+      toast('Nota guardada en la historia de ' + nameOf(c), null, { icono: 'check' });
+    }).catch(function () { toast('No se pudo guardar la nota. Lo escrito sigue aquí.'); })
+      .finally(function () { $('fx-nota-ok').disabled = false; });
+  }
+  $('fx-nota-ok').onclick = guardarNotaInterna;
+  $('fx-nota').onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); guardarNotaInterna(); } };
   // (fin de XEN · Bandeja omnicanal)
 
   // ===== XEN · Contactos, ficha y tratos: lo nuevo del agente de Contactos =====

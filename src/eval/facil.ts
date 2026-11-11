@@ -155,7 +155,8 @@ const recorrer = (css: string) => {
     const cab = css.slice(i, abre).trim();
     let n = 1, j = abre + 1;
     for (; j < css.length && n; j++) { if (css[j] === '{') n++; else if (css[j] === '}') n--; }
-    if (cab.startsWith('@media') || cab.startsWith('@supports')) recorrer(css.slice(abre + 1, j - 1));
+    // @container también solo envuelve: la conversación de la bandeja se acomoda a su propio ancho.
+    if (cab.startsWith('@media') || cab.startsWith('@supports') || cab.startsWith('@container')) recorrer(css.slice(abre + 1, j - 1));
     else if (cab) selectores.push(...cab.split(',').map((x) => x.trim()));
     i = j;
   }

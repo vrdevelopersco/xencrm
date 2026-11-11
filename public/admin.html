@@ -1694,89 +1694,210 @@ dialog.perdida input{width:100%}
 @media (max-width:900px){:root[data-piel="xen"] .app>.subnav{display:none}}
 :root[data-piel="xen"] #foot-user .fx-flecha{width:16px;height:16px;flex:0 0 16px;color:var(--fx-t3)}
 
-/* ---------- Inbox: la lista, la conversación y el resumen, como en Nexora ---------- */
-:root[data-piel="xen"] .inbox{grid-template-columns:290px minmax(0,1fr) 300px;background:var(--fx-panel)}
+/* ---------- Inbox: la Bandeja omnicanal (SendPulse + ZapFast): la lista, la conversación y la ficha ---------- */
+:root[data-piel="xen"] .inbox{grid-template-columns:320px minmax(0,1fr) 320px;background:var(--fx-panel)}
 :root[data-piel="xen"] .list{background:var(--fx-panel);border-right:1px solid var(--fx-borde)}
-:root[data-piel="xen"] .list .tools{padding:16px;gap:12px;border-bottom:1px solid var(--fx-borde)}
-.fx-lista-cab{display:flex;align-items:center;justify-content:space-between}
-.fx-lista-cab h1{margin:0;font-size:20px;font-weight:600;letter-spacing:-.025em;color:var(--fx-t0)}
-.fx-lista-cab p{margin:0;font-size:12px;color:var(--fx-t2)}
-.fx-lista-cab .ic{width:20px;height:20px;color:var(--fx-acento)}
-:root[data-piel="xen"] #q{padding-left:36px;background:var(--fx-panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 12px center/16px 16px}
-.fx-filtro{position:relative;display:block}
-.fx-filtro .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--fx-t3);pointer-events:none}
-:root[data-piel="xen"] .fx-filtro select{padding-left:36px;width:auto;max-width:100%}
-:root[data-piel="xen"] .list .tools .filters button:not(.leidas){display:none}
-:root[data-piel="xen"] .list .tools .filters{padding:0}
-:root[data-piel="xen"] .list .tools .filters button.leidas{padding:0;min-height:0;font-size:12px;color:var(--fx-acento-t)}
-:root[data-piel="xen"] .rows{background:var(--fx-panel)}
-:root[data-piel="xen"] .row{grid-template-columns:32px minmax(0,1fr) auto;column-gap:10px;row-gap:2px;min-height:76px;padding:12px;border-bottom:1px solid var(--fx-borde-2);border-left:2px solid transparent;align-content:start}
-:root[data-piel="xen"] .row:hover{background:var(--fx-fila)}
-:root[data-piel="xen"] .row.sel{background:color-mix(in srgb,var(--fx-suave) 60%,transparent);border-left-color:var(--fx-acento)}
-.fx-ini-fila{grid-column:1;grid-row:1/span 3;align-self:start;font-size:11px}
-:root[data-piel="xen"] .row .name{grid-column:2;grid-row:1;font-size:14px;font-weight:600;color:var(--fx-t1)}
-:root[data-piel="xen"] .row .time{grid-column:3;grid-row:1;font-size:10px;color:var(--fx-t3);white-space:nowrap}
-.fx-canal{grid-column:2/4;grid-row:2;display:flex;align-items:center;gap:4px;min-width:0;font-size:11px;color:var(--fx-t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fx-canal i{display:inline-block;width:6px;height:6px;flex:0 0 6px;border-radius:999px;background:var(--fx-verde)}
-:root[data-piel="xen"] .row .linea2{grid-column:2/4;grid-row:3;margin-top:0}
-:root[data-piel="xen"] .row .linea2 .snip{order:0;font-size:12px;color:var(--fx-t2)}
-:root[data-piel="xen"] .row .linea2 .chip{order:1;font-size:10px;font-weight:600;padding:2px 6px}
-:root[data-piel="xen"] .row .unread{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:999px;background:var(--fx-acento);color:var(--fx-sobre-acento);font-size:10px;font-weight:600;padding:0 5px}
-/* La conversación. */
-:root[data-piel="xen"] .chat{background:var(--fx-fondo)}
-:root[data-piel="xen"] .chat .head{min-height:76px;padding:8px 16px;gap:8px;background:var(--fx-panel);border-bottom:1px solid var(--fx-borde);box-shadow:none}
-:root[data-piel="xen"] #chat-name,:root[data-piel="xen"] #chat-channel,:root[data-piel="xen"] .chat .head .seg-row>.small.muted,:root[data-piel="xen"] .chat .head #seg{display:none}
-.fx-chat-quien{display:flex;flex-direction:column;min-width:0;flex:0 1 auto}
-.fx-chat-quien b{font-size:14px;font-weight:600;color:var(--fx-t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#fx-chat-linea{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;font-size:11px;color:var(--fx-t2)}
-.fx-pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 6px;font-weight:500}
-.fx-pill .ic{width:12px;height:12px;color:currentColor}
-.fx-pill.ia{background:var(--fx-violeta-s);color:var(--fx-violeta-t)}
-.fx-pill.humano{background:var(--fx-suave);color:var(--fx-suave-t)}
-:root[data-piel="xen"] .chat .head .chip{font-size:12px}
-:root[data-piel="xen"] .chat .head .btn.sm{min-height:32px;font-size:12px;padding:0 10px}
-:root[data-piel="xen"] .msgs{background:var(--fx-fondo);padding:20px;gap:16px}
-:root[data-piel="xen"] .msgs>*{max-width:672px;width:100%;margin-left:auto;margin-right:auto}
-:root[data-piel="xen"] .msgs>.bubble{width:auto;margin:0}
-:root[data-piel="xen"] .bubble{max-width:min(78%,524px);padding:12px 16px;border-radius:16px;font-size:14px;line-height:24px;box-shadow:var(--fx-sombra-sm)}
-:root[data-piel="xen"] .bubble.customer{align-self:flex-start;margin-left:max(0px,calc((100% - 672px)/2));background:var(--fx-panel);border:1px solid var(--fx-borde);border-top-left-radius:6px;border-bottom-left-radius:16px;color:#334155}
-:root[data-piel="xen"] .bubble.bot,:root[data-piel="xen"] .bubble.human{align-self:flex-end;margin-right:max(0px,calc((100% - 672px)/2));background:var(--fx-acento);color:#fff;border:0;border-top-right-radius:6px;border-bottom-right-radius:16px}
-:root[data-piel="xen"] .bubble.human{background:#1e40af}
-:root[data-piel="xen"][data-theme=dark] .bubble.customer{color:var(--fx-t1)}
-:root[data-piel="xen"] .bubble .who{font-size:11px;color:var(--fx-t2)}
-:root[data-piel="xen"] .bubble.bot .who,:root[data-piel="xen"] .bubble.human .who,:root[data-piel="xen"] .bubble.bot .ts,:root[data-piel="xen"] .bubble.human .ts{color:rgb(255 255 255/.75)}
-:root[data-piel="xen"] .bubble .ts{font-size:10px}
-:root[data-piel="xen"] .bubble.bot .por-que{color:rgb(255 255 255/.8)}
-:root[data-piel="xen"] .bubble.bot a,:root[data-piel="xen"] .bubble.human a{color:#fff}
-:root[data-piel="xen"] .sysline{border:1px dashed var(--fx-borde);background:var(--fx-panel);color:var(--fx-t2);width:auto}
-/* El cajón de escribir, como una tarjeta. */
-:root[data-piel="xen"] .composer{gap:8px;padding:12px;background:var(--fx-panel);border-top:1px solid var(--fx-borde);box-shadow:none;align-items:center}
-:root[data-piel="xen"] .composer>textarea{flex:1 0 100%;min-height:80px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);box-shadow:var(--fx-sombra-sm);padding:12px}
-:root[data-piel="xen"] .composer #adj-btn{margin-left:auto}
-:root[data-piel="xen"] .composer #send{min-height:32px;padding:0 12px}
-:root[data-piel="xen"] .composer .hint{font-size:13px;color:var(--fx-t2)}
-:root[data-piel="xen"] .propuesta{background:var(--fx-suave);border-top:1px solid var(--fx-suave-borde)}
-/* El resumen de al lado. */
-:root[data-piel="xen"] .details{background:var(--fx-panel);border-left:1px solid var(--fx-borde);padding:16px;gap:16px}
-:root[data-piel="xen"] .details .perfil-quien .ficha-ini{width:40px;height:40px;font-size:14px;background:var(--fx-suave);color:var(--fx-suave-t)}
-:root[data-piel="xen"] .details .perfil-quien b{font-size:16px;font-weight:600}
-.fx-360{display:inline-flex;align-items:center;gap:4px;margin-top:-8px;font-size:12px;font-weight:500;color:var(--fx-acento-t);background:none;border:0;padding:0;cursor:pointer;align-self:flex-start}
-.fx-360 .ic{width:12px;height:12px;color:currentColor}
-:root[data-piel="xen"] .details .ficha-quiere{margin:0;border:1px solid var(--fx-suave-borde);border-radius:var(--fx-r-lg);background:color-mix(in srgb,var(--fx-suave) 60%,transparent);padding:12px;font-size:12px;line-height:20px;color:#172554}
-:root[data-piel="xen"][data-theme=dark] .details .ficha-quiere{color:var(--fx-suave-t)}
-:root[data-piel="xen"] .details .ficha-quiere::before{content:"Lo que busca";display:block;font-size:12px;font-weight:600;color:#1e3a8a;margin-bottom:4px}
-:root[data-piel="xen"][data-theme=dark] .details .ficha-quiere::before{color:#bfdbfe}
+:root[data-piel="xen"] .list .tools{padding:18px 16px 12px;gap:12px;border-bottom:1px solid var(--fx-borde)}
+.fx-lista-cab{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.fx-lista-cab h1{margin:0;font-size:22px;line-height:1.2;font-weight:700;letter-spacing:-.02em;color:var(--fx-t0)}
+.fx-lista-cab p{margin:2px 0 0;font-size:12.5px;color:var(--fx-t2)}
+/* El buscador, en píldora; la lupa va pintada (#687e84 mide ≥ 3:1 sobre el pozo, en claro y en oscuro). */
+:root[data-piel="xen"] #q{min-height:40px;padding-left:40px;border-color:transparent;border-radius:var(--fx-r-pill);background:var(--fx-panel-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23687e84' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 14px 50%/17px 17px}
+:root[data-piel="xen"] #q:hover{border-color:var(--fx-borde)}
+:root[data-piel="xen"] #q:focus{border-color:var(--fx-acento);background-color:var(--fx-panel)}
+/* De quién son: Mías · Sin asignar · Todas, un control segmentado. La elegida, blanca y levantada sobre el pozo. */
+:root[data-piel="xen"] .list .tools .filters{display:block;padding:0}
+:root[data-piel="xen"] #filters .fx-estado{display:none!important}
+.fx-estado[hidden]{display:none}
+.fx-asig{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;padding:3px;border-radius:var(--fx-r-md);background:var(--fx-panel-2);border:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .fx-asig button{min-height:32px;padding:0 8px;border:0;border-radius:8px;background:none;box-shadow:none;color:var(--fx-t2);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background var(--fx-t-rapido),color var(--fx-t-rapido)}
+:root[data-piel="xen"] .fx-asig button:hover{background:var(--fx-hover);color:var(--fx-t0)}
+:root[data-piel="xen"] .fx-asig button.on{background:var(--fx-panel);color:var(--fx-t0);box-shadow:var(--fx-sombra-sm);font-weight:700}
+:root[data-piel="xen"] .fx-asig button[hidden]{display:none}
+@media (pointer:coarse){:root[data-piel="xen"] .fx-asig button{min-height:40px}}
+/* Todos los estados: el desplegable, y «Marcar todo como leído» al lado. */
+.fx-lista-estados{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.fx-filtro{position:relative;display:block;flex:1 1 auto;min-width:0}
+.fx-filtro .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--fx-t2);pointer-events:none}
+:root[data-piel="xen"] .fx-filtro select{width:100%;min-height:34px;padding:4px 10px 4px 32px;font-size:13px;font-weight:600;color:var(--fx-t1)}
+:root[data-piel="xen"] .fx-lista-estados .leidas{display:inline-grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-md);background:var(--fx-panel);color:var(--fx-acento-t)}
+:root[data-piel="xen"] .fx-lista-estados .leidas:hover{background:var(--fx-suave)}
+:root[data-piel="xen"] .fx-lista-estados .leidas .ic{width:17px;height:17px;color:currentColor}
+:root[data-piel="xen"] #rows .rows{background:var(--fx-panel);padding:6px 0 12px}
+/* Cada conversación: el avatar con la insignia de su canal; el nombre y la hora; lo que dijo y los no leídos; y,
+   si hay, las marcas que dicen algo en su propio renglón, enteras. */
+:root[data-piel="xen"] #rows .row{grid-template-columns:44px minmax(0,1fr) auto;column-gap:12px;row-gap:2px;min-height:0;margin:2px 8px;padding:10px 10px 10px 8px;border:0;border-radius:var(--fx-r-lg);align-content:start;transition:background var(--fx-t-rapido)}
+:root[data-piel="xen"] #rows .row:hover{background:var(--fx-fila)}
+:root[data-piel="xen"] #rows .row.sel{background:var(--fx-suave)}
+:root[data-piel="xen"] #rows .row:focus-visible{outline:none;box-shadow:var(--fx-anillo)}
+:root[data-piel="xen"] #rows .row>.fx-av{grid-column:1;grid-row:1/span 3;align-self:start}
+:root[data-piel="xen"] #rows .row .name{grid-column:2;grid-row:1;font-size:14.5px;font-weight:600;color:var(--fx-t1);min-width:0}
+:root[data-piel="xen"] #rows .row.con-nuevos .name{font-weight:700;color:var(--fx-t0)}
+:root[data-piel="xen"] #rows .row .time{grid-column:3;grid-row:1;align-self:center;font-size:11.5px;color:var(--fx-t2);white-space:nowrap}
+:root[data-piel="xen"] #rows .row.con-nuevos .time{color:var(--fx-acento-t);font-weight:700}
+:root[data-piel="xen"] #rows .row .linea2{grid-column:2/4;grid-row:2;display:flex;align-items:center;gap:8px;margin-top:0;min-width:0}
+:root[data-piel="xen"] #rows .row .linea2 .snip{flex:1 1 auto;min-width:0;font-size:13px;color:var(--fx-t2)}
+:root[data-piel="xen"] #rows .row.con-nuevos .linea2 .snip{color:var(--fx-t1)}
+:root[data-piel="xen"] #rows .row .unread{flex:0 0 auto;display:inline-grid;place-items:center;min-width:20px;height:20px;margin-left:auto;padding:0 6px;border-radius:var(--fx-r-pill);background:var(--fx-acento);color:var(--fx-sobre-acento);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+.fx-marcas{grid-column:2/4;grid-row:3;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:4px;min-width:0}
+:root[data-piel="xen"] .fx-marcas .chip{flex:0 0 auto;font-size:11px;padding:1px 8px;white-space:nowrap}
+.fx-asig-mini{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:auto;border-radius:999px;background:var(--fx-panel-2);border:1px solid var(--fx-borde);color:var(--fx-t2);font-size:9.5px;font-weight:700}
+.fx-vacio-bandeja{display:flex;flex-direction:column;align-items:center;gap:6px;margin:24px 16px;padding:24px 16px;border:1px dashed var(--fx-t4);border-radius:var(--fx-r-xl);text-align:center}
+.fx-vacio-bandeja b{color:var(--fx-t1)}
+.fx-vacio-bandeja span{font-size:13px;color:var(--fx-t2)}
+.fx-vacio-bandeja .btn{margin-top:6px}
+
+/* El avatar: iniciales en un tono estable por nombre, y la insignia de su canal en la esquina. */
+.fx-av{position:relative;display:inline-grid;place-items:center;flex:0 0 auto;width:44px;height:44px;border-radius:999px;font-size:14px;font-weight:700;letter-spacing:.01em;background:var(--fx-av-1-s);color:var(--fx-av-1-t)}
+.fx-av.av-2{background:var(--fx-av-2-s);color:var(--fx-av-2-t)}.fx-av.av-3{background:var(--fx-av-3-s);color:var(--fx-av-3-t)}
+.fx-av.av-4{background:var(--fx-av-4-s);color:var(--fx-av-4-t)}.fx-av.av-5{background:var(--fx-av-5-s);color:var(--fx-av-5-t)}
+.fx-av.av-6{background:var(--fx-av-6-s);color:var(--fx-av-6-t)}
+.fx-canal-ins{position:absolute;right:-3px;bottom:-3px;display:grid;place-items:center;width:19px;height:19px;border-radius:999px;border:2px solid var(--fx-panel);background:var(--fx-canal-otro);color:#fff}
+.fx-canal-ins.fx-canal-wa{background:var(--fx-canal-wa)}.fx-canal-ins.fx-canal-web{background:var(--fx-canal-web)}
+.fx-canal-ins .fx-svg{width:11px;height:11px;stroke-width:2.2}
+:root[data-piel="xen"] #rows .row.sel .fx-canal-ins{border-color:var(--fx-suave)}
+.fx-svg{display:block;flex:0 0 auto}
+
+/* La conversación: papel con una trama propia (equis, puntos, cuadritos: el «x» de XEN), pintada con su token a
+   través de una máscara —un color dentro de un data URI no sigue al tema—. La trama no es texto: nada se lee encima
+   sin su burbuja. */
+:root[data-piel="xen"] .chat{position:relative;isolation:isolate;background:var(--fx-papel);container-type:inline-size;container-name:conversacion}
+:root[data-piel="xen"] .chat::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:var(--fx-papel-trama);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M14 14l8 8M22 14l-8 8M40 70l6 6M46 70l-6 6M76 98h14M83 91v14'/%3E%3Ccircle cx='70' cy='22' r='2.2' fill='black' stroke='none'/%3E%3Ccircle cx='104' cy='18' r='1.6' fill='black' stroke='none'/%3E%3Ccircle cx='52' cy='108' r='1.6' fill='black' stroke='none'/%3E%3Crect x='92' y='58' width='12' height='12' rx='3.5'/%3E%3Ccircle cx='20' cy='92' r='5'/%3E%3C/svg%3E") 0 0/120px 120px repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M14 14l8 8M22 14l-8 8M40 70l6 6M46 70l-6 6M76 98h14M83 91v14'/%3E%3Ccircle cx='70' cy='22' r='2.2' fill='black' stroke='none'/%3E%3Ccircle cx='104' cy='18' r='1.6' fill='black' stroke='none'/%3E%3Ccircle cx='52' cy='108' r='1.6' fill='black' stroke='none'/%3E%3Crect x='92' y='58' width='12' height='12' rx='3.5'/%3E%3Ccircle cx='20' cy='92' r='5'/%3E%3C/svg%3E") 0 0/120px 120px repeat}
+:root[data-piel="xen"] .chat>#chat-empty{color:var(--fx-t2);background:var(--fx-panel);border:1px solid var(--fx-borde);border-radius:var(--fx-r-pill);padding:8px 16px}
+:root[data-piel="xen"] .chat .head{min-height:68px;padding:10px 16px;gap:12px;flex-wrap:nowrap;background:var(--fx-panel);border-bottom:1px solid var(--fx-borde);box-shadow:none}
+:root[data-piel="xen"] .chat .head>.grow{display:none}
+:root[data-piel="xen"] #chat-name,:root[data-piel="xen"] #chat-channel,:root[data-piel="xen"] #chat-stage,:root[data-piel="xen"] #chat-who,:root[data-piel="xen"] .chat .head .seg-row>.small.muted,:root[data-piel="xen"] .chat .head #seg{display:none!important}
+.fx-av-chat{width:40px;height:40px;font-size:13px}
+.fx-chat-quien{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 auto}
+#fx-chat-nombre{font-size:15px;font-weight:700;color:var(--fx-t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#fx-chat-linea{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;font-size:12px;color:var(--fx-t2)}
+:root[data-piel="xen"] .fx-chat-quien #chat-temp{font-size:12px;color:var(--fx-t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx-pill{display:inline-flex;align-items:center;gap:5px;border-radius:var(--fx-r-pill);padding:2px 9px 2px 7px;font-weight:600}
+.fx-pill .fx-svg{width:12px;height:12px}
+/* Lo que dice la IA va en su violeta; la pausa, en el arena del equipo (es una persona la que la lleva). */
+.fx-pill.ia{background:var(--fx-ia-s);color:var(--fx-ia-t)}
+.fx-pill.humano{background:var(--fx-burbuja-equipo);color:var(--fx-nombre-equipo)}
+:root[data-piel="xen"] .chat .head .seg-row{flex:0 0 auto;gap:10px}
+.fx-asignado{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--fx-t2);white-space:nowrap}
+.fx-asignado .ic{width:15px;height:15px;flex:0 0 15px;color:currentColor}
+/* La conversación se acomoda a SU ancho (no al de la ventana): con la lista y la ficha al lado le quedan ~550 px. */
+@container conversacion (max-width:700px){.fx-asignado>.fx-asignado-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+@container conversacion (max-width:620px){#fx-control .fx-largo{display:none}}
+:root[data-piel="xen"] .fx-asignado select{width:auto;max-width:170px;min-height:34px;padding:4px 10px;font-size:13px;font-weight:600}
+:root[data-piel="xen"] #fx-control{gap:6px;min-height:34px;padding:0 12px;font-size:13px}
+:root[data-piel="xen"] #fx-control .fx-svg{width:14px;height:14px}
+:root[data-piel="xen"] #fx-control.pausada{background:var(--fx-suave);border-color:var(--fx-suave-borde);color:var(--fx-suave-t)}
+:root[data-piel="xen"] #fx-control.pausada:hover{background:var(--fx-acento);border-color:var(--fx-acento);color:var(--fx-sobre-acento)}
+/* Los mensajes: el cliente a la izquierda en blanco, el agente (verde agua) y el equipo (arena) a la derecha, cada
+   uno con su cola. Quién habla va arriba en su color; la hora, abajo a la derecha. */
+:root[data-piel="xen"] .msgs{background:transparent;padding:20px 28px 16px;gap:6px}
+:root[data-piel="xen"] .msgs>*{max-width:none}
+:root[data-piel="xen"] .bubble{max-width:min(72%,560px);padding:7px 12px 6px;border:0;border-radius:12px;font-size:14px;line-height:1.45;color:var(--fx-t1);box-shadow:0 1px 1px rgb(10 34 39/.08)}
+:root[data-piel="xen"] .bubble::before{content:"";position:absolute;top:0;width:8px;height:12px;background:inherit}
+:root[data-piel="xen"] .bubble.customer{align-self:flex-start;margin-left:8px;background:var(--fx-panel);border-top-left-radius:0}
+:root[data-piel="xen"] .bubble.customer::before{left:-7px;clip-path:polygon(0 0,100% 0,100% 100%)}
+:root[data-piel="xen"] .bubble.bot,:root[data-piel="xen"] .bubble.human{align-self:flex-end;margin-right:8px;border-top-right-radius:0}
+:root[data-piel="xen"] .bubble.bot{background:var(--fx-burbuja-xen)}
+:root[data-piel="xen"] .bubble.human{background:var(--fx-burbuja-equipo)}
+:root[data-piel="xen"] .bubble.bot::before,:root[data-piel="xen"] .bubble.human::before{right:-7px;clip-path:polygon(0 0,100% 0,0 100%)}
+:root[data-piel="xen"] .bubble .who{display:block;margin-bottom:2px;font-size:12px;font-weight:700;color:var(--fx-t2)}
+:root[data-piel="xen"] .bubble.bot .who{color:var(--fx-nombre-xen)}
+:root[data-piel="xen"] .bubble.human .who{color:var(--fx-nombre-equipo)}
+:root[data-piel="xen"] .bubble .ts{display:block;margin-top:2px;font-size:11px;text-align:right;color:var(--fx-t2)}
+:root[data-piel="xen"] .bubble.bot .ts,:root[data-piel="xen"] .bubble.human .ts{color:var(--fx-hora-burbuja)}
+:root[data-piel="xen"] .bubble .por-que,:root[data-piel="xen"] .bubble.bot .por-que{color:var(--fx-hora-burbuja)}
+:root[data-piel="xen"] .bubble a,:root[data-piel="xen"] .bubble.bot a,:root[data-piel="xen"] .bubble.human a{color:var(--fx-acento-t)}
+/* Lo que no salió: borde punteado y la palabra (no solo el rojo). */
+:root[data-piel="xen"] .bubble.fallo{outline:1.5px dashed var(--fx-rojo-t);outline-offset:2px}
+:root[data-piel="xen"] .bubble .no-salio{color:var(--fx-rojo-t)}
+/* 🪤 Lo de antes se distingue con el borde punteado, NUNCA con opacidad (diseno-tablero.md, «Puntaje»). */
+:root[data-piel="xen"] .bubble.de-antes{opacity:1;box-shadow:none;outline:1px dashed var(--fx-t4);outline-offset:-1px}
+:root[data-piel="xen"] .sysline{align-self:center;width:auto;max-width:90%;margin:6px 0;padding:4px 12px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-pill);background:var(--fx-panel);color:var(--fx-t2);font-size:12px;box-shadow:var(--fx-sombra-xs);text-align:center}
+/* Lo que el agente dejó listo: viene de la IA, así que va en su violeta. */
+:root[data-piel="xen"] .propuesta{background:var(--fx-ia-s);border-top:1px solid var(--fx-ia-borde)}
+:root[data-piel="xen"] .propuesta #propuesta-titulo{color:var(--fx-ia-t)}
+:root[data-piel="xen"] .propuesta.vieja{background:var(--fx-ambar-s);border-top-color:var(--fx-ambar-borde)}
+/* El cajón: pestañas «Enviar mensaje» · «Nota interna», y debajo lo que se escribe. */
+:root[data-piel="xen"] .composer{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-auto-flow:row dense;gap:8px;align-items:end;padding:6px 16px 10px;background:var(--fx-panel);border-top:1px solid var(--fx-borde);box-shadow:none}
+/* 🪤 `.btn{display:inline-flex}` le gana al [hidden] del navegador: «Guardar nota» salía en el modo de mensaje. */
+:root[data-piel="xen"] .composer>[hidden]{display:none!important}
+:root[data-piel="xen"] .composer>.fx-cajon-tabs,:root[data-piel="xen"] .composer>#window-warn,:root[data-piel="xen"] .composer>#composer-hint,:root[data-piel="xen"] .composer>#adj-listo,:root[data-piel="xen"] .composer>#fx-nota-aviso,:root[data-piel="xen"] .composer>.fx-cajon-ayuda{grid-column:1/-1}
+:root[data-piel="xen"] .composer>#adj-btn{grid-column:1}
+:root[data-piel="xen"] .composer>#reply{grid-column:2}
+:root[data-piel="xen"] .composer>#send{grid-column:3}
+.fx-cajon-tabs{display:flex;gap:18px;border-bottom:1px solid var(--fx-borde-2)}
+.fx-cajon-tabs button{margin-bottom:-1px;padding:8px 2px 7px;border:0;border-bottom:2px solid transparent;background:none;color:var(--fx-t2);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.fx-cajon-tabs button:hover{color:var(--fx-t0)}
+.fx-cajon-tabs button[aria-selected="true"]{color:var(--fx-acento-t);border-bottom-color:var(--fx-acento)}
+.fx-cajon-tabs #fx-tab-nota[aria-selected="true"]{color:var(--fx-nombre-equipo);border-bottom-color:var(--fx-nombre-equipo)}
+:root[data-piel="xen"] .composer .hint{padding:0;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .composer>#reply{min-height:44px;max-height:160px;padding:11px 16px;border-radius:22px;background:var(--fx-panel-2);resize:none}
+:root[data-piel="xen"] .composer>#reply:focus{background:var(--fx-panel)}
+:root[data-piel="xen"] .composer #adj-btn{min-height:44px;border-radius:22px;padding:0 14px}
+:root[data-piel="xen"] .composer #send{min-height:44px;border-radius:22px;padding:0 18px}
+.fx-cajon-ayuda{font-size:11.5px;color:var(--fx-t2)}
+/* La nota interna: el cajón se vuelve arena (el color del equipo) y lo dice con palabras, no solo con el color. */
+:root[data-piel="xen"] .composer.en-nota{background:var(--fx-burbuja-equipo)}
+:root[data-piel="xen"] .composer.en-nota>#reply,:root[data-piel="xen"] .composer.en-nota>#send,:root[data-piel="xen"] .composer.en-nota>#adj-btn,:root[data-piel="xen"] .composer.en-nota>#composer-hint,:root[data-piel="xen"] .composer.en-nota>#window-warn,:root[data-piel="xen"] .composer.en-nota>#adj-listo{display:none!important}
+:root[data-piel="xen"] .composer.en-nota .fx-cajon-tabs{border-bottom-color:color-mix(in srgb,var(--fx-nombre-equipo) 25%,transparent)}
+.fx-nota-aviso{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--fx-nombre-equipo)}
+.fx-nota-aviso[hidden]{display:none}
+.fx-nota-aviso .ic{width:14px;height:14px;color:currentColor}
+:root[data-piel="xen"] .composer>#fx-nota{grid-column:1/3;min-height:64px;max-height:180px;border-color:color-mix(in srgb,var(--fx-nombre-equipo) 35%,transparent);background:var(--fx-panel);resize:vertical}
+:root[data-piel="xen"] .composer>#fx-nota:focus{border-color:var(--fx-nombre-equipo)}
+:root[data-piel="xen"] .composer>#fx-nota-ok{grid-column:3;min-height:44px}
+/* La ficha del contacto, al lado: como la de un CRM de mensajería. */
+:root[data-piel="xen"] .details{background:var(--fx-panel);border-left:1px solid var(--fx-borde);padding:22px 18px;gap:16px}
+:root[data-piel="xen"] .details .perfil-quien.fx-cto{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.fx-av-cto{width:76px;height:76px;font-size:24px}
+.fx-av-cto .fx-canal-ins{width:24px;height:24px;right:0;bottom:0}
+.fx-av-cto .fx-canal-ins .fx-svg{width:13px;height:13px}
+.fx-cto .ficha-titulo{min-width:0;max-width:100%}
+.fx-cto-nombre{display:inline-flex;align-items:center;gap:4px;max-width:100%}
+.fx-cto-nombre b{font-family:var(--fx-display);font-size:19px;font-weight:700;letter-spacing:-.015em;color:var(--fx-t0);overflow-wrap:anywhere}
+.fx-lapiz{display:inline-grid;place-items:center;flex:0 0 auto;width:30px;height:30px;border:0;border-radius:8px;background:none;color:var(--fx-t2);cursor:pointer}
+.fx-lapiz:hover{background:var(--fx-hover);color:var(--fx-t0)}
+.fx-lapiz .fx-svg{width:15px;height:15px}
+.fx-cto-sub{margin-top:2px;overflow-wrap:anywhere}
+.fx-cto-acciones{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+:root[data-piel="xen"] .fx-cto-acciones .btn{gap:6px}
+:root[data-piel="xen"] .fx-cto-acciones .fx-360{margin:0;font-size:13px;color:var(--fx-t1)}
+.fx-cto-acciones .fx-svg{width:15px;height:15px}
+:root[data-piel="xen"] .fx-cto-acciones .fx-cto-ic{width:36px;min-width:36px;padding:0;color:var(--fx-acento-t)}
+.fx-medios{list-style:none;margin:0;padding:12px 0;display:flex;flex-direction:column;gap:9px;border-top:1px solid var(--fx-borde-2);border-bottom:1px solid var(--fx-borde-2)}
+.fx-medio{display:flex;align-items:center;gap:10px;min-width:0;font-size:13.5px;color:var(--fx-t1)}
+.fx-medio-ic{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:8px;background:var(--fx-panel-2);color:var(--fx-t2)}
+.fx-medio-ic .fx-svg{width:15px;height:15px}
+.fx-medio-k{color:var(--fx-t2)}
+.fx-medio-v{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fx-medio a{color:var(--fx-acento-t);font-weight:600;text-decoration:none}
+.fx-medio a:hover{text-decoration:underline}
+/* Las filas etiqueta → valor: la etiqueta a la izquierda, el valor (o su control) a la derecha. */
+:root[data-piel="xen"] .details dl.det{display:grid;grid-template-columns:minmax(88px,auto) minmax(0,1fr);column-gap:12px;row-gap:10px;align-items:center;margin:0}
+:root[data-piel="xen"] .details dl.det dt{margin:0;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--fx-t2)}
+:root[data-piel="xen"] .details dl.det dd{margin:0;min-width:0;font-size:13.5px;color:var(--fx-t1);overflow-wrap:anywhere}
+:root[data-piel="xen"] .details dl.det dd select{width:100%;min-height:34px;padding:4px 10px;font-size:13px}
+/* Lo que busca: lo resumió el agente de IA, por eso va en su violeta. El texto, en tinta (se lee de corrido). */
+:root[data-piel="xen"] .details .ficha-quiere{margin:0;padding:12px 14px;border:1px solid var(--fx-ia-borde);border-radius:var(--fx-r-lg);background:var(--fx-ia-s);font-size:13px;line-height:20px;color:var(--fx-t1)}
+:root[data-piel="xen"] .details .ficha-quiere::before{content:"Lo que busca";display:block;margin-bottom:4px;font-size:12px;font-weight:700;color:var(--fx-ia-t)}
 :root[data-piel="xen"] .details .ficha-quiere.muted::before{content:"Todavía sin resumen"}
-:root[data-piel="xen"] .details h3{font-size:12px;font-weight:600;letter-spacing:.025em;color:var(--fx-t3)}
-:root[data-piel="xen"] .details dl.det{grid-template-columns:1fr;row-gap:2px}
-:root[data-piel="xen"] .details dl.det dt{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.025em;color:var(--fx-t3);margin-top:10px}
-:root[data-piel="xen"] .details dl.det dt:first-child{margin-top:0}
-:root[data-piel="xen"] .details dl.det dd{margin:0;font-size:14px;color:#334155}
-:root[data-piel="xen"][data-theme=dark] .details dl.det dd{color:var(--fx-t1)}
-@media (max-width:1199px){:root[data-piel="xen"] .inbox{grid-template-columns:290px minmax(0,1fr) 280px}}
-@media (max-width:900px){:root[data-piel="xen"] .inbox{grid-template-columns:1fr}}
+:root[data-piel="xen"] .details h3{margin:0 0 8px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--fx-t3)}
+@media (max-width:1199px){:root[data-piel="xen"] .inbox{grid-template-columns:300px minmax(0,1fr) 288px}.fx-asignado>span:first-child{display:none}}
+@media (max-width:900px){
+  :root[data-piel="xen"] .inbox{grid-template-columns:1fr}
+  :root[data-piel="xen"] .chat .head{padding:8px 10px;gap:8px}
+  :root[data-piel="xen"] .fx-asignado{display:none}
+  /* En el celular, el botón de pausar dice su acción solo con el dibujo; el nombre sigue ahí para el lector de pantalla. */
+  :root[data-piel="xen"] #fx-control{width:40px;min-width:40px;padding:0}
+  :root[data-piel="xen"] #fx-control span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  :root[data-piel="xen"] .msgs{padding:14px 12px}
+  :root[data-piel="xen"] .bubble{max-width:86%}
+  :root[data-piel="xen"] .composer{padding:6px 10px 8px}
+}
 :root[data-piel="xen"] .details .volver-chat{display:none}
-@media (max-width:900px){:root[data-piel="xen"] .details .volver-chat{display:inline-flex}}
+@media (max-width:900px){:root[data-piel="xen"] .details .volver-chat{display:inline-flex;align-self:flex-start}}
 
 /* ---------- Contactos: buscador y grupos debajo del título, la tabla en una tarjeta ---------- */
 :root[data-piel="xen"] .cli-pestanas{display:none}
@@ -1891,6 +2012,19 @@ dialog.perdida input{width:100%}
 /* (fin de XEN · Inicio) */
 
 /* ---------- XEN · Bandeja omnicanal (complementos nuevos del agente de la bandeja) ---------- */
+/* Los tonos de los avatares: seis propios, aparte de los de las etapas (un avatar rojo se leería «perdido», uno
+   verde «ganado»). Iniciales medidas: ≥ 6.05:1 en claro y ≥ 7.9:1 en oscuro. Y el color de cada canal en su
+   insignia (dibujo blanco encima: WhatsApp 4.3:1, sitio 7.3:1; para un ícono basta 3:1). */
+:root[data-piel="xen"]{
+  --fx-av-1-s:#dcebe7;--fx-av-1-t:#24544c;--fx-av-2-s:#f1e6d3;--fx-av-2-t:#6b4a1c;--fx-av-3-s:#f6dfe8;--fx-av-3-t:#8a2c55;
+  --fx-av-4-s:#e5ecd2;--fx-av-4-t:#4b5a17;--fx-av-5-s:#dde6ef;--fx-av-5-t:#2f4a66;--fx-av-6-s:#f3e0d8;--fx-av-6-t:#8a3b1c;
+  --fx-canal-wa:#128c4a;--fx-canal-web:#3f5a66;--fx-canal-otro:#5c7177;
+}
+:root[data-piel="xen"][data-theme=dark]{
+  --fx-av-1-s:#1d3a35;--fx-av-1-t:#a8dccf;--fx-av-2-s:#3a3020;--fx-av-2-t:#e9cf9f;--fx-av-3-s:#3d2230;--fx-av-3-t:#f0b3cc;
+  --fx-av-4-s:#2f3618;--fx-av-4-t:#cbdc95;--fx-av-5-s:#1e2c3b;--fx-av-5-t:#a9c4e2;--fx-av-6-s:#3d2519;--fx-av-6-t:#f1b99c;
+}
+@media (prefers-reduced-motion:reduce){:root[data-piel="xen"] #rows .row,:root[data-piel="xen"] .fx-asig button{transition:none}}
 /* (fin de XEN · Bandeja omnicanal) */
 
 /* ---------- XEN · Contactos, ficha y tratos (complementos nuevos del agente de Contactos) ---------- */
@@ -2045,25 +2179,31 @@ dialog.perdida input{width:100%}
       <div class="inbox" id="inbox" data-pane="list">
         <div class="list">
           <div class="tools">
-            <!-- Modo fácil: la cabecera de la lista, como en Nexora. -->
-            <div class="fx-lista-cab solo-facil"><div><h1>Bandeja omnicanal</h1><p id="fx-inbox-n"></p></div><i class="ic" data-ic="burbuja"></i></div>
-            <input type="search" id="q" placeholder="Buscar por nombre, teléfono o lo que se dijo…">
-            <!-- Modo fácil: los filtros en un desplegable (los mismos de las pestañas de abajo, que ahí se esconden). -->
-            <label class="fx-filtro solo-facil"><i class="ic" data-ic="embudo"></i><span class="sr-only">Qué conversaciones ver</span><select id="fx-filtro"></select></label>
-            <!-- Los filtros, como pestañas encima de la lista y no en un panel aparte: ese panel le quitaba 212 px a
-                 la conversación, que es lo único que importa en esta pantalla. -->
+            <!-- La Bandeja omnicanal (XENCRM): todos los canales en una lista, como la de SendPulse. -->
+            <div class="fx-lista-cab solo-facil"><div><h1>Bandeja omnicanal</h1><p id="fx-inbox-n"></p></div></div>
+            <input type="search" id="q" placeholder="Buscar por nombre, teléfono o lo que se dijo…" aria-label="Buscar en la bandeja">
+            <!-- Los filtros son UNO solo (state.filter): estos botones son la fuente. Arriba, de quién son (Mías ·
+                 Sin asignar · Todas, un control segmentado); los de estado no se ven como botones en la piel: los
+                 enseña el desplegable «Todos los estados» de abajo, que se arma con ellos (pintarFiltroFacil). -->
             <div class="filters" id="filters">
-              <button data-f="all" class="on">Todos</button>
-              <button data-f="unread">Sin leer</button>
-              <!-- Las que están a cargo de quien mira o que está atendiendo. Sin nombre no hay «míos». -->
-              <button data-f="mios" id="f-mios" hidden>Míos</button>
-              <button data-f="human" class="solo-completo">Con una persona</button>
-              <button data-f="hot">Prospectos</button>
-              <button data-rol="interes" data-f="stage:interesado" class="solo-completo" hidden>Interesados</button>
-              <button data-rol="cita" data-f="stage:cita_agendada" class="solo-completo" hidden>Con cita</button>
-              <button data-f="archived" class="solo-completo">Archivados</button>
+              <div class="fx-asig" role="group" aria-label="De quién son las conversaciones">
+                <!-- Las que están a cargo de quien mira o que está atendiendo. Sin nombre no hay «mías». -->
+                <button data-f="mios" id="f-mios" hidden>Mías</button>
+                <!-- Sin nadie asignado (sin «Asignado a»): las que nadie ha hecho suyas. -->
+                <button data-f="sin-asignar">Sin asignar</button>
+                <button data-f="all" class="on">Todas</button>
+              </div>
+              <button data-f="unread" class="fx-estado">Sin leer</button>
+              <button data-f="human" class="fx-estado solo-completo">Con una persona</button>
+              <button data-f="hot" class="fx-estado">Prospectos</button>
+              <button data-rol="interes" data-f="stage:interesado" class="fx-estado solo-completo" hidden>Interesados</button>
+              <button data-rol="cita" data-f="stage:cita_agendada" class="fx-estado solo-completo" hidden>Con cita</button>
+              <button data-f="archived" class="fx-estado solo-completo">Archivados</button>
+            </div>
+            <div class="fx-lista-estados">
+              <label class="fx-filtro"><i class="ic" data-ic="embudo"></i><span class="sr-only">Estado de las conversaciones</span><select id="fx-filtro"></select></label>
               <!-- Para el día que se atendió todo desde el teléfono y el tablero sigue en rojo. -->
-              <button class="leidas" id="marcar-leidas">Marcar todo como leído</button>
+              <button class="leidas" id="marcar-leidas" title="Marcar todo como leído" aria-label="Marcar todo como leído"><i class="ic" data-ic="leidas" aria-hidden="true"></i></button>
             </div>
           </div>
           <div class="rows" id="rows"><div class="empty">Sin conversaciones todavía.</div></div>
@@ -2072,8 +2212,8 @@ dialog.perdida input{width:100%}
           <div class="empty" id="chat-empty" style="margin:auto">Elige una conversación.</div>
           <div class="head" id="chat-head" hidden>
             <button class="btn sm" id="back-list" style="display:none">←</button>
-            <!-- Modo fácil: quién es, en dos renglones (el nombre; y el número, el canal y quién responde). -->
-            <span class="fx-ini solo-facil" id="fx-chat-ini" aria-hidden="true"></span>
+            <!-- La piel: quién es, en dos renglones (el nombre; y quién responde, el número y el canal). -->
+            <span class="fx-av fx-av-chat solo-facil" id="fx-chat-ini" aria-hidden="true"></span>
             <div class="fx-chat-quien solo-facil"><b id="fx-chat-nombre"></b><span id="fx-chat-linea"></span></div>
             <span class="who" id="chat-name"></span>
             <span class="chip" id="chat-channel"></span>
@@ -2086,8 +2226,11 @@ dialog.perdida input{width:100%}
                 <button data-mode="bot" class="on" id="seg-bot" aria-pressed="true">Aiva</button>
                 <button data-mode="human" id="seg-human" aria-pressed="false">Tú</button>
               </div>
+              <!-- «Asignado a»: el mismo dato que la ficha de al lado (c.responsable), con su mismo guardado. -->
+              <label class="fx-asignado solo-facil" id="fx-asignado-caja"><i class="ic" data-ic="user" aria-hidden="true"></i><span class="fx-asignado-t">Asignado a</span><span id="fx-asignado-sel"></span></label>
               <button class="btn sm" id="details-btn" style="display:none">Ficha</button>
-              <!-- Modo fácil: lo mismo que Aiva/Tú, dicho como en Nexora. Toca el mismo interruptor. -->
+              <!-- Lo mismo que Aiva/Tú, dicho como en un CRM de mensajería: lo que se pausa es la automatización
+                   (el agente de IA). Toca el mismo interruptor. -->
               <button class="btn sm solo-facil" id="fx-control"></button>
             </div>
           </div>
@@ -2107,6 +2250,11 @@ dialog.perdida input{width:100%}
             <div id="propuesta-texto"></div>
           </div>
           <div class="composer" id="composer" hidden>
+            <!-- Las dos cosas que se escriben aquí: lo que le llega al cliente y lo que solo ve el equipo. -->
+            <div class="fx-cajon-tabs solo-facil" role="tablist" aria-label="Qué escribes">
+              <button role="tab" id="fx-tab-mensaje" aria-selected="true" aria-controls="composer">Enviar mensaje</button>
+              <button role="tab" id="fx-tab-nota" aria-selected="false" aria-controls="composer" tabindex="-1">Nota interna</button>
+            </div>
             <div class="ch-warn" id="window-warn" role="status" hidden></div>
             <div class="hint" id="composer-hint">Aiva está respondiendo esta conversación. Cambia a <b>Tú</b> para escribir.</div>
             <textarea id="reply" placeholder="Escribe tu respuesta… (Enter envía, Shift+Enter salto)" hidden></textarea>
@@ -2118,6 +2266,12 @@ dialog.perdida input{width:100%}
             <input type="file" id="adj-file" hidden>
             <button class="btn sm" id="adj-btn" hidden title="Adjuntar una foto o un documento">📎 Adjuntar</button>
             <button class="btn primary" id="send" hidden>Enviar</button>
+            <!-- La nota interna: va a la historia de la ficha por la misma ruta que «Guardar nota». No le llega al
+                 cliente y no toma la conversación (por eso no es el mismo cajón: escribir en #reply la toma). -->
+            <div class="fx-nota-aviso solo-facil" id="fx-nota-aviso" hidden><i class="ic" data-ic="candado-nota"></i>Solo la ve el equipo: no le llega al cliente.</div>
+            <textarea id="fx-nota" class="solo-facil" rows="3" maxlength="2000" placeholder="Escribe una nota para el equipo…" aria-label="Nota interna" hidden></textarea>
+            <button class="btn primary solo-facil" id="fx-nota-ok" hidden>Guardar nota</button>
+            <div class="fx-cajon-ayuda solo-facil" id="fx-cajon-ayuda">Enter envía · Shift+Enter, nueva línea</div>
           </div>
         </div>
         <div class="details" id="details"><div class="empty">Sin ficha.</div></div>
