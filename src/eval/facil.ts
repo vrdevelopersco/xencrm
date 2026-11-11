@@ -63,7 +63,7 @@ const lee: Record<string, string[]> = {
   // XEN · Embudo y filtrado
   embudo: ['contacts', 'stats'],
   // XEN · Panel KAM
-  kam: ['contacts'],
+  kam: ['cuentas-clave'],
   // XEN · KPIs y metas
   kpis: ['stats', 'series'],
   // XEN · Optimización de ventas

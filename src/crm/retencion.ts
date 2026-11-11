@@ -133,7 +133,8 @@ function mediosDe(userId: string): string[] {
 }
 
 /** Lo que tiene texto de la persona y no sirve sin saber de quién es: se va con las dos acciones. */
-const CON_TEXTO = ['messages', 'analyses', 'verifications', 'misses', 'propuestas', 'wa_salida'];
+// cuentas_clave lleva el plan de cuenta, que es texto sobre la persona: al anonimizar se va con lo demás.
+const CON_TEXTO = ['messages', 'analyses', 'verifications', 'misses', 'propuestas', 'wa_salida', 'cuentas_clave'];
 
 const existe = (tabla: string) => Boolean(getDb().prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(tabla));
 

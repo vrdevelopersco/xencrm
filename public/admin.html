@@ -2719,6 +2719,144 @@ dialog.perdida input{width:100%}
 /* (fin de XEN · KPIs y metas) */
 
 /* ---------- XEN · Panel KAM (agente de cuentas clave) ---------- */
+/* Las cuentas clave: cifras arriba (las que filtran son botones), filtros, cada cuenta en su tarjeta con la franja de
+   su salud a la izquierda y la palabra en una píldora que abre su porqué, y las candidatas debajo. La salud usa los
+   colores de dato (rojo, ámbar, verde), nunca el acento, y siempre lleva su palabra: el color solo no dice qué hacer. */
+:root[data-piel="xen"] #xk-kam{display:flex;flex-direction:column;gap:20px}
+:root[data-piel="xen"] .xk-cifras{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+:root[data-piel="xen"] .xk-cifra-c{display:flex;flex-direction:column;gap:6px;min-width:0;padding:16px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs);color:var(--fx-t1);font:inherit;text-align:left}
+:root[data-piel="xen"] button.xk-cifra-c{cursor:pointer;transition:border-color var(--fx-t-rapido),box-shadow var(--fx-t-rapido)}
+:root[data-piel="xen"] button.xk-cifra-c:hover{border-color:var(--fx-t4);box-shadow:var(--fx-sombra-sm)}
+:root[data-piel="xen"] button.xk-cifra-c[aria-pressed="true"]{border-color:var(--fx-acento);box-shadow:0 0 0 1px var(--fx-acento)}
+:root[data-piel="xen"] .xk-cifra-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px;font-weight:500;color:var(--fx-t2)}
+:root[data-piel="xen"] .xk-cifra-ic{display:inline-grid;place-items:center;width:32px;height:32px;flex:0 0 32px;border-radius:var(--fx-r-md);background:var(--fx-hover);color:var(--fx-t2)}
+:root[data-piel="xen"] .xk-cifra-ic .ic{width:16px;height:16px}
+:root[data-piel="xen"] .xk-cifra-c.t-acento .xk-cifra-ic{background:var(--fx-suave);color:var(--fx-acento-t)}
+:root[data-piel="xen"] .xk-cifra-c.t-verde .xk-cifra-ic{background:var(--fx-verde-s);color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xk-cifra-c.t-rojo .xk-cifra-ic{background:var(--fx-rojo-s);color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xk-cifra-c.t-ambar .xk-cifra-ic{background:var(--fx-ambar-s);color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xk-n{font-family:var(--fx-display);font-size:28px;line-height:1.1;font-weight:700;letter-spacing:-.02em;color:var(--fx-t0);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] .xk-n.flojo{color:var(--fx-t2)}
+:root[data-piel="xen"] .xk-cifra-c.t-rojo .xk-n{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xk-cifra-c small{font-size:12.5px;color:var(--fx-t2);line-height:1.35}
+/* Los filtros: el KAM en un desplegable y la salud en un control segmentado con su número. */
+:root[data-piel="xen"] .xk-herr{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+:root[data-piel="xen"] .xk-f-kam{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--fx-t2)}
+:root[data-piel="xen"] .xk-f-kam select{width:auto;min-width:180px}
+:root[data-piel="xen"] .xk-seg{display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel-2)}
+:root[data-piel="xen"] .xk-seg button{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border:0;border-radius:8px;background:none;color:var(--fx-t2);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+:root[data-piel="xen"] .xk-seg button:hover{color:var(--fx-t0)}
+:root[data-piel="xen"] .xk-seg button[aria-pressed="true"]{background:var(--fx-panel);color:var(--fx-t0);box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] .xk-cuenta-n{font-variant-numeric:tabular-nums;color:var(--fx-t3);font-weight:600}
+:root[data-piel="xen"] .xk-punto{display:inline-block;width:8px;height:8px;border-radius:999px;background:var(--fx-t3)}
+:root[data-piel="xen"] .xk-seg .s-riesgo .xk-punto{background:var(--fx-rojo)}
+:root[data-piel="xen"] .xk-seg .s-atencion .xk-punto{background:var(--fx-ambar)}
+:root[data-piel="xen"] .xk-seg .s-sana .xk-punto{background:var(--fx-verde)}
+/* Cada cuenta: una tarjeta con la franja de su salud. */
+:root[data-piel="xen"] .xk-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:16px;align-items:start}
+:root[data-piel="xen"] .xk-cuenta{position:relative;display:flex;flex-direction:column;gap:14px;min-width:0;padding:18px 18px 16px 22px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs);overflow:hidden}
+:root[data-piel="xen"] .xk-cuenta::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--fx-t4)}
+:root[data-piel="xen"] .xk-cuenta.s-riesgo::before{background:var(--fx-rojo)}
+:root[data-piel="xen"] .xk-cuenta.s-atencion::before{background:var(--fx-ambar)}
+:root[data-piel="xen"] .xk-cuenta.s-sana::before{background:var(--fx-verde)}
+:root[data-piel="xen"] .xk-cab{display:flex;align-items:flex-start;gap:12px;min-width:0}
+:root[data-piel="xen"] .xk-quien{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+:root[data-piel="xen"] .xk-nombre{align-self:flex-start;max-width:100%;padding:0;border:0;background:none;color:var(--fx-t0);font:inherit;font-size:16px;font-weight:700;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] .xk-nombre:hover{color:var(--fx-acento-t);text-decoration:underline;text-underline-offset:3px}
+:root[data-piel="xen"] .xk-sub{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:12.5px;color:var(--fx-t2);min-width:0}
+/* La salud: palabra en píldora, con su ícono; abre la lista de motivos. */
+:root[data-piel="xen"] .xk-salud{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;min-height:32px;padding:0 10px;border:1px solid transparent;border-radius:var(--fx-r-pill);font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+:root[data-piel="xen"] .xk-salud .ic{width:15px;height:15px;flex:0 0 15px}
+:root[data-piel="xen"] .xk-salud .xk-chev{width:13px;height:13px;flex:0 0 13px;transition:transform var(--fx-t-rapido)}
+:root[data-piel="xen"] .xk-salud[aria-expanded="true"] .xk-chev{transform:rotate(180deg)}
+:root[data-piel="xen"] .xk-salud.s-riesgo{background:var(--fx-rojo-s);color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xk-salud.s-atencion{background:var(--fx-ambar-s);color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xk-salud.s-sana{background:var(--fx-verde-s);color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xk-salud:hover{border-color:currentColor}
+:root[data-piel="xen"] .xk-motivos{list-style:none;margin:-4px 0 0;padding:10px 12px;display:flex;flex-direction:column;gap:6px;border-radius:var(--fx-r-lg);background:var(--fx-panel-2);border:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .xk-motivos[hidden]{display:none}
+:root[data-piel="xen"] .xk-motivos li{display:flex;align-items:flex-start;gap:8px;font-size:13.5px;color:var(--fx-t1);line-height:1.4}
+:root[data-piel="xen"] .xk-motivos .ic{width:15px;height:15px;flex:0 0 15px;margin-top:2px}
+:root[data-piel="xen"] .xk-motivos .m-riesgo .ic{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .xk-motivos .m-atencion .ic{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xk-motivos .m-bien .ic{color:var(--fx-verde-t)}
+:root[data-piel="xen"] .xk-motivos .m-bien{color:var(--fx-t2)}
+/* Los datos, en una rejilla de etiqueta arriba y valor abajo. */
+:root[data-piel="xen"] .xk-datos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 16px;margin:0}
+:root[data-piel="xen"] .xk-datos>div{min-width:0}
+:root[data-piel="xen"] .xk-datos dt{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fx-t3);margin-bottom:4px}
+:root[data-piel="xen"] .xk-datos dd{margin:0;font-size:14px;color:var(--fx-t1);min-width:0}
+:root[data-piel="xen"] .xk-d-trato{grid-column:span 2}
+:root[data-piel="xen"] .xk-d-trato dd{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+:root[data-piel="xen"] .xk-d-kam select{width:100%;min-height:34px;padding:4px 10px;font-size:13.5px}
+:root[data-piel="xen"] .xk-plata{font-weight:700;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xk-datos small{font-size:12px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xk-nada{color:var(--fx-t2)}
+:root[data-piel="xen"] .xk-paso{font-size:13px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xk-paso.urgente{color:var(--fx-ambar-t);font-weight:600}
+:root[data-piel="xen"] .xk-carita{white-space:nowrap}
+/* El plan de cuenta: se lee de un vistazo y se edita ahí mismo. */
+:root[data-piel="xen"] .xk-plan{border-top:1px solid var(--fx-borde-2);padding-top:12px;display:flex;flex-direction:column;gap:6px}
+:root[data-piel="xen"] .xk-plan-l{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fx-t3)}
+:root[data-piel="xen"] .xk-plan-t{margin:0;font-size:14px;line-height:1.5;color:var(--fx-t1);white-space:pre-wrap;overflow-wrap:anywhere}
+:root[data-piel="xen"] .xk-plan-pie{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+:root[data-piel="xen"] .xk-plan-pie small,:root[data-piel="xen"] .xk-cuantas{flex:1 1 auto;font-size:12px;color:var(--fx-t2);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xk-plan textarea{min-height:84px;resize:vertical}
+:root[data-piel="xen"] .xk-plan-vacio{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;padding:4px 0;border:0;background:none;color:var(--fx-acento-t);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+:root[data-piel="xen"] .xk-plan-vacio:hover{text-decoration:underline;text-underline-offset:3px}
+:root[data-piel="xen"] .xk-plan-vacio .ic,:root[data-piel="xen"] .xk-plan .btn .ic,:root[data-piel="xen"] .xk-acc .btn .ic,:root[data-piel="xen"] .xk-cand-f .btn .ic{width:15px;height:15px;flex:0 0 15px;color:currentColor}
+:root[data-piel="xen"] .xk-err{flex:1 1 100%;font-size:13px;font-weight:600;color:var(--fx-rojo-t)}
+/* Las acciones de cada cuenta. */
+:root[data-piel="xen"] .xk-acc{display:flex;flex-wrap:wrap;align-items:center;gap:8px;border-top:1px solid var(--fx-borde-2);padding-top:12px}
+:root[data-piel="xen"] .xk-desde{flex:1 1 auto;min-width:0;font-size:12px;color:var(--fx-t2);text-align:right}
+:root[data-piel="xen"] .xk-quitar{color:var(--fx-t2)}
+:root[data-piel="xen"] .xk-quitar-si{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--fx-t1)}
+/* Vacío, sin resultados, error y cargando. */
+:root[data-piel="xen"] .xk-vacio{display:flex;gap:16px;align-items:flex-start;padding:22px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel)}
+:root[data-piel="xen"] .xk-vacio-ic{display:inline-grid;place-items:center;width:44px;height:44px;flex:0 0 44px;border-radius:var(--fx-r-lg);background:var(--fx-suave);color:var(--fx-acento-t)}
+:root[data-piel="xen"] .xk-vacio-ic .ic{width:22px;height:22px}
+:root[data-piel="xen"] .xk-vacio h2{margin:0 0 6px;font-family:var(--fx-display);font-size:19px;font-weight:700;color:var(--fx-t0)}
+:root[data-piel="xen"] .xk-vacio p{margin:0 0 6px;font-size:14px;line-height:1.55;color:var(--fx-t2);max-width:72ch}
+:root[data-piel="xen"] .xk-sin,:root[data-piel="xen"] .xk-error{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:20px;border:1px dashed var(--fx-t4);border-radius:var(--fx-r-xl);background:var(--fx-panel-2)}
+:root[data-piel="xen"] .xk-error{border-style:solid;border-color:var(--fx-rojo-s);background:var(--fx-panel)}
+:root[data-piel="xen"] .xk-sin b,:root[data-piel="xen"] .xk-error b{font-size:15px;color:var(--fx-t0)}
+:root[data-piel="xen"] .xk-sin span,:root[data-piel="xen"] .xk-error span{font-size:14px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xk-esq{pointer-events:none}
+:root[data-piel="xen"] .xk-esq i{display:block;height:12px;border-radius:6px;background:var(--fx-hover);margin:6px 0}
+:root[data-piel="xen"] .xk-esq i:first-child{width:45%}
+:root[data-piel="xen"] .xk-esq i:nth-child(2){width:70%;height:22px}
+:root[data-piel="xen"] .xk-cuenta.xk-esq{min-height:220px}
+/* Las candidatas: una fila por contacto, con sus razones en etiquetas y su botón. */
+:root[data-piel="xen"] .xk-cand{display:flex;flex-direction:column;gap:12px}
+:root[data-piel="xen"] .xk-cand-cab h2{margin:0;font-family:var(--fx-display);font-size:19px;font-weight:700;color:var(--fx-t0)}
+:root[data-piel="xen"] .xk-cand-cab p{margin:4px 0 0;font-size:14px;color:var(--fx-t2);max-width:80ch}
+:root[data-piel="xen"] .xk-cand-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+:root[data-piel="xen"] .xk-cand-f{display:grid;grid-template-columns:auto minmax(0,1.2fr) minmax(0,1.6fr) auto;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel)}
+:root[data-piel="xen"] .xk-porque{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+:root[data-piel="xen"] .xk-tag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:var(--fx-r-pill);background:var(--fx-suave);color:var(--fx-suave-t);font-size:12px;font-weight:600}
+/* El botón de la ficha: estrella hueca; encendida, rellena y con el tono del acento. */
+:root[data-piel="xen"] .xk-pf-clave .ic{width:15px;height:15px;flex:0 0 15px;color:currentColor}
+:root[data-piel="xen"] .xk-pf-clave.on{background:var(--fx-suave);border-color:var(--fx-suave-borde);color:var(--fx-suave-t)}
+:root[data-piel="xen"] .xk-pf-clave.on .ic svg{fill:currentColor}
+:root[data-piel="xen"] .xk-pf-clave[hidden]{display:none}
+@media (max-width:1100px){:root[data-piel="xen"] .xk-cifras{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){
+  :root[data-piel="xen"] .xk-datos{grid-template-columns:repeat(2,minmax(0,1fr))}
+  :root[data-piel="xen"] .xk-d-trato{grid-column:1/-1}
+  :root[data-piel="xen"] .xk-cand-f{grid-template-columns:auto minmax(0,1fr)}
+  :root[data-piel="xen"] .xk-cand-f .xk-porque,:root[data-piel="xen"] .xk-cand-f .btn{grid-column:1/-1}
+  :root[data-piel="xen"] .xk-cand-f .btn{justify-self:start}
+  :root[data-piel="xen"] .xk-desde{flex-basis:100%;text-align:left;order:3}
+  :root[data-piel="xen"] .xk-cuenta{padding:16px 14px 14px 18px}
+  :root[data-piel="xen"] .xk-vacio{flex-direction:column}
+  :root[data-piel="xen"] .xk-n{font-size:24px}
+  /* Los cuatro filtros de salud no caben en una fila: dos por fila, del mismo ancho. */
+  :root[data-piel="xen"] .xk-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+  :root[data-piel="xen"] .xk-seg button{justify-content:center}
+  :root[data-piel="xen"] .xk-f-kam{width:100%}
+  :root[data-piel="xen"] .xk-f-kam select{flex:1;min-width:0}
+}
+@media (prefers-reduced-motion:reduce){:root[data-piel="xen"] .xk-salud .xk-chev,:root[data-piel="xen"] button.xk-cifra-c{transition:none}}
 /* (fin de XEN · Panel KAM) */
 
 /* ---------- XEN · Optimización de ventas (agente de optimización) ---------- */
@@ -3183,6 +3321,8 @@ dialog.perdida input{width:100%}
           <span class="small muted" id="pf-pos"></span>
           <button class="btn sm" id="pf-sig" aria-label="Ficha siguiente">›</button>
         </div>
+        <!-- XEN · Panel KAM: marcar o quitar como cuenta clave (lo pinta pintarClaveFicha). -->
+        <button class="btn sm xk-pf-clave" id="pf-clave" type="button" aria-pressed="false" hidden><i class="ic" data-ic="estrella"></i><span>Cuenta clave</span></button>
         <button class="btn sm" id="pf-fijar" aria-pressed="false">☆ Fijar</button>
         <button class="btn sm primary" id="pf-chat"><i class="ic" data-ic="burbuja"></i>Abrir chat</button>
         <button class="btn sm" id="pf-cerrar">Cerrar</button>

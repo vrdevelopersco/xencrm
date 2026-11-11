@@ -4414,6 +4414,7 @@
       $('pf-sig').disabled = i >= PF_LISTA.length - 1;
     }
     pintarFijar();
+    pintarClaveFicha(d); // XEN · Panel KAM: el botón «★ Cuenta clave»
 
     var ver = verdict(c);
     var notas = (d.events || []).filter(function (e) { return e.type === 'nota' && e.payload && e.payload.texto; });
@@ -4617,6 +4618,7 @@
         case 'followup_snooze': t = 'Seguimiento pospuesto ' + (p.days || 7) + ' días'; break;
         case 'archivada': t = p.by ? quien(p.by) + ' la archivó' : 'Se archivó'; break;
         case 'desarchivada': t = p.by ? quien(p.by) + ' la devolvió a las listas' : 'Volvió a las listas'; break;
+        case 'cuenta_clave': t = quien(p.by) + (p.on ? ' la marcó como cuenta clave' : ' le quitó la marca de cuenta clave'); break;
         case 'contacts_merged': t = (p.by ? quien(p.by) + ' la unió' : 'Se unió') + ' con otra ficha de la misma persona'; break;
         case 'cross_channel': t = 'Escribió también por otro canal'; break;
         default: return;
@@ -6375,6 +6377,311 @@
   // (fin de XEN · KPIs y metas)
 
   // ===== XEN · Panel KAM: lo nuevo del agente de cuentas clave (alAbrir('kam', …)) =====
+  // Las cuentas clave (KAM): los clientes que más importan, quién los lleva, cuánto valen y cómo están. Lo calcula el
+  // servidor (crm/cuentas-clave.ts) sin modelo: aquí solo se pinta, se filtra y se marca.
+  //
+  // 🪤 La salud siempre va con su palabra (Sana · Atención · En riesgo) y su porqué a un toque: un color solo no
+  // dice qué hacer, y una cifra mágica no se puede discutir. El ánimo y el interés, con emoji Y palabra (el emoji
+  // va con aria-hidden: un lector de pantalla diría «cara sonriente con ojos de estrella» en vez de «Quiere comprar»).
+  //
+  // 🪤 Sin precio, el valor es «—», nunca «$0»: cero diría que no vale nada, y lo que pasa es que no se sabe.
+  //
+  // 🪤 El plan de cuenta se escribe aquí mismo y NO se borra si guardar falla: lo escrito se queda (en XK.borradores,
+  // así sobrevive a que el panel se vuelva a pintar) con el porqué del fallo al lado.
+  var XK = { datos: null, cargando: false, error: null, kam: '', salud: '', abiertos: {}, editando: {}, borradores: {}, errores: {}, quitando: {}, marcando: {} };
+  var XK_SALUD = { riesgo: { lbl: 'En riesgo', ic: 'alerta' }, atencion: { lbl: 'Atención', ic: 'reloj' }, sana: { lbl: 'Sana', ic: 'check' } };
+  var XK_ANIMO = { positivo: ['😊', 'Contento'], neutral: ['😐', 'Neutral'], negativo: ['😠', 'Molesto'] };
+  var XK_INTERES = { 3: ['🤩', 'Quiere comprar'], 2: ['🙂', 'Interés claro'], 1: ['🤔', 'Curiosidad'], 0: ['😶', 'Sin interés'] };
+  var XK_NIVEL_IC = { riesgo: 'alerta', atencion: 'reloj', bien: 'check' };
+  var XK_NOTA_MAX = 600;
+  ICONS.quitar = '<path d="M18 6 6 18M6 6l12 12"/>';
+
+  function xkCarita(par) { return par ? '<span class="xk-carita"><span aria-hidden="true">' + par[0] + '</span> ' + esc(par[1]) + '</span>' : '<span class="xk-nada">Sin análisis</span>'; }
+  function xkValor(v, vendido) {
+    if (!v) return '<span class="xk-nada" title="Sin precio: ni puesto a mano ni en el catálogo">—</span>';
+    return '<b class="xk-plata">' + esc(plata(v)) + '</b> <small>' + (vendido ? 'vendido' : 'abierto') + '</small>';
+  }
+  function xkFiltradas() {
+    var d = XK.datos;
+    if (!d) return [];
+    return d.cuentas.filter(function (k) {
+      if (XK.salud && k.salud !== XK.salud) return false;
+      if (XK.kam === '__nadie') return !k.kam;
+      if (XK.kam) return mismoNombre(k.kam, XK.kam);
+      return true;
+    });
+  }
+  function xkSel(attr, id) { return '[' + attr + '="' + String(id).replace(/["\\]/g, '\\$&') + '"]'; }
+
+  function cargarKam() {
+    if (XK.cargando) return;
+    var caja = $('xk-kam');
+    if (!caja) return;
+    XK.cargando = true;
+    caja.setAttribute('aria-busy', 'true');
+    // Cargando: la forma de lo que viene (cifras y tres cuentas), para que nada salte al llegar.
+    if (!XK.datos) caja.innerHTML = '<div class="xk-cifras">' + [1, 2, 3, 4].map(function () { return '<div class="xk-cifra-c xk-esq" aria-hidden="true"><i></i><i></i></div>'; }).join('') + '</div>' +
+      '<div class="xk-lista">' + [1, 2, 3].map(function () { return '<div class="xk-cuenta xk-esq" aria-hidden="true"><i></i><i></i><i></i></div>'; }).join('') + '</div>';
+    api('/cuentas-clave').then(function (d) {
+      XK.cargando = false;
+      caja.removeAttribute('aria-busy');
+      if (!d || d.error) { XK.error = (d && d.error) || 'el servidor no contestó'; pintarKam(); return; }
+      XK.error = null;
+      XK.datos = d;
+      if (d.moneda && !state.moneda) state.moneda = d.moneda;
+      pintarKam();
+    }).catch(function (e) {
+      XK.cargando = false;
+      caja.removeAttribute('aria-busy');
+      if (String(e && e.message) === '401') return;
+      XK.error = 'no hubo conexión con el servidor';
+      pintarKam();
+    });
+  }
+  alAbrir('kam', cargarKam);
+
+  function pintarKam() {
+    var caja = $('xk-kam');
+    if (!caja) return;
+    // Lo que se estaba escribiendo en un plan se guarda antes de repintar (y vuelve después).
+    caja.querySelectorAll('textarea[data-xk-nota]').forEach(function (t) { XK.borradores[t.getAttribute('data-xk-nota')] = t.value; });
+    if (XK.error && !XK.datos) {
+      caja.innerHTML = '<div class="xk-error" role="alert"><b>No se pudieron cargar las cuentas clave</b><span>' + esc(XK.error) + '. Lo que ya marcaste sigue guardado.</span>' +
+        '<button class="btn sm" type="button" id="xk-reintentar">Volver a intentar</button></div>';
+      $('xk-reintentar').onclick = function () { XK.error = null; cargarKam(); };
+      return;
+    }
+    var d = XK.datos;
+    if (!d) return;
+    var c = d.cifras;
+    var cifras = [
+      { t: 'Cuentas clave', n: String(c.cuentas), p: c.cuentas ? (c.cuentas === 1 ? 'la que más importa' : 'las que más importan') : 'todavía ninguna', ic: 'estrella', tono: 'acento' },
+      { t: 'Valor de las cuentas', n: c.conValor ? plataCorta(c.valor) : '—', p: c.conValor ? (c.vendido ? plataCorta(c.vendido) + ' ya vendido' : 'todo abierto') + (c.conValor < c.cuentas ? ' · ' + (c.cuentas - c.conValor) + ' sin precio' : '') : (c.cuentas ? 'Sin precios en estas cuentas' : 'Se suma al marcarlas'), ic: 'dolar', tono: 'verde', flojo: !c.conValor },
+      { t: 'En riesgo', n: String(c.enRiesgo), p: c.enRiesgo ? 'mira su porqué y actúa hoy' : (c.atencion ? c.atencion + ' para mirar' : 'ninguna en riesgo'), ic: 'alerta', tono: c.enRiesgo ? 'rojo' : 'neutro', salud: c.cuentas ? 'riesgo' : '' },
+      { t: 'Sin KAM', n: String(c.sinKam), p: c.sinKam ? 'nadie las tiene asignadas' : (c.cuentas ? 'todas tienen quién las lleve' : 'cada cuenta, con su responsable'), ic: 'user', tono: c.sinKam ? 'ambar' : 'neutro', kam: c.cuentas ? '__nadie' : '' }
+    ];
+    var html = '<div class="xk-cifras">' + cifras.map(function (x) {
+      var filtra = x.salud || x.kam;
+      var on = (x.salud && XK.salud === x.salud) || (x.kam && XK.kam === x.kam);
+      return '<' + (filtra ? 'button type="button" aria-pressed="' + Boolean(on) + '"' : 'div') + ' class="xk-cifra-c t-' + x.tono + '"' + (x.salud ? ' data-xk-salud="' + x.salud + '"' : '') + (x.kam ? ' data-xk-kam="' + x.kam + '"' : '') + '>' +
+        '<span class="xk-cifra-cab"><span>' + esc(x.t) + '</span><span class="xk-cifra-ic"><i class="ic" data-ic="' + x.ic + '"></i></span></span>' +
+        '<b class="xk-n' + (x.flojo ? ' flojo' : '') + '">' + esc(x.n) + '</b><small>' + esc(x.p) + '</small></' + (filtra ? 'button' : 'div') + '>';
+    }).join('') + '</div>';
+
+    if (!c.cuentas) {
+      html += '<section class="xk-vacio"><span class="xk-vacio-ic"><i class="ic" data-ic="estrella"></i></span><div><h2>Una cuenta clave es un cliente que pesa más que el resto</h2>' +
+        '<p>Ya compró, vuelve, trae a otros o vale más. Márcala y XENCRM vigila su salud por ti: si lleva mucho sin hablar, si escribió y nadie le contestó, si está molesta o si nadie la tiene asignada.</p>' +
+        '<p>Márcalas aquí abajo, entre las candidatas, o desde la ficha de cualquier contacto con <b>★ Marcar como cuenta clave</b>.</p></div></section>';
+    } else {
+      var kams = d.equipo.slice();
+      d.cuentas.forEach(function (k) { if (k.kam && !kams.some(function (n) { return mismoNombre(n, k.kam); })) kams.push(k.kam); });
+      var cuantas = function (s) { return d.cuentas.filter(function (k) { return !s || k.salud === s; }).length; };
+      html += '<div class="xk-herr">' +
+        '<label class="xk-f-kam"><span>KAM</span><select id="xk-f-kam" aria-label="Filtrar por KAM"><option value="">Todos</option>' +
+          kams.map(function (n) { return '<option value="' + esc(n) + '"' + (mismoNombre(n, XK.kam) ? ' selected' : '') + '>' + esc(n) + (mismoNombre(n, state.name) ? ' (tú)' : '') + '</option>'; }).join('') +
+          '<option value="__nadie"' + (XK.kam === '__nadie' ? ' selected' : '') + '>Sin asignar</option></select></label>' +
+        '<div class="xk-seg" role="group" aria-label="Filtrar por salud">' +
+          [['', 'Todas'], ['riesgo', 'En riesgo'], ['atencion', 'Atención'], ['sana', 'Sanas']].map(function (s) {
+            return '<button type="button" data-xk-f="' + s[0] + '" aria-pressed="' + (XK.salud === s[0]) + '"' + (s[0] ? ' class="s-' + s[0] + '"' : '') + '>' + (s[0] ? '<i class="xk-punto" aria-hidden="true"></i>' : '') + esc(s[1]) + ' <span class="xk-cuenta-n">' + cuantas(s[0]) + '</span></button>';
+          }).join('') + '</div></div>';
+      var lista = xkFiltradas();
+      html += lista.length
+        ? '<div class="xk-lista">' + lista.map(xkCuentaHtml).join('') + '</div>'
+        : '<div class="xk-sin"><b>Ninguna cuenta con este filtro</b><span>Hay ' + c.cuentas + (c.cuentas === 1 ? ' cuenta clave' : ' cuentas clave') + ' en total.</span><button class="btn sm" type="button" id="xk-ver-todas">Ver todas</button></div>';
+    }
+
+    html += '<section class="xk-cand" aria-labelledby="xk-cand-t"><div class="xk-cand-cab"><h2 id="xk-cand-t">Candidatas a cuenta clave</h2>' +
+      '<p>Contactos que cumplen alguna regla: ya compraron, volvieron, vinieron a su cita, están calientes y con cita, o están entre las de mayor valor. Se proponen; las marcas tú.</p></div>' +
+      (d.candidatas.length
+        ? '<ul class="xk-cand-l">' + d.candidatas.map(function (k) {
+            return '<li class="xk-cand-f">' + avatarHtml(k.nombre || k.telefono || k.id, k.id) +
+              '<div class="xk-quien"><button type="button" class="xk-nombre" data-xk-ficha="' + esc(k.id) + '">' + esc(k.nombre || k.telefono || 'Sin nombre') + '</button>' +
+              '<span class="xk-sub"><span class="chip stage-' + esc(k.etapaRol || 'activo') + '">' + esc(k.etapaNombre) + '</span>' + (k.valor ? '<span>' + esc(plata(k.valor)) + '</span>' : '') + '</span></div>' +
+              '<div class="xk-porque">' + k.motivos.map(function (m) { return '<span class="xk-tag">' + esc(m) + '</span>'; }).join('') + '</div>' +
+              '<button type="button" class="btn sm" data-xk-marcar="' + esc(k.id) + '"' + (XK.marcando[k.id] ? ' disabled' : '') + '><i class="ic" data-ic="estrella"></i>' + (XK.marcando[k.id] ? 'Marcando…' : 'Marcar como cuenta clave') + '</button></li>';
+          }).join('') + '</ul>'
+        : '<div class="xk-sin"><b>Por ahora no hay candidatas</b><span>Aparecen cuando alguien compra, vuelve después de un tiempo o viene a su cita. También puedes marcar a cualquiera desde su ficha.</span></div>') +
+      '</section>';
+
+    caja.innerHTML = html;
+    iconos(caja);
+    xkEnganchar(caja);
+  }
+
+  function xkCuentaHtml(k, i) {
+    var s = XK_SALUD[k.salud] || XK_SALUD.atencion;
+    var abierto = Boolean(XK.abiertos[k.id]);
+    var mid = 'xk-m-' + i;
+    var porque = k.motivos.filter(function (m) { return m.nivel !== 'bien'; }).map(function (m) { return m.texto; }).join(' · ') || 'Todo en orden';
+    var urgente = k.paso && k.paso.urgente;
+    return '<article class="xk-cuenta s-' + k.salud + '" data-xk-id="' + esc(k.id) + '">' +
+      '<header class="xk-cab">' + avatarHtml(k.nombre || k.telefono || k.id, k.id) +
+        '<div class="xk-quien"><button type="button" class="xk-nombre" data-xk-ficha="' + esc(k.id) + '">' + esc(k.nombre || k.telefono || 'Sin nombre') + '</button>' +
+        '<span class="xk-sub">' + canalHtml(k.canal) + (k.telefono ? '<span>' + esc(k.telefono) + '</span>' : '') + (k.archivada ? '<span>archivada</span>' : '') + '</span></div>' +
+        '<button type="button" class="xk-salud s-' + k.salud + '" aria-expanded="' + abierto + '" aria-controls="' + mid + '" data-xk-motivos="' + esc(k.id) + '" title="' + esc(s.lbl + ': ' + porque) + '">' +
+          '<i class="ic" data-ic="' + s.ic + '"></i>' + esc(s.lbl) + '<span class="sr-only">. Por qué: ' + esc(porque) + '</span><i class="ic xk-chev" data-ic="abajo"></i></button>' +
+      '</header>' +
+      '<ul class="xk-motivos" id="' + mid + '" aria-label="Por qué está ' + esc(s.lbl.toLowerCase()) + '"' + (abierto ? '' : ' hidden') + '>' + k.motivos.map(function (m) {
+        return '<li class="m-' + m.nivel + '"><i class="ic" data-ic="' + XK_NIVEL_IC[m.nivel] + '"></i>' + esc(m.texto) + '</li>';
+      }).join('') + '</ul>' +
+      '<dl class="xk-datos">' +
+        '<div class="xk-d-kam"><dt>KAM</dt><dd>' + responsableHtml({ id: k.id, responsable: k.kam }, 'xk-r-' + i) + '</dd></div>' +
+        '<div><dt>Valor</dt><dd>' + xkValor(k.valor, k.vendido) + '</dd></div>' +
+        '<div class="xk-d-trato"><dt>Último trato</dt><dd><span class="chip stage-' + esc(k.etapaRol || 'activo') + '">' + esc(k.etapaNombre) + '</span>' +
+          (k.paso && k.paso.texto ? '<span class="xk-paso' + (urgente ? ' urgente' : '') + '">' + esc(k.paso.texto) + '</span>' : '') + '</dd></div>' +
+        '<div><dt>Última actividad</dt><dd>' + (k.ultima ? 'hace ' + esc(rel(k.ultima)) : '<span class="xk-nada">Sin conversación</span>') + '</dd></div>' +
+        '<div><dt>Ánimo</dt><dd>' + xkCarita(XK_ANIMO[k.animo]) + '</dd></div>' +
+        '<div><dt>Interés</dt><dd>' + xkCarita(k.interes == null ? null : XK_INTERES[k.interes]) + '</dd></div>' +
+      '</dl>' +
+      xkPlanHtml(k) +
+      '<footer class="xk-acc">' +
+        '<button type="button" class="btn sm primary" data-xk-chat="' + esc(k.id) + '"><i class="ic" data-ic="burbuja"></i>Abrir chat</button>' +
+        '<button type="button" class="btn sm" data-xk-ficha="' + esc(k.id) + '">Ver ficha</button>' +
+        '<span class="xk-desde">Desde el ' + esc(new Date(k.desde).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })) + (k.por ? ' · la marcó ' + esc(k.por) : '') + '</span>' +
+        (XK.quitando[k.id]
+          ? '<span class="xk-quitar-si" role="group" aria-label="Confirmar"><span>¿Quitarla de las cuentas clave?</span><button type="button" class="btn sm danger" data-xk-quitar-si="' + esc(k.id) + '">Sí, quitar</button><button type="button" class="btn sm" data-xk-quitar-no="' + esc(k.id) + '">No</button></span>'
+          : '<button type="button" class="btn sm xk-quitar" data-xk-quitar="' + esc(k.id) + '" aria-label="Quitar de cuentas clave" title="Quitar de cuentas clave"><i class="ic" data-ic="quitar"></i><span>Quitar</span></button>') +
+      '</footer></article>';
+  }
+
+  function xkPlanHtml(k) {
+    var id = esc(k.id);
+    if (XK.editando[k.id]) {
+      var val = XK.borradores[k.id] != null ? XK.borradores[k.id] : k.nota;
+      return '<div class="xk-plan editando"><label class="xk-plan-l" for="xk-n-' + id + '">Plan de cuenta</label>' +
+        '<textarea id="xk-n-' + id + '" data-xk-nota="' + id + '" data-borrador maxlength="' + XK_NOTA_MAX + '" rows="3" placeholder="Lo que hay que saber antes de hablarle: qué compra, cuándo vuelve, a quién trae, qué no le gusta…">' + esc(val) + '</textarea>' +
+        '<div class="xk-plan-pie"><span class="xk-cuantas" data-xk-cuantas="' + id + '">' + String(val || '').length + ' / ' + XK_NOTA_MAX + '</span>' +
+        (XK.errores[k.id] ? '<span class="xk-err" role="alert">No se guardó: ' + esc(XK.errores[k.id]) + '. Lo escrito sigue aquí.</span>' : '') +
+        '<button type="button" class="btn sm primary" data-xk-guardar="' + id + '">Guardar plan</button><button type="button" class="btn sm" data-xk-cancelar="' + id + '">Cancelar</button></div></div>';
+    }
+    if (!k.nota) return '<div class="xk-plan"><button type="button" class="xk-plan-vacio" data-xk-editar="' + id + '"><i class="ic" data-ic="lapiz"></i>Escribir el plan de cuenta</button></div>';
+    return '<div class="xk-plan"><span class="xk-plan-l">Plan de cuenta</span><p class="xk-plan-t">' + esc(k.nota) + '</p>' +
+      '<div class="xk-plan-pie"><small>' + (k.notaPor ? esc(k.notaPor) : '') + (k.notaAt ? ' · hace ' + esc(rel(k.notaAt)) : '') + '</small>' +
+      '<button type="button" class="btn sm" data-xk-editar="' + id + '"><i class="ic" data-ic="lapiz"></i>Editar plan</button></div></div>';
+  }
+
+  function xkEnganchar(caja) {
+    var cada = function (sel, fn) { caja.querySelectorAll(sel).forEach(fn); };
+    if ($('xk-f-kam')) $('xk-f-kam').onchange = function () { XK.kam = this.value; pintarKam(); };
+    if ($('xk-ver-todas')) $('xk-ver-todas').onclick = function () { XK.kam = ''; XK.salud = ''; pintarKam(); };
+    cada('[data-xk-f]', function (b) { b.onclick = function () { XK.salud = b.getAttribute('data-xk-f'); pintarKam(); }; });
+    cada('[data-xk-salud]', function (b) { b.onclick = function () { var s = b.getAttribute('data-xk-salud'); XK.salud = XK.salud === s ? '' : s; pintarKam(); }; });
+    cada('[data-xk-kam]', function (b) { b.onclick = function () { var k = b.getAttribute('data-xk-kam'); XK.kam = XK.kam === k ? '' : k; pintarKam(); }; });
+    var ids = function () { return xkFiltradas().map(function (k) { return k.id; }); };
+    cada('[data-xk-ficha]', function (b) { b.onclick = function () { var id = b.getAttribute('data-xk-ficha'), l = ids(); abrirPerfil(id, l.indexOf(id) >= 0 ? l : null); }; });
+    cada('[data-xk-chat]', function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-xk-chat')); }; });
+    cada('[data-xk-motivos]', function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-xk-motivos'), abrir = !XK.abiertos[id];
+        XK.abiertos[id] = abrir;
+        b.setAttribute('aria-expanded', String(abrir));
+        var ul = $(b.getAttribute('aria-controls'));
+        if (ul) ul.hidden = !abrir;
+      };
+    });
+    // KAM: el mismo «Asignado a» de la ficha (misma ruta, misma regla), y el panel se vuelve a pedir.
+    cada('.xk-d-kam select', function (sel) {
+      var art = sel.closest('[data-xk-id]'), id = art && art.getAttribute('data-xk-id');
+      var k = XK.datos.cuentas.filter(function (x) { return x.id === id; })[0];
+      if (k) { sel.setAttribute('aria-label', 'KAM de ' + (k.nombre || 'esta cuenta')); engancharResponsable(sel, { id: k.id, responsable: k.kam }, cargarKam); }
+    });
+    cada('[data-xk-editar]', function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-xk-editar');
+        XK.editando[id] = true; delete XK.errores[id];
+        pintarKam();
+        var t = caja.querySelector('textarea' + xkSel('data-xk-nota', id));
+        if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); }
+      };
+    });
+    cada('[data-xk-cancelar]', function (b) { b.onclick = function () { var id = b.getAttribute('data-xk-cancelar'); delete XK.editando[id]; delete XK.borradores[id]; delete XK.errores[id]; pintarKam(); }; });
+    cada('textarea[data-xk-nota]', function (t) {
+      t.oninput = function () {
+        var id = t.getAttribute('data-xk-nota');
+        XK.borradores[id] = t.value;
+        var n = caja.querySelector(xkSel('data-xk-cuantas', id));
+        if (n) n.textContent = t.value.length + ' / ' + XK_NOTA_MAX;
+      };
+      t.onkeydown = function (e) {
+        if (e.key !== 'Escape') return;
+        e.stopPropagation();
+        var b = caja.querySelector(xkSel('data-xk-cancelar', t.getAttribute('data-xk-nota')));
+        if (b) b.click();
+      };
+    });
+    cada('[data-xk-guardar]', function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-xk-guardar'), t = caja.querySelector('textarea' + xkSel('data-xk-nota', id));
+        var texto = t ? t.value : '';
+        XK.borradores[id] = texto;
+        b.disabled = true; b.textContent = 'Guardando…';
+        api('/contacts/' + encodeURIComponent(id) + '/cuenta-clave', { method: 'PUT', body: { nota: texto } }).then(function (r) {
+          if (!r || r.error) { XK.errores[id] = (r && r.error) || 'el servidor no contestó'; pintarKam(); return; }
+          delete XK.editando[id]; delete XK.borradores[id]; delete XK.errores[id];
+          toast('Plan de cuenta guardado', null, { icono: 'check' });
+          cargarKam();
+        }).catch(function (e) { if (String(e && e.message) === '401') return; XK.errores[id] = 'no hubo conexión'; pintarKam(); });
+      };
+    });
+    cada('[data-xk-quitar]', function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-xk-quitar');
+        XK.quitando[id] = true; pintarKam();
+        var no = caja.querySelector(xkSel('data-xk-quitar-no', id));
+        if (no) no.focus();
+      };
+    });
+    cada('[data-xk-quitar-no]', function (b) { b.onclick = function () { delete XK.quitando[b.getAttribute('data-xk-quitar-no')]; pintarKam(); }; });
+    cada('[data-xk-quitar-si]', function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-xk-quitar-si');
+        b.disabled = true;
+        xkMarcar(id, false).then(function (ok) { delete XK.quitando[id]; if (ok) cargarKam(); else pintarKam(); });
+      };
+    });
+    cada('[data-xk-marcar]', function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-xk-marcar');
+        XK.marcando[id] = true; pintarKam();
+        xkMarcar(id, true).then(function () { delete XK.marcando[id]; cargarKam(); });
+      };
+    });
+  }
+
+  /** Marcar o quitar, desde el panel o desde la ficha. Devuelve si se pudo. */
+  function xkMarcar(id, on) {
+    return api('/contacts/' + encodeURIComponent(id) + '/cuenta-clave', { method: 'PUT', body: { on: on } }).then(function (r) {
+      if (!r || r.error) { toast('No se pudo: ' + ((r && r.error) || 'el servidor no contestó')); return false; }
+      toast(on ? 'Ahora es cuenta clave' : 'Ya no es cuenta clave', null, { icono: 'check' });
+      return true;
+    }).catch(function (e) { if (String(e && e.message) !== '401') toast('No se pudo: no hubo conexión'); return false; });
+  }
+
+  /** El botón «★ Cuenta clave» de la ficha: dice si lo es (y desde cuándo) y la marca o la quita. */
+  function pintarClaveFicha(d) {
+    var b = $('pf-clave');
+    if (!b) return;
+    var k = d && d.cuentaClave;
+    b.hidden = false;
+    b.setAttribute('aria-pressed', String(Boolean(k)));
+    b.classList.toggle('on', Boolean(k));
+    b.title = k ? 'Cuenta clave desde el ' + new Date(k.desde).toLocaleDateString('es-CO', { day: 'numeric', month: 'long' }) + (k.por ? ', la marcó ' + k.por : '') + '. Toca para quitarla.' : 'Marcar como cuenta clave';
+    b.innerHTML = '<i class="ic" data-ic="estrella"></i><span>' + (k ? 'Cuenta clave' : 'Marcar como cuenta clave') + '</span>';
+    iconos(b);
+    b.onclick = function () {
+      if (!PF || !PF.contact) return;
+      var id = PF.contact.id, on = !PF.cuentaClave;
+      b.disabled = true;
+      xkMarcar(id, on).then(function (ok) {
+        b.disabled = false;
+        if (!ok) return;
+        api('/contacts/' + encodeURIComponent(id)).then(function (r) {
+          if (r && !r.error && PF && PF.contact && PF.contact.id === id) { PF.cuentaClave = r.cuentaClave; pintarClaveFicha(PF); }
+        });
+        if (state.view === 'kam') cargarKam();
+      });
+    };
+  }
   // (fin de XEN · Panel KAM)
 
   // ===== XEN · Optimización de ventas: lo nuevo del agente de optimización (alAbrir('optimizacion', …)) =====

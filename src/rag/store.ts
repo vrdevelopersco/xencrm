@@ -227,6 +227,17 @@ export function getDb(): DatabaseSync {
       value TEXT NOT NULL,
       updated_at INTEGER NOT NULL
     );
+    -- Las cuentas clave (KAM): qué contactos importan más, quién lo decidió y su plan de cuenta. Ver
+    -- crm/cuentas-clave.ts. Va aquí, con las de siempre, y no al usarse: borrar, unir y anonimizar una ficha la
+    -- tocan, y una tabla que todavía no existe no se puede limpiar.
+    CREATE TABLE IF NOT EXISTS cuentas_clave (
+      user_id TEXT PRIMARY KEY,
+      por TEXT NOT NULL DEFAULT '',
+      desde INTEGER NOT NULL,
+      nota TEXT NOT NULL DEFAULT '',
+      nota_por TEXT,
+      nota_at INTEGER
+    );
   `);
   migrate(db);
   loadVectors();
