@@ -177,7 +177,10 @@ check('el buscador es la búsqueda de Ctrl+K', /\$\('fx-buscar'\)\.onclick = fun
 const delBloqueYo = js.slice(js.indexOf("document.querySelectorAll('[data-yo]')"), js.indexOf("if ($('cfg-btn')) $('cfg-btn').addEventListener"));
 check('🪤 los botones de «tu cuenta» paran el clic (si no, lo que abren se cerraba al instante)', delBloqueYo.length > 0 && delBloqueYo.length < 800 && /b\.onclick = function \(e\) \{\s*e\.stopPropagation\(\);/.test(delBloqueYo), String(delBloqueYo.length));
 check('«Tomar control» toca el mismo interruptor de Aiva/Tú', /\$\('fx-control'\)\.onclick = function \(\) \{ if \(state\.detail\) \$\(state\.detail\.contact\.humanMode \? 'seg-bot' : 'seg-human'\)\.click\(\); \}/.test(js));
-check('🪤 la ficha como página: un clic en el menú la cierra y sigue hasta donde iba', /document\.elementFromPoint\(e\.clientX, e\.clientY\)/.test(js) && /dialog\.perfil\.ficha\{position:fixed;inset:64px 0 0 256px/.test(bloque));
+// XENCRM: la ficha empieza justo donde acaba el menú. Se compara con el ancho del menú en vez de fijar un número:
+// cuando el menú cambió de 256 a 248 px, un número fijo habría dejado una franja de 8 px o tapado el borde.
+const anchoMenu = /:root\[data-piel="xen"\] \.app\{grid-template-columns:(\d+)px /.exec(bloque)?.[1];
+check('🪤 la ficha como página: un clic en el menú la cierra y sigue hasta donde iba', /document\.elementFromPoint\(e\.clientX, e\.clientY\)/.test(js) && Boolean(anchoMenu) && new RegExp(`dialog\\.perfil\\.ficha\\{position:fixed;inset:64px 0 0 ${anchoMenu}px`).test(bloque), String(anchoMenu));
 
 console.log('— Inicio');
 const inicio = funcion('pintarInicio');

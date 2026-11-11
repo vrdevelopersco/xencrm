@@ -126,8 +126,12 @@ check('el de «Nuevo contacto» trae solo lo de contacto, sin WhatsApp (el telé
 campos['f-x-correo'] = { value: ' a@b.co ' }; campos['f-x-instagram'] = { value: '@ana' };
 check('lo escrito se lee para guardarlo', JSON.stringify(tablero.leerFicha('f-x-')) === '{"correo":"a@b.co","instagram":"@ana"}', JSON.stringify(tablero.leerFicha('f-x-')));
 check('las dos fichas y el alta mandan la ficha al guardar', /ficha: leerFicha\('f-x-'\)/.test(js) && /ficha: leerFicha\('pf-x-'\)/.test(js) && /ficha: leerFicha\('nv-x-'\)/.test(js));
-check('lo de contacto no se repite en «Lo que contó»', (js.match(/motivo_perdida: 1 \}, DE_CONTACTO\)/g) ?? []).length === 2);
-check('los dos lo enseñan, en los dos modos (sin solo-completo)', (js.match(/contactoHtml\(c, fila\) \+/g) ?? []).length === 2 && !/contactoHtml\(c, fila\)[^\n]*solo-completo/.test(js));
+// XENCRM: la ficha completa saca lo captado con datosCapturados(), que también usa la tabla de Contactos para sus
+// etiquetas: un solo filtro para los dos sitios. Lo que se vigila es lo mismo: ninguna de las dos fichas repite lo de
+// contacto en «Lo que contó».
+const sinContacto = (js.match(/motivo_perdida: 1 \}, DE_CONTACTO\)/g) ?? []).length + (js.match(/= datosCapturados\(c\)/g) ?? []).length;
+check('lo de contacto no se repite en «Lo que contó»', sinContacto === 2 && /function datosCapturados\(c\) \{[\s\S]{0,700}!DE_CONTACTO\[k\]/.test(js), String(sinContacto));
+check('los dos lo enseñan, en los dos modos (sin solo-completo)', (js.match(/(?<!function )contactoHtml\(c, fila\)/g) ?? []).length === 2 && !/contactoHtml\(c, fila\)[^\n]*solo-completo/.test(js) && !/deContacto \+[^\n]*solo-completo/.test(js));
 check('el alta tiene dónde pintarlos, dentro de su misma rejilla', /<div id="nv-ficha" style="display:contents"><\/div>/.test(html));
 check('unas medidas largas se corrigen en dos renglones', tablero.camposFichaHtml({ data: { [stats.ficha.delNegocio[0]!.k]: 'Saco 40, pantalón 32, pecho 100 cm, largo de manga 64 cm' } }, 'f-x-').includes(`<textarea id="f-x-${stats.ficha.delNegocio[0]!.k}" rows="2"`));
 check('sin teléfono, la lista de Clientes dice su @ o su correo', /c\.phone \|\| \(c\.data && c\.data\.instagram \? '@' \+ c\.data\.instagram : ''\) \|\| \(c\.data && c\.data\.correo\)/.test(js));
