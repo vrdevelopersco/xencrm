@@ -1897,6 +1897,234 @@ dialog.perdida input{width:100%}
 /* (fin de XEN · Contactos, ficha y tratos) */
 
 /* ---------- XEN · Analítica y sentimiento (agente de Analítica) ---------- */
+/* Analítica: una puerta del menú y dos pestañas (Resumen · Sentimiento). Las gráficas usan colores de DATO, nunca el
+   acento: el interés es una escala de un solo verde (de claro a oscuro: más verde, más interés) y el ánimo es
+   divergente (verde · gris · rojo), validados con el verificador de paletas (separación para daltonismo y contraste
+   ≥ 3:1 contra el panel, en claro y en oscuro). Cada color va con su emoji y su palabra: el color nunca va solo. */
+:root[data-piel="xen"]{--xa-i0:#76c497;--xa-i1:#3ea96c;--xa-i2:#1d874a;--xa-i3:#0c5b2f;--xa-pos:#1f9d55;--xa-neu:#5c7177;--xa-neg:#e11d48}
+:root[data-piel="xen"][data-theme=dark]{--xa-i0:#1f6b43;--xa-i1:#279057;--xa-i2:#3dbb76;--xa-i3:#86e0ad;--xa-pos:#2fa865;--xa-neu:#566b6f;--xa-neg:#e65f79}
+/* Las pestañas: un control segmentado debajo del título; la elegida, blanca y levantada sobre el pozo. */
+:root[data-piel="xen"] #view-analysis .xa-pestanas{display:flex;gap:4px;flex:0 0 auto;align-self:flex-start;margin:0 28px 4px;padding:4px;border-radius:var(--fx-r-lg);background:var(--fx-hover);border:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] #view-analysis .xa-pestanas button{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 16px;border:0;border-radius:var(--fx-r-md);background:none;color:var(--fx-t2);font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background var(--fx-t-rapido),color var(--fx-t-rapido)}
+:root[data-piel="xen"] #view-analysis .xa-pestanas button:hover{color:var(--fx-t0)}
+:root[data-piel="xen"] #view-analysis .xa-pestanas button[aria-selected="true"]{background:var(--fx-panel);color:var(--fx-t0);box-shadow:var(--fx-sombra-sm)}
+:root[data-piel="xen"] #view-analysis .xa-cuerpo{flex:1 1 auto;min-height:0;overflow:auto}
+:root[data-piel="xen"] #view-analysis .xa-panel:focus-visible{outline:none;box-shadow:inset var(--fx-anillo)}
+:root[data-piel="xen"] #view-analysis .xa-panel[hidden]{display:none}
+
+/* ---- Resumen: las cifras en tarjetas con la letra de las cifras, y las gráficas de dos en dos ---- */
+:root[data-piel="xen"] #view-analysis .tiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:16px 28px 0}
+:root[data-piel="xen"] #view-analysis .tile{display:flex;flex-direction:column;gap:2px;padding:16px 18px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs);color:var(--fx-t1);font:inherit;transition:border-color var(--fx-t-rapido),box-shadow var(--fx-t-rapido)}
+:root[data-piel="xen"] #view-analysis .tile:hover{border-color:var(--fx-t4);box-shadow:var(--fx-sombra-md);transform:none}
+:root[data-piel="xen"] #view-analysis .tile b{font-family:var(--fx-display);font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] #view-analysis .tile span{font-size:13.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] #view-analysis .tile .go{margin-top:6px;font-size:12.5px;font-weight:600;color:var(--fx-acento-t)}
+:root[data-piel="xen"] #view-analysis .deltas{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:0;padding:12px 28px 0}
+:root[data-piel="xen"] #view-analysis .delta{padding:14px 18px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] #view-analysis .delta b{font-family:var(--fx-display);font-size:26px;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] #view-analysis .delta .que{font-size:13px;color:var(--fx-t2)}
+:root[data-piel="xen"] #view-analysis .delta .cambio.igual{background:var(--fx-hover);color:var(--fx-t2)}
+:root[data-piel="xen"] #view-analysis .charts{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;padding:20px 28px 28px}
+:root[data-piel="xen"] #view-analysis .charts>.panel{padding:20px;border-radius:var(--fx-r-xl);min-width:0}
+:root[data-piel="xen"] #view-analysis .charts>.panel>b{display:block;font-size:16px;font-weight:600;color:var(--fx-t1)}
+:root[data-piel="xen"] #view-analysis .charts>.panel>.small.muted{margin-top:2px;font-size:13px;color:var(--fx-t2)}
+/* Las dos gráficas de llegada van lado a lado: a todo lo ancho, el SVG crecía y el texto de sus ejes con él. */
+:root[data-piel="xen"] #view-analysis .charts>.panel.ancho:has(#g-nuevas),:root[data-piel="xen"] #view-analysis .charts>.panel.ancho:has(#g-horas){grid-column:auto}
+:root[data-piel="xen"] #view-analysis .grafica .eje{fill:var(--fx-t2);font-size:11px}
+:root[data-piel="xen"] #view-analysis #sla-min{width:88px;flex:0 0 88px}
+:root[data-piel="xen"] #view-analysis .xa-mini .btn{align-self:flex-start}
+:root[data-piel="xen"] #view-analysis .leyenda{color:var(--fx-t2)}
+:root[data-piel="xen"] #view-analysis #export-panel{margin:0 28px 28px}
+/* El embudo: cada etapa con el color de su papel (el mismo de sus etiquetas), la pista en el pozo. */
+:root[data-piel="xen"] #view-analysis .funnel .f{grid-template-columns:minmax(96px,140px) minmax(0,1fr) 3ch;gap:12px;margin:0;padding:6px 8px;border-radius:var(--fx-r-md);font-size:13.5px;color:var(--fx-t1)}
+:root[data-piel="xen"] #view-analysis .funnel .f:hover{background:var(--fx-fila)}
+:root[data-piel="xen"] #view-analysis .funnel .f b{text-align:right;font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] #view-analysis .funnel .bar{height:10px;border:0;border-radius:var(--fx-r-pill);background:var(--fx-panel-2);box-shadow:none}
+:root[data-piel="xen"] #view-analysis .funnel .bar i{border-radius:var(--fx-r-pill);background:var(--fx-t3);box-shadow:none}
+:root[data-piel="xen"] #view-analysis .funnel .f[data-rol=activo] .bar i{background:var(--fx-cielo)}
+:root[data-piel="xen"] #view-analysis .funnel .f[data-rol=interes] .bar i{background:var(--fx-ambar)}
+:root[data-piel="xen"] #view-analysis .funnel .f[data-rol=cita] .bar i{background:var(--fx-indigo)}
+:root[data-piel="xen"] #view-analysis .funnel .f[data-rol=ganado] .bar i{background:var(--fx-verde)}
+:root[data-piel="xen"] #view-analysis .funnel .f[data-rol=perdido] .bar i{background:var(--fx-rojo)}
+/* El sentimiento en el Resumen: tres cifras con su emoji y la puerta a la pestaña. */
+:root[data-piel="xen"] #view-analysis .xa-mini #sentiments{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+:root[data-piel="xen"] .xa-mini-fila{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+:root[data-piel="xen"] .xa-mini-fila>div{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:var(--fx-r-lg);background:var(--fx-panel-2)}
+:root[data-piel="xen"] .xa-mini-fila .e{font-size:22px;line-height:1}
+:root[data-piel="xen"] .xa-mini-fila b{font-family:var(--fx-display);font-size:22px;font-weight:700;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xa-mini-fila span{font-size:12.5px;color:var(--fx-t2)}
+
+/* ---- Sentimiento ---- */
+:root[data-piel="xen"] #xa-sentimiento{display:flex;flex-direction:column;gap:20px;padding:16px 28px 28px}
+:root[data-piel="xen"] #xa-sent{display:flex;flex-direction:column;gap:20px}
+:root[data-piel="xen"] .xa-titular{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:18px 20px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] .xa-titular p{flex:1 1 360px;margin:0;font-size:16px;line-height:1.5;color:var(--fx-t1)}
+:root[data-piel="xen"] .xa-titular p b{font-family:var(--fx-display);font-size:19px;font-weight:700;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xa-titular .xa-sin{display:block;margin-top:2px;font-size:13px;color:var(--fx-t2)}
+/* Lo que dice la IA va en su violeta (docs/xencrm.md): aquí, de dónde sale todo esto. */
+:root[data-piel="xen"] .xa-ia{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--fx-r-pill);background:var(--fx-ia-s);color:var(--fx-ia-t);border:1px solid var(--fx-ia-borde);font-size:12.5px;font-weight:600;white-space:nowrap}
+:root[data-piel="xen"] .xa-cuidar{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 14px;border:1px solid var(--fx-ambar-borde);border-radius:var(--fx-r-md);background:var(--fx-ambar-s);color:var(--fx-ambar-t);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+:root[data-piel="xen"] .xa-cuidar:hover{border-color:var(--fx-ambar)}
+:root[data-piel="xen"] .xa-cuidar[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--fx-ambar)}
+:root[data-piel="xen"] .xa-fila{display:grid;gap:20px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+:root[data-piel="xen"] .xa-fila-35{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+:root[data-piel="xen"] .xa-card{min-width:0;padding:20px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:var(--fx-sombra-xs)}
+:root[data-piel="xen"] .xa-card-cab{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:8px 12px;margin-bottom:16px}
+:root[data-piel="xen"] .xa-card-cab h2{margin:0;font-size:16px;font-weight:600;color:var(--fx-t1)}
+:root[data-piel="xen"] .xa-card-cab p{margin:2px 0 0;font-size:13px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xa-card-cab select{width:auto;min-height:34px;font-size:13px}
+/* Los niveles: una tarjeta que se toca por nivel. El emoji es decoración (aria-hidden); la palabra es lo que se lee. */
+:root[data-piel="xen"] .xa-niveles{display:grid;gap:10px;grid-template-columns:repeat(var(--n,4),minmax(0,1fr))}
+:root[data-piel="xen"] .xa-nivel{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;padding:14px 14px 12px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel);color:var(--fx-t1);font:inherit;text-align:left;cursor:pointer;transition:border-color var(--fx-t-rapido),background var(--fx-t-rapido)}
+:root[data-piel="xen"] .xa-nivel:hover{border-color:var(--fx-t4);background:var(--fx-fila)}
+:root[data-piel="xen"] .xa-nivel[aria-pressed="true"]{border-color:var(--fx-acento);background:var(--fx-suave);box-shadow:inset 0 0 0 1px var(--fx-acento)}
+:root[data-piel="xen"] .xa-nivel .e{font-size:28px;line-height:1.1}
+:root[data-piel="xen"] .xa-nivel .l{font-size:14px;font-weight:600;color:var(--fx-t1)}
+:root[data-piel="xen"] .xa-nivel .d{font-size:12.5px;line-height:1.35;color:var(--fx-t2)}
+:root[data-piel="xen"] .xa-nivel .n{display:flex;align-items:baseline;gap:6px;margin-top:6px}
+:root[data-piel="xen"] .xa-nivel .n b{font-family:var(--fx-display);font-size:28px;font-weight:700;line-height:1;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xa-nivel .n span{font-size:13px;color:var(--fx-t2);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xa-nivel .pista{display:block;align-self:stretch;height:6px;margin-top:8px;border-radius:var(--fx-r-pill);background:var(--fx-panel-2);overflow:hidden}
+:root[data-piel="xen"] .xa-nivel .pista i{display:block;height:100%;min-width:0;border-radius:var(--fx-r-pill);background:var(--tono)}
+/* El termómetro: la proporción de un vistazo. Repite lo que dicen las tarjetas, así que no se lee dos veces. */
+:root[data-piel="xen"] .xa-termo{display:flex;gap:2px;height:12px;margin:0 0 16px;border-radius:var(--fx-r-pill);overflow:hidden;background:var(--fx-panel-2)}
+:root[data-piel="xen"] .xa-termo i{display:block;height:100%;background:var(--tono)}
+:root[data-piel="xen"] .xa-nota{margin:12px 0 0;font-size:12.5px;color:var(--fx-t2)}
+/* Interés × ánimo: la tabla que se toca. Cada celda se tiñe con el color de su ánimo según cuántos hay (como mucho
+   un tercio de tinta, para que la cifra se siga leyendo encima en los dos temas). */
+:root[data-piel="xen"] .xa-cruce{width:100%;border-collapse:separate;border-spacing:4px;table-layout:fixed}
+:root[data-piel="xen"] .xa-cruce th{padding:4px 6px;font-size:12.5px;font-weight:600;color:var(--fx-t2);text-align:center}
+:root[data-piel="xen"] .xa-cruce th[scope=row]{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] .xa-cruce th .e{font-size:16px;margin-right:4px}
+:root[data-piel="xen"] .xa-cruce thead th:first-child{width:38%}
+:root[data-piel="xen"] .xa-celda{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;padding:0;border:1px solid var(--fx-borde-2);border-radius:var(--fx-r-md);background:color-mix(in srgb,var(--tono) var(--p,0%),var(--fx-panel));color:var(--fx-t0);font:inherit;font-family:var(--fx-display);font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer}
+:root[data-piel="xen"] .xa-celda:hover{border-color:var(--fx-t4)}
+:root[data-piel="xen"] .xa-celda[aria-pressed="true"]{border-color:var(--fx-acento);box-shadow:inset 0 0 0 1px var(--fx-acento)}
+:root[data-piel="xen"] .xa-celda.vacia{color:var(--fx-t3);font-weight:500;cursor:default}
+:root[data-piel="xen"] .xa-celda.cuidar{border:2px dashed var(--fx-ambar)}
+:root[data-piel="xen"] .xa-leyenda{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xa-leyenda i{display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:-2px;border-radius:4px;background:var(--tono)}
+:root[data-piel="xen"] .xa-leyenda i.borde{background:none;border:2px dashed var(--fx-ambar)}
+/* La lista de quiénes: el grupo que se tocó, y cada persona abre su ficha. */
+:root[data-piel="xen"] .xa-lista ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+:root[data-piel="xen"] .xa-persona{display:grid;grid-template-columns:36px minmax(0,1.6fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr) minmax(10ch,auto);align-items:center;gap:12px;width:100%;padding:12px 8px;border:0;border-bottom:1px solid var(--fx-borde-2);background:none;color:var(--fx-t1);font:inherit;text-align:left;cursor:pointer;border-radius:var(--fx-r-md)}
+:root[data-piel="xen"] .xa-lista li:last-child .xa-persona{border-bottom:0}
+:root[data-piel="xen"] .xa-persona:hover{background:var(--fx-fila)}
+:root[data-piel="xen"] .xa-persona .ini{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:999px;background:var(--fx-suave);color:var(--fx-suave-t);font-size:12px;font-weight:700}
+:root[data-piel="xen"] .xa-persona .quien{min-width:0}
+:root[data-piel="xen"] .xa-persona .quien b{display:block;font-size:14px;font-weight:600;color:var(--fx-t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] .xa-persona .quien small{display:block;font-size:12.5px;color:var(--fx-t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] .xa-persona .quien .frena{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .xa-persona .dato{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;color:var(--fx-t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] .xa-persona .dato .e{font-size:17px}
+:root[data-piel="xen"] .xa-persona .dato.sin{color:var(--fx-t3)}
+:root[data-piel="xen"] .xa-persona .cuando{font-size:12.5px;color:var(--fx-t2);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+/* 🪤 `.btn` lleva su propio display y le gana al [hidden] del navegador: «Ver todos» salía sin filtro puesto. */
+:root[data-piel="xen"] #xa-lista-todos[hidden]{display:none}
+:root[data-piel="xen"] .xa-persona .etapa-celda{min-width:0}
+:root[data-piel="xen"] .xa-persona .chip{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+:root[data-piel="xen"] .xa-lista-pie{margin:8px 0 0;font-size:12.5px;color:var(--fx-t2)}
+/* Lo que frena: las objeciones que se repiten, cada una abre a quiénes la dijeron. */
+:root[data-piel="xen"] .xa-obj{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+:root[data-piel="xen"] .xa-obj button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;width:100%;padding:10px 12px;border:1px solid var(--fx-borde-2);border-radius:var(--fx-r-md);background:var(--fx-panel);color:var(--fx-t1);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+:root[data-piel="xen"] .xa-obj button:hover{border-color:var(--fx-t4);background:var(--fx-fila)}
+:root[data-piel="xen"] .xa-obj button[aria-pressed="true"]{border-color:var(--fx-acento);background:var(--fx-suave)}
+:root[data-piel="xen"] .xa-obj .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+:root[data-piel="xen"] .xa-obj b{font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .xa-obj .pista{grid-column:1/-1;height:6px;border-radius:var(--fx-r-pill);background:var(--fx-panel-2);overflow:hidden}
+:root[data-piel="xen"] .xa-obj .pista i{display:block;height:100%;border-radius:var(--fx-r-pill);background:var(--fx-ambar)}
+/* Cómo cambió: barras apiladas por día (2 px de hueco entre trozos, puntas redondeadas), con su globo al pasar. */
+:root[data-piel="xen"] .xa-serie{position:relative}
+:root[data-piel="xen"] .xa-serie svg{display:block;width:100%;height:220px;overflow:visible}
+:root[data-piel="xen"] .xa-serie .eje{font-size:11px;fill:var(--fx-t2)}
+:root[data-piel="xen"] .xa-serie .rejilla{stroke:var(--fx-borde);stroke-dasharray:3 3}
+:root[data-piel="xen"] .xa-serie .col{outline:none}
+:root[data-piel="xen"] .xa-serie .zona{fill:transparent}
+:root[data-piel="xen"] .xa-serie .col:hover .zona,:root[data-piel="xen"] .xa-serie .col:focus .zona{fill:var(--fx-hover)}
+:root[data-piel="xen"] .xa-globo{position:absolute;z-index:2;pointer-events:none;padding:8px 12px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-lg);background:var(--fx-panel);box-shadow:var(--fx-sombra-md);font-size:12.5px;color:var(--fx-t1);white-space:nowrap}
+:root[data-piel="xen"] .xa-globo b{display:block;margin-bottom:2px}
+:root[data-piel="xen"] .xa-globo[hidden]{display:none}
+:root[data-piel="xen"] .xa-vacio{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:180px;padding:28px;border:1px dashed var(--fx-t4);border-radius:var(--fx-r-xl);background:color-mix(in srgb,var(--fx-panel-2) 60%,transparent);text-align:center}
+:root[data-piel="xen"] .xa-vacio .e{font-size:30px}
+:root[data-piel="xen"] .xa-vacio b{font-size:15px;font-weight:600;color:var(--fx-t1)}
+:root[data-piel="xen"] .xa-vacio span{max-width:56ch;font-size:13.5px;line-height:1.5;color:var(--fx-t2)}
+:root[data-piel="xen"] .xa-vacio .btn{margin-top:8px}
+/* Cargando: la forma de lo que viene, sin saltos cuando llega. */
+:root[data-piel="xen"] .xa-esqueleto{display:flex;flex-direction:column;gap:20px}
+:root[data-piel="xen"] .xa-esqueleto i{display:block;border-radius:var(--fx-r-xl);background:var(--fx-panel-2);border:1px solid var(--fx-borde-2)}
+
+/* ---- Por voz: POR DESARROLLAR. Se ve como algo que no está encendido: borde punteado, sin color de dato. ---- */
+:root[data-piel="xen"] .xa-voz{padding:20px;border:1px dashed var(--fx-t4);border-radius:var(--fx-r-xl);background:var(--fx-panel);box-shadow:none}
+:root[data-piel="xen"] .xa-voz-cab{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+:root[data-piel="xen"] .xa-voz-titulo{display:flex;gap:12px;min-width:0;flex:1 1 320px}
+:root[data-piel="xen"] .xa-voz-ic{display:inline-grid;place-items:center;width:44px;height:44px;flex:0 0 44px;border-radius:var(--fx-r-lg);background:var(--fx-panel-2);font-size:22px}
+:root[data-piel="xen"] .xa-voz h2{margin:0;font-size:16px;font-weight:600;color:var(--fx-t1)}
+:root[data-piel="xen"] .xa-voz-cab p{margin:2px 0 0;font-size:13.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xa-por-desarrollar{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border:1px dashed var(--fx-t3);border-radius:var(--fx-r-pill);color:var(--fx-t1);font-size:12.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+:root[data-piel="xen"] .xa-por-desarrollar::before{content:"";width:8px;height:8px;border-radius:999px;border:2px solid var(--fx-t3)}
+:root[data-piel="xen"] .xa-voz-cols{display:grid;gap:20px;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
+:root[data-piel="xen"] .xa-voz h3{margin:14px 0 4px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fx-t3)}
+:root[data-piel="xen"] .xa-voz h3:first-child{margin-top:0}
+:root[data-piel="xen"] .xa-voz ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.55;color:var(--fx-t1)}
+:root[data-piel="xen"] .xa-voz-texto>p{margin:0;font-size:13.5px;line-height:1.55;color:var(--fx-t1)}
+:root[data-piel="xen"] .xa-voz-interruptor{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:14px;font-weight:600;color:var(--fx-t2);cursor:not-allowed}
+:root[data-piel="xen"] .xa-voz-interruptor input{width:18px;height:18px;min-height:0;margin:0;cursor:not-allowed}
+:root[data-piel="xen"] .xa-voz-texto>p.xa-voz-nota{margin:4px 0 0 28px;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xa-voz-previa{display:flex;flex-direction:column;gap:14px;align-self:start;margin:0;padding:16px;border-radius:var(--fx-r-lg);background:var(--fx-panel-2);border:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .xa-voz-previa figcaption{align-self:flex-start;padding:2px 8px;border-radius:var(--fx-r-pill);background:var(--fx-panel);border:1px solid var(--fx-borde);font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--fx-t2)}
+:root[data-piel="xen"] .xa-voz-nota-maqueta{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px 14px 14px 4px;background:var(--fx-panel);border:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .xa-voz-play{width:28px;height:28px;flex:0 0 28px;border-radius:999px;background:var(--fx-t4)}
+:root[data-piel="xen"] .xa-voz-onda{display:flex;align-items:center;gap:3px;flex:1;height:28px}
+:root[data-piel="xen"] .xa-voz-onda i{flex:1;max-width:4px;border-radius:2px;background:var(--fx-t4);height:30%}
+:root[data-piel="xen"] .xa-voz-onda i:nth-child(3n){height:70%}
+:root[data-piel="xen"] .xa-voz-onda i:nth-child(4n+1){height:45%}
+:root[data-piel="xen"] .xa-voz-onda i:nth-child(5n+2){height:90%}
+:root[data-piel="xen"] .xa-voz-onda i:nth-child(7n){height:55%}
+:root[data-piel="xen"] .xa-voz-tonos{display:flex;gap:8px;flex-wrap:wrap}
+:root[data-piel="xen"] .xa-voz-tonos span{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--fx-r-pill);background:var(--fx-panel);border:1px solid var(--fx-borde-2);font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xa-voz-tonos b{font-weight:400;opacity:.55;filter:grayscale(1)}
+:root[data-piel="xen"] .xa-voz-barras{display:flex;flex-direction:column;gap:6px}
+:root[data-piel="xen"] .xa-voz-barras i{display:block;height:8px;border-radius:var(--fx-r-pill);background:var(--fx-t4);opacity:.6}
+:root[data-piel="xen"] .xa-voz-barras i:nth-child(1){width:70%}
+:root[data-piel="xen"] .xa-voz-barras i:nth-child(2){width:45%}
+:root[data-piel="xen"] .xa-voz-barras i:nth-child(3){width:25%}
+
+/* ---- Ventas y Seguimientos: las cifras con la letra de las cifras, y las tarjetas que caben ---- */
+:root[data-piel="xen"] #view-ventas .kpis{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+:root[data-piel="xen"] #view-ventas .kpi .n,:root[data-piel="xen"] #view-seguimientos .kpi .n{font-family:var(--fx-display);font-size:28px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] #view-ventas #ven-perdidas .panel,:root[data-piel="xen"] #view-seguimientos .panel{border-radius:var(--fx-r-xl)}
+:root[data-piel="xen"] #view-seguimientos #seg-resumen{font-size:13px;color:var(--fx-t2)}
+
+@media (max-width:1199px){
+  :root[data-piel="xen"] #view-analysis .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  :root[data-piel="xen"] .xa-fila,:root[data-piel="xen"] .xa-fila-35{grid-template-columns:minmax(0,1fr)}
+  :root[data-piel="xen"] .xa-persona{grid-template-columns:36px minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) minmax(9ch,auto)}
+  :root[data-piel="xen"] .xa-persona .etapa-celda{display:none}
+}
+@media (max-width:900px){
+  :root[data-piel="xen"] #view-analysis .xa-pestanas{margin:0 20px 4px}
+  :root[data-piel="xen"] #view-analysis .tiles{padding:12px 20px 0;gap:10px}
+  :root[data-piel="xen"] #view-analysis .deltas{padding:12px 20px 0}
+  :root[data-piel="xen"] #view-analysis .charts{grid-template-columns:minmax(0,1fr);padding:16px 20px 20px}
+  :root[data-piel="xen"] #view-analysis .charts>.panel{grid-column:1/-1}
+  :root[data-piel="xen"] #view-analysis #export-panel{margin:0 20px 20px}
+  :root[data-piel="xen"] #xa-sentimiento{padding:12px 20px 20px;gap:16px}
+  :root[data-piel="xen"] .xa-niveles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  :root[data-piel="xen"] .xa-niveles[data-n="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}
+  :root[data-piel="xen"] .xa-voz-cols{grid-template-columns:minmax(0,1fr)}
+  :root[data-piel="xen"] .xa-persona{grid-template-columns:36px minmax(0,1fr) auto;row-gap:6px;column-gap:10px}
+  :root[data-piel="xen"] .xa-persona .ini{grid-column:1;grid-row:1/span 2;align-self:start}
+  :root[data-piel="xen"] .xa-persona .dato{grid-column:auto}
+  :root[data-piel="xen"] .xa-persona .cuando{grid-column:3;grid-row:1}
+}
+@media (max-width:480px){
+  :root[data-piel="xen"] #view-analysis .tile b{font-size:24px}
+  :root[data-piel="xen"] .xa-nivel .n b{font-size:24px}
+  :root[data-piel="xen"] .xa-nivel .d{display:none}
+  :root[data-piel="xen"] .xa-nivel{padding:12px 10px 10px}
+  :root[data-piel="xen"] .xa-cruce thead th:first-child{width:34%}
+  :root[data-piel="xen"] .xa-cruce .lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+}
 /* (fin de XEN · Analítica y sentimiento) */
 
 /* ---------- XEN · Modelos de IA (agente de Modelos) ---------- */
@@ -2167,7 +2395,63 @@ dialog.perdida input{width:100%}
     <!-- Análisis -->
     <section class="view" id="view-analysis">
       <div class="topbar"><h1>Análisis</h1><span class="muted small">Cada número abre la lista correspondiente</span></div>
-      <div style="overflow:auto">
+      <!-- XEN · Analítica: una sola puerta del menú con dos pestañas. Resumen es lo de siempre; Sentimiento cuenta el
+           interés y el ánimo que dejó el análisis de cada conversación (con emojis Y su palabra), lo que frena, cómo
+           cambió y, aparte, el análisis por voz, que está por desarrollar y lo dice. -->
+      <div class="xa-pestanas" role="tablist" aria-label="Qué ver en Analítica">
+        <button type="button" role="tab" id="xa-tab-resumen" aria-controls="xa-resumen" aria-selected="true">Resumen</button>
+        <button type="button" role="tab" id="xa-tab-sentimiento" aria-controls="xa-sentimiento" aria-selected="false" tabindex="-1"><span aria-hidden="true">🙂</span> Sentimiento</button>
+      </div>
+      <div class="xa-cuerpo">
+      <div id="xa-sentimiento" class="xa-panel" role="tabpanel" aria-labelledby="xa-tab-sentimiento" tabindex="0" hidden>
+        <div id="xa-sent"></div>
+        <p class="sr-only" role="status" id="xa-anuncio"></p>
+        <!-- Por voz: POR DESARROLLAR. No mide nada todavía y no enseña cifras: dice qué hará, qué hay y qué falta. -->
+        <section class="panel xa-voz" id="xa-voz" aria-labelledby="xa-voz-t" data-estado="por-desarrollar">
+          <div class="xa-voz-cab">
+            <div class="xa-voz-titulo">
+              <span class="xa-voz-ic" aria-hidden="true">🎙️</span>
+              <div><h2 id="xa-voz-t">Sentimiento por voz</h2><p>Medirá el tono de las notas de voz —calma, prisa, molestia—, no solo lo que dicen las palabras.</p></div>
+            </div>
+            <span class="xa-por-desarrollar">Por desarrollar</span>
+          </div>
+          <div class="xa-voz-cols">
+            <div class="xa-voz-texto">
+              <h3>Lo que hará</h3>
+              <ul>
+                <li>Escuchar las notas de voz que llegan por WhatsApp y decir con qué tono vienen.</li>
+                <li>Sumar ese tono al ánimo de cada contacto, para no confundir un «sí, claro» seco con uno contento.</li>
+                <li>Avisar cuando alguien suena molesto aunque sus palabras sean amables.</li>
+              </ul>
+              <h3>Lo que ya hay</h3>
+              <p>Las notas de voz de hasta un minuto se pasan a texto (con la llave de OpenAI) y ese texto entra en el análisis de arriba. El tono de la voz no se mide.</p>
+              <h3>Lo que falta</h3>
+              <ul>
+                <li>Un modelo que escuche el audio: hoy solo se transcribe.</li>
+                <li>Decidir cuánto tiempo se guarda cada audio para medirlo.</li>
+                <li>Probarlo con notas de voz reales del negocio antes de enseñar una sola cifra.</li>
+              </ul>
+              <label class="xa-voz-interruptor">
+                <input type="checkbox" id="xa-voz-medir" disabled aria-disabled="true" aria-describedby="xa-voz-nota">
+                <span>Medir el tono de las notas de voz</span>
+              </label>
+              <p class="xa-voz-nota" id="xa-voz-nota">Se podrá encender cuando esté listo. Hoy no mide nada.</p>
+            </div>
+            <figure class="xa-voz-previa" role="img" aria-label="Vista previa sin datos: una nota de voz con su tono, como se verá cuando esté listo">
+              <figcaption>Vista previa · sin datos</figcaption>
+              <div class="xa-voz-nota-maqueta" aria-hidden="true">
+                <span class="xa-voz-play"></span>
+                <span class="xa-voz-onda"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+              </div>
+              <div class="xa-voz-tonos" aria-hidden="true">
+                <span><b>😌</b>Calma</span><span><b>⏱️</b>Prisa</span><span><b>😠</b>Molestia</span>
+              </div>
+              <div class="xa-voz-barras" aria-hidden="true"><i></i><i></i><i></i></div>
+            </figure>
+          </div>
+        </section>
+      </div>
+      <div id="xa-resumen" class="xa-panel" role="tabpanel" aria-labelledby="xa-tab-resumen" tabindex="0">
         <div class="tiles" id="tiles"></div>
         <div class="deltas" id="deltas"></div>
         <div class="charts">
@@ -2176,7 +2460,7 @@ dialog.perdida input{width:100%}
           <div class="panel ancho" id="panel-tiempos"><b>Cuánto se tarda en contestar</b><div class="small muted">Solo cuenta el tiempo dentro del horario de atención: lo que entra de noche o en domingo no corre hasta que abren.</div><div id="tiempos"></div></div>
           <div class="panel ancho" id="panel-origenes"><b>Qué trae clientes</b><div class="small muted">De dónde salió cada conversación y en qué terminó. Lo que trajo a alguien no cambia porque vuelva por otro lado.</div><div id="origenes"></div></div>
           <div class="panel funnel"><b>Embudo por etapa</b><div id="funnel"></div></div>
-          <div class="panel"><b>Ánimo de los clientes</b><div id="sentiments" class="small"></div><div class="small muted" style="margin-top:8px">Los prospectos calientes se atienden desde <b>Hoy</b> (sin seguimiento) o con el filtro «Prospectos» en Conversaciones.</div></div>
+          <div class="panel xa-mini"><b>Sentimiento</b><div class="small muted">El interés y el ánimo que dejó el análisis de cada conversación.</div><div id="sentiments"></div></div>
         </div>
         <div class="panel" id="export-panel">
           <b>Llevarse los datos</b>
@@ -2187,6 +2471,7 @@ dialog.perdida input{width:100%}
           </div>
           <div class="small" id="exp-msg" role="status"></div>
         </div>
+      </div>
       </div>
     </section>
     <!-- Agente -->

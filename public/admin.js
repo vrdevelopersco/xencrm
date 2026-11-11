@@ -2469,12 +2469,16 @@
     });
   }
   function loadAnalysis() {
+    // XEN: Analítica abre en la pestaña que se dejó, y el sentimiento se pide siempre (el Resumen también lo cuenta).
+    xaPestana(XA.tab);
+    cargarSentimiento();
     cargarSeries();
     api('/stats').then(function (s) {
       var tiles = [
         { n: s.total, l: 'Contactos', f: 'all' },
         { n: s.unread, l: 'Mensajes sin leer', f: 'unread' },
-        { n: s.hot, l: 'Prospectos claros', f: 'hot' },
+        // «Prospecto claro» es lenguaje del puntaje: en el modo fácil, que no lo enseña, se dice como su filtro.
+        { n: s.hot, l: esFacil() ? 'Prospectos' : 'Prospectos claros', f: 'hot' },
         { n: s.human, l: 'Atendidos por una persona', f: 'human' },
         // Por papel, no por nombre: en un negocio de soporte no existe "interesado" ni "cita_agendada".
         { n: s.byStage[etapaCon('interes')] || 0, l: state.stageLabels[etapaCon('interes')] || 'Interesados', f: 'stage:' + etapaCon('interes') },
@@ -2482,14 +2486,18 @@
         { n: s.upcomingAppointments, l: 'Citas en los próximos 7 días', v: 'calendar' },
         { n: s.messagesToday, l: 'Mensajes de clientes (24 h)', f: 'all' },
       ];
-      $('tiles').innerHTML = tiles.map(function (t, i) { return '<button class="tile" data-i="' + i + '"><b>' + t.n + '</b><span>' + esc(t.l) + '</span><span class="go">ver →</span></button>'; }).join('');
+      // 🪤 Las que abren un filtro que el modo fácil esconde (con una persona, por etapa) se esconden con él: si no,
+      // llevaban a la bandeja con un filtro puesto que no se ve y no se puede quitar.
+      $('tiles').innerHTML = tiles.map(function (t, i) { return '<button class="tile' + (t.f && FILTROS_COMPLETOS.test(t.f) ? ' solo-completo' : '') + '" data-i="' + i + '"><b>' + t.n + '</b><span>' + esc(t.l) + '</span><span class="go">ver →</span></button>'; }).join('');
       $('tiles').querySelectorAll('.tile').forEach(function (b) { b.onclick = function () { var t = tiles[Number(b.getAttribute('data-i'))]; if (t.v) go(t.v); else go('inbox', { filter: t.f }); }; });
       var max = Math.max(1, s.total);
-      $('funnel').innerHTML = Object.keys(s.stageLabels).map(function (k) { var n = s.byStage[k] || 0; return '<div class="f" data-f="stage:' + k + '"><span>' + esc(s.stageLabels[k]) + '</span><div class="bar"><i style="width:' + Math.round((n / max) * 100) + '%"></i></div><b>' + n + '</b></div>'; }).join('');
+      $('funnel').innerHTML = Object.keys(s.stageLabels).map(function (k) { var n = s.byStage[k] || 0; return '<div class="f" data-rol="' + esc(rol(k) || '') + '" data-f="stage:' + k + '"><span>' + esc(s.stageLabels[k]) + '</span><div class="bar"><i style="width:' + Math.round((n / max) * 100) + '%"></i></div><b>' + n + '</b></div>'; }).join('');
       $('funnel').querySelectorAll('.f').forEach(function (f) { f.onclick = function () { go('inbox', { filter: f.getAttribute('data-f') }); }; });
       bindExport();
-      var sent = s.sentiments || {};
-      $('sentiments').innerHTML = ['positivo', 'neutral', 'negativo'].map(function (k) { return '<div>' + sentIcon(k) + ': <b>' + (sent[k] || 0) + '</b></div>'; }).join('') + '<div class="muted">Puntaje promedio: ' + s.avgScore + '</div>';
+      // El ánimo de aquí es el mismo de la pestaña Sentimiento (crm/sentimiento.ts: sin archivados ni grupos); de
+      // /stats solo se toma el puntaje promedio, que es del completo.
+      XA.puntaje = s.avgScore;
+      pintarMiniSentimiento();
     });
   }
 
@@ -4551,7 +4559,9 @@
     $('ven-lista').innerHTML = '<div class="small muted">Cargando…</div>';
     api('/ventas?days=' + dias).then(function (d) {
       $('ven-kpis').innerHTML =
-        tarjeta(plata(d.total || 0), 'vendido en ' + (dias === 365 ? 'un año' : dias + ' días')) +
+        // 🪤 Con ventas y ninguna con precio, «$0» decía que no valieron nada; lo que pasa es que no se sabe. Es la
+        // misma regla de Tratos y de Hoy: sin precio, «Sin precios». Sin ventas, cero sí es la verdad.
+        tarjeta(d.total ? plata(d.total) : d.cuantas ? 'Sin precios' : plata(0), 'vendido en ' + (dias === 365 ? 'un año' : dias + ' días')) +
         tarjeta(String(d.cuantas || 0), d.cuantas === 1 ? 'venta' : 'ventas') +
         tarjeta(d.promedio ? plata(Math.round(d.promedio)) : '—', 'promedio por venta') +
         // 🪤 Cuántas no tienen precio se enseña al lado del total. Sin esto, un total bajo parece un mal mes
@@ -5337,9 +5347,12 @@
   // Área apilada: WhatsApp abajo, el chat del sitio encima. Si alguien no usa un canal, esa banda no aparece.
   function pintarNuevas(dias) {
     var caja = $('g-nuevas');
+    XA.nuevas = dias;
     var total = dias.reduce(function (a, d) { return a + d.total; }, 0);
     if (!total) { caja.innerHTML = '<div class="sin-datos">Todavía no ha entrado nadie en estos días.</div>'; return; }
-    var W = 620, H = 170, izq = 26, abajo = 22;
+    // XEN: al ancho de verdad de su tarjeta (escalada, el texto de los ejes bajaba a 7 px). Escondida mide cero, y
+    // entonces se queda en 620 hasta que se vuelva a ver (xaPestana la redibuja).
+    var W = Math.max(300, caja.clientWidth || 620), H = 180, izq = 26, abajo = 22;
     var max = Math.max.apply(null, dias.map(function (d) { return d.total; })) || 1;
     var x = function (i) { return izq + (i * (W - izq - 6)) / Math.max(1, dias.length - 1); };
     var y = function (v) { return H - abajo - (v * (H - abajo - 10)) / max; };
@@ -5359,14 +5372,15 @@
     var etiquetas = dias.map(function (d, i) {
       return i % 2 ? '' : '<text class="eje" x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + etiquetaDia(d.dia) + '</text>';
     }).join('');
-    caja.innerHTML = '<svg class="grafica" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Conversaciones nuevas por día">' +
+    caja.innerHTML = '<svg class="grafica" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Conversaciones nuevas por día">' +
       reglas +
-      banda(function (d) { return d.total; }, 'var(--cita)') +
-      banda(function (d) { return d.whatsapp + d.otros; }, 'var(--brand)') +
-      linea(function (d) { return d.total; }, 'var(--cita)') +
+      // XEN: los canales son datos, con su color aparte del acento: WhatsApp verde y el chat del sitio cielo.
+      banda(function (d) { return d.total; }, 'var(--fx-cielo)') +
+      banda(function (d) { return d.whatsapp + d.otros; }, 'var(--fx-verde)') +
+      linea(function (d) { return d.total; }, 'var(--fx-cielo)') +
       etiquetas + '</svg>' +
-      '<div class="leyenda"><span><i style="background:var(--brand)"></i>WhatsApp</span>' +
-      '<span><i style="background:var(--cita)"></i>Chat del sitio</span>' +
+      '<div class="leyenda"><span><i style="background:var(--fx-verde)"></i>WhatsApp</span>' +
+      '<span><i style="background:var(--fx-cielo)"></i>Chat del sitio</span>' +
       '<span class="muted">' + total + ' en 14 días</span></div>';
   }
 
@@ -5380,7 +5394,7 @@
       return fila.map(function (n, c) {
         var fuerza = n ? 0.18 + 0.82 * (n / a.max) : 0;
         return '<rect class="celda" x="' + (izq + c * (celda + hueco)) + '" y="' + (arriba + f * (celda + hueco)) + '" ' +
-          'width="' + celda + '" height="' + celda + '" rx="4" fill="var(--brand)" fill-opacity="' + fuerza.toFixed(2) + '">' +
+          'width="' + celda + '" height="' + celda + '" rx="4" fill="var(--fx-cielo)" fill-opacity="' + fuerza.toFixed(2) + '">' +
           '<title>' + etiquetaDia(a.dias[c]) + ' · ' + a.horas[f] + ':00 · ' + n + (n === 1 ? ' mensaje' : ' mensajes') + '</title></rect>';
       }).join('');
     }).join('');
@@ -5407,6 +5421,351 @@
   // (fin de XEN · Contactos, ficha y tratos)
 
   // ===== XEN · Analítica y sentimiento: lo nuevo del agente de Analítica =====
+  // Analítica es UNA puerta del menú con dos pestañas: Resumen (lo de siempre) y Sentimiento. El sentimiento no se
+  // calcula aquí ni se le pregunta a ningún modelo: lo cuenta el servidor (crm/sentimiento.ts) con lo que el
+  // análisis de cada conversación ya guardó. Aquí solo se pinta, y cada nivel lleva su emoji Y su palabra: el emoji
+  // solo no lo lee igual todo el mundo, y para un lector de pantalla es ruido (va con aria-hidden).
+  //
+  // 🪤 El interés y el ánimo son dos escalas aparte. Quien quiere comprar y está molesto es justo a quien hay que
+  // cuidar primero; en una escala única de «interesado a molesto» se perdería. Por eso van separadas y cruzadas.
+  //
+  // 🪤 Nada se rellena para que se vea bonito: un nivel sin nadie dice 0, un día sin análisis no tiene barra y, sin
+  // análisis, la pestaña explica de dónde sale el sentimiento en vez de enseñar ceros como si fueran datos.
+  var XA_INTERES = [
+    { k: 3, e: '🤩', lbl: 'Quiere comprar', d: 'Quiere comprar o agendar ya', tono: 'var(--xa-i3)' },
+    { k: 2, e: '🙂', lbl: 'Interés claro', d: 'Pregunta en serio por lo que vendes', tono: 'var(--xa-i2)' },
+    { k: 1, e: '🤔', lbl: 'Curiosidad', d: 'Está mirando, sin decidirse', tono: 'var(--xa-i1)' },
+    { k: 0, e: '😶', lbl: 'Sin interés', d: 'No muestra ganas de comprar', tono: 'var(--xa-i0)' }
+  ];
+  var XA_ANIMO = [
+    { k: 'positivo', e: '😊', lbl: 'Contento', d: 'Escribe a gusto', tono: 'var(--xa-pos)' },
+    { k: 'neutral', e: '😐', lbl: 'Neutral', d: 'Ni a gusto ni a disgusto', tono: 'var(--xa-neu)' },
+    { k: 'negativo', e: '😠', lbl: 'Molesto', d: 'Algo le incomodó', tono: 'var(--xa-neg)' }
+  ];
+  var XA_LISTA_MAX = 50;
+  var XA = { tab: 'resumen', datos: null, filtro: null, dias: 30, pidiendo: 0, puntaje: null, todos: false, nuevas: null };
+  try { XA.tab = localStorage.getItem(LLAVE('analitica')) === 'sentimiento' ? 'sentimiento' : 'resumen'; } catch (e) {}
+  var XA_SUB = {
+    resumen: 'Cómo llega la gente, a qué horas escribe y cuánto se tarda en contestar.',
+    sentimiento: 'Cuánto interés hay y de qué ánimo está la gente, según el análisis de cada conversación.'
+  };
+  function xaE(e) { return '<span class="e" aria-hidden="true">' + e + '</span>'; }
+  function xaPct(n, de) { return de ? Math.round((n / de) * 100) : 0; }
+  function xaPlural(n, uno, varios) { return n === 1 ? uno : varios; }
+  function xaDe(lista, k) { return lista.filter(function (x) { return x.k === k; })[0] || null; }
+  function xaNombre(f) {
+    var c = (state.contacts || []).filter(function (x) { return x.id === f.id; })[0];
+    return c ? nameOf(c) : (f.nombre || f.telefono || short(f.id));
+  }
+  function xaHace(ts) { if (!ts) return '—'; var r = rel(ts); return r === 'ahora' ? 'ahora' : 'hace ' + r; }
+
+  // ---- las pestañas ----
+  function xaPestana(t, foco) {
+    XA.tab = t === 'sentimiento' ? 'sentimiento' : 'resumen';
+    try { localStorage.setItem(LLAVE('analitica'), XA.tab); } catch (e) {}
+    ['resumen', 'sentimiento'].forEach(function (k) {
+      var on = k === XA.tab, b = $('xa-tab-' + k), panel = $('xa-' + k);
+      if (!b || !panel) return;
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
+      panel.hidden = !on;
+      if (on && foco) b.focus();
+    });
+    var p = document.querySelector('#view-analysis .fx-cab p');
+    if (p) p.textContent = XA_SUB[XA.tab];
+    // La gráfica por día mide el ancho donde vive: escondida mide cero, así que se dibuja al enseñarla.
+    if (XA.tab === 'sentimiento') { if (XA.datos) xaDibujarSerie(); else cargarSentimiento(); }
+    else if (XA.nuevas && $('g-nuevas') && $('g-nuevas').clientWidth) pintarNuevas(XA.nuevas);
+  }
+  ['resumen', 'sentimiento'].forEach(function (k) {
+    if ($('xa-tab-' + k)) $('xa-tab-' + k).onclick = function () { xaPestana(k); };
+  });
+  if (document.querySelector('#view-analysis .xa-pestanas')) document.querySelector('#view-analysis .xa-pestanas').addEventListener('keydown', function (e) {
+    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(e.key) < 0) return;
+    e.preventDefault();
+    var otra = e.key === 'Home' ? 'resumen' : e.key === 'End' ? 'sentimiento' : XA.tab === 'resumen' ? 'sentimiento' : 'resumen';
+    xaPestana(otra, true);
+  });
+
+  // ---- traer y pintar ----
+  function cargarSentimiento() {
+    var caja = $('xa-sent');
+    if (!caja) return;
+    var n = ++XA.pidiendo;
+    if (!XA.datos) {
+      caja.setAttribute('aria-busy', 'true');
+      caja.innerHTML = '<div class="xa-esqueleto" aria-hidden="true"><i style="height:72px"></i><div class="xa-fila xa-fila-35"><i style="height:250px"></i><i style="height:250px"></i></div><i style="height:220px"></i></div>' +
+        '<p class="sr-only">Cargando el sentimiento…</p>';
+    }
+    var fallo = function (por) {
+      if (n !== XA.pidiendo) return;
+      caja.removeAttribute('aria-busy');
+      if (XA.datos) { toast('No se pudo actualizar el sentimiento: ' + (por || 'sin respuesta')); return; }
+      caja.innerHTML = xaVacio('⚠️', 'No se pudo cargar el sentimiento', (por ? 'El servidor dijo: ' + por + '. ' : 'No hubo respuesta del servidor. ') + 'Lo demás de Analítica sigue funcionando.', 'Volver a intentar', 'reintentar');
+      pintarMiniSentimiento();
+    };
+    api('/sentimiento?dias=' + XA.dias).then(function (d) {
+      if (n !== XA.pidiendo) return;
+      if (!d || d.error) { fallo(d && d.error); return; }
+      caja.removeAttribute('aria-busy');
+      XA.datos = d;
+      pintarSentimiento();
+      pintarMiniSentimiento();
+    }).catch(function (e) { if (String(e && e.message) !== '401') fallo(''); });
+  }
+  function xaVacio(e, titulo, texto, boton, accion) {
+    return '<div class="xa-vacio">' + xaE(e) + '<b>' + esc(titulo) + '</b><span>' + esc(texto) + '</span>' +
+      (boton ? '<button type="button" class="btn sm" data-xa-ir="' + esc(accion) + '">' + esc(boton) + '</button>' : '') + '</div>';
+  }
+  function xaCuidar(d) { return d.cruce[3].negativo + d.cruce[2].negativo; }
+
+  function pintarSentimiento() {
+    var d = XA.datos, caja = $('xa-sent');
+    if (!d || !caja) return;
+    if (!d.total) {
+      caja.innerHTML = xaVacio('🗂️', 'Todavía no hay contactos', 'Cuando alguien escriba por WhatsApp o por el chat del sitio, su conversación se analiza y aquí se cuenta cuánto interés trae y de qué ánimo está.', 'Abrir la bandeja omnicanal', 'inbox');
+      return;
+    }
+    if (!d.analizados) {
+      caja.innerHTML = xaVacio('🔎', 'Aún no hay sentimiento que contar',
+        'Sale del análisis que la IA hace de cada conversación cuando se queda en silencio: el ánimo (contento, neutral, molesto), el interés (de la curiosidad a querer comprar) y lo que frena la compra. Hay ' +
+        d.total + ' ' + xaPlural(d.total, 'contacto', 'contactos') + ' y todavía no se ha analizado ninguno.', 'Abrir la bandeja omnicanal', 'inbox');
+      return;
+    }
+    var conInteres = d.interes[3] + d.interes[2], molestos = d.animo.negativo, cuidar = xaCuidar(d);
+    var titular = '<div class="xa-titular"><p>De <b>' + d.analizados + '</b> ' + xaPlural(d.analizados, 'contacto analizado', 'contactos analizados') + ', <b>' + conInteres + '</b> ' +
+      xaPlural(conInteres, 'tiene interés claro o quiere comprar', 'tienen interés claro o quieren comprar') + ' y <b>' + molestos + '</b> ' + xaPlural(molestos, 'está molesto', 'están molestos') + '.' +
+      (d.sinAnalizar ? '<span class="xa-sin">' + d.sinAnalizar + ' ' + xaPlural(d.sinAnalizar, 'contacto todavía no se ha analizado', 'contactos todavía no se han analizado') + ': no cuentan aquí.</span>' : '') + '</p>' +
+      '<span class="xa-ia"><span aria-hidden="true">✦</span>Según el análisis de IA de cada conversación</span>' +
+      (cuidar ? '<button type="button" class="xa-cuidar" data-xa="cuidar" data-v="1" aria-pressed="false"><span aria-hidden="true">⚠️</span>Cuidar a ' + cuidar + ' ' + xaPlural(cuidar, 'con interés y molesto', 'con interés y molestos') + '</button>' : '') +
+      '</div>';
+    var conI = d.analizados - d.interesSinDato, conA = d.analizados - d.animoSinDato;
+    var escala = function (titulo, sub, tipo, lista, cuentas, de, sinDato) {
+      return '<section class="xa-card" aria-labelledby="xa-t-' + tipo + '"><div class="xa-card-cab"><div><h2 id="xa-t-' + tipo + '">' + esc(titulo) + '</h2><p>' + esc(sub) + '</p></div></div>' +
+        '<div class="xa-termo" aria-hidden="true">' + lista.map(function (x) { var n = cuentas[x.k] || 0; return n ? '<i style="flex:' + n + ';--tono:' + x.tono + '"></i>' : ''; }).join('') + '</div>' +
+        '<div class="xa-niveles" data-n="' + lista.length + '" style="--n:' + lista.length + '">' + lista.map(function (x) { return xaNivel(tipo, x, cuentas[x.k] || 0, de); }).join('') + '</div>' +
+        (sinDato ? '<p class="xa-nota">' + sinDato + ' ' + xaPlural(sinDato, 'contacto analizado no tiene', 'contactos analizados no tienen') + ' este dato.</p>' : '') + '</section>';
+    };
+    caja.innerHTML = titular +
+      '<div class="xa-fila xa-fila-35">' +
+        escala('Interés', 'De querer comprar ya a no tener interés. Toca un nivel para ver quiénes son.', 'interes', XA_INTERES, d.interes, conI, d.interesSinDato) +
+        escala('Ánimo', 'Cómo se siente al escribir, en su último análisis.', 'animo', XA_ANIMO, d.animo, conA, d.animoSinDato) +
+      '</div>' +
+      '<section class="xa-card xa-lista" aria-labelledby="xa-lista-t"><div class="xa-card-cab"><div><h2 id="xa-lista-t"></h2><p id="xa-lista-sub"></p></div><button type="button" class="btn sm" id="xa-lista-todos" data-xa-ir="todos" hidden>Ver todos</button></div><div id="xa-lista-cuerpo"></div></section>' +
+      '<div class="xa-fila">' +
+        '<section class="xa-card" aria-labelledby="xa-t-cruce"><div class="xa-card-cab"><div><h2 id="xa-t-cruce">Interés × ánimo</h2><p>Quien quiere comprar y está molesto es a quien hay que cuidar primero.</p></div></div>' + xaCruce(d) + '</section>' +
+        '<section class="xa-card" aria-labelledby="xa-t-obj"><div class="xa-card-cab"><div><h2 id="xa-t-obj">Lo que frena</h2><p>Las objeciones que se repiten, de su último análisis.</p></div></div>' + xaObjeciones(d) + '</section>' +
+      '</div>' +
+      '<section class="xa-card" aria-labelledby="xa-t-serie"><div class="xa-card-cab"><div><h2 id="xa-t-serie">Cómo cambió</h2><p id="xa-serie-sub"></p></div>' +
+        '<label><span class="sr-only">Cuántos días ver</span><select id="xa-dias">' + [14, 30, 90].map(function (n) { return '<option value="' + n + '"' + (n === d.dias ? ' selected' : '') + '>Últimos ' + n + ' días</option>'; }).join('') + '</select></label></div>' +
+        '<div class="xa-serie" id="xa-serie"></div>' +
+        '<div class="xa-leyenda">' + XA_ANIMO.map(function (a) { return '<span><i style="--tono:' + a.tono + '"></i>' + xaE(a.e) + ' ' + esc(a.lbl) + '</span>'; }).join('') + '</div>' +
+        '<details class="xa-tabla-dias"><summary>Ver como tabla</summary><div id="xa-serie-tabla"></div></details>' +
+      '</section>';
+    $('xa-dias').onchange = function () { XA.dias = Number($('xa-dias').value) || 30; cargarSentimiento(); };
+    xaPintarLista();
+    xaDibujarSerie();
+  }
+  function xaNivel(tipo, x, n, de) {
+    var p = xaPct(n, de);
+    return '<button type="button" class="xa-nivel" data-xa="' + tipo + '" data-v="' + x.k + '" aria-pressed="false" style="--tono:' + x.tono + '"' +
+      ' aria-label="' + esc(x.lbl + ': ' + n + ' ' + xaPlural(n, 'contacto', 'contactos') + ', ' + p + ' %. ' + x.d) + '">' +
+      xaE(x.e) + '<span class="l">' + esc(x.lbl) + '</span><span class="d">' + esc(x.d) + '</span>' +
+      '<span class="n"><b>' + n + '</b><span>' + p + ' %</span></span><span class="pista"><i style="width:' + p + '%"></i></span></button>';
+  }
+  function xaCruce(d) {
+    var max = 1;
+    XA_INTERES.forEach(function (i) { XA_ANIMO.forEach(function (a) { max = Math.max(max, d.cruce[i.k][a.k]); }); });
+    return '<table class="xa-cruce"><caption class="sr-only">Cuántos contactos hay en cada nivel de interés según su ánimo</caption><thead><tr><th scope="col"><span class="sr-only">Interés</span></th>' +
+      XA_ANIMO.map(function (a) { return '<th scope="col">' + xaE(a.e) + '<span class="lbl">' + esc(a.lbl) + '</span></th>'; }).join('') + '</tr></thead><tbody>' +
+      XA_INTERES.map(function (i) {
+        return '<tr><th scope="row">' + xaE(i.e) + '<span class="lbl">' + esc(i.lbl) + '</span></th>' + XA_ANIMO.map(function (a) {
+          var n = d.cruce[i.k][a.k], cuidar = i.k >= 2 && a.k === 'negativo';
+          // Tinta según cuántos (de 8 % a 32 %): la cifra se sigue leyendo encima, en claro y en oscuro.
+          var p = n ? Math.round(8 + (n / max) * 24) : 0;
+          return '<td><button type="button" class="xa-celda' + (n ? '' : ' vacia') + (cuidar ? ' cuidar' : '') + '"' + (n ? '' : ' disabled') +
+            ' data-xa="cruce" data-v="' + i.k + '|' + a.k + '" aria-pressed="false" style="--tono:' + a.tono + ';--p:' + p + '%"' +
+            ' aria-label="' + esc(i.lbl + ' y ' + a.lbl.toLowerCase() + ': ' + n + ' ' + xaPlural(n, 'contacto', 'contactos') + (cuidar && n ? '. Para cuidar primero' : '')) + '">' + n + '</button></td>';
+        }).join('') + '</tr>';
+      }).join('') + '</tbody></table>' +
+      '<div class="xa-leyenda">' + XA_ANIMO.map(function (a) { return '<span><i style="--tono:' + a.tono + '"></i>' + esc(a.lbl) + '</span>'; }).join('') +
+      '<span><i class="borde"></i>Interés con molestia</span></div>';
+  }
+  function xaObjeciones(d) {
+    if (!d.objeciones.length) return '<div class="xa-vacio" style="min-height:140px">' + xaE('🙌') + '<b>Nadie ha puesto una objeción</b><span>Cuando alguien diga que le queda lejos, que le parece caro o que no le da el tiempo, sale aquí con cuántos lo dijeron.</span></div>';
+    var max = d.objeciones[0].n || 1;
+    return '<ul class="xa-obj">' + d.objeciones.map(function (o, i) {
+      var t = o.texto.charAt(0).toUpperCase() + o.texto.slice(1);
+      return '<li><button type="button" data-xa="objecion" data-v="' + i + '" aria-pressed="false" aria-label="' + esc(t + ': ' + o.n + ' ' + xaPlural(o.n, 'contacto', 'contactos')) + '">' +
+        '<span class="t">' + esc(t) + '</span><b>' + o.n + '</b><span class="pista" aria-hidden="true"><i style="width:' + xaPct(o.n, max) + '%"></i></span></button></li>';
+    }).join('') + '</ul>';
+  }
+
+  // ---- la lista de quiénes ----
+  function xaFiltrados(d) {
+    var f = XA.filtro, L = d.contactos.slice();
+    if (f) L = L.filter(function (c) {
+      if (f.tipo === 'interes') return c.interes === Number(f.v);
+      if (f.tipo === 'animo') return c.animo === f.v;
+      if (f.tipo === 'cruce') { var p = f.v.split('|'); return c.interes === Number(p[0]) && c.animo === p[1]; }
+      if (f.tipo === 'objecion') { var o = d.objeciones[Number(f.v)]; return Boolean(o) && o.ids.indexOf(c.id) >= 0; }
+      if (f.tipo === 'cuidar') return c.interes !== null && c.interes >= 2 && c.animo === 'negativo';
+      return true;
+    });
+    // Primero quien más interés trae; entre iguales, el análisis más reciente.
+    return L.sort(function (a, b) { return (b.interes === null ? -1 : b.interes) - (a.interes === null ? -1 : a.interes) || (b.analizadoEn || 0) - (a.analizadoEn || 0); });
+  }
+  function xaTituloDelFiltro(d) {
+    var f = XA.filtro;
+    if (!f) return 'Todos los analizados';
+    if (f.tipo === 'interes') { var i = xaDe(XA_INTERES, Number(f.v)); return i.e + ' ' + i.lbl; }
+    if (f.tipo === 'animo') { var a = xaDe(XA_ANIMO, f.v); return a.e + ' ' + a.lbl; }
+    if (f.tipo === 'cruce') { var p = f.v.split('|'), ii = xaDe(XA_INTERES, Number(p[0])), aa = xaDe(XA_ANIMO, p[1]); return ii.e + ' ' + ii.lbl + ' y ' + aa.e + ' ' + aa.lbl.toLowerCase(); }
+    if (f.tipo === 'objecion') { var o = d.objeciones[Number(f.v)]; return 'Frena: «' + (o ? o.texto : '') + '»'; }
+    return '⚠️ Para cuidar: interés con molestia';
+  }
+  function xaDato(lista, k, que) {
+    var x = k === null || k === undefined ? null : xaDe(lista, k);
+    return x ? '<span class="dato"><span class="sr-only">' + que + ': </span>' + xaE(x.e) + '<span>' + esc(x.lbl) + '</span></span>'
+      : '<span class="dato sin"><span class="sr-only">' + que + ': </span>Sin dato</span>';
+  }
+  function xaPintarLista() {
+    var d = XA.datos, cuerpo = $('xa-lista-cuerpo');
+    if (!d || !cuerpo) return;
+    var L = xaFiltrados(d), visibles = XA.todos ? L : L.slice(0, XA_LISTA_MAX);
+    var titulo = xaTituloDelFiltro(d);
+    // El emoji del título es decoración: se le pinta aparte para que el lector no lo lea.
+    $('xa-lista-t').innerHTML = esc(titulo).replace(/^(\S+) /, function (m, e) { return /[A-Za-zÁ-ú«]/.test(e) ? m : xaE(e) + ' '; });
+    $('xa-lista-sub').textContent = L.length + ' ' + xaPlural(L.length, 'contacto', 'contactos') + (L.length ? ' · toca uno para abrir su ficha' : '');
+    $('xa-lista-todos').hidden = !XA.filtro;
+    document.querySelectorAll('#xa-sent [data-xa]').forEach(function (b) {
+      var on = Boolean(XA.filtro) && XA.filtro.tipo === b.getAttribute('data-xa') && String(XA.filtro.v) === b.getAttribute('data-v');
+      b.setAttribute('aria-pressed', String(on));
+    });
+    if (!L.length) { cuerpo.innerHTML = '<div class="xa-vacio" style="min-height:120px"><b>Nadie en este grupo</b><span>Prueba con otro nivel o vuelve a ver todos.</span></div>'; return; }
+    cuerpo.innerHTML = '<ul>' + visibles.map(function (c) {
+      var nombre = xaNombre(c), linea = c.objecion ? 'Frena: ' + c.objecion : (c.resumen || c.telefono || '');
+      return '<li><button type="button" class="xa-persona" data-id="' + esc(c.id) + '">' +
+        '<span class="ini" aria-hidden="true">' + esc(inicialesDe(nombre)) + '</span>' +
+        '<span class="quien"><b>' + esc(nombre) + '</b>' + (linea ? '<small' + (c.objecion ? ' class="frena"' : '') + '>' + esc(linea) + '</small>' : '') + '</span>' +
+        '<span class="etapa-celda">' + pastillaEtapa(c.etapa) + '</span>' +
+        xaDato(XA_INTERES, c.interes, 'Interés') + xaDato(XA_ANIMO, c.animo, 'Ánimo') +
+        '<span class="cuando"><span class="sr-only">Último análisis: </span>' + esc(xaHace(c.analizadoEn)) + '</span></button></li>';
+    }).join('') + '</ul>' +
+      (L.length > visibles.length ? '<p class="xa-lista-pie">Se ven ' + visibles.length + ' de ' + L.length + '. <button type="button" class="linkbtn" data-xa-ir="mas">Ver los ' + L.length + '</button></p>' : '');
+  }
+  function xaElegir(tipo, v, desde) {
+    var igual = XA.filtro && XA.filtro.tipo === tipo && String(XA.filtro.v) === String(v);
+    XA.filtro = igual ? null : { tipo: tipo, v: v };
+    XA.todos = false;
+    xaPintarLista();
+    if ($('xa-anuncio')) $('xa-anuncio').textContent = $('xa-lista-t').textContent + ': ' + $('xa-lista-sub').textContent;
+    // Si se eligió desde abajo (el cruce, lo que frena), la lista queda arriba: se lleva a la vista.
+    var lista = document.querySelector('#xa-sent .xa-lista');
+    if (lista && desde && lista.getBoundingClientRect().top < 0) lista.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }
+  if ($('xa-sent')) $('xa-sent').addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target : null;
+    if (!t) return;
+    var persona = t.closest('.xa-persona');
+    if (persona) { abrirPerfil(persona.getAttribute('data-id'), xaFiltrados(XA.datos).map(function (c) { return c.id; })); return; }
+    var ir = t.closest('[data-xa-ir]');
+    if (ir) {
+      var a = ir.getAttribute('data-xa-ir');
+      if (a === 'reintentar') cargarSentimiento();
+      else if (a === 'todos') { XA.filtro = null; XA.todos = false; xaPintarLista(); }
+      else if (a === 'mas') { XA.todos = true; xaPintarLista(); }
+      else go(a);
+      return;
+    }
+    var b = t.closest('[data-xa]');
+    if (b && !b.disabled) xaElegir(b.getAttribute('data-xa'), b.getAttribute('data-v'), b.closest('.xa-fila:not(.xa-fila-35)') || b.classList.contains('xa-cuidar'));
+  });
+
+  // ---- cómo cambió: barras apiladas por día ----
+  function xaBarraArriba(x, y, w, h, r) {
+    r = Math.min(r, h, w / 2);
+    return '<path d="M' + x + ',' + (y + h) + 'V' + (y + r) + 'Q' + x + ',' + y + ' ' + (x + r) + ',' + y + 'H' + (x + w - r) + 'Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + r) + 'V' + (y + h) + 'Z"';
+  }
+  function xaDibujarSerie() {
+    var d = XA.datos, caja = $('xa-serie');
+    if (!d || !caja || XA.tab !== 'sentimiento') return;
+    var dias = d.serie || [], hay = dias.some(function (x) { return x.positivo + x.neutral + x.negativo; });
+    var conAlgo = dias.filter(function (x) { return x.positivo + x.neutral + x.negativo; }).length;
+    $('xa-serie-sub').textContent = hay ? 'El ánimo del último análisis de cada contacto, día por día (' + conAlgo + ' ' + xaPlural(conAlgo, 'día con análisis', 'días con análisis') + ' de ' + d.dias + ').' : 'El ánimo del último análisis de cada contacto, día por día.';
+    if (!hay) {
+      caja.innerHTML = '<div class="xa-vacio" style="min-height:160px"><b>Sin análisis en los últimos ' + d.dias + ' días</b><span>Cuando se analice una conversación, su ánimo de ese día sale aquí.</span></div>';
+      $('xa-serie-tabla').innerHTML = '';
+      return;
+    }
+    var W = Math.max(280, caja.clientWidth || 640), H = 220, izq = 28, abajo = 24, arriba = 8;
+    var max = Math.max.apply(null, dias.map(function (x) { return x.positivo + x.neutral + x.negativo; })) || 1;
+    var paso = (W - izq) / dias.length, ancho = Math.max(3, Math.min(24, paso * 0.62));
+    var Y = function (v) { return H - abajo - (v * (H - abajo - arriba)) / max; };
+    var cada = Math.max(1, Math.ceil(dias.length / 8));
+    var svg = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Ánimo por día en los últimos ' + d.dias + ' días. El detalle está en «Ver como tabla».">';
+    [0, Math.ceil(max / 2), max].filter(function (v, i, a) { return a.indexOf(v) === i; }).forEach(function (v) {
+      svg += '<line class="rejilla" x1="' + izq + '" x2="' + W + '" y1="' + Y(v) + '" y2="' + Y(v) + '"/><text class="eje" x="' + (izq - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + v + '</text>';
+    });
+    dias.forEach(function (x, i) {
+      var cx = izq + paso * i + (paso - ancho) / 2, base = Y(0), trozos = [];
+      XA_ANIMO.forEach(function (a) { if (x[a.k]) trozos.push({ a: a, n: x[a.k] }); });
+      var total = trozos.reduce(function (s, t) { return s + t.n; }, 0);
+      svg += '<g class="col" data-i="' + i + '"' + (total ? ' tabindex="0" role="img" aria-label="' + esc(etiquetaDia(x.dia) + ': ' + trozos.map(function (t) { return t.n + ' ' + t.a.lbl.toLowerCase(); }).join(', ')) + '"' : '') + '>' +
+        '<rect class="zona" x="' + (izq + paso * i) + '" y="' + arriba + '" width="' + paso + '" height="' + (H - abajo - arriba) + '" rx="4"/>';
+      var y = base;
+      trozos.forEach(function (t, j) {
+        var h = Math.max(2, (t.n * (H - abajo - arriba)) / max - (j < trozos.length - 1 ? 2 : 0));
+        y -= h;
+        svg += j === trozos.length - 1 ? xaBarraArriba(cx, y, ancho, h, 4) + ' fill="' + t.a.tono + '"/>' : '<rect x="' + cx + '" y="' + y + '" width="' + ancho + '" height="' + h + '" fill="' + t.a.tono + '"/>';
+        y -= 2;
+      });
+      svg += '</g>';
+      if (i % cada === 0 || i === dias.length - 1) svg += '<text class="eje" x="' + (izq + paso * i + paso / 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(etiquetaDia(x.dia)) + '</text>';
+    });
+    caja.innerHTML = svg + '</svg><div class="xa-globo" id="xa-globo" hidden></div>';
+    var globo = $('xa-globo');
+    caja.querySelectorAll('.col').forEach(function (g) {
+      var mostrar = function () {
+        var x = dias[Number(g.getAttribute('data-i'))], n = x.positivo + x.neutral + x.negativo;
+        if (!n) { globo.hidden = true; return; }
+        globo.innerHTML = '<b>' + esc(etiquetaDia(x.dia)) + '</b>' + XA_ANIMO.map(function (a) { return x[a.k] ? xaE(a.e) + ' ' + x[a.k] + ' ' + esc(a.lbl.toLowerCase()) : ''; }).filter(Boolean).join(' · ') +
+          (x.interesMedio !== null ? '<br>Interés medio: ' + String(x.interesMedio).replace('.', ',') + ' de 3' : '');
+        globo.hidden = false;
+        var r = g.getBoundingClientRect(), rc = caja.getBoundingClientRect();
+        var left = r.left - rc.left + r.width / 2 - globo.offsetWidth / 2;
+        globo.style.left = Math.max(0, Math.min(rc.width - globo.offsetWidth, left)) + 'px';
+        globo.style.top = '0px';
+      };
+      g.onmouseenter = mostrar; g.onfocus = mostrar;
+      g.onmouseleave = function () { globo.hidden = true; }; g.onblur = function () { globo.hidden = true; };
+    });
+    $('xa-serie-tabla').innerHTML = '<table class="tz-tabla"><thead><tr><th scope="col">Día</th>' + XA_ANIMO.map(function (a) { return '<th scope="col">' + esc(a.lbl) + '</th>'; }).join('') + '<th scope="col">Interés medio</th></tr></thead><tbody>' +
+      dias.filter(function (x) { return x.positivo + x.neutral + x.negativo; }).map(function (x) {
+        return '<tr><th scope="row">' + esc(etiquetaDia(x.dia)) + '</th>' + XA_ANIMO.map(function (a) { return '<td>' + x[a.k] + '</td>'; }).join('') + '<td>' + (x.interesMedio === null ? '—' : String(x.interesMedio).replace('.', ',') + ' de 3') + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+  var xaAlRedimensionar;
+  window.addEventListener('resize', function () { clearTimeout(xaAlRedimensionar); xaAlRedimensionar = setTimeout(function () {
+    if (state.view !== 'analysis') return;
+    if (XA.tab === 'sentimiento') xaDibujarSerie(); else if (XA.nuevas) pintarNuevas(XA.nuevas);
+  }, 150); });
+
+  // ---- el sentimiento en el Resumen: tres cifras y la puerta ----
+  function pintarMiniSentimiento() {
+    var el = $('sentiments'), d = XA.datos;
+    if (!el) return;
+    var puntaje = XA.puntaje === null ? '' : '<div class="small muted solo-completo">Puntaje promedio: ' + XA.puntaje + '</div>';
+    var boton = '<button type="button" class="btn sm" data-xa-mini="sentimiento">Ver el sentimiento</button>';
+    if (!d) { el.innerHTML = '<div class="small muted">Cargando…</div>'; return; }
+    if (!d.analizados) { el.innerHTML = '<div class="small muted">Todavía no hay conversaciones analizadas.</div>' + puntaje + boton; return; }
+    el.innerHTML = '<div class="xa-mini-fila">' + XA_ANIMO.map(function (a) {
+      return '<div>' + xaE(a.e) + '<b>' + d.animo[a.k] + '</b><span>' + esc(a.lbl) + '</span></div>';
+    }).join('') + '</div>' + puntaje + boton;
+  }
+  if ($('sentiments')) $('sentiments').addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('[data-xa-mini]')) { xaPestana('sentimiento', true); }
+  });
   // (fin de XEN · Analítica y sentimiento)
 
   // ===== XEN · Modelos de IA: lo nuevo del agente de Modelos =====

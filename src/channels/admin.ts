@@ -83,6 +83,7 @@ import type { Contact } from '../crm/contacts.js';
 import { cabecerasDeSiempre, paginaConCsp, soloDesdeAqui } from '../cabeceras.js';
 import { contextoDelPaso, proximoPaso } from '../crm/proximo.js';
 import { guardarFijados, leerFijados, reemplazarEnFijados } from '../crm/fijados.js';
+import { sentimiento } from '../crm/sentimiento.js';
 
 /**
  * Lo que el tablero enseña de cada contacto además de la ficha: temperatura, recap (hechos de la ficha + próxima
@@ -1398,6 +1399,13 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const dias = Math.min(365, Math.max(1, Number(c.req.query('dias') ?? 30) || 30));
     return c.json({ dias, ...porCampana({ desde: Date.now() - dias * 86400_000 }) });
   });
+
+  /**
+   * El sentimiento de la cartera (Analítica › Sentimiento): interés, ánimo, su cruce, las objeciones que se repiten
+   * y cómo cambió por día. Solo cuenta lo que el análisis por turno ya guardó: sin modelo y sin red. Es del que
+   * vende, así que el candado deja leerlo (channels/candado.ts lee todo menos lo avanzado).
+   */
+  app.get('/admin/api/sentimiento', (c) => c.json(sentimiento(Number(c.req.query('dias') ?? 30) || 30)));
 
   /**
    * A quién avisar cuando alguien lleva esperando de más. Es lo único que funciona con el navegador cerrado, y
