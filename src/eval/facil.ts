@@ -155,7 +155,8 @@ const recorrer = (css: string) => {
     const cab = css.slice(i, abre).trim();
     let n = 1, j = abre + 1;
     for (; j < css.length && n; j++) { if (css[j] === '{') n++; else if (css[j] === '}') n--; }
-    if (cab.startsWith('@media') || cab.startsWith('@supports')) recorrer(css.slice(abre + 1, j - 1));
+    // @container también solo envuelve: la conversación de la bandeja se acomoda a su propio ancho.
+    if (cab.startsWith('@media') || cab.startsWith('@supports') || cab.startsWith('@container')) recorrer(css.slice(abre + 1, j - 1));
     // Una animación (el brillo de los esqueletos de Inicio) no es una regla: no pinta nada hasta que una regla de
     // la piel la nombra. Sus «0%» y «to» no son selectores.
     else if (cab.startsWith('@keyframes')) { /* nada que vigilar */ }
