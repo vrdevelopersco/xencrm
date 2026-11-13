@@ -322,8 +322,8 @@ function migrate(d: DatabaseSync) {
   d.exec('CREATE INDEX IF NOT EXISTS users_number ON users(number)');
   const appts = cols('appointments');
   // Recordatorio del día antes: estado (enviado, a_mano, no_hace_falta), cuándo, por qué, y qué respondió el cliente.
-  // La sede de la cita, si el negocio tiene sedes (crm/sedes.ts).
-  for (const [name, ddl] of [['reminder_status', 'TEXT'], ['reminder_at', 'INTEGER'], ['reminder_note', 'TEXT'], ['customer_reply', 'TEXT'], ['sede', 'TEXT']] as const)
+  // La sede de la cita, si el negocio tiene sedes (crm/sedes.ts). link: el enlace de la videollamada.
+  for (const [name, ddl] of [['reminder_status', 'TEXT'], ['reminder_at', 'INTEGER'], ['reminder_note', 'TEXT'], ['customer_reply', 'TEXT'], ['sede', 'TEXT'], ['link', 'TEXT']] as const)
     if (!appts.has(name)) d.exec(`ALTER TABLE appointments ADD COLUMN ${name} ${ddl}`);
   const messages = cols('messages');
   if (!messages.has('author')) d.exec("ALTER TABLE messages ADD COLUMN author TEXT NOT NULL DEFAULT 'bot'");

@@ -1,6 +1,7 @@
 // Flujo determinista de agendamiento: ofrece espacios reales, entiende la elección y confirma.
 // Fechas y horas no se le confían al modelo: "el sábado en la tarde" lo interpretan reglas (crm/when.ts) y, solo si
 // no lo entienden, el modelo traduce la frase a un filtro; los espacios siempre salen de la agenda real.
+import { diaCerrado } from './cierres.js';
 import { V } from '../vocabulario.js';
 import { business } from '../config.js';
 import { pick } from '../agent/prompts.js';
@@ -139,6 +140,9 @@ function whyNoSlots(w: When, continuing: boolean, ag: Agenda = agendaDe()): stri
   const aqui = variasSedes() && ag.sede ? ` en ${ag.sede.nombre}` : '';
   if (w.weekdays && !w.weekdays.some((d) => ag.days.includes(d))) return `${day} no atendemos${aqui}`;
   if (days.length && !days.some((k) => ag.days.includes(weekdayOfKey(k)))) return `${day} no atendemos${aqui}`;
+  // Un día bloqueado en el calendario (un festivo, un viaje): se dice igual que un día que no se atiende, no «ya
+  // no me quedan espacios», que invita a insistir con otra hora del mismo día.
+  if (days.length && days.every((k) => diaCerrado(k, ag.sede?.id))) return `${day} no atendemos${aqui}`;
   if (w.fromMin !== undefined || w.toMin !== undefined) {
     const lo = w.fromMin ?? 0;
     const hi = w.toMin ?? 24 * 60;

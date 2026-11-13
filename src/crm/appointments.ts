@@ -6,6 +6,7 @@ import { addEvent, etapaCon, getContact, rolDe, setStage, updateContact } from '
 import { emitEvent } from './events.js';
 import { busyOverlaps } from './busy.js';
 import { agendaDe, esLaPrimera, sedes, type Agenda } from './sedes.js';
+import { diaCerrado } from './cierres.js';
 
 const cfg = business.appointments;
 const TZ = business.timezone;
@@ -31,6 +32,8 @@ export interface Appointment {
   reminder: { status: 'enviado' | 'a_mano' | 'no_hace_falta'; at: number | null; note: string | null } | null;
   /** Lo que respondió al recordatorio. */
   reply: 'confirmó' | 'no_puede' | null;
+  /** El enlace de la videollamada, si se atiende en línea: lo pega el equipo y sale en el recordatorio. */
+  enlace: string | null;
 }
 
 // ---------- Zona horaria (sin librerías) ----------
@@ -164,6 +167,8 @@ export function availableSlots(opts: { count?: number; weekday?: number; after?:
     if (opts.weekday !== undefined && p.wd !== opts.weekday) continue;
     const key = dayKey(p.y, p.m, p.d);
     if (w && !whenAllowsDay(w, key, p.wd)) continue;
+    // Un día bloqueado en el calendario (crm/cierres.ts) no se ofrece.
+    if (diaCerrado(key, ag.sede?.id)) continue;
     for (const [from, to] of ag.hours) {
       const [fh, fm] = from.split(':').map(Number) as [number, number];
       const [th, tm] = to.split(':').map(Number) as [number, number];
@@ -189,7 +194,68 @@ export function availableSlots(opts: { count?: number; weekday?: number; after?:
 
 export function isSlotFree(startsAt: Date, opts: { includeBusy?: boolean; sede?: string | null } = {}): boolean {
   const ag = agendaDe(opts.sede);
+  // El día bloqueado cuenta como el calendario del dueño: lo respeta el asistente, no quien agenda a mano.
+  if (opts.includeBusy !== false) {
+    const p = tzParts(startsAt);
+    if (diaCerrado(dayKey(p.y, p.m, p.d), ag.sede?.id)) return false;
+  }
   return bookedCount(startsAt, ag, opts) < ag.capacity;
+}
+
+/** El cupo de un día, contado en espacios de la agenda (cada espacio vale su capacidad). */
+export interface CupoDia {
+  fecha: string;
+  /** Se atiende ese día (en alguna sede, si se miran todas). */
+  abierto: boolean;
+  /** Bloqueado en el calendario (crm/cierres.ts), en todas las sedes que se miran. */
+  cerrado: boolean;
+  total: number;
+  /** Tomados por citas confirmadas o por el calendario del dueño. */
+  ocupados: number;
+  /** Los que todavía se pueden agendar: libres y con la antelación mínima por delante. */
+  libres: number;
+}
+
+/**
+ * Cuánto cupo tiene cada día entre `desde` y `hasta`, con los mismos espacios que ofrece el asistente
+ * (availableSlots): así «quedan 3» en el calendario es lo mismo que puede ofrecer el asistente. Con varias sedes y
+ * sin escoger una, es la suma de todas.
+ */
+export function cupoPorDia(desde: number, hasta: number, opts: { sede?: string | null; now?: number } = {}): CupoDia[] {
+  const now = opts.now ?? Date.now();
+  const ags = opts.sede || sedes().length < 2 ? [agendaDe(opts.sede)] : sedes().map((s) => agendaDe(s.id));
+  const p0 = tzParts(new Date(desde));
+  const pf = tzParts(new Date(hasta));
+  const ultimo = dayKey(pf.y, pf.m, pf.d);
+  const out: CupoDia[] = [];
+  for (let i = 0; i < 62; i++) {
+    const p = tzParts(new Date(Date.UTC(p0.y, p0.m - 1, p0.d + i, 12, 0)));
+    const key = dayKey(p.y, p.m, p.d);
+    if (key > ultimo) break;
+    const dia: CupoDia = { fecha: key, abierto: false, cerrado: false, total: 0, ocupados: 0, libres: 0 };
+    let bloqueadas = 0, conAgenda = 0;
+    for (const ag of ags) {
+      if (!ag.days.includes(p.wd)) continue;
+      conAgenda++;
+      if (diaCerrado(key, ag.sede?.id)) { bloqueadas++; continue; }
+      dia.abierto = true;
+      const desdeAqui = now + ag.minLeadHours * 3600_000;
+      for (const [from, to] of ag.hours) {
+        const [fh, fm] = from.split(':').map(Number) as [number, number];
+        const [th, tm] = to.split(':').map(Number) as [number, number];
+        const fin = zoned(p.y, p.m, p.d, th, tm).getTime();
+        for (let t = zoned(p.y, p.m, p.d, fh, fm); t.getTime() + ag.durationMin * 60_000 <= fin; t = new Date(t.getTime() + ag.durationMin * 60_000)) {
+          const n = Math.min(ag.capacity, bookedCount(t, ag));
+          dia.total += ag.capacity;
+          dia.ocupados += n;
+          if (t.getTime() >= desdeAqui) dia.libres += ag.capacity - n;
+        }
+      }
+    }
+    dia.cerrado = conAgenda > 0 && bloqueadas === conAgenda;
+    out.push(dia);
+  }
+  return out;
 }
 
 // ---------- Reservas ----------
@@ -210,6 +276,7 @@ function rowToAppointment(r: Record<string, unknown>): Appointment {
       ? { status: r.reminder_status as NonNullable<Appointment['reminder']>['status'], at: r.reminder_at == null ? null : Number(r.reminder_at), note: (r.reminder_note as string | null) ?? null }
       : null,
     reply: (r.customer_reply as Appointment['reply']) ?? null,
+    enlace: (r.link as string | null) || null,
   };
 }
 
@@ -297,7 +364,24 @@ export function listAppointments(opts: { userId?: string; from?: number; to?: nu
   return rows.map(rowToAppointment);
 }
 
-export function updateAppointment(id: number, patch: { status?: Appointment['status']; notes?: string }, by = 'admin'): Appointment | null {
+/**
+ * El enlace de la videollamada, limpio: http(s) y nada más, o '' para quitarlo. null si no sirve.
+ * 🪤 Solo http(s): el enlace sale en el recordatorio al cliente y en el tablero como un <a>, y un «javascript:»
+ * pegado ahí correría con la sesión de quien lo toque.
+ */
+export function enlaceLimpio(v: unknown): string | null {
+  const s = String(v ?? '').trim();
+  if (!s) return '';
+  if (s.length > 500) return null;
+  try {
+    const u = new URL(/^[a-z][a-z0-9+.-]*:/i.test(s) ? s : `https://${s}`);
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function updateAppointment(id: number, patch: { status?: Appointment['status']; notes?: string; enlace?: string }, by = 'admin'): Appointment | null {
   const sets: string[] = [];
   const params: (string | number)[] = [];
   if (patch.status) {
@@ -307,6 +391,10 @@ export function updateAppointment(id: number, patch: { status?: Appointment['sta
   if (patch.notes !== undefined) {
     sets.push('notes = ?');
     params.push(patch.notes);
+  }
+  if (patch.enlace !== undefined) {
+    sets.push('link = ?');
+    params.push(patch.enlace);
   }
   if (sets.length) {
     params.push(id);

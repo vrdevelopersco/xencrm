@@ -2138,6 +2138,173 @@ dialog.perdida input{width:100%}
 :root[data-piel="xen"] #cal-list .appt.completada{border-left-color:var(--fx-verde)}
 :root[data-piel="xen"] #cal-list .appt.no_asistio{border-left-color:var(--fx-rojo)}
 :root[data-piel="xen"] #cal-list .appt.cancelada{border-left:1px dashed var(--fx-t4)}
+/* ---------- Calendario más completo (2026-11-13): timeline, anuncios, vista rápida y el panel «Hoy» ----------
+   Todo sale de los tokens --fx-*. Los tonos de los anuncios dicen qué hacer, no qué son: ámbar = hay algo que
+   atender, rojo = lleno, gris = bloqueado, violeta = festivo (un dato del calendario), cielo = viene de Servicio. */
+:root[data-piel="xen"] #view-calendar{--cal-raya-hora:var(--fx-borde);--cal-raya-sub:var(--fx-borde-2)}
+/* La columna: una raya por hora y una más tenue cada media hora (cada cuarto, si las citas son cortas). */
+:root[data-piel="xen"] #view-calendar .cal-col{background-image:linear-gradient(to bottom,var(--cal-raya-hora) 1px,transparent 1px),linear-gradient(to bottom,var(--cal-raya-sub) 1px,transparent 1px);background-size:100% var(--hour-px),100% var(--sub-px,var(--hour-px))}
+/* La cabecera de cada día es un botón: abre la vista del día. Debajo del número, cuánto del cupo está tomado. */
+:root[data-piel="xen"] #view-calendar .cal-head button.d{border:0;background:none;font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0;border-radius:var(--fx-r-md);transition:background var(--fx-t-rapido)}
+:root[data-piel="xen"] #view-calendar .cal-head button.d:hover{background:var(--fx-hover)}
+:root[data-piel="xen"] #view-calendar button:focus-visible,:root[data-piel="xen"] #view-calendar a:focus-visible,:root[data-piel="xen"] #view-calendar summary:focus-visible{outline:2px solid var(--fx-acento);outline-offset:2px}
+:root[data-piel="xen"] .cal-cupo{display:block;width:36px;height:4px;margin:5px auto 0;border-radius:var(--fx-r-pill);background:var(--fx-borde-2);overflow:hidden}
+:root[data-piel="xen"] .cal-cupo i{display:block;height:100%;border-radius:inherit;background:var(--fx-indigo)}
+:root[data-piel="xen"] .cal-cupo.casi i{background:var(--fx-ambar)}
+:root[data-piel="xen"] .cal-cupo.lleno i{background:var(--fx-rojo)}
+/* Los avisos van en una fila propia de la cabecera (misma rejilla, así quedan alineados con su día). */
+:root[data-piel="xen"] #view-calendar .cal-head .av{display:flex;flex-direction:column;gap:3px;min-width:0;padding:4px 3px 6px;border-top:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] #view-calendar .cal-head .av-l{align-items:flex-end;justify-content:center;padding-right:6px;font-size:11px;font-weight:600;color:var(--fx-t3)}
+:root[data-piel="xen"] .cal-aviso{display:flex;align-items:center;gap:4px;min-width:0;max-width:100%;min-height:24px;padding:2px 6px;border:1px solid var(--tono-b,transparent);border-radius:var(--fx-r-md);background:var(--tono-s);color:var(--tono-t);font:600 11.5px/1.2 var(--fx-letra);text-align:left;cursor:pointer}
+:root[data-piel="xen"] .cal-aviso span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] .cal-aviso .fx-svg{width:13px;height:13px}
+:root[data-piel="xen"] .cal-aviso:hover{filter:brightness(.97)}
+:root[data-piel="xen"] .ta-aviso{--tono-s:var(--fx-ambar-s);--tono-t:var(--fx-ambar-t);--tono-b:var(--fx-ambar-borde)}
+:root[data-piel="xen"] .ta-lleno{--tono-s:var(--fx-rojo-s);--tono-t:var(--fx-rojo-t)}
+:root[data-piel="xen"] .ta-cerrado{--tono-s:var(--fx-panel-2);--tono-t:var(--fx-t1);--tono-b:var(--fx-borde)}
+:root[data-piel="xen"] .ta-festivo{--tono-s:var(--fx-violeta-s);--tono-t:var(--fx-violeta-t)}
+:root[data-piel="xen"] .ta-servicio{--tono-s:var(--fx-cielo-s);--tono-t:var(--fx-cielo-t)}
+:root[data-piel="xen"] .ta-mas{--tono-s:var(--fx-hover);--tono-t:var(--fx-t2);justify-content:center}
+/* Un día bloqueado: la trama de cerrado y, arriba, la palabra (el color nunca es la única señal). */
+:root[data-piel="xen"] #view-calendar .cal-col .closed.bloqueado{display:flex;justify-content:center;padding-top:10px;background:repeating-linear-gradient(135deg,var(--fx-panel-2) 0 6px,var(--fx-panel) 6px 12px)}
+:root[data-piel="xen"] #view-calendar .cal-col .closed.bloqueado span{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 9px;border-radius:var(--fx-r-pill);background:var(--fx-panel);border:1px solid var(--fx-borde);color:var(--fx-t1);font-size:11.5px;font-weight:600}
+:root[data-piel="xen"] #view-calendar .cal-col .closed.bloqueado .fx-svg{width:12px;height:12px}
+/* La cita es un botón: nombre, hora y empresa, y una línea de datos (canal, recordatorio, enlace, valor). */
+:root[data-piel="xen"] #view-calendar .cal-ev{display:flex;flex-direction:column;align-items:stretch;gap:1px;font:inherit;text-align:left;cursor:pointer;appearance:none}
+:root[data-piel="xen"] #view-calendar .cal-ev b{font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] #view-calendar .cal-ev .ev-l2{display:block;font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] #view-calendar .cal-ev .ev-datos{display:flex;align-items:center;gap:5px;min-width:0;margin-top:auto;overflow:hidden}
+:root[data-piel="xen"] #view-calendar .ev-ic{display:inline-flex;flex:none;width:14px;height:14px}
+:root[data-piel="xen"] #view-calendar .ev-ic .fx-svg{width:14px;height:14px}
+:root[data-piel="xen"] #view-calendar .ev-ic.ok{color:var(--fx-verde-t)}
+:root[data-piel="xen"] #view-calendar .ev-ic.mal{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] #view-calendar .ev-ic.aviso{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] #view-calendar .cal-ev .ev-valor{display:block;margin-left:auto;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+:root[data-piel="xen"] #view-calendar .cal-ev.corta .ev-datos{display:none}
+:root[data-piel="xen"] #view-calendar .cal-ev.corta .ev-l2{display:none}
+:root[data-piel="xen"] #view-calendar .cal-ev.estrecha .ev-datos{display:none}
+:root[data-piel="xen"] #view-calendar .cal-head,:root[data-piel="xen"] #view-calendar .cal-body{grid-template-columns:var(--cal-cols,56px repeat(7,minmax(84px,1fr)))}
+:root[data-piel="xen"] #view-calendar .cal-ev:focus-visible{z-index:2}
+
+/* El lado. En escritorio se desplaza por su cuenta: la semana se queda quieta mientras se lee el panel. */
+:root[data-piel="xen"] .cal-lado{display:flex;flex-direction:column;gap:16px;min-width:0}
+@media (min-width:901px){:root[data-piel="xen"] #view-calendar .cal{grid-template-rows:minmax(0,1fr)}:root[data-piel="xen"] .cal-lado{min-height:0;overflow:auto;padding:0 2px 2px 0}}
+:root[data-piel="xen"] #view-calendar .cal-proxima,:root[data-piel="xen"] #view-calendar .cal-hoy{display:flex;flex-direction:column;gap:4px;padding:16px 18px}
+:root[data-piel="xen"] .cal-proxima>p,:root[data-piel="xen"] .cal-hoy>p{margin:0}
+/* «Próxima»: lo único que levanta la voz en la pantalla. El índigo de las citas y la cuenta regresiva en grande. */
+:root[data-piel="xen"] #view-calendar .cal-proxima{background:var(--fx-indigo-s);border-color:color-mix(in srgb,var(--fx-indigo) 22%,var(--fx-borde))}
+:root[data-piel="xen"] .hp-k{margin:0;font:700 12px/1.2 var(--fx-letra);letter-spacing:.06em;text-transform:uppercase;color:var(--fx-indigo-t)}
+:root[data-piel="xen"] .cal-proxima .hp-cuenta{display:flex;align-items:center;gap:8px;font:700 26px/1.15 var(--fx-display);color:var(--fx-t0);font-variant-numeric:tabular-nums;margin:2px 0 6px}
+:root[data-piel="xen"] .cal-proxima.pronto .hp-cuenta::before{content:"";flex:none;width:9px;height:9px;border-radius:50%;background:var(--fx-indigo);animation:cal-latido 1.6s ease-in-out infinite}
+@keyframes cal-latido{50%{opacity:.35;transform:scale(.8)}}
+@media (prefers-reduced-motion:reduce){:root[data-piel="xen"] .cal-proxima.pronto .hp-cuenta::before{animation:none}}
+:root[data-piel="xen"] .hp-quien{display:flex;flex-direction:column;gap:1px;margin:0;color:var(--fx-t0)}
+:root[data-piel="xen"] .hp-quien b{font-size:15px}
+:root[data-piel="xen"] .hp-quien span{font-size:13px;color:var(--fx-t1)}
+:root[data-piel="xen"] .cal-proxima .hp-cuando{font-size:13px;line-height:1.55;color:var(--fx-t1);margin:4px 0 0}
+:root[data-piel="xen"] .hp-cuando .fx-svg{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:4px}
+:root[data-piel="xen"] .cal-proxima .hp-ojo{display:flex;align-items:flex-start;gap:6px;margin:8px 0 0;padding:6px 8px;border-radius:var(--fx-r-md);background:var(--fx-ambar-s);color:var(--fx-ambar-t);font-size:12.5px;line-height:1.4}
+:root[data-piel="xen"] .hp-ojo .fx-svg{width:14px;height:14px;margin-top:1px}
+:root[data-piel="xen"] .hp-acc{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+:root[data-piel="xen"] .hp-acc .btn .fx-svg,:root[data-piel="xen"] .qv-enlace .btn .fx-svg,:root[data-piel="xen"] .qd-bloquear summary .fx-svg,:root[data-piel="xen"] .acts .btn .fx-svg,:root[data-piel="xen"] [data-agregar-enlace] .fx-svg{width:16px;height:16px}
+:root[data-piel="xen"] .cal-proxima .hp-nada{font:600 15px/1.3 var(--fx-letra);color:var(--fx-t0);margin:4px 0 0}
+:root[data-piel="xen"] #view-calendar .cal-proxima>.small{color:var(--fx-t1)}
+:root[data-piel="xen"] #view-calendar .cal-hoy h3{margin:14px 0 2px;font:700 12px/1.2 var(--fx-letra);letter-spacing:.06em;text-transform:uppercase;color:var(--fx-t2)}
+:root[data-piel="xen"] #view-calendar .cal-hoy h3:first-child{margin-top:0}
+:root[data-piel="xen"] #view-calendar .cal-hoy h3 .muted{font-weight:500;letter-spacing:0;text-transform:none}
+:root[data-piel="xen"] .hp-lista,:root[data-piel="xen"] .hp-cupos,:root[data-piel="xen"] .qd-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+:root[data-piel="xen"] .hp-fila,:root[data-piel="xen"] .qd-cita,:root[data-piel="xen"] .hp-cupo{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:6px 8px;border:0;border-radius:var(--fx-r-md);background:none;font:inherit;font-size:14px;color:var(--fx-t0);text-align:left;cursor:pointer;transition:background var(--fx-t-rapido)}
+:root[data-piel="xen"] .hp-fila:hover,:root[data-piel="xen"] .qd-cita:hover,:root[data-piel="xen"] .hp-cupo:hover{background:var(--fx-hover)}
+:root[data-piel="xen"] .hp-fila .t,:root[data-piel="xen"] .qd-cita .t{min-width:68px;font-size:13px;color:var(--fx-t2);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .hp-fila .q{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-piel="xen"] .hp-fila.cancelada .q,:root[data-piel="xen"] .qd-cita.cancelada span:nth-child(2){text-decoration:line-through;color:var(--fx-t3)}
+:root[data-piel="xen"] .hp-rec{display:flex;flex-direction:column;gap:8px;padding:8px 10px;border:1px solid var(--fx-ambar-borde);border-radius:var(--fx-r-md);background:var(--fx-ambar-s);color:var(--fx-ambar-t);font-size:13px}
+:root[data-piel="xen"] .hp-rec b{color:var(--fx-t0)}
+:root[data-piel="xen"] .hp-rec .hp-acc{margin-top:0}
+:root[data-piel="xen"] .hp-mini{padding:3px 8px;font-size:13px;color:var(--fx-t1)}
+:root[data-piel="xen"] .hp-mini b{font-weight:600;color:var(--fx-t0)}
+:root[data-piel="xen"] .hp-mini.ok{color:var(--fx-verde-t)}
+:root[data-piel="xen"] .hp-mini.mal{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .hp-cupo{display:grid;grid-template-columns:minmax(0,1fr) 56px 88px;font-size:13px;color:var(--fx-t1)}
+:root[data-piel="xen"] .hp-cupo .cal-cupo{width:56px;margin:0}
+:root[data-piel="xen"] .hp-cupo .n{text-align:right;font-weight:600;color:var(--fx-t0);font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .hp-fest{margin-left:4px;padding:1px 6px;border-radius:var(--fx-r-pill);background:var(--fx-violeta-s);color:var(--fx-violeta-t);font-size:11px;font-weight:600}
+:root[data-piel="xen"] #view-calendar .cal-agendar label input{width:100%}
+
+/* La vista rápida (una cita) y la vista del día: el mismo globo, junto a lo que se tocó; en el celular, una hoja abajo. */
+:root[data-piel="xen"] #view-calendar .cal-pop{width:360px;max-height:calc(100vh - 24px);overflow:auto;padding:16px;gap:12px}
+:root[data-piel="xen"] #view-calendar .cal-pop.hoja{left:0;right:0;top:auto;bottom:0;width:auto;max-width:none;max-height:85vh;border-radius:var(--fx-r-xl) var(--fx-r-xl) 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+:root[data-piel="xen"] .qv-cab{display:flex;align-items:flex-start;gap:10px}
+:root[data-piel="xen"] .qv-cab>div{flex:1;min-width:0}
+:root[data-piel="xen"] .qv-cab h2{margin:0;font:700 17px/1.25 var(--fx-display);color:var(--fx-t0);overflow-wrap:anywhere}
+:root[data-piel="xen"] .qv-cab h2:focus{outline:none}
+:root[data-piel="xen"] .qv-cab .small{color:var(--fx-t2)}
+:root[data-piel="xen"] .qv-av{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:50%;background:var(--fx-indigo-s);color:var(--fx-indigo-t);font-weight:700}
+:root[data-piel="xen"] #view-calendar .qv-x{flex:none;min-width:36px;padding:0;margin:-4px -6px 0 0}
+:root[data-piel="xen"] .qv-x .fx-svg{width:18px;height:18px}
+:root[data-piel="xen"] .qv-datos{display:grid;grid-template-columns:92px minmax(0,1fr);gap:7px 12px;margin:0;font-size:13.5px;line-height:1.45}
+:root[data-piel="xen"] .qv-datos dt{color:var(--fx-t2)}
+:root[data-piel="xen"] .qv-datos dd{margin:0;color:var(--fx-t0);overflow-wrap:anywhere}
+:root[data-piel="xen"] .qv-datos dd .btn{margin-top:6px}
+:root[data-piel="xen"] .qv-datos dd.ta-ok{color:var(--fx-verde-t)}
+:root[data-piel="xen"] .qv-datos dd.ta-mal{color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .qv-datos dd.ta-aviso{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .num{font-variant-numeric:tabular-nums}
+:root[data-piel="xen"] .qv-enlace,:root[data-piel="xen"] #view-calendar .cal-pop .acts{display:flex;flex-wrap:wrap;gap:8px}
+:root[data-piel="xen"] .qv-campo{display:flex;flex-direction:column;gap:4px}
+:root[data-piel="xen"] .qv-campo[hidden]{display:none}
+:root[data-piel="xen"] .qv-campo label,:root[data-piel="xen"] .qd-bloquear label{font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .qv-campo .small{color:var(--fx-t2)}
+:root[data-piel="xen"] .qv-fila{display:flex;gap:8px}
+:root[data-piel="xen"] .qv-fila input{flex:1;min-width:0;min-height:40px}
+:root[data-piel="xen"] .qv-campo input[aria-invalid="true"]{border-color:var(--fx-rojo)}
+:root[data-piel="xen"] .qv-campo input[aria-invalid="true"]~*,:root[data-piel="xen"] .qv-campo input[aria-invalid="true"]+button{color:inherit}
+:root[data-piel="xen"] .qv-confirma{flex-basis:100%;margin:0;font-size:13.5px;line-height:1.45;color:var(--fx-t0)}
+:root[data-piel="xen"] .cal-aviso-fila{display:flex;align-items:flex-start;gap:8px;width:100%;padding:8px 10px;border:1px solid var(--tono-b,transparent);border-radius:var(--fx-r-md);background:var(--tono-s);color:var(--tono-t);font:13px/1.4 var(--fx-letra);text-align:left}
+:root[data-piel="xen"] .cal-aviso-fila>span{display:flex;flex-direction:column;gap:2px;min-width:0}
+:root[data-piel="xen"] .cal-aviso-fila b{font-weight:700}
+:root[data-piel="xen"] .cal-aviso-fila .fx-svg{width:16px;height:16px;margin-top:1px}
+:root[data-piel="xen"] button.cal-aviso-fila{cursor:pointer}
+:root[data-piel="xen"] .qd-avisos{display:flex;flex-direction:column;gap:6px}
+:root[data-piel="xen"] .qd-cupo{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--fx-t1)}
+:root[data-piel="xen"] .qd-cupo .cal-cupo{flex:none;width:72px;margin:0}
+:root[data-piel="xen"] .qd-bloquear{display:contents}
+:root[data-piel="xen"] .qd-bloquear summary{list-style:none;cursor:pointer}
+:root[data-piel="xen"] .qd-bloquear summary::-webkit-details-marker{display:none}
+:root[data-piel="xen"] .qd-bloquear[open]{display:flex;flex-direction:column;gap:6px;flex-basis:100%;padding:10px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-md)}
+:root[data-piel="xen"] .qd-bloquear[open] summary{align-self:flex-start}
+:root[data-piel="xen"] .qd-bloquear p{margin:0}
+
+/* Agenda: la hora con su duración, quién (abre la vista rápida) y sus datos; los anuncios del día encima. */
+:root[data-piel="xen"] #cal-list .appt .t{display:flex;flex-direction:column;line-height:1.2}
+:root[data-piel="xen"] #cal-list .appt .t small{font-size:11.5px;font-weight:500;color:var(--fx-t3)}
+:root[data-piel="xen"] .appt-quien{padding:0;border:0;background:none;font:inherit;color:var(--fx-t0);text-align:left;cursor:pointer}
+:root[data-piel="xen"] .appt-quien:hover b{text-decoration:underline}
+:root[data-piel="xen"] .appt-datos{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:2px;color:var(--fx-t2)}
+:root[data-piel="xen"] .appt-datos .fx-svg{display:inline-block;width:14px;height:14px}
+:root[data-piel="xen"] #cal-list .day .cal-aviso-fila{margin-bottom:6px}
+:root[data-piel="xen"] .cal-vacio{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:24px;font-size:14px;color:var(--fx-t2)}
+:root[data-piel="xen"] .cal-vacio b{font-size:15px;color:var(--fx-t0)}
+:root[data-piel="xen"] .cal-vacio .btn{margin-top:4px}
+
+/* El mes: el número del día abre su vista; los avisos son íconos al lado (su nombre va en el título y en la vista). */
+:root[data-piel="xen"] #view-calendar .mes .dia-cab{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:26px}
+:root[data-piel="xen"] #view-calendar .mes .dia .n{min-width:28px;min-height:26px;padding:0 6px;border:0;border-radius:var(--fx-r-pill);background:none;font:inherit;font-size:12.5px;font-weight:700;color:inherit;cursor:pointer}
+:root[data-piel="xen"] #view-calendar .mes .dia .n:hover{background:var(--fx-hover)}
+:root[data-piel="xen"] .dia-avisos{display:flex;gap:2px;min-width:0;overflow:hidden}
+:root[data-piel="xen"] .dia-avisos .cal-aviso{min-height:22px;padding:2px 4px}
+:root[data-piel="xen"] #view-calendar .mes .mas{padding:0;border:0;background:none;font:inherit;font-size:11px;color:var(--fx-t2);text-align:left;cursor:pointer}
+:root[data-piel="xen"] #view-calendar .mes .mas:hover{text-decoration:underline}
+
+/* En el celular: «Próxima» encima del calendario, y hoy, mañana, recordatorios, cupo y agendar debajo. */
+@media (max-width:900px){
+  :root[data-piel="xen"] .cal-lado{display:contents}
+  :root[data-piel="xen"] #view-calendar .cal-proxima{order:-1}
+  :root[data-piel="xen"] #view-calendar #cal-main{order:0}
+  :root[data-piel="xen"] #view-calendar .cal-hoy{order:1}
+  :root[data-piel="xen"] #view-calendar .cal-agendar{order:2}
+  :root[data-piel="xen"] #view-calendar .cal-head .av-l{font-size:0;padding:0}
+}
 :root[data-piel="xen"] #cal-list .appt .t{color:var(--fx-indigo-t)}
 :root[data-piel="xen"] .cal>.panel{padding:20px;gap:12px;align-self:start}
 :root[data-piel="xen"] .cal>.panel>b{font-size:16px;font-weight:700;color:var(--fx-t0)}
@@ -4122,18 +4289,25 @@ dialog.perdida input{width:100%}
           <div id="cal-month" hidden></div>
           <div id="cal-list" hidden><div class="empty" data-voc="Sin {citas} {g:próximas}.">Sin citas próximas.</div></div>
         </div>
-        <div class="panel">
-          <b data-voc="Agendar {una} {cita}">Agendar cita</b>
-          <span class="small muted">Haz clic en un hueco libre de la semana o elige la fecha y hora.</span>
-          <label class="small muted">Contacto<select id="book-contact"></select></label>
-          <label class="small muted" id="book-sede-l" hidden>Sede<select id="book-sede"></select></label>
-          <label class="small muted">Fecha y hora<input type="datetime-local" id="book-when" step="900"></label>
-          <input type="text" id="book-notes" placeholder="Nota (opcional)">
-          <button class="btn primary" id="book-btn">Agendar</button>
-          <span class="small" id="book-msg"></span>
-        </div>
+        <!-- El lado: la próxima cita con su cuenta regresiva, hoy y mañana, recordatorios y cupo, y agendar a mano.
+             En el celular «Próxima» sube encima del calendario y lo demás queda debajo (display:contents). -->
+        <aside class="cal-lado" aria-label="Hoy en la agenda">
+          <section class="panel cal-proxima" id="cal-proxima"></section>
+          <section class="panel cal-hoy" id="cal-hoy"></section>
+          <div class="panel cal-agendar">
+            <b data-voc="Agendar {una} {cita}">Agendar cita</b>
+            <span class="small muted">Haz clic en un hueco libre de la semana o elige la fecha y hora.</span>
+            <label class="small muted">Contacto<select id="book-contact"></select></label>
+            <label class="small muted" id="book-sede-l" hidden>Sede<select id="book-sede"></select></label>
+            <label class="small muted">Fecha y hora<input type="datetime-local" id="book-when" step="900"></label>
+            <label class="small muted">Nota (opcional)<input type="text" id="book-notes" autocomplete="off"></label>
+            <button class="btn primary" id="book-btn">Agendar</button>
+            <span class="small" id="book-msg" role="status"></span>
+          </div>
+        </aside>
       </div>
-      <div class="cal-pop" id="cal-pop" hidden></div>
+      <div class="cal-pop" id="cal-pop" role="dialog" aria-modal="false" hidden></div>
+      <div class="sr-only" id="cal-anuncio" role="status"></div>
     </section>
     <!-- Análisis -->
     <section class="view" id="view-analysis">

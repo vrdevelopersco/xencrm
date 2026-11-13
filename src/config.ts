@@ -204,6 +204,11 @@ export const BusinessConfigSchema = z.object({
       /** Pedir un número para confirmar (si el canal no lo trae, como el chat web) y ofrecer dejar el correo. */
       askPhone: z.boolean().default(true),
       askEmail: z.boolean().default(true),
+      /**
+       * De qué país se anuncian los festivos en el calendario («CO»; '' para ninguno). Sin decirlo, se deduce de la
+       * zona horaria. Anunciar no cierra: el día se bloquea a mano (crm/festivos.ts, crm/cierres.ts).
+       */
+      festivos: z.string().optional(),
       /** Recordatorio antes de la cita, por el canal del cliente; lo que no se puede enviar solo queda en Hoy para hacerlo a mano. */
       reminder: z
         .object({

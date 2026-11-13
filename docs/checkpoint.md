@@ -3,6 +3,26 @@
 Dónde quedó el trabajo, para retomarlo sin releer la conversación. Se reescribe al cerrar cada sesión; el detalle de
 cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 
+## 2026-11-13 · El calendario más completo (sin commit todavía)
+
+**Las cuatro ideas del calendario, hechas** (detalle y porqués en `arreglos.md` › 2026-11-13; cómo se usa en
+`guia-del-tablero.md` › Citas): timeline en franjas de media hora con las citas que se cruzan en carriles; tarjetas
+con canal, recordatorio, enlace y valor, y una vista rápida con el **enlace de la videollamada**; el panel «Hoy»
+(próxima con cuenta regresiva, hoy, mañana, recordatorios y cupo); y los anuncios: **festivos de Colombia**
+calculados, **días bloqueados** (el asistente no los ofrece), mantenimientos y días casi llenos o llenos. Módulos
+nuevos: `crm/festivos.ts`, `crm/cierres.ts`, `crm/agenda-vista.ts`; prueba nueva `pnpm test:agenda`.
+**Batería: 3610 bien, 0 fallas.** Visto en Chrome (Playwright, `channel: 'chrome'`) a 1440 y 390, claro y oscuro.
+
+**Supuestos tomados (para revisar con Luis):**
+- Un festivo **no cierra** la agenda solo: lo anuncia y se bloquea con un clic. Si se prefiere que los festivos
+  cierren solos, es una opción más en `appointments` (no está hecha).
+- Bloquear un día es de quien administra (el candado no lo deja); poner el enlace de la videollamada es de todos.
+- «Casi lleno» desde el 80 % (`agenda.casiLlenoPct`) y cinco días de cupo en el panel (`agenda.diasCupo`).
+
+**Para retomar:** hacer el commit (con el autor noreply) y `git push`; luego poner el hash en la entrada de
+`arreglos.md`. Siguen los pendientes del 12-nov (`PROSPECTOS_CLIENTE`, dominio de `pnpm paquete`, el caso con fecha
+de `test:scenarios`).
+
 ## 2026-11-12, al cerrar · XENCRM público
 
 **El repositorio es `vrdevelopersco/xencrm` (público)**, con el historial reescrito; su estado y cómo se publicó están

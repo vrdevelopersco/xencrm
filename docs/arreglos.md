@@ -7,6 +7,42 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-11-13
+
+### El calendario más completo: timeline, tarjetas, panel «Hoy» y anuncios
+Las cuatro ideas que quedaron pendientes, juntas (detalle en `guia-del-tablero.md` › Citas y `arquitectura.md` › Citas):
+- **Timeline**: rayas cada media hora (cada cuarto con citas cortas), la hora de 64 px y cada cita con su duración
+  real. Las que se cruzan van **una al lado de la otra** en carriles (`carriles()` en `admin.js`), no encimadas.
+  🪤 Con siete columnas iguales y capacidad 2, cada carril medía 48 px y se leía «Val…»: los días que no se atienden
+  y no tienen nada (el fin de semana, casi siempre) se angostan, y en un carril estrecho va el primer nombre y la hora.
+- **Tarjetas y vista rápida**: la cita es un botón (antes un `div`) con canal, recordatorio, enlace y valor; al tocarla
+  abre la vista rápida: cuándo, qué, dónde, trato (etapa, valor, puntaje), recordatorio en palabras, nota, el
+  **enlace de la videollamada** (abrir, copiar, cambiar) y Asistió · No asistió · Cancelar. Cancelar se confirma
+  diciendo cuál y que XENCRM no le avisa. Escape cierra y el foco vuelve a la cita; en el celular es una hoja abajo.
+  🪤 Un botón que se reemplaza al tocarlo («Cancelar…» → la confirmación) ya no está en la página cuando el clic llega
+  al documento, así que tampoco está «dentro»: la vista se cerraba justo al pedir la confirmación (`isConnected`).
+- **Panel «Hoy»**: la próxima con cuenta regresiva (se repinta cada 30 s, sin pedir nada) y un latido cuando falta
+  menos de una hora; hoy y mañana; recordatorios (los de a mano con «Abrir WhatsApp» y «Ya se lo recordé») y el cupo
+  de los próximos días (regla `agenda.diasCupo`). En el celular «Próxima» sube encima del calendario.
+- **Anuncios**: mantenimientos programados (Servicio), **festivos de Colombia** calculados (Emiliani y Semana Santa,
+  `crm/festivos.ts`), **días bloqueados** (`crm/cierres.ts`, tabla `agenda_cierres`) y días **casi llenos** (regla
+  `agenda.casiLlenoPct`, 80 %) o llenos. Van en una fila «Avisos» de la semana, en el mes, en la Agenda y en la vista
+  del día, que se abre tocando la cabecera del día y tiene «Bloquear el día» / «Abrir el día».
+  🪤 Un festivo NO cierra la agenda solo: lo anuncia («la agenda sigue abierta») y se bloquea con un clic. Un festivo
+  bloqueado es un anuncio, no dos. 🪤 El asistente no ofrece un día bloqueado (`availableSlots`, `isSlotFree`, y
+  «ese día no atendemos»); desde el tablero se puede agendar igual, como encima del calendario del dueño. Bloquear
+  es de quien administra: el candado no lo deja (cambia lo que se ofrece a todos).
+- **El enlace de la videollamada** va con la cita (`appointments.link`), en el recordatorio (en su propio renglón:
+  pegado a un punto, algunos teléfonos no lo abren) y en el `.ics`. 🪤 Solo http(s): sale como `<a>` en el tablero y
+  un `javascript:` pegado ahí correría con la sesión de quien lo toque.
+
+Rutas nuevas: `GET /admin/api/agenda` (cupo y anuncios de un rango, hasta 62 días), `GET /admin/api/agenda/hoy`,
+`POST /admin/api/agenda/cierres` y `DELETE /admin/api/agenda/cierres/:fecha`; `GET /appointments` trae cada cita con
+sus datos (`citaConDatos`) y el PATCH acepta `enlace`. 🪤 Los estilos nuevos llevan el prefijo de la piel
+(`:root[data-piel="xen"]`): una prueba de `facil.ts` vigila que nada del bloque se salga. Visto en Chrome a 1440 y a
+390, en claro y oscuro: contraste de 5,1:1 a 16:1, teclado y foco, bloquear y abrir un día, el enlace mal pegado
+(el error junto al campo, lo escrito se queda). Pruebas: `pnpm test:agenda` (73 comprobaciones).
+
 ## 2026-11-12
 
 ### Publicado como `vrdevelopersco/xencrm`, sin marca de terceros

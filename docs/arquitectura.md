@@ -403,7 +403,19 @@ no entra a los otros ni sabiéndose la dirección.
     el alta de un cliente (la consola y `pnpm cliente nuevo`), `pnpm onboard` y El negocio, que comparten el cálculo
     del id: «Sede Norte» da `norte` y «DUNOR Centro», `centro`.
 - **Calendario**: iCalendar estándar. Suscripción secreta, página por cita con firma HMAC y calendarios del dueño
-  que bloquean la agenda.
+  que bloquean la agenda. El enlace de la videollamada (`appointments.link`, solo http(s): `enlaceLimpio`) va en el
+  recordatorio y en el `.ics` (`URL` y descripción).
+- **Días bloqueados** (`crm/cierres.ts`, tabla `agenda_cierres`: fecha civil del negocio y sede, '' = todas):
+  `availableSlots` los salta e `isSlotFree` los cuenta como ocupados para el asistente; con `includeBusy: false`
+  (agendar desde el tablero) no. `whyNoSlots` dice «ese día no atendemos». Bloquear no cancela lo agendado.
+- **Festivos** (`crm/festivos.ts`): los de Colombia, calculados (Pascua por el algoritmo gregoriano y la Ley
+  Emiliani). Solo se anuncian; el país sale de `appointments.festivos` o de la zona horaria.
+- **Lo que ve el calendario** (`crm/agenda-vista.ts`): `citaConDatos` (canal, etapa, valor, empresa, cuándo sale el
+  recordatorio), `cupoPorDia` (en `appointments.ts`: los mismos espacios que ofrece el asistente, por la capacidad;
+  con varias sedes y ninguna escogida, la suma), `vistaDeAgenda` (cupo y anuncios de un rango: festivos, cierres,
+  mantenimientos, casi lleno desde `agenda.casiLlenoPct`, lleno) y `panelHoy` (próxima, hoy, mañana, recordatorios y
+  el cupo de `agenda.diasCupo` días). Rutas: `/admin/api/agenda`, `/agenda/hoy` y `/agenda/cierres` (esta última,
+  fuera de lo que el candado deja cambiar).
 
 ## Turnos
 
@@ -453,6 +465,7 @@ no con `npx tsx src/eval/x.ts` (esa usaría la configuración de la raíz).
 | `pnpm test` | todas las de abajo, en orden | no |
 | `pnpm test:when` | fechas, franjas y muletillas | no |
 | `pnpm test:calendar` | iCalendar, suscripción y calendarios que bloquean | no |
+| `pnpm test:agenda` | festivos, días bloqueados, cupo, anuncios, panel «Hoy», enlace de la videollamada | no |
 | `pnpm test:signals` | teléfono, correo, presupuesto, cortesías | no |
 | `pnpm test:gate` | cobertura de las reglas del clasificador | no |
 | `pnpm test:booking` | el flujo de citas con muletillas; falla si llamó al modelo | no |

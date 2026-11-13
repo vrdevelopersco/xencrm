@@ -72,7 +72,10 @@ export function reminderText(appt: Appointment, contact: Contact | null, now = D
     : esMismoDia(tzParts(new Date(now + 24 * HOUR)))
       ? `de mañana, ${formatSlot(new Date(appt.startsAt))}`
       : `del ${formatSlot(new Date(appt.startsAt))}`;
-  return `Hola${first ? `, ${first}` : ''} 🙂 Te recordamos tu ${appt.service} ${when}${appt.location ? `, en ${appt.location}` : ''}. ¿Nos confirmas que vienes? Si necesitas cambiarla, me dices por aquí.`;
+  // El enlace de la videollamada va en su propio renglón: pegado al final de una frase, el punto se le une al tocarlo
+  // en algunos teléfonos y el enlace no abre.
+  const entrar = appt.enlace ? `\nPara entrar: ${appt.enlace}\n` : ' ';
+  return `Hola${first ? `, ${first}` : ''} 🙂 Te recordamos tu ${appt.service} ${when}${appt.location ? `, en ${appt.location}` : ''}.${entrar}¿Nos confirmas que vienes? Si necesitas cambiarla, me dices por aquí.`;
 }
 
 /** Por qué no se puede enviar solo; null si se puede. */

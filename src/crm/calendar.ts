@@ -68,15 +68,17 @@ function vevent(a: Appointment, audience: 'team' | 'customer'): string[] {
       c?.summary ?? '',
       ...data.map(([k, v]) => `${k.replace(/_/g, ' ')}: ${String(v)}`),
       a.notes,
+      a.enlace ? `Videollamada: ${a.enlace}` : '',
       env.publicUrl ? `Conversación: ${env.publicUrl}/admin#c=${encodeURIComponent(a.userId)}` : '',
     ].filter(Boolean);
     lines.push(`SUMMARY:${escapeText(`${who} · ${a.service}`)}`);
     if (details.length) lines.push(`DESCRIPTION:${escapeText(details.join('\n'))}`);
   } else {
     lines.push(`SUMMARY:${escapeText(customerTitle(a))}`);
-    lines.push(`DESCRIPTION:${escapeText(`Cualquier cambio: ${business.business.humanContact}`)}`);
+    lines.push(`DESCRIPTION:${escapeText(`${a.enlace ? `Para entrar: ${a.enlace}\n` : ''}Cualquier cambio: ${business.business.humanContact}`)}`);
   }
   if (a.location) lines.push(`LOCATION:${escapeText(a.location)}`);
+  if (a.enlace) lines.push(`URL:${a.enlace}`);
   lines.push(`STATUS:${a.status === 'cancelada' ? 'CANCELLED' : 'CONFIRMED'}`, `SEQUENCE:${a.status === 'confirmada' ? 0 : 1}`);
   if (audience === 'customer' && a.status === 'confirmada') {
     for (const trigger of ['-P1D', '-PT2H']) {

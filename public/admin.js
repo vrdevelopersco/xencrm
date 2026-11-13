@@ -2556,14 +2556,30 @@
   // ---------- calendario (vista semanal tipo agenda) ----------
   // En el celular la semana no cabe (siete columnas): se abre en Agenda, que es una lista. Lo que elijas se recuerda.
   var onPhone = function () { return window.matchMedia('(max-width: 900px)').matches; };
-  var cal = { mode: helpGet('xencrm.cal.mode') || (onPhone() ? 'agenda' : 'week'), start: startOfWeek(new Date()), cfg: null, appts: [], todas: [], busy: [], sede: helpGet('xencrm.cal.sede') || '', sedesAg: [] };
-  var HOUR_PX = 56;
+  // La cámara de la videollamada (Lucide, el mismo trazo que los demás): en la tarjeta, la vista rápida y el panel.
+  ICONS.video = '<path d="m16 13 5.2 3.5a.5.5 0 0 0 .8-.4V7.9a.5.5 0 0 0-.8-.4L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/>';
+  var cal = { mode: helpGet('xencrm.cal.mode') || (onPhone() ? 'agenda' : 'week'), start: startOfWeek(new Date()), cfg: null, appts: [], todas: [], busy: [], sede: helpGet('xencrm.cal.sede') || '', sedesAg: [], vista: null, hoy: null, hoyError: false, error: false, disparador: null, abrirDia: '' };
+  // Una hora mide esto en la semana. 64 px: una cita de 45 min (48 px) cabe con nombre, hora y una línea de datos.
+  var HOUR_PX = 64;
   function startOfWeek(d) { var x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
   function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
   function sameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
   function hm(str) { var p = str.split(':'); return Number(p[0]) + Number(p[1] || 0) / 60; }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   function toLocalInput(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  // El día como lo dice el servidor (YYYY-MM-DD): así se cruzan las citas con los anuncios y el cupo.
+  // 🪤 Es la fecha del navegador. El equipo mira en la hora del negocio; uno que mire desde otra zona vería los
+  // anuncios corridos un día en las horas del borde, igual que ya veía las citas.
+  function claveDia(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function diaDeClave(k) { var p = k.split('-'); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])); }
+  // La hora corta de la rejilla, en 24 h como su eje («9:00–9:45»). En el panel y la vista rápida va la de siempre.
+  function h24(ts) { var d = new Date(ts); return d.getHours() + ':' + pad(d.getMinutes()); }
+  function fechaLarga(d) { return d.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }); }
+  function fechaCorta(d) { return d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' }); }
+  function agenteXen() { return state.agentName || 'Xen'; }
+  // «08:00» de la configuración, dicho como las demás horas del tablero («8:00 a. m.»).
+  function horaDe(hhmmTexto) { var d = new Date(); d.setHours(Math.floor(hm(hhmmTexto)), Math.round((hm(hhmmTexto) % 1) * 60), 0, 0); return hhmm(d.getTime()); }
+  function citasN(n) { return n + ' ' + (n === 1 ? VOC.cita : VOC.citas); }
 
   // ---------- sedes (src/crm/sedes.ts) ----------
   // 🪤 Una cita sin sede es de antes de que el negocio tuviera sedes, y se cuenta en la primera, igual que en la
@@ -2573,6 +2589,7 @@
   function nombreSede(id) { var s = (state.sedes || []).filter(function (x) { return x.id === id; })[0]; return s ? s.nombre : ''; }
   function conSede(a) { return variasSedes() && sedeDe(a) ? ' · ' + nombreSede(sedeDe(a)) : ''; }
   function filtrarSede(list) { return cal.sede && variasSedes() ? list.filter(function (a) { return sedeDe(a) === cal.sede; }) : list; }
+  function deLaSedeQs(primero) { return cal.sede && variasSedes() ? (primero ? '?' : '&') + 'sede=' + encodeURIComponent(cal.sede) : ''; }
   // Lo que se pinta abierto: el de la sede que se mira, o con «todas», lo que abre cualquiera.
   function agendaVista(def) {
     var base = cal.cfg || def;
@@ -2597,6 +2614,64 @@
     $('book-sede-l').hidden = false;
   }
 
+  // ---------- cupo y anuncios (src/crm/agenda-vista.ts) ----------
+  // El rango que se mira, para pedir su cupo y sus anuncios: la semana, las seis semanas del mes, o los próximos 60
+  // días en Agenda.
+  function rangoVisible() {
+    if (cal.mode === 'agenda') { var h = new Date(); h.setHours(0, 0, 0, 0); return { from: h.getTime(), to: addDays(h, 60).getTime() - 1 }; }
+    if (cal.mode === 'month') {
+      var m0 = new Date(cal.start.getFullYear(), cal.start.getMonth(), 1), ini = addDays(m0, -((m0.getDay() + 6) % 7));
+      return { from: ini.getTime(), to: addDays(ini, 42).getTime() - 1 };
+    }
+    return { from: cal.start.getTime(), to: addDays(cal.start, 7).getTime() - 1 };
+  }
+  function anunciosDel(k) { return ((cal.vista && cal.vista.anuncios) || []).filter(function (a) { return a.fecha === k; }); }
+  function cupoDel(k) { return ((cal.vista && cal.vista.cupo) || []).filter(function (c) { return c.fecha === k; })[0] || null; }
+  function diaBloqueado(k) { var c = cupoDel(k); return Boolean(c && c.cerrado); }
+  /**
+   * Cada anuncio dicho en palabras, con su tono y su dibujo. Un solo sitio: la semana, el mes, la agenda, la vista del
+   * día y el formulario de agendar dicen lo mismo con las mismas palabras.
+   * Tonos: aviso (ámbar: hay algo que hacer), lleno (rojo), cerrado (gris), festivo (violeta), servicio (cielo).
+   */
+  function textoAnuncio(a) {
+    var hay = a.agendadas ? ' Hay ' + citasN(a.agendadas) + ' ' + VOC.g('agendadas') + '.' : '';
+    var bloqueado = 'Bloqueado: ' + agenteXen() + ' no ofrece este día.' + (a.agendadas ? ' ' + (a.agendadas === 1 ? 'Queda' : 'Quedan') + ' ' + citasN(a.agendadas) + ' ' + VOC.g('agendadas') + ': ' + (a.agendadas === 1 ? 'muévela o atiéndela' : 'muévelas o atiéndelas') + '.' : '');
+    if (a.tipo === 'festivo') return { ic: 'estrella', tono: a.cerrado ? 'cerrado' : a.agendadas ? 'aviso' : 'festivo', corto: 'Festivo', titulo: 'Festivo · ' + a.titulo, detalle: a.cerrado ? bloqueado : 'La agenda sigue abierta: ' + agenteXen() + ' ofrece este día.' + hay };
+    if (a.tipo === 'cierre') return { ic: 'candado-nota', tono: 'cerrado', corto: 'Bloqueado', titulo: (a.titulo ? 'Bloqueado · ' + a.titulo : 'Día bloqueado') + (a.sede ? ' en ' + a.sede : ''), detalle: bloqueado };
+    if (a.tipo === 'mantenimiento') {
+      var aviso = a.porAvisar ? 'Falta avisar a ' + a.porAvisar + (a.porAvisar === 1 ? ' cliente' : ' clientes') + '.' : a.afectados ? a.afectados + (a.afectados === 1 ? ' cliente afectado.' : ' clientes afectados.') : 'Sin clientes afectados.';
+      return { ic: 'llave', tono: a.porAvisar ? 'aviso' : 'servicio', corto: h24(a.inicio) + ' ' + a.titulo, titulo: 'Mantenimiento · ' + a.titulo, detalle: (a.producto ? a.producto + ' · ' : '') + h24(a.inicio) + '–' + h24(a.fin) + '. ' + aviso };
+    }
+    if (a.tipo === 'lleno') return { ic: 'alerta', tono: 'lleno', corto: 'Lleno', titulo: 'Día lleno', detalle: 'No quedan espacios: ' + agenteXen() + ' ofrece el siguiente día con cupo.' };
+    return { ic: 'alerta', tono: 'aviso', corto: 'Casi lleno', titulo: 'Casi lleno', detalle: 'Quedan ' + a.libres + ' de ' + a.total + ' espacios.' };
+  }
+  // Un anuncio como etiqueta (la semana y el mes): abre la vista del día, que lo explica y tiene sus acciones.
+  function chipAnuncio(a, conTexto) {
+    var t = textoAnuncio(a);
+    return '<button type="button" class="cal-aviso ta-' + t.tono + '" data-dia="' + esc(a.fecha) + '" title="' + esc(t.titulo + '. ' + t.detalle) + '">' + svgXen(t.ic) + '<span' + (conTexto === false ? ' class="sr-only"' : '') + '>' + esc(t.corto) + '</span></button>';
+  }
+  // Un anuncio entero (la agenda y la vista del día).
+  function filaAnuncio(a, comoBoton) {
+    var t = textoAnuncio(a), etiqueta = comoBoton ? 'button type="button" data-dia="' + esc(a.fecha) + '"' : 'div';
+    return '<' + etiqueta + ' class="cal-aviso-fila ta-' + t.tono + '">' + svgXen(t.ic) + '<span><b>' + esc(t.titulo) + '</b><span>' + esc(t.detalle) + '</span></span></' + (comoBoton ? 'button' : 'div') + '>';
+  }
+  function medidorCupo(c) {
+    if (!c || !c.total) return '';
+    var pct = Math.round((c.ocupados / c.total) * 100), lim = R('agenda.casiLlenoPct', 80);
+    return '<span class="cal-cupo' + (c.ocupados >= c.total ? ' lleno' : pct >= lim ? ' casi' : '') + '" aria-hidden="true"><i style="width:' + pct + '%"></i></span>';
+  }
+  function textoCupo(c, hoy) {
+    if (!c) return '';
+    if (c.cerrado) return 'Bloqueado';
+    if (!c.abierto) return 'No se atiende';
+    if (!c.total) return 'Sin espacios';
+    if (c.ocupados >= c.total) return 'Lleno';
+    // Hoy cuenta solo lo que aún se puede agendar (con la antelación mínima por delante): por eso puede ser menos que
+    // lo que no está tomado.
+    return c.libres + (c.libres === 1 ? ' libre' : ' libres');
+  }
+
+  // ---------- cargar ----------
   function loadCalendar() {
     var p = cal.cfg ? Promise.resolve(cal.cfg) : api('/agent').then(function (a) { cal.cfg = a.appointments; cal.sedesAg = a.sedes || []; pintarSedesCal(); return cal.cfg; });
     p.then(function () {
@@ -2612,17 +2687,29 @@
         from = addDays(m0, -7).getTime();
         to = addDays(new Date(cal.start.getFullYear(), cal.start.getMonth() + 1, 1), 7).getTime();
       } else { from = addDays(cal.start, -1).getTime(); to = addDays(cal.start, 8).getTime(); }
+      var r = rangoVisible();
       // Los bloques ocupados de la sede que se mira: los del dueño y los de su calendario (src/crm/busy.ts).
-      var deLaSede = cal.sede && variasSedes() ? '&sede=' + encodeURIComponent(cal.sede) : '';
-      return Promise.all([api('/appointments?from=' + from + '&to=' + to), api('/busy?from=' + from + '&to=' + to + deLaSede)]);
+      // El cupo y los anuncios no tumban el calendario si fallan: sin ellos se ve igual que antes.
+      return Promise.all([api('/appointments?from=' + from + '&to=' + to), api('/busy?from=' + from + '&to=' + to + deLaSedeQs()),
+        api('/agenda?from=' + r.from + '&to=' + r.to + deLaSedeQs()).catch(function () { return null; })]);
     }).then(function (r) {
-      var list = r[0]; cal.busy = r[1] || [];
+      var list = r[0];
+      if (!Array.isArray(list)) throw new Error('citas');
+      cal.error = false;
+      cal.busy = Array.isArray(r[1]) ? r[1] : [];
+      cal.vista = r[2] && !r[2].error ? r[2] : { cupo: [], anuncios: [] };
       cal.todas = list;
       cal.appts = filtrarSede(list);
       $('badge-cal').textContent = list.filter(function (a) { return a.status === 'confirmada' && a.startsAt >= Date.now(); }).length || '';
       if ($('fx-n-citas')) $('fx-n-citas').textContent = $('badge-cal').textContent;
       renderCalendar();
+      if (cal.abrirDia) { var k = cal.abrirDia; cal.abrirDia = ''; var b = document.querySelector('#view-calendar [data-dia="' + k + '"]'); vistaDelDia(k, b); }
+    }).catch(function (e) {
+      if (String(e && e.message) === '401') return;
+      cal.error = true;
+      renderCalendar();
     });
+    cargarHoy();
     api('/contacts?limit=' + R('contactos.tope', 500)).then(function (list) { $('book-contact').innerHTML = list.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(nameOf(c)) + '</option>'; }).join(''); });
   }
   function renderCalendar() {
@@ -2641,7 +2728,70 @@
     $('cal-week-btn').setAttribute('aria-pressed', String(cal.mode === 'week'));
     $('cal-month-btn').setAttribute('aria-pressed', String(cal.mode === 'month'));
     $('cal-agenda-btn').setAttribute('aria-pressed', String(cal.mode === 'agenda'));
+    if (cal.error) { pintarErrorCal(); return; }
     if (cal.mode === 'week') renderWeek(); else if (cal.mode === 'month') renderMonth(); else renderAgenda();
+  }
+  // Si no llegan las citas: decirlo, con la salida, en el sitio donde iban (y no una rejilla vacía que parece «no hay nada»).
+  function pintarErrorCal() {
+    var caja = cal.mode === 'week' ? $('cal-grid') : cal.mode === 'month' ? $('cal-month') : $('cal-list');
+    caja.innerHTML = '<div class="cal-vacio" role="alert"><b>No se pudo cargar el calendario.</b><span>Puede ser la conexión. Lo que ya estaba agendado sigue igual.</span><button type="button" class="btn" data-reintentar>Reintentar</button></div>';
+    caja.querySelector('[data-reintentar]').onclick = loadCalendar;
+  }
+
+  // ---------- la semana ----------
+  /**
+   * Las citas que se cruzan van una al lado de la otra, no encimadas. Se agrupan en racimos —las que se tocan en
+   * cadena— y cada racimo se reparte en tantos carriles como citas a la vez llegó a tener. Con capacidad 2, dos
+   * citas a las 9:00 son dos tarjetas de media columna, cada una con su nombre.
+   */
+  function carriles(lista) {
+    var orden = lista.slice().sort(function (a, b) { return a.startsAt - b.startsAt || b.endsAt - a.endsAt; });
+    var out = [], racimo = [], fines = [], finRacimo = -Infinity;
+    function cerrar() { var n = fines.length; racimo.forEach(function (x) { x.n = n; }); racimo = []; fines = []; }
+    orden.forEach(function (a) {
+      if (a.startsAt >= finRacimo) { cerrar(); finRacimo = -Infinity; }
+      var c = -1;
+      for (var i = 0; i < fines.length; i++) if (fines[i] <= a.startsAt) { c = i; break; }
+      if (c < 0) { c = fines.length; fines.push(a.endsAt); } else fines[c] = a.endsAt;
+      var x = { a: a, carril: c, n: 1 };
+      racimo.push(x); out.push(x);
+      finRacimo = Math.max(finRacimo, a.endsAt);
+    });
+    cerrar();
+    return out;
+  }
+  // El recordatorio en un dibujo, para la tarjeta (en palabras va en la vista rápida).
+  function iconoRecordatorio(a) {
+    if (a.status !== 'confirmada') return '';
+    if (a.reply === 'confirmó') return '<span class="ev-ic ok" title="Confirmó que viene">' + svgXen('check') + '</span>';
+    if (a.reply === 'no_puede') return '<span class="ev-ic mal" title="Dijo que no puede">' + svgXen('alerta') + '</span>';
+    if (a.reminder && a.reminder.status === 'a_mano') return '<span class="ev-ic aviso" title="Hay que recordarle a mano">' + svgXen('bell') + '</span>';
+    if (a.reminder && a.reminder.status === 'enviado') return '<span class="ev-ic" title="Recordada">' + svgXen('bell') + '</span>';
+    return a.remindAt ? '<span class="ev-ic" title="' + esc('El recordatorio sale solo ' + cuandoSale(a.remindAt)) + '">' + svgXen('reloj') + '</span>' : '';
+  }
+  function cuandoSale(ts) {
+    var at = new Date(ts), hoy = new Date(), man = addDays(hoy, 1);
+    var dia = sameDay(at, hoy) ? 'hoy' : sameDay(at, man) ? 'mañana' : 'el ' + at.toLocaleDateString('es-CO', { weekday: 'long' });
+    return dia + ' a las ' + hhmm(ts);
+  }
+  function etiquetaCita(a) {
+    var est = { completada: 'asistió', no_asistio: 'no asistió', cancelada: 'cancelada' }[a.status] || VOC.g('confirmada');
+    return (a.contactName || short(a.userId)) + (a.empresa ? ', ' + a.empresa : '') + '. ' + fechaLarga(new Date(a.startsAt)) + ', de ' + hhmm(a.startsAt) + ' a ' + hhmm(a.endsAt) + '. ' + a.service + '. ' + est + '.';
+  }
+  function tarjetaCita(x, h0) {
+    var a = x.a, st = new Date(a.startsAt), en = new Date(a.endsAt);
+    var top = ((st.getHours() + st.getMinutes() / 60) - h0) * HOUR_PX, alto = Math.max(24, ((en - st) / 3600000) * HOUR_PX - 2);
+    var ancho = 100 / x.n;
+    var estilo = 'top:' + top + 'px;height:' + alto + 'px;left:calc(' + (x.carril * ancho) + '% + 3px);width:calc(' + ancho + '% - 6px)';
+    // El estado va también en el texto: el color y el relieve nunca son la única señal.
+    var mark = { completada: '✓ ', no_asistio: '✗ ', cancelada: '' }[a.status] || '';
+    var ch = canalDeXen(a.canal);
+    var datos = '<span class="ev-ic" title="' + esc(ch.t) + '">' + svgXen(ch.ic) + '</span>' + iconoRecordatorio(a) + (a.enlace ? '<span class="ev-ic" title="Tiene enlace de videollamada">' + svgXen('video') + '</span>' : '') + (a.valor ? '<span class="ev-valor">' + esc(plataCorta(a.valor)) + '</span>' : '');
+    // En un carril estrecho (dos o más a la vez) cabe el primer nombre y la hora; lo demás, en la vista rápida.
+    var nombre = a.contactName || short(a.userId), estrecha = x.n > 1;
+    var l2 = estrecha ? h24(a.startsAt) : h24(a.startsAt) + '–' + h24(a.endsAt) + (a.empresa ? ' · ' + a.empresa : ' · ' + a.service);
+    return '<button type="button" class="cal-ev ' + a.status + (alto < 44 ? ' corta' : '') + (estrecha ? ' estrecha' : '') + '" data-id="' + a.id + '" style="' + estilo + '" aria-label="' + esc(etiquetaCita(a)) + '" title="' + esc(nombre + ' · ' + h24(a.startsAt) + '–' + h24(a.endsAt)) + '">' +
+      '<b>' + esc(mark + (estrecha ? nombre.split(' ')[0] : nombre)) + '</b><span class="ev-l2">' + esc(l2) + '</span><span class="ev-datos">' + datos + '</span></button>';
   }
   function renderWeek() {
     var cfg = agendaVista({ days: [1, 2, 3, 4, 5], hours: [['09:00', '18:00']], durationMin: 45, enabled: false });
@@ -2649,13 +2799,24 @@
     var h0 = Math.max(0, Math.floor(Math.min.apply(null, hours.map(function (h) { return hm(h[0]); })) - 1));
     var h1 = Math.min(24, Math.ceil(Math.max.apply(null, hours.map(function (h) { return hm(h[1]); })) + 1));
     var total = h1 - h0, now = new Date();
+    // Las rayas finas: cada media hora, o cada cuarto si las citas son cortas.
+    var paso = (cfg.durationMin || 30) < 30 ? 15 : 30;
     var days = []; for (var i = 0; i < 7; i++) days.push(addDays(cal.start, i));
-    var head = '<div class="cal-head"><div class="d"></div>' + days.map(function (d) { return '<div class="d' + (sameDay(d, now) ? ' today' : '') + (cfg.days.indexOf(d.getDay()) < 0 ? ' closed' : '') + '">' + d.toLocaleDateString('es-CO', { weekday: 'short' }) + '<b>' + d.getDate() + '</b></div>'; }).join('') + '</div>';
+    var hayAvisos = days.some(function (d) { return anunciosDel(claveDia(d)).length; });
+    var head = '<div class="cal-head' + (hayAvisos ? ' con-avisos' : '') + '"><div class="d"></div>' + days.map(function (d) {
+      var k = claveDia(d), cu = cupoDel(k), cerrado = cfg.days.indexOf(d.getDay()) < 0 || diaBloqueado(k);
+      var dice = fechaLarga(d) + (cu && cu.cerrado ? ', bloqueado' : cu && cu.total ? ', ' + cu.ocupados + ' de ' + cu.total + ' espacios tomados' : '') + '. Ver el día';
+      return '<button type="button" class="d' + (sameDay(d, now) ? ' today' : '') + (cerrado ? ' closed' : '') + '" data-dia="' + k + '" aria-label="' + esc(dice) + '">' + d.toLocaleDateString('es-CO', { weekday: 'short' }) + '<b>' + d.getDate() + '</b>' + medidorCupo(cu) + '</button>';
+    }).join('') + (hayAvisos ? '<div class="av av-l small">Avisos</div>' + days.map(function (d) {
+      var l = anunciosDel(claveDia(d));
+      return '<div class="av">' + l.slice(0, 2).map(function (a) { return chipAnuncio(a); }).join('') + (l.length > 2 ? '<button type="button" class="cal-aviso ta-mas" data-dia="' + claveDia(d) + '">+' + (l.length - 2) + '</button>' : '') + '</div>';
+    }).join('') : '') + '</div>';
     var hoursCol = '<div class="cal-hours" style="height:' + total * HOUR_PX + 'px">' + Array.from({ length: total + 1 }, function (_, i) { return '<div class="h" style="top:' + i * HOUR_PX + 'px">' + pad(h0 + i) + ':00</div>'; }).join('') + '</div>';
     var cols = days.map(function (d) {
-      var open = cfg.days.indexOf(d.getDay()) >= 0;
+      var k = claveDia(d), bloqueado = diaBloqueado(k);
+      var open = cfg.days.indexOf(d.getDay()) >= 0 && !bloqueado;
       var closed = '';
-      if (!open) closed = '<div class="closed" style="top:0;height:' + total * HOUR_PX + 'px"></div>';
+      if (!open) closed = '<div class="closed' + (bloqueado ? ' bloqueado' : '') + '" style="top:0;height:' + total * HOUR_PX + 'px">' + (bloqueado ? '<span>' + svgXen('candado-nota') + 'Bloqueado</span>' : '') + '</div>';
       else {
         var cursor = h0;
         hours.slice().sort(function (a, b) { return hm(a[0]) - hm(b[0]); }).forEach(function (h) {
@@ -2665,14 +2826,7 @@
         });
         if (cursor < h1) closed += '<div class="closed" style="top:' + (cursor - h0) * HOUR_PX + 'px;height:' + (h1 - cursor) * HOUR_PX + 'px"></div>';
       }
-      var evs = cal.appts.filter(function (a) { return sameDay(new Date(a.startsAt), d); }).map(function (a) {
-        var st = new Date(a.startsAt), en = new Date(a.endsAt);
-        var top = ((st.getHours() + st.getMinutes() / 60) - h0) * HOUR_PX, height = Math.max(22, ((en - st) / 3600000) * HOUR_PX - 2);
-        // El estado va también en el texto: el color y el relieve nunca son la única señal.
-        var mark = { completada: '✓ Asistió · ', no_asistio: '✗ No asistió · ', cancelada: 'Cancelada · ' }[a.status] || '';
-        var who = a.contactName || short(a.userId);
-        return '<div class="cal-ev ' + a.status + '" data-id="' + a.id + '" title="' + esc(who + ' · ' + mark + hhmm(a.startsAt) + ' · ' + a.service + conSede(a)) + '" style="top:' + top + 'px;height:' + height + 'px"><b>' + esc(who) + '</b><span>' + esc(mark + hhmm(a.startsAt)) + '</span><span>' + esc(a.service) + '</span></div>';
-      }).join('');
+      var evs = carriles(cal.appts.filter(function (a) { return sameDay(new Date(a.startsAt), d); })).map(function (x) { return tarjetaCita(x, h0); }).join('');
       // Eventos del calendario privado del dueño: el bot no ofrece esas horas.
       var dayStart = new Date(d).setHours(0, 0, 0, 0), dayEnd = dayStart + 86400000;
       var busy = cal.busy.map(function (b) {
@@ -2682,8 +2836,16 @@
         return bottom > top ? '<div class="cal-busy" style="top:' + top + 'px;height:' + (bottom - top) + 'px" title="Ocupado en tu calendario: el bot no ofrece esta hora"><span>Ocupado</span></div>' : '';
       }).join('');
       var nowLine = sameDay(d, now) ? '<div class="cal-now" style="top:' + ((now.getHours() + now.getMinutes() / 60) - h0) * HOUR_PX + 'px"></div>' : '';
-      return '<div class="cal-col' + (sameDay(d, now) ? ' today' : '') + '" data-day="' + d.getTime() + '" style="height:' + total * HOUR_PX + 'px;--hour-px:' + HOUR_PX + 'px">' + closed + busy + evs + nowLine + '</div>';
+      return '<div class="cal-col' + (sameDay(d, now) ? ' today' : '') + '" data-day="' + d.getTime() + '" style="height:' + total * HOUR_PX + 'px;--hour-px:' + HOUR_PX + 'px;--sub-px:' + (HOUR_PX * paso / 60) + 'px">' + closed + busy + evs + nowLine + '</div>';
     }).join('');
+    // 🪤 Los días que no se atienden y no tienen nada (el fin de semana, casi siempre) se angostan: su ancho se lo
+    // llevan los días con citas, donde dos a la misma hora comparten la columna. Con siete columnas iguales, cada
+    // carril quedaba en 48 px y se leía «Val…».
+    var movil = onPhone();
+    $('cal-grid').style.setProperty('--cal-cols', (movil ? '44px ' : '56px ') + days.map(function (d) {
+      var k = claveDia(d), vacio = (cfg.days.indexOf(d.getDay()) < 0 || diaBloqueado(k)) && !anunciosDel(k).length && !cal.appts.some(function (a) { return sameDay(new Date(a.startsAt), d); });
+      return vacio ? (movil ? 'minmax(36px,.35fr)' : 'minmax(44px,.35fr)') : (movil ? 'minmax(64px,1fr)' : 'minmax(84px,1fr)');
+    }).join(' '));
     $('cal-grid').innerHTML = head + '<div class="cal-body">' + hoursCol + cols + '</div>';
     // clic en un hueco: prellena la fecha y hora del formulario (redondeado a la duración de la cita)
     $('cal-grid').querySelectorAll('.cal-col').forEach(function (col) {
@@ -2694,30 +2856,226 @@
         var step = (cfg.durationMin || 30) / 60;
         var t = Math.floor(hoursFromTop / step) * step;
         var d = new Date(Number(col.getAttribute('data-day'))); d.setHours(Math.floor(t), Math.round((t % 1) * 60), 0, 0);
-        $('book-when').value = toLocalInput(d); $('book-msg').textContent = 'Hueco elegido: ' + d.toLocaleString('es-CO', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
-        $('book-contact').focus();
+        elegirHueco(d);
       };
     });
-    $('cal-grid').querySelectorAll('.cal-ev').forEach(function (ev) { ev.onclick = function (e) { e.stopPropagation(); showApptPop(Number(ev.getAttribute('data-id')), e.clientX, e.clientY); }; });
+    enlazarCal($('cal-grid'));
     // desplazar a la primera hora de atención
     var firstOpen = Math.min.apply(null, hours.map(function (h) { return hm(h[0]); }));
     $('cal-grid').scrollTop = Math.max(0, (firstOpen - h0) * HOUR_PX - 8);
   }
-  function showApptPop(id, x, y) {
-    var a = cal.appts.find(function (z) { return z.id === id; }); if (!a) return;
-    var pop = $('cal-pop');
-    pop.innerHTML = '<b>' + esc(a.contactName || short(a.userId)) + '</b><span class="small muted">' + esc(a.label || '') + ' · ' + esc(a.service) + (a.location ? ' · ' + esc(a.location) : '') + '</span>' + (a.notes ? '<span class="small">' + esc(a.notes) + '</span>' : '') +
-      '<span class="chip">' + esc(a.status) + '</span><div class="acts">' +
-      (a.status === 'confirmada' ? '<button class="btn sm" data-act="completada">Asistió</button><button class="btn sm" data-act="no_asistio">No asistió</button><button class="btn sm danger" data-act="cancelada">Cancelar</button>' : '') +
-      '<button class="btn sm" data-open="1">Chat</button><button class="btn sm" data-close="1">Cerrar</button></div>';
-    pop.hidden = false;
-    var w = 280, h = pop.offsetHeight || 160;
-    pop.style.left = Math.min(x + 8, window.innerWidth - w - 12) + 'px'; pop.style.top = Math.min(y + 8, window.innerHeight - h - 12) + 'px';
-    pop.querySelectorAll('[data-act]').forEach(function (b) { b.onclick = function () { api('/appointments/' + a.id, { method: 'PATCH', body: { status: b.getAttribute('data-act') } }).then(function () { pop.hidden = true; loadCalendar(); }); }; });
-    pop.querySelector('[data-open]').onclick = function () { pop.hidden = true; go('inbox'); openContact(a.userId); };
-    pop.querySelector('[data-close]').onclick = function () { pop.hidden = true; };
+  // Lo que se toca en cualquier vista: una cita abre su vista rápida; un día (su cabecera, un aviso) abre la del día.
+  function enlazarCal(raiz) {
+    raiz.querySelectorAll('[data-id]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); vistaRapida(Number(b.getAttribute('data-id')), b); }; });
+    raiz.querySelectorAll('[data-dia]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); vistaDelDia(b.getAttribute('data-dia'), b); }; });
   }
-  document.addEventListener('click', function (e) { var pop = $('cal-pop'); if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('.cal-ev')) pop.hidden = true; });
+  // Un hueco elegido (en la rejilla o en la vista del día) va al formulario de agendar.
+  function elegirHueco(d) {
+    $('book-when').value = toLocalInput(d);
+    $('book-msg').textContent = 'Hueco elegido: ' + d.toLocaleString('es-CO', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) + avisoDelDia(claveDia(d));
+    $('book-contact').focus();
+  }
+  // Si el día que se agenda tiene un festivo o está bloqueado, se dice antes de agendar (se puede igual: es a mano).
+  function avisoDelDia(k) {
+    var l = anunciosDel(k).filter(function (a) { return a.tipo === 'festivo' || a.tipo === 'cierre' || a.tipo === 'lleno'; });
+    if (!l.length) return '';
+    var a = l[0];
+    if (a.tipo === 'lleno') return '. Ojo: ese día ya está lleno.';
+    if (a.cerrado) return '. Ojo: ese día está bloqueado; a mano se puede agendar igual.';
+    return '. Ojo: es festivo (' + a.titulo + ').';
+  }
+
+  // ---------- la vista rápida (una cita) y la vista del día ----------
+  function abrirPop(html, disparador, clase) {
+    var pop = $('cal-pop');
+    pop.className = 'cal-pop' + (clase ? ' ' + clase : '') + (window.matchMedia('(max-width: 600px)').matches ? ' hoja' : '');
+    pop.innerHTML = html;
+    pop.hidden = false;
+    cal.disparador = disparador ? { el: disparador, sel: disparador.getAttribute('data-id') ? '[data-id="' + disparador.getAttribute('data-id') + '"]' : disparador.getAttribute('data-dia') ? '[data-dia="' + disparador.getAttribute('data-dia') + '"]' : '' } : null;
+    if (!pop.classList.contains('hoja') && disparador) {
+      var r = disparador.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+      var left = r.right + 8;
+      if (left + w > window.innerWidth - 12) left = r.left - w - 8;
+      if (left < 12) left = Math.max(12, Math.min(window.innerWidth - w - 12, r.left));
+      var top = Math.max(12, Math.min(r.top, window.innerHeight - h - 12));
+      pop.style.left = left + 'px'; pop.style.top = top + 'px';
+    } else { pop.style.left = ''; pop.style.top = ''; }
+    var foco = pop.querySelector('h2');
+    if (foco) { foco.setAttribute('tabindex', '-1'); foco.focus(); }
+    pop.querySelector('[data-cerrar-pop]').onclick = cerrarPop;
+  }
+  function cerrarPop() {
+    var pop = $('cal-pop');
+    if (pop.hidden) return;
+    pop.hidden = true; pop.innerHTML = '';
+    // El foco vuelve a lo que abrió la vista. Si se repintó (una acción recarga el calendario), al que lo reemplazó.
+    var d = cal.disparador; cal.disparador = null;
+    if (!d) return;
+    var el = document.contains(d.el) ? d.el : d.sel ? document.querySelector('#view-calendar ' + d.sel) : null;
+    if (el) el.focus();
+  }
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('cal-pop').hidden) { e.stopPropagation(); cerrarPop(); } });
+  // Un clic afuera cierra. 🪤 Un botón que se reemplaza al tocarlo («Cancelar…» pasa a la confirmación) ya no está en
+  // la página cuando el clic llega aquí, así que tampoco está «dentro»: sin mirar isConnected, la vista se cerraba
+  // justo al pedir la confirmación.
+  document.addEventListener('click', function (e) { var pop = $('cal-pop'); if (!pop.hidden && e.target.isConnected && !pop.contains(e.target) && !e.target.closest('#view-calendar [data-id], #view-calendar [data-dia]')) cerrarPop(); });
+  function anunciar(t) { if ($('cal-anuncio')) { $('cal-anuncio').textContent = ''; setTimeout(function () { $('cal-anuncio').textContent = t; }, 30); } }
+  function citaPorId(id) {
+    var de = function (l) { return (l || []).filter(function (z) { return z.id === id; })[0]; };
+    var h = cal.hoy || {};
+    return de(cal.todas) || de(h.hoy) || de(h.manana) || (h.proxima && h.proxima.id === id ? h.proxima : null);
+  }
+  function textoRecordatorio(a) {
+    var r = a.reminder;
+    if (a.reply === 'confirmó') return { t: 'Confirmó que viene.', tono: 'ok' };
+    if (a.reply === 'no_puede') return { t: 'Dijo que no puede: escríbele para moverla.', tono: 'mal' };
+    if (r && r.status === 'enviado') return { t: 'Recordada' + (r.at ? ' hace ' + rel(r.at) : '') + (r.note ? ' · ' + r.note : '') + '. Aún no responde.', tono: '' };
+    if (r && r.status === 'a_mano') return { t: 'No se pudo enviar solo: hay que recordarle a mano. ' + (r.note || ''), tono: 'aviso', aMano: true };
+    if (a.status !== 'confirmada') return null;
+    if (a.remindAt && a.remindAt > Date.now()) return { t: 'Sale solo ' + cuandoSale(a.remindAt).replace(/\.?$/, '.'), tono: '' };
+    return { t: 'Sin recordatorio automático.', tono: '' };
+  }
+  var VIDEO = /video|llamada|meet|zoom|teams|en l[ií]nea|virtual|online/i;
+  function vistaRapida(id, disparador) {
+    var a = citaPorId(id); if (!a) return;
+    var who = a.contactName || short(a.userId), d = new Date(a.startsAt), dur = Math.round((a.endsAt - a.startsAt) / 60000);
+    var ch = canalDeXen(a.canal), rec = textoRecordatorio(a);
+    var deDia = anunciosDel(claveDia(d)).filter(function (x) { return x.tipo === 'festivo' || x.tipo === 'cierre'; })[0];
+    var fila = function (k, v, extra) { return v ? '<dt>' + k + '</dt><dd' + (extra ? ' class="' + extra + '"' : '') + '>' + v + '</dd>' : ''; };
+    var trato = a.etapaNombre ? esc(a.etapaNombre) + (a.valor ? ' · <span class="num">' + esc(plata(a.valor)) + '</span>' : '') + (a.puntaje != null ? ' · puntaje ' + a.puntaje : '') : '';
+    var online = a.enlace || VIDEO.test(a.location || '') || VIDEO.test(a.service || '');
+    var enlace = a.enlace
+      ? '<div class="qv-enlace"><a class="btn primary" href="' + esc(a.enlace) + '" target="_blank" rel="noopener noreferrer">' + svgXen('video') + 'Abrir videollamada</a><button type="button" class="btn" data-copiar>Copiar enlace</button><button type="button" class="btn sin-borde" data-cambiar>Cambiar</button></div>'
+      : '';
+    var campo = '<div class="qv-campo"' + (a.enlace || !online ? ' hidden' : '') + '><label for="qv-enlace">Enlace de la videollamada</label><div class="qv-fila"><input id="qv-enlace" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://meet.google.com/…" value="' + esc(a.enlace || '') + '" aria-describedby="qv-enlace-msg"><button type="button" class="btn" data-guardar-enlace>Guardar enlace</button></div><div class="small" id="qv-enlace-msg" role="status">' + (a.enlace ? '' : 'Va en el recordatorio y en el calendario del cliente.') + '</div></div>';
+    var agregar = !a.enlace && !online ? '<button type="button" class="btn sin-borde sm" data-agregar-enlace>' + svgXen('video') + 'Agregar enlace de videollamada</button>' : '';
+    var acciones = a.status === 'confirmada'
+      ? '<button type="button" class="btn primary" data-chat>Abrir chat</button><button type="button" class="btn" data-act="completada">Asistió</button><button type="button" class="btn" data-act="no_asistio">No asistió</button><button type="button" class="btn danger sin-borde" data-cancelar>Cancelar…</button>'
+      : '<span class="chip">' + esc(estadoCita(a.status)) + '</span><button type="button" class="btn primary" data-chat>Abrir chat</button>';
+    var html = '<div class="qv-cab"><span class="qv-av">' + esc((who.trim()[0] || '?').toUpperCase()) + '</span><div><h2 id="qv-t">' + esc(who) + '</h2><span class="small">' + esc([a.empresa, ch.t].filter(Boolean).join(' · ')) + '</span></div><button type="button" class="btn sin-borde sm qv-x" data-cerrar-pop aria-label="Cerrar">' + svgXen('cerrar') + '</button></div>' +
+      (deDia ? filaAnuncio(deDia) : '') +
+      '<dl class="qv-datos">' +
+      fila('Cuándo', esc(fechaLarga(d)) + ' · ' + esc(hhmm(a.startsAt)) + ' a ' + esc(hhmm(a.endsAt)) + ' <span class="muted">(' + dur + ' min)</span>') +
+      fila('Qué', esc(a.service + conSede(a))) +
+      fila('Dónde', a.location ? esc(a.location) : '') +
+      fila('Trato', trato) +
+      fila('Recordatorio', rec ? esc(rec.t) + (rec.aMano ? ' <button type="button" class="btn sm" data-recordado>Ya se lo recordé</button>' : '') : '', rec && rec.tono ? 'ta-' + rec.tono : '') +
+      fila('Nota', a.notes ? esc(a.notes) : '') +
+      '</dl>' + enlace + campo + agregar +
+      '<div class="acts" data-acts>' + acciones + '</div><div class="small" role="status" data-msg></div>';
+    abrirPop(html, disparador, 'qv');
+    var pop = $('cal-pop');
+    pop.setAttribute('aria-labelledby', 'qv-t');
+    var msg = pop.querySelector('[data-msg]');
+    var tras = function (texto) { anunciar(texto); toast(texto); cerrarPop(); loadCalendar(); };
+    pop.querySelector('[data-chat]').onclick = function () { cerrarPop(); go('inbox'); openContact(a.userId); };
+    pop.querySelectorAll('[data-act]').forEach(function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        api('/appointments/' + a.id, { method: 'PATCH', body: { status: b.getAttribute('data-act') } })
+          .then(function (r) { if (r && r.error) throw new Error(r.error); tras(b.getAttribute('data-act') === 'completada' ? who + ': asistió.' : who + ': no asistió.'); })
+          .catch(function () { b.disabled = false; msg.textContent = 'No se pudo guardar. Vuelve a intentar.'; });
+      };
+    });
+    var cancelar = pop.querySelector('[data-cancelar]');
+    if (cancelar) cancelar.onclick = function () {
+      // Cancelar le cambia el plan a alguien: se confirma diciendo cuál, y que XENCRM no le avisa.
+      var caja = pop.querySelector('[data-acts]');
+      caja.innerHTML = '<p class="qv-confirma">¿Cancelar ' + VOC.la + ' ' + VOC.cita + ' de <b>' + esc(who) + '</b> del ' + esc(fechaLarga(d)) + ' a las ' + esc(hhmm(a.startsAt)) + '? XENCRM no le avisa: díselo tú en el chat.</p>' +
+        '<button type="button" class="btn danger" data-si>Sí, cancelar ' + VOC.la + ' ' + VOC.cita + '</button><button type="button" class="btn" data-no>No, ' + VOC.g('dejarla') + '</button>';
+      caja.querySelector('[data-no]').focus();
+      caja.querySelector('[data-no]').onclick = function () { vistaRapida(a.id, cal.disparador && cal.disparador.el); };
+      caja.querySelector('[data-si]').onclick = function () {
+        this.disabled = true;
+        api('/appointments/' + a.id, { method: 'PATCH', body: { status: 'cancelada' } })
+          .then(function (r) { if (r && r.error) throw new Error(r.error); tras(VOC.Cita + ' de ' + who + ' ' + VOC.g('cancelada') + '.'); })
+          .catch(function () { msg.textContent = 'No se pudo cancelar. Vuelve a intentar.'; });
+      };
+    };
+    var recordado = pop.querySelector('[data-recordado]');
+    if (recordado) recordado.onclick = function () {
+      recordado.disabled = true;
+      api('/appointments/' + a.id + '/reminded', { method: 'POST', body: { by: state.name } }).then(function () { tras('Recordatorio de ' + who + ' marcado.'); }).catch(function () { recordado.disabled = false; msg.textContent = 'No se pudo guardar. Vuelve a intentar.'; });
+    };
+    var copiar = pop.querySelector('[data-copiar]');
+    if (copiar) copiar.onclick = function () {
+      var ok = function () { msg.textContent = 'Enlace copiado.'; }, mal = function () { msg.textContent = 'No se pudo copiar: selecciónalo en «Cambiar».'; };
+      try { navigator.clipboard.writeText(a.enlace).then(ok, mal); } catch (e) { mal(); }
+    };
+    var mostrarCampo = function () { pop.querySelector('.qv-campo').hidden = false; var i = $('qv-enlace'); i.focus(); i.select(); };
+    if (pop.querySelector('[data-cambiar]')) pop.querySelector('[data-cambiar]').onclick = mostrarCampo;
+    if (pop.querySelector('[data-agregar-enlace]')) pop.querySelector('[data-agregar-enlace]').onclick = function () { this.hidden = true; mostrarCampo(); };
+    var guardar = pop.querySelector('[data-guardar-enlace]');
+    var input = $('qv-enlace');
+    // Se valida al guardar y, después de un error, mientras se corrige: no mientras se escribe la primera vez.
+    var huboError = false;
+    var valido = function (v) { return !v.trim() || /^(https?:\/\/)?[^\s/]+\.[^\s]+$/i.test(v.trim()); };
+    input.oninput = function () { if (huboError) { var ok = valido(input.value); input.setAttribute('aria-invalid', String(!ok)); $('qv-enlace-msg').textContent = ok ? '' : 'Pega el enlace completo, como https://meet.google.com/abc-defg-hij'; } };
+    input.onkeydown = function (e) { if (e.key === 'Enter') guardar.click(); };
+    guardar.onclick = function () {
+      if (!valido(input.value)) { huboError = true; input.setAttribute('aria-invalid', 'true'); $('qv-enlace-msg').textContent = 'Pega el enlace completo, como https://meet.google.com/abc-defg-hij'; input.focus(); return; }
+      guardar.disabled = true;
+      api('/appointments/' + a.id, { method: 'PATCH', body: { enlace: input.value.trim() } }).then(function (r) {
+        guardar.disabled = false;
+        if (r && r.error) { huboError = true; input.setAttribute('aria-invalid', 'true'); $('qv-enlace-msg').textContent = r.error; input.focus(); return; }
+        tras(input.value.trim() ? 'Enlace guardado: va en el recordatorio.' : 'Enlace quitado.');
+      }).catch(function () { guardar.disabled = false; $('qv-enlace-msg').textContent = 'No se pudo guardar. Lo que pegaste sigue ahí: vuelve a intentar.'; });
+    };
+  }
+  function vistaDelDia(k, disparador) {
+    var d = diaDeClave(k), cu = cupoDel(k), avisos = anunciosDel(k);
+    var citas = cal.appts.filter(function (a) { return claveDia(new Date(a.startsAt)) === k; }).sort(function (a, b) { return a.startsAt - b.startsAt; });
+    var cfg = agendaVista({ days: [1, 2, 3, 4, 5], hours: [['09:00', '18:00']] });
+    var seAtiende = cfg.days.indexOf(d.getDay()) >= 0;
+    var bloqueado = diaBloqueado(k) || avisos.some(function (a) { return a.tipo === 'cierre' || (a.tipo === 'festivo' && a.cerrado); });
+    var festivo = avisos.filter(function (a) { return a.tipo === 'festivo'; })[0];
+    var mant = avisos.filter(function (a) { return a.tipo === 'mantenimiento'; });
+    var hoy = sameDay(d, new Date()), pasado = d < new Date(new Date().setHours(0, 0, 0, 0));
+    var cupo = cu && cu.total ? '<div class="qd-cupo">' + medidorCupo(cu) + '<span>' + cu.ocupados + ' de ' + cu.total + ' espacios tomados · ' + esc(textoCupo(cu, hoy)) + '</span></div>' : '<div class="qd-cupo"><span>' + esc(bloqueado ? 'Bloqueado' : seAtiende ? 'Sin espacios en la agenda' : 'Este día no se atiende') + '</span></div>';
+    var lista = citas.length ? '<ul class="qd-lista">' + citas.map(function (a) { return '<li><button type="button" class="qd-cita ' + a.status + '" data-cita="' + a.id + '"><span class="t">' + esc(hhmm(a.startsAt)) + '</span><span>' + esc(a.contactName || short(a.userId)) + '</span>' + (a.status !== 'confirmada' ? '<span class="chip">' + esc(estadoCita(a.status)) + '</span>' : '') + '</button></li>'; }).join('') + '</ul>' : '<p class="small muted">' + VOC.Ninguna + ' ' + VOC.cita + ' este día.</p>';
+    // Bloquear cambia lo que ofrece el asistente a todos: es de quien administra (channels/candado.ts no lo deja).
+    var dondeSede = cal.sede && variasSedes() ? ' en ' + nombreSede(cal.sede) : '';
+    var bloquear = enCandado() || pasado || !seAtiende ? '' : bloqueado
+      ? '<button type="button" class="btn" data-abrir-dia>' + svgXen('candado-nota') + 'Abrir el día' + esc(dondeSede) + '</button>'
+      : '<details class="qd-bloquear"><summary class="btn">' + svgXen('candado-nota') + 'Bloquear el día' + esc(dondeSede) + '</summary><label for="qd-motivo">Motivo (opcional)</label><div class="qv-fila"><input id="qd-motivo" maxlength="80" autocomplete="off" value="' + esc(festivo ? festivo.titulo : '') + '" placeholder="Festivo, viaje, inventario…"><button type="button" class="btn primary" data-bloquear>Bloquear</button></div><p class="small muted">' + esc(agenteXen()) + ' deja de ofrecerlo. Lo ya agendado se queda: muévelo o atiéndelo.</p></details>';
+    var html = '<div class="qv-cab"><div><h2 id="qd-t">' + esc(fechaLarga(d)) + '</h2><span class="small">' + esc(hoy ? 'Hoy' : festivo ? 'Festivo' : seAtiende ? 'Se atiende' : 'No se atiende') + '</span></div><button type="button" class="btn sin-borde sm qv-x" data-cerrar-pop aria-label="Cerrar">' + svgXen('cerrar') + '</button></div>' +
+      (avisos.length ? '<div class="qd-avisos">' + avisos.map(function (a) { return filaAnuncio(a); }).join('') + '</div>' : '') +
+      cupo + lista +
+      '<div class="acts">' + (seAtiende && !pasado ? '<button type="button" class="btn primary" data-agendar>Agendar este día</button>' : '') + (mant.length ? '<button type="button" class="btn" data-mant>Ver mantenimientos</button>' : '') + bloquear + '</div><div class="small" role="status" data-msg></div>';
+    abrirPop(html, disparador, 'qd');
+    var pop = $('cal-pop');
+    pop.setAttribute('aria-labelledby', 'qd-t');
+    var msg = pop.querySelector('[data-msg]');
+    pop.querySelectorAll('[data-cita]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); vistaRapida(Number(b.getAttribute('data-cita')), cal.disparador && cal.disparador.el); }; });
+    if (pop.querySelector('[data-agendar]')) pop.querySelector('[data-agendar]').onclick = function () {
+      // A la primera hora que abre ese día (o la siguiente media hora, si es hoy).
+      var h = cfg.hours && cfg.hours.length ? cfg.hours.slice().sort(function (a, b) { return hm(a[0]) - hm(b[0]); })[0][0] : '09:00';
+      var t = new Date(d); t.setHours(Math.floor(hm(h)), Math.round((hm(h) % 1) * 60), 0, 0);
+      if (hoy && t < new Date()) { t = new Date(); t.setMinutes(t.getMinutes() < 30 ? 30 : 60, 0, 0); }
+      cerrarPop(); elegirHueco(t);
+    };
+    if (pop.querySelector('[data-mant]')) pop.querySelector('[data-mant]').onclick = function () { cerrarPop(); go('mantenimientos'); };
+    if (pop.querySelector('[data-bloquear]')) {
+      var motivo = $('qd-motivo');
+      motivo.onkeydown = function (e) { if (e.key === 'Enter') pop.querySelector('[data-bloquear]').click(); };
+      pop.querySelector('[data-bloquear]').onclick = function () {
+        var b = this; b.disabled = true;
+        api('/agenda/cierres', { method: 'POST', body: { fecha: k, sede: cal.sede && variasSedes() ? cal.sede : '', motivo: motivo.value } }).then(function (r) {
+          if (r && r.error) { b.disabled = false; msg.textContent = r.error; return; }
+          var t = 'Día bloqueado: ' + agenteXen() + ' no ofrece el ' + fechaLarga(d) + '.'; anunciar(t); toast(t); cerrarPop(); loadCalendar();
+        }).catch(function () { b.disabled = false; msg.textContent = 'No se pudo bloquear. Vuelve a intentar.'; });
+      };
+    }
+    if (pop.querySelector('[data-abrir-dia]')) pop.querySelector('[data-abrir-dia]').onclick = function () {
+      var b = this; b.disabled = true;
+      api('/agenda/cierres/' + k + deLaSedeQs(true), { method: 'DELETE' }).then(function (r) {
+        if (r && r.error) { b.disabled = false; msg.textContent = r.error; return; }
+        // Abrir solo quita el bloqueo de quien se mira. Si el día sigue cerrado (bloqueado para todas las sedes), se dice.
+        var t = r && r.abierto ? 'Día abierto: ' + agenteXen() + ' vuelve a ofrecerlo.' : 'Este día está bloqueado para todas las sedes: ábrelo desde «Todas las sedes».';
+        anunciar(t); toast(t); cerrarPop(); loadCalendar();
+      }).catch(function () { b.disabled = false; msg.textContent = 'No se pudo abrir. Vuelve a intentar.'; });
+    };
+  }
 
   /**
    * El mes, como un calendario de pared: la rejilla manda y las citas son renglones dentro del día.
@@ -2735,46 +3093,162 @@
     var cab = '<div class="mes-cab">' + ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'].map(function (d) { return '<div>' + d + '</div>'; }).join('') + '</div>';
     var celdas = [];
     for (var i = 0; i < 42; i++) {
-      var d = addDays(inicio, i);
+      var d = addDays(inicio, i), k = claveDia(d);
       var delMes = d.getMonth() === mo;
-      var abierto = cfg.days.indexOf(d.getDay()) >= 0;
+      var abierto = cfg.days.indexOf(d.getDay()) >= 0 && !diaBloqueado(k);
       var citas = cal.appts.filter(function (a) { return sameDay(new Date(a.startsAt), d); })
         .sort(function (a, b) { return a.startsAt - b.startsAt; });
       var dentro = citas.slice(0, 3).map(function (a) {
-        return '<button class="cita ' + a.status + '" data-id="' + a.id + '" title="' + esc((a.contactName || short(a.userId)) + ' · ' + (a.service || '')) + '">' +
-          hhmm(a.startsAt) + ' ' + esc(a.contactName || short(a.userId)) + '</button>';
+        return '<button type="button" class="cita ' + a.status + '" data-id="' + a.id + '" aria-label="' + esc(etiquetaCita(a)) + '">' +
+          h24(a.startsAt) + ' ' + esc(a.contactName || short(a.userId)) + '</button>';
       }).join('');
-      if (citas.length > 3) dentro += '<div class="mas">+' + (citas.length - 3) + ' más</div>';
+      if (citas.length > 3) dentro += '<button type="button" class="mas" data-dia="' + k + '">+' + (citas.length - 3) + ' más</button>';
+      var avisos = anunciosDel(k).map(function (a) { return chipAnuncio(a, false); }).join('');
       celdas.push('<div class="dia' + (delMes ? '' : ' otro') + (abierto ? '' : ' cerrado') + (sameDay(d, hoy) ? ' hoy' : '') + '">' +
-        '<span class="n">' + d.getDate() + '</span>' + dentro + '</div>');
+        '<div class="dia-cab"><span class="dia-avisos">' + avisos + '</span><button type="button" class="n" data-dia="' + k + '" aria-label="' + esc(fechaLarga(d) + '. Ver el día') + '">' + d.getDate() + '</button></div>' + dentro + '</div>');
     }
     $('cal-month').innerHTML = cab + '<div class="mes">' + celdas.join('') + '</div>';
-    // Tocar una cita abre su conversación, que es lo que uno quiere hacer desde un calendario.
-    Array.prototype.forEach.call($('cal-month').querySelectorAll('.cita'), function (b) {
+    enlazarCal($('cal-month'));
+  }
+
+  // ---------- Agenda: lo que viene, en lista ----------
+  function renderAgenda() {
+    // Todo lo que viene, en orden, sin importar qué semana esté puesta arriba. Los días con un anuncio salen aunque
+    // no tengan citas: un festivo o un mantenimiento la semana entrante también es «lo que viene».
+    var desde = Date.now() - 2 * 3600000;
+    var list = cal.appts.filter(function (a) { return a.startsAt >= desde; }).sort(function (a, b) { return a.startsAt - b.startsAt; });
+    var porDia = {};
+    list.forEach(function (a) { var k = claveDia(new Date(a.startsAt)); (porDia[k] = porDia[k] || []).push(a); });
+    ((cal.vista && cal.vista.anuncios) || []).forEach(function (a) { if (a.fecha >= claveDia(new Date())) porDia[a.fecha] = porDia[a.fecha] || []; });
+    var claves = Object.keys(porDia).sort();
+    if (!claves.length) {
+      $('cal-list').innerHTML = '<div class="cal-vacio"><b>No hay ' + VOC.citas + ' ' + VOC.g('próximas') + '.</b><span>Cuando ' + esc(agenteXen()) + ' agende ' + VOC.una + ', sale aquí. También puedes agendar desde el panel.</span><button type="button" class="btn" data-ir-agendar>Agendar ' + VOC.una + ' ' + VOC.cita + '</button></div>';
+      $('cal-list').querySelector('[data-ir-agendar]').onclick = function () { $('book-contact').focus(); };
+      return;
+    }
+    var ahora = Date.now();
+    $('cal-list').innerHTML = claves.map(function (k) {
+      return '<div class="day"><h3>' + esc(fechaLarga(diaDeClave(k))) + '</h3>' + anunciosDel(k).map(function (a) { return filaAnuncio(a, true); }).join('') + porDia[k].map(function (a) {
+        var ch = canalDeXen(a.canal), empezo = a.startsAt <= ahora;
+        return '<div class="appt ' + a.status + '"><span class="t">' + hhmm(a.startsAt) + '<small>' + Math.round((a.endsAt - a.startsAt) / 60000) + ' min</small></span>' +
+          '<span class="grow"><button type="button" class="appt-quien" data-id="' + a.id + '"><b>' + esc(a.contactName || short(a.userId)) + '</b>' + (a.empresa ? ' <span class="muted">· ' + esc(a.empresa) + '</span>' : '') + '</button>' +
+          '<span class="appt-datos small"><span class="ev-ic" title="' + esc(ch.t) + '">' + svgXen(ch.ic) + '</span>' + esc(a.service + conSede(a)) + (a.valor ? ' · <span class="num">' + esc(plata(a.valor)) + '</span>' : '') + (a.enlace ? ' · ' + svgXen('video') + 'con enlace' : '') + '</span>' + reminderChip(a) + '</span>' +
+          // Asistió y No asistió, en la fila, solo cuando ya empezó: antes no hay nada que anotar. Lo demás, en la vista rápida.
+          (a.status === 'confirmada' && empezo ? '<button class="btn sm" data-act="completada" data-aid="' + a.id + '">Asistió</button><button class="btn sm" data-act="no_asistio" data-aid="' + a.id + '">No asistió</button>' : a.status !== 'confirmada' ? '<span class="chip">' + esc(estadoCita(a.status)) + '</span>' : '') +
+          '<button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>';
+      }).join('') + '</div>';
+    }).join('');
+    $('cal-list').querySelectorAll('[data-act]').forEach(function (b) { b.onclick = function () { b.disabled = true; api('/appointments/' + b.getAttribute('data-aid'), { method: 'PATCH', body: { status: b.getAttribute('data-act') } }).then(loadCalendar); }; });
+    $('cal-list').querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-open')); }; });
+    enlazarCal($('cal-list'));
+  }
+
+  // ---------- el panel «Hoy» ----------
+  function cargarHoy() {
+    if (!cal.hoy) pintarHoy();
+    api('/agenda/hoy' + deLaSedeQs(true)).then(function (d) {
+      if (!d || d.error) throw new Error('hoy');
+      cal.hoy = d; cal.hoyError = false; pintarHoy();
+    }).catch(function (e) { if (String(e && e.message) === '401') return; cal.hoyError = true; pintarHoy(); });
+  }
+  /**
+   * La cuenta regresiva de la próxima cita, en palabras: «en 12 min», «en 3 h 20 min», «en 2 d 4 h». Mientras
+   * dura, «en curso · termina en 20 min». Se repinta cada 30 s sin pedir nada al servidor.
+   */
+  function cuentaRegresiva(a, ahora) {
+    var falta = a.startsAt - ahora;
+    if (falta <= 0) { var queda = Math.max(1, Math.round((a.endsAt - ahora) / 60000)); return { t: 'En curso · termina en ' + queda + ' min', ya: true }; }
+    var min = Math.ceil(falta / 60000);
+    if (min < 60) return { t: 'Empieza en ' + min + ' min', ya: true };
+    var h = Math.floor(min / 60), m = min % 60;
+    if (h < 24) return { t: 'En ' + h + ' h' + (m ? ' ' + m + ' min' : ''), ya: false };
+    var dd = Math.floor(h / 24), hh = h % 24;
+    return { t: 'En ' + dd + ' d' + (hh ? ' ' + hh + ' h' : ''), ya: false };
+  }
+  function pintarCuenta() {
+    var el = $('cal-cuenta'), p = cal.hoy && cal.hoy.proxima;
+    if (!el || !p) return;
+    if (p.endsAt <= Date.now()) { cargarHoy(); return; }
+    var c = cuentaRegresiva(p, Date.now());
+    el.textContent = c.t;
+    $('cal-proxima').classList.toggle('pronto', c.ya);
+  }
+  setInterval(function () { if (state.view === 'calendar') pintarCuenta(); }, 30000);
+  function filaHoy(a) {
+    var est = a.status !== 'confirmada' ? '<span class="chip">' + esc(estadoCita(a.status)) + '</span>' : iconoRecordatorio(a);
+    return '<li><button type="button" class="hp-fila ' + a.status + '" data-id="' + a.id + '" aria-label="' + esc(etiquetaCita(a)) + '"><span class="t">' + esc(hhmm(a.startsAt)) + '</span><span class="q">' + esc(a.contactName || short(a.userId)) + '</span>' + est + '</button></li>';
+  }
+  function pintarHoy() {
+    var px = $('cal-proxima'), ph = $('cal-hoy');
+    if (!px || !ph) return;
+    var d = cal.hoy;
+    if (!d && !cal.hoyError) {
+      // Cargando: la forma de lo que viene, para que el panel no salte al llegar.
+      px.innerHTML = '<span class="fx-esq fx-esq-linea" style="width:40%"></span><span class="fx-esq fx-esq-titulo" style="width:60%"></span><span class="fx-esq fx-esq-linea" style="width:80%"></span><span class="fx-esq fx-esq-linea" style="width:55%"></span>';
+      ph.innerHTML = '<span class="fx-esq fx-esq-linea" style="width:30%"></span><span class="fx-esq fx-esq-linea" style="width:90%"></span><span class="fx-esq fx-esq-linea" style="width:85%"></span><span class="fx-esq fx-esq-linea" style="width:30%;margin-top:12px"></span><span class="fx-esq fx-esq-linea" style="width:90%"></span>';
+      px.setAttribute('aria-busy', 'true'); ph.setAttribute('aria-busy', 'true');
+      return;
+    }
+    px.removeAttribute('aria-busy'); ph.removeAttribute('aria-busy');
+    if (cal.hoyError && !d) {
+      px.innerHTML = '<div class="cal-vacio" role="alert"><b>No se pudo cargar lo de hoy.</b><span>El calendario sigue funcionando.</span><button type="button" class="btn sm" data-reintentar>Reintentar</button></div>';
+      px.querySelector('[data-reintentar]').onclick = cargarHoy;
+      ph.innerHTML = ''; ph.hidden = true;
+      return;
+    }
+    ph.hidden = false;
+    var p = d.proxima;
+    var proxima = VOC.g('Próxima') + ' ' + VOC.cita;
+    if (p) {
+      var c = cuentaRegresiva(p, Date.now()), ch = canalDeXen(p.canal);
+      var cu = (d.cupo || []).filter(function (x) { return x.fecha === claveDia(new Date(p.startsAt)); })[0];
+      px.classList.toggle('pronto', c.ya);
+      px.innerHTML = '<h2 class="hp-k">' + esc(proxima) + '</h2>' +
+        '<p class="hp-cuenta" id="cal-cuenta">' + esc(c.t) + '</p>' +
+        '<p class="hp-quien"><b>' + esc(p.contactName || short(p.userId)) + '</b>' + (p.empresa ? '<span>' + esc(p.empresa) + '</span>' : '') + '</p>' +
+        '<p class="hp-cuando">' + esc(fechaLarga(new Date(p.startsAt))) + ' · ' + esc(hhmm(p.startsAt)) + ' a ' + esc(hhmm(p.endsAt)) + '<br>' + svgXen(ch.ic) + esc(ch.t) + (p.valor ? ' · <span class="num">' + esc(plata(p.valor)) + '</span>' : '') + '</p>' +
+        (cu && cu.festivo ? '<p class="hp-ojo">' + svgXen('estrella') + 'Ese día es festivo: ' + esc(cu.festivo) + '.</p>' : '') +
+        (p.reply === 'no_puede' ? '<p class="hp-ojo">' + svgXen('alerta') + 'Dijo que no puede: escríbele para moverla.</p>' : '') +
+        '<div class="hp-acc">' + (p.enlace ? '<a class="btn primary" href="' + esc(p.enlace) + '" target="_blank" rel="noopener noreferrer">' + svgXen('video') + 'Abrir videollamada</a>' : '<button type="button" class="btn primary" data-chat>Abrir chat</button>') +
+        '<button type="button" class="btn" data-id="' + p.id + '">Ver detalle</button></div>';
+      if (px.querySelector('[data-chat]')) px.querySelector('[data-chat]').onclick = function () { go('inbox'); openContact(p.userId); };
+    } else {
+      px.classList.remove('pronto');
+      px.innerHTML = '<h2 class="hp-k">' + esc(proxima) + '</h2><p class="hp-nada">' + VOC.Ninguna + ' ' + VOC.cita + ' por delante.</p><p class="small">Cuando ' + esc(agenteXen()) + ' agende ' + VOC.una + ', sale aquí con su cuenta regresiva.</p><div class="hp-acc"><button type="button" class="btn" data-ir-agendar>Agendar ' + VOC.una + ' ' + VOC.cita + '</button></div>';
+      px.querySelector('[data-ir-agendar]').onclick = function () { $('book-contact').focus(); };
+    }
+    var rec = d.recordatorios || { activos: false, lista: [] };
+    var aMano = rec.lista.filter(function (r) { return r.estado === 'a_mano'; });
+    var otros = rec.lista.filter(function (r) { return r.estado !== 'a_mano'; });
+    var recHtml = !rec.activos ? '' : '<h3>Recordatorios</h3>' + (aMano.length ? aMano.map(function (r) {
+      var wa = r.number ? '<a class="btn sm primary" target="_blank" rel="noopener" href="https://wa.me/' + esc(r.number) + '?text=' + encodeURIComponent(r.text || '') + '">Abrir WhatsApp</a>' : '';
+      return '<div class="hp-rec aviso"><span><b>' + esc(r.contactName || short(r.userId)) + '</b> · ' + esc(hhmm(r.startsAt)) + '<br><span class="small">Hay que recordarle a mano.</span></span><span class="hp-acc">' + wa + '<button type="button" class="btn sm" data-recordado="' + r.id + '">Ya se lo recordé</button></span></div>';
+    }).join('') : '') + (otros.length ? '<ul class="hp-lista">' + otros.map(function (r) {
+      var t = { programado: 'sale solo ' + cuandoSale(r.remindAt), enviado: 'recordada, sin respuesta', 'confirmó': 'confirmó', no_puede: 'dijo que no puede' }[r.estado];
+      return '<li class="hp-mini' + (r.estado === 'no_puede' ? ' mal' : r.estado === 'confirmó' ? ' ok' : '') + '"><b>' + esc(r.contactName || short(r.userId)) + '</b> ' + esc(t) + '</li>';
+    }).join('') + '</ul>' : '') + (!aMano.length && !otros.length ? '<p class="small muted">Nada pendiente. Los de mañana salen solos a las ' + esc(horaDe((cal.cfg && cal.cfg.reminder && cal.cfg.reminder.at) || '08:00')).replace(/\.?$/, '.') + '</p>' : '');
+    var cupoHtml = (d.cupo || []).length ? '<h3>Cupo</h3><ul class="hp-cupos">' + d.cupo.map(function (c) {
+      var dia = diaDeClave(c.fecha), esHoy = sameDay(dia, new Date());
+      return '<li><button type="button" class="hp-cupo" data-ir-dia="' + c.fecha + '" aria-label="' + esc(fechaLarga(dia) + ': ' + textoCupo(c, esHoy) + (c.festivo ? ', festivo' : '') + '. Ver el día') + '"><span class="d">' + esc(esHoy ? 'Hoy' : fechaCorta(dia)) + (c.festivo ? ' <span class="hp-fest" title="' + esc(c.festivo) + '">Festivo</span>' : '') + '</span>' + medidorCupo(c) + '<span class="n">' + esc(textoCupo(c, esHoy)) + '</span></button></li>';
+    }).join('') + '</ul>' : '';
+    ph.innerHTML = '<h3>Hoy <span class="muted">· ' + esc(fechaLarga(new Date())) + '</span></h3>' + (d.hoy.length ? '<ul class="hp-lista">' + d.hoy.map(filaHoy).join('') + '</ul>' : '<p class="small muted">' + VOC.Ninguna + ' ' + VOC.cita + ' hoy.</p>') +
+      '<h3>Mañana</h3>' + (d.manana.length ? '<ul class="hp-lista">' + d.manana.map(filaHoy).join('') + '</ul>' : '<p class="small muted">Nada agendado.</p>') +
+      recHtml + cupoHtml;
+    enlazarCal(px); enlazarCal(ph);
+    ph.querySelectorAll('[data-recordado]').forEach(function (b) {
+      b.onclick = function () { b.disabled = true; api('/appointments/' + b.getAttribute('data-recordado') + '/reminded', { method: 'POST', body: { by: state.name } }).then(function () { toast('Recordatorio marcado.'); loadCalendar(); }).catch(function () { b.disabled = false; }); };
+    });
+    // El cupo de un día lleva a su semana y abre ese día.
+    ph.querySelectorAll('[data-ir-dia]').forEach(function (b) {
       b.onclick = function () {
-        var a = cal.appts.filter(function (x) { return String(x.id) === b.dataset.id; })[0];
-        if (a) { go('inbox'); openContact(a.userId); }
+        var k = b.getAttribute('data-ir-dia'), dia = diaDeClave(k);
+        if (cal.mode === 'month') cal.start = new Date(dia.getFullYear(), dia.getMonth(), 1); else if (cal.mode === 'week') cal.start = startOfWeek(dia);
+        cal.abrirDia = k;
+        loadCalendar();
       };
     });
   }
 
-  function renderAgenda() {
-    // Todo lo que viene, en orden, sin importar qué semana esté puesta arriba.
-    var list = cal.appts.filter(function (a) { return a.startsAt >= Date.now() - 2 * 3600000; })
-      .sort(function (a, b) { return a.startsAt - b.startsAt; });
-    if (!list.length) { $('cal-list').innerHTML = '<div class="empty">No hay ' + VOC.citas + ' ' + VOC.g('próximas') + '.</div>'; return; }
-    var byDay = {};
-    list.forEach(function (a) { var day = new Date(a.startsAt).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }); (byDay[day] = byDay[day] || []).push(a); });
-    $('cal-list').innerHTML = Object.keys(byDay).map(function (day) {
-      return '<div class="day"><h3>' + esc(day) + '</h3>' + byDay[day].map(function (a) {
-        return '<div class="appt ' + a.status + '"><span class="t">' + hhmm(a.startsAt) + '</span><span class="grow"><b>' + esc(a.contactName || short(a.userId)) + '</b> <span class="muted small">' + esc(a.service + conSede(a)) + (a.notes ? ' · ' + esc(a.notes) : '') + '</span></span>' +
-          (a.status === 'confirmada' ? '<button class="btn sm" data-act="completada" data-id="' + a.id + '">Asistió</button><button class="btn sm" data-act="no_asistio" data-id="' + a.id + '">No asistió</button><button class="btn sm danger" data-act="cancelada" data-id="' + a.id + '">Cancelar</button>' : '<span class="chip">' + a.status + '</span>') +
-          '<button class="btn sm" data-open="' + esc(a.userId) + '">Chat</button></div>';
-      }).join('') + '</div>';
-    }).join('');
-    $('cal-list').querySelectorAll('[data-act]').forEach(function (b) { b.onclick = function () { api('/appointments/' + b.getAttribute('data-id'), { method: 'PATCH', body: { status: b.getAttribute('data-act') } }).then(loadCalendar); }; });
-    $('cal-list').querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { go('inbox'); openContact(b.getAttribute('data-open')); }; });
-  }
   // 🪤 Cambiar de modo RECARGA, no solo repinta: Semana pide una semana y Agenda pide cuatro meses. Repintando
   // a secas, Agenda enseñaba lo que había traído Semana —una semana— y seguía diciendo que no hay citas.
   $('cal-week-btn').onclick = function () { cal.mode = 'week'; helpSet('xencrm.cal.mode', 'week'); loadCalendar(); };
@@ -2796,18 +3270,21 @@
   };
   $('cal-prev').onclick = function () { mover(-1); };
   $('cal-next').onclick = function () { mover(1); };
-  $('cal-today').onclick = function () { cal.start = startOfWeek(new Date()); loadCalendar(); };
+  $('cal-today').onclick = function () { cal.start = cal.mode === 'month' ? new Date(new Date().getFullYear(), new Date().getMonth(), 1) : startOfWeek(new Date()); loadCalendar(); };
   $('cal-sede').onchange = function () {
     cal.sede = $('cal-sede').value;
     helpSet('xencrm.cal.sede', cal.sede);
     if (cal.sede) $('book-sede').value = cal.sede;
-    // Se recarga y no solo se repinta: los bloques ocupados también cambian con la sede.
+    // Se recarga y no solo se repinta: los bloques ocupados, el cupo y el panel también cambian con la sede.
     loadCalendar();
   };
+  $('book-when').onchange = function () { var v = $('book-when').value; $('book-msg').textContent = v ? avisoDelDia(v.slice(0, 10)).replace(/^\. /, '') : ''; };
   $('book-btn').onclick = function () {
     var userId = $('book-contact').value, when = $('book-when').value; if (!userId || !when) { $('book-msg').textContent = 'Elige contacto y fecha.'; return; }
     if (variasSedes() && !$('book-sede').value) { $('book-msg').textContent = 'Elige en qué sede.'; return; }
-    api('/appointments', { method: 'POST', body: { userId: userId, startsAt: new Date(when).toISOString(), notes: $('book-notes').value, sede: variasSedes() ? $('book-sede').value : undefined } }).then(function (r) { $('book-msg').textContent = r.error ? 'Error: ' + r.error : VOC.Cita + ' ' + VOC.g('agendada') + '.'; if (!r.error) $('book-notes').value = ''; loadCalendar(); });
+    $('book-btn').disabled = true;
+    api('/appointments', { method: 'POST', body: { userId: userId, startsAt: new Date(when).toISOString(), notes: $('book-notes').value, sede: variasSedes() ? $('book-sede').value : undefined } }).then(function (r) { $('book-btn').disabled = false; $('book-msg').textContent = r.error ? 'Error: ' + r.error : VOC.Cita + ' ' + VOC.g('agendada') + '.'; if (!r.error) $('book-notes').value = ''; loadCalendar(); })
+      .catch(function () { $('book-btn').disabled = false; $('book-msg').textContent = 'No se pudo agendar. Vuelve a intentar.'; });
   };
 
   // ---------- análisis ----------

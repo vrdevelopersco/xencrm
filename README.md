@@ -14,7 +14,6 @@ XENCRM es un CRM conversacional para gestionar clientes, ventas y servicio desde
 ### Qué falta
 
 - Implementar el análisis de sentimiento por voz y definir la retención de los audios; las notas de voz ya pueden transcribirse.
-- Un calendario más completo: timeline detallado, tarjetas de cita con más datos, un panel «Hoy» y avisos en la agenda.
 - Completar y validar los pendientes de despliegue e integraciones descritos en [el checkpoint](docs/checkpoint.md) y [la documentación de XENCRM](docs/xencrm.md).
 
 ### Posibles evoluciones
@@ -341,6 +340,12 @@ Todo en formato iCalendar estándar, sin cuentas conectadas ni tokens de IA:
   encima de un evento personal. Con sedes, ese calendario ocupa todas, porque es el del dueño; el de una
   sola sede va en `CALENDAR_BUSY_ICS_<SEDE>` (por ejemplo `CALENDAR_BUSY_ICS_NORTE`) y solo ocupa esa. Van en
   el `.env` y no en la configuración: son direcciones secretas. Pruebas: `pnpm test:calendar` y `pnpm test:sedes`.
+- **En el tablero**: la semana en franjas de media hora (las citas que se cruzan, una al lado de la otra), una vista
+  rápida por cita con el **enlace de la videollamada** (sale en el recordatorio y en el `.ics`), el panel «Hoy» con la
+  próxima y su cuenta regresiva, y los **avisos**: festivos, días bloqueados, mantenimientos y días casi llenos.
+  Los festivos de Colombia se calculan solos (`appointments.festivos`: `"CO"`, o `""` para ninguno; sin decirlo, sale
+  de la zona horaria) y no cierran la agenda: se bloquea el día con un clic, y desde ahí el asistente no lo ofrece.
+  Pruebas: `pnpm test:agenda`.
 
 ### Consumo de IA
 Cada llamada a un modelo queda registrada (tokens de entrada, caché, salida y razonamiento). El

@@ -328,6 +328,10 @@ registrarReglas(
     { id: 'seg.posponerDias', grupo: 'Seguimientos', etiqueta: 'Posponer, por defecto', ayuda: 'Cuántos días aparta «Dejarlo por ahora» si no se dice otra cosa.', ...DIAS, max: 365, defecto: 7 },
     { id: 'seg.posponerMaxDias', grupo: 'Seguimientos', etiqueta: 'Posponer, como mucho', ayuda: 'El tope de días que se puede apartar un seguimiento.', ...DIAS, max: 3650, defecto: 90 },
 
+    // ---------- Agenda: lo que anuncia el calendario (crm/agenda-vista.ts) ----------
+    { id: 'agenda.casiLlenoPct', grupo: 'Agenda', etiqueta: '«Casi lleno» desde', ayuda: `Qué parte del cupo de un día tiene que estar tomada para que el calendario lo anuncie como casi lleno. Lleno del todo se anuncia siempre.`, ...PCT, min: 50, max: 99, entero: true, defecto: 80 },
+    { id: 'agenda.diasCupo', grupo: 'Agenda', etiqueta: 'Días de cupo en el panel', ayuda: `Cuántos días que se atienden muestra el panel «Hoy» del calendario con lo que les queda libre.`, tipo: 'numero', unidad: 'días', min: 1, max: 14, entero: true, defecto: 5 },
+
     // ---------- Cuentas clave (crm/cuentas-clave.ts) ----------
     { id: 'kam.diasAtencion', grupo: 'Cuentas clave', etiqueta: 'Atención desde', ayuda: 'Días sin hablar para que una cuenta clave pase a «Atención».', ...DIAS, defecto: 21 },
     { id: 'kam.diasRiesgo', grupo: 'Cuentas clave', etiqueta: 'En riesgo desde', ayuda: 'Días sin hablar para que una cuenta clave pase a «En riesgo».', ...DIAS, defecto: 45 },

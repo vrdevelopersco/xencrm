@@ -14,7 +14,9 @@ import { genteDelGrupo } from '../crm/grupo-gente.js';
 import { getMessages } from '../agent/memory.js';
 import { addEvent, contactNumber, deleteContact, esDe, esPersona, rolDe, estaCerrada, getContact, listContacts, messageHit, listEvents, setArchived, setHumanMode, setResponsable, setStage, stats, updateContact, STAGES, STAGE_DEFS, STAGE_LABELS, type Stage } from '../crm/contacts.js';
 import { analyzeContact, listAnalyses, temperature } from '../crm/analyzer.js';
-import { availableSlots, bookAppointment, formatSlot, listAppointments, setReminder, updateAppointment } from '../crm/appointments.js';
+import { availableSlots, bookAppointment, enlaceLimpio, formatSlot, listAppointments, setReminder, updateAppointment } from '../crm/appointments.js';
+import { citaConDatos, panelHoy, vistaDeAgenda } from '../crm/agenda-vista.js';
+import { abrirDia, cerrarDia, esFecha } from '../crm/cierres.js';
 import { llevaArchivos, reintentarMensaje, replyWindow, sendToContact, WINDOW_CLOSED } from '../crm/outbox.js';
 import { appointmentsCsv, contactsCsv } from '../crm/export.js';
 import { isSnoozed, snoozeFollowup } from '../crm/followup.js';
@@ -710,7 +712,38 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const from = c.req.query('from') ? Number(c.req.query('from')) : Date.now() - 86400_000;
     const to = c.req.query('to') ? Number(c.req.query('to')) : undefined;
     const status = c.req.query('status') || undefined;
-    return c.json(listAppointments({ from, to, status, limit: 500 }).map((a) => ({ ...a, label: formatSlot(new Date(a.startsAt)) })));
+    // Cada cita con lo que muestran su tarjeta y su vista rápida: canal, etapa, valor, recordatorio (crm/agenda-vista.ts).
+    return c.json(listAppointments({ from, to, status, limit: 500 }).map(citaConDatos));
+  });
+
+  /**
+   * Lo que el calendario pinta además de las citas, para el rango que se mira (una semana, un mes con su borde):
+   * el cupo de cada día y los anuncios (mantenimientos, festivos, días bloqueados, casi lleno). Ver crm/agenda-vista.ts.
+   */
+  app.get('/admin/api/agenda', (c) => {
+    const from = Number(c.req.query('from') ?? Date.now());
+    const to = Number(c.req.query('to') ?? from + 7 * 86400_000);
+    if (!Number.isFinite(from) || !Number.isFinite(to) || to < from || to - from > 62 * 86400_000) return c.json({ error: 'El rango va de «from» a «to», en milisegundos, y cubre hasta 62 días.' }, 400);
+    return c.json(vistaDeAgenda(from, to, c.req.query('sede') || null));
+  });
+  // El panel «Hoy» del calendario: la próxima cita, hoy y mañana, recordatorios y el cupo de los próximos días.
+  app.get('/admin/api/agenda/hoy', (c) => c.json(panelHoy(c.req.query('sede') || null)));
+
+  /**
+   * Bloquear y abrir un día de la agenda (crm/cierres.ts): el asistente deja de ofrecerlo. Cambia lo que el asistente
+   * ofrece a todos los clientes, así que es de quien administra: no está en lo que el candado deja cambiar.
+   */
+  app.post('/admin/api/agenda/cierres', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { fecha?: unknown; sede?: unknown; motivo?: unknown };
+    if (!esFecha(body.fecha)) return c.json({ error: 'La fecha va como AAAA-MM-DD.' }, 400);
+    const sede = typeof body.sede === 'string' && body.sede ? body.sede : '';
+    if (sede && !business.sedes.some((s) => s.id === sede)) return c.json({ error: 'Esa sede no existe.' }, 400);
+    return c.json({ cierre: cerrarDia(body.fecha, { sede, motivo: typeof body.motivo === 'string' ? body.motivo : '', por: quienHace(c) }) });
+  });
+  app.delete('/admin/api/agenda/cierres/:fecha', (c) => {
+    const fecha = c.req.param('fecha');
+    if (!esFecha(fecha)) return c.json({ error: 'La fecha va como AAAA-MM-DD.' }, 400);
+    return c.json({ abierto: abrirDia(fecha, c.req.query('sede') || '') });
   });
 
   // Consumo de los modelos (tokens y costo estimado) de los últimos N días.
@@ -1351,10 +1384,17 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
   });
 
   app.patch('/admin/api/appointments/:id', async (c) => {
-    const body = (await c.req.json().catch(() => ({}))) as { status?: 'confirmada' | 'cancelada' | 'completada' | 'no_asistio'; notes?: string };
-    const appt = updateAppointment(Number(c.req.param('id')), body, quienHace(c));
+    const body = (await c.req.json().catch(() => ({}))) as { status?: 'confirmada' | 'cancelada' | 'completada' | 'no_asistio'; notes?: string; enlace?: unknown };
+    // El enlace de la videollamada: http(s) o vacío para quitarlo (crm/appointments.ts, enlaceLimpio).
+    let enlace: string | undefined;
+    if (body.enlace !== undefined) {
+      const limpio = enlaceLimpio(body.enlace);
+      if (limpio === null) return c.json({ error: 'El enlace tiene que empezar por https:// (por ejemplo, el de Meet, Zoom o Teams).' }, 400);
+      enlace = limpio;
+    }
+    const appt = updateAppointment(Number(c.req.param('id')), { status: body.status, notes: body.notes, enlace }, quienHace(c));
     if (!appt) return c.json({ error: 'no existe' }, 404);
-    return c.json({ appointment: { ...appt, label: formatSlot(new Date(appt.startsAt)) } });
+    return c.json({ appointment: citaConDatos(appt) });
   });
 
   // Recordatorio hecho a mano (por WhatsApp desde el teléfono del negocio): sale de "Recordar a mano".

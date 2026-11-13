@@ -205,9 +205,33 @@ Cada respuesta va firmada con el nombre de quien la escribió, así que en el ch
 
 ## Citas
 
-La semana con las citas. Toca una para ver el detalle o cambiar su estado (completada, no asistió, cancelada), o
-agenda una a mano. En el celular abre en **Agenda**, la lista de la semana; con **Semana** ves la cuadrícula (se
-desliza en horizontal). Lo que elijas se recuerda. Si el dueño conectó su calendario personal, sus eventos salen como bloques *Ocupado* y el
+La semana con las citas, en franjas de media hora. Cada cita ocupa lo que dura, y si dos caen a la misma hora van
+una al lado de la otra. La tarjeta dice quién, la hora y la empresa, y con dibujos el canal, el recordatorio
+(reloj: sale solo; campana: ya salió o hay que mandarlo a mano; chulo: confirmó), si tiene enlace de videollamada y
+lo que vale el trato. **Tócala** y se abre su vista rápida: cuándo, qué, dónde, el trato, el recordatorio en
+palabras, la nota y el **enlace de la videollamada** (pégalo ahí y sale en el recordatorio y en el calendario del
+cliente). Desde ahí se marca *Asistió*, *No asistió* o se cancela; cancelar pide confirmar y XENCRM **no le avisa**
+al cliente: díselo en el chat. Escape la cierra. O agenda una a mano. En el celular abre en **Agenda**, la lista de
+lo que viene; con **Semana** ves la cuadrícula (se desliza en horizontal). Lo que elijas se recuerda.
+
+**El panel de la derecha** empieza por la **próxima** cita, con la cuenta regresiva («En 2 h 15 min»; «En curso ·
+termina en 20 min») y el botón para abrir su videollamada o su chat. Debajo, las de **hoy** y **mañana**, los
+**recordatorios** (los que hay que mandar a mano traen «Abrir WhatsApp» y «Ya se lo recordé») y el **cupo** de los
+próximos días: cuántos espacios quedan, con una barra que se pone ámbar cuando el día está casi lleno. Tocar un día
+del cupo te lleva a él. En el celular la próxima sale arriba del calendario y lo demás debajo.
+
+**Los avisos** salen en la fila de arriba de la semana (y como íconos en el mes, y entre los días de la Agenda):
+- **Festivo**: los de Colombia salen solos. Un festivo no cierra la agenda: el asistente sigue ofreciéndolo hasta que
+  lo bloquees. Si ya hay citas ese día, el aviso sale en ámbar para que no se te pase.
+- **Bloqueado**: un día que cerraste.
+- **Mantenimiento**: los programados en Servicio, con su hora y si falta avisar a alguien.
+- **Casi lleno** (desde el 80 % del cupo, se cambia en Reglas y umbrales › Agenda) y **Lleno**.
+
+**Toca el día** (su nombre arriba, o el número en el mes) y ves todo lo de ese día: sus avisos, el cupo, las citas,
+*Agendar este día* y, si administras XENCRM, **Bloquear el día** (con un motivo, si quieres) o **Abrir el día**.
+Bloqueado, el asistente no lo ofrece; lo que ya estaba agendado se queda, así que muévelo o atiéndelo. Desde aquí sí
+puedes agendar a mano en un día bloqueado. Con varias sedes, se bloquea la sede que estás mirando (o todas, con
+«Todas las sedes»). Si el dueño conectó su calendario personal, sus eventos salen como bloques *Ocupado* y el
 asistente no ofrece esas horas; desde aquí sí puedes agendar encima si hace falta.
 
 Si el negocio tiene **varias sedes**, arriba sale a cuál mirar. Con una escogida ves solo sus citas y su horario;
