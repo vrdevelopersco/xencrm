@@ -9,7 +9,7 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-11-13
 
-### El calendario más completo: timeline, tarjetas, panel «Hoy» y anuncios
+### El calendario más completo: timeline, tarjetas, panel «Hoy» y anuncios · `2512ce5`
 Las cuatro ideas que quedaron pendientes, juntas (detalle en `guia-del-tablero.md` › Citas y `arquitectura.md` › Citas):
 - **Timeline**: rayas cada media hora (cada cuarto con citas cortas), la hora de 64 px y cada cita con su duración
   real. Las que se cruzan van **una al lado de la otra** en carriles (`carriles()` en `admin.js`), no encimadas.

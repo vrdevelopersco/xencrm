@@ -3,7 +3,7 @@
 Dónde quedó el trabajo, para retomarlo sin releer la conversación. Se reescribe al cerrar cada sesión; el detalle de
 cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 
-## 2026-11-13 · El calendario más completo (sin commit todavía)
+## 2026-11-13 · El calendario más completo · `2512ce5`
 
 **Las cuatro ideas del calendario, hechas** (detalle y porqués en `arreglos.md` › 2026-11-13; cómo se usa en
 `guia-del-tablero.md` › Citas): timeline en franjas de media hora con las citas que se cruzan en carriles; tarjetas
@@ -19,8 +19,7 @@ nuevos: `crm/festivos.ts`, `crm/cierres.ts`, `crm/agenda-vista.ts`; prueba nueva
 - Bloquear un día es de quien administra (el candado no lo deja); poner el enlace de la videollamada es de todos.
 - «Casi lleno» desde el 80 % (`agenda.casiLlenoPct`) y cinco días de cupo en el panel (`agenda.diasCupo`).
 
-**Para retomar:** hacer el commit (con el autor noreply) y `git push`; luego poner el hash en la entrada de
-`arreglos.md`. Siguen los pendientes del 12-nov (`PROSPECTOS_CLIENTE`, dominio de `pnpm paquete`, el caso con fecha
+**Para retomar:** subido a `vrdevelopersco/xencrm` (`main`). Siguen los pendientes del 12-nov (`PROSPECTOS_CLIENTE`, dominio de `pnpm paquete`, el caso con fecha
 de `test:scenarios`).
 
 ## 2026-11-12, al cerrar · XENCRM público
