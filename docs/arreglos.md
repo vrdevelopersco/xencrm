@@ -9,6 +9,27 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-11-13
 
+### Teléfono por SIP (3CX y otros) y el omnicanal
+Pedido por Luis: voz por teléfono, SIP, que se conecte con 3CX o algún proveedor, y armar el omnicanal (referencia:
+[`modo-agentico.md`](modo-agentico.md) › Teléfono por SIP y › El omnicanal).
+- **Teléfono** (`voz/telefono.ts`, con el SIP de xAI): la troncal manda la llamada a `sip:<número>@sip.voice.x.ai`,
+  xAI avisa en `/voz/sip` y XENCRM se une por `call_id` y la controla; el audio no pasa por aquí. 🪤 El aviso se
+  verifica antes de nada (Standard Webhooks, `XAI_SIP_SECRETO`): sin eso, cualquiera haría que XENCRM se uniera a
+  llamadas, y cada minuto se paga. Pasar a una persona **transfiere** (SIP REFER) a la extensión o cola de 3CX en
+  `XAI_SIP_DESVIO`; colgar deja sonar la despedida. Cupo de llamadas a la vez (`voz.telefonoSimultaneas`): pasado,
+  al desvío o se cuelga.
+- **Omnicanal**: la ficha del que llama es `tel:+57…` y su número se normaliza igual que el de WhatsApp, así que
+  sale «¿Es la misma persona?» y el agente sabe lo que se habló por escrito. Canales tiene las tarjetas «Llamadas
+  desde el chat» y «Teléfono (SIP)» (con lo que hay que copiar y los pasos para xAI, 3CX, Twilio y Telnyx); la Bandeja
+  pone la insignia de teléfono y, como a una llamada no se le escribe, en vez del cajón ofrece su otra conversación o
+  su WhatsApp. Cada mensaje del asistente guarda qué agente lo dijo, y la burbuja lo muestra («Eve»).
+- Visto en Chrome con xAI simulado: un aviso firmado de una llamada desde el número de Camilo Duarte entra a la
+  Bandeja como «Teléfono», con «¿Es la misma persona?» y «Abrir su conversación de WhatsApp». 🪤 Un script mío dejó
+  `admin.js` vacío a mitad de camino (abrió el archivo para escribir antes de leerlo); se restauró del último commit
+  y se rehicieron los cambios, que eran solo de este paso. Pruebas: `pnpm test:telefono` (46).
+- **Falta**: una llamada con una troncal real (3CX o proveedor) y confirmar ahí el formato de la firma; llamadas
+  salientes.
+
 ### Varios agentes y voz con Grok · `244bf97`
 Pedido por Luis: configurar uno o varios agentes que atiendan varias cosas, y agentes conversacionales de voz como los
 de Grok (referencia: [`modo-agentico.md`](modo-agentico.md) › Varios agentes y › Voz con Grok).

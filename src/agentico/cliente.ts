@@ -158,7 +158,7 @@ const POR_AREA: Record<string, string[]> = {
 };
 export function herramientasDe(agente: Pick<Agente, 'atiende'>, canal: string = 'web'): Herramienta[] {
   const nombres = new Set(['buscar_informacion', 'pasar_a_persona', ...agente.atiende.flatMap((x) => POR_AREA[x] ?? [])]);
-  if (canal === 'voz') nombres.delete('pedir_cita');
+  if (canal === 'voz' || canal === 'telefono') nombres.delete('pedir_cita');
   return HERRAMIENTAS_DEL_CLIENTE.filter((h) => nombres.has(h.nombre));
 }
 

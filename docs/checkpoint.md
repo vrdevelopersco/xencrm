@@ -3,7 +3,7 @@
 Dónde quedó el trabajo, para retomarlo sin releer la conversación. Se reescribe al cerrar cada sesión; el detalle de
 cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 
-## 2026-11-13 · Modo agéntico, varios agentes y voz con Grok · `244bf97`
+## 2026-11-13 · Modo agéntico, varios agentes, voz con Grok y teléfono por SIP
 
 **Hecho** (detalle en `arreglos.md` › 2026-11-13 y la referencia en `modo-agentico.md`): el asistente puede usar
 herramientas con los clientes (apagado de fábrica) y el equipo tiene un copiloto en el tablero (prendido). Módulos
@@ -11,10 +11,15 @@ nuevos: `src/llm/herramientas.ts` y `src/agentico/` (`nucleo.ts`, `cliente.ts`, 
 /agent/agentico` y `POST /copiloto`; reglas `agentico.pasos` y `agentico.topeTurnoUsd`; prueba `pnpm test:agentico`.
 Después, en la misma sesión: **varios agentes** (Configuración › Agente › Agentes: qué atiende cada uno y por dónde,
 con relevo) y **voz con Grok** (llamadas desde `/chat`, XENCRM de puente en `/voz/ws`, `XAI_API_KEY`); módulos
-`agentico/agentes.ts` y `voz/llamada.ts`, prueba `pnpm test:agentes`. **Batería: 3731 bien, 0 fallas.**
+`agentico/agentes.ts` y `voz/llamada.ts`, prueba `pnpm test:agentes` (`244bf97`). Y al final, el **teléfono por SIP**
+(3CX o cualquier troncal, `voz/telefono.ts`, `XAI_SIP_SECRETO` y `XAI_SIP_DESVIO`) con el **omnicanal** (tarjetas de
+voz y teléfono en Canales, la insignia y el aviso en la Bandeja, qué agente dijo cada cosa); prueba
+`pnpm test:telefono`. **Batería: 3777 bien, 0 fallas.** Las instancias de prueba de esta sesión quedaron apagadas.
 
 **Para retomar:**
-- Una llamada con la llave real de xAI (`XAI_API_KEY`): hasta ahora, contra un Grok de mentira con el mismo protocolo.
+- Una llamada con la llave real de xAI (`XAI_API_KEY`) y una troncal real (3CX o proveedor): hasta ahora, contra xAI
+  simulado. En la primera llamada por teléfono, confirmar el formato de la firma del aviso (Standard Webhooks).
+- Queda corriendo una demo de la consola del 12-nov (puerto 3913, en un scratchpad de esa sesión): apagarla si no se usa.
 - Medirlo con un modelo real (los escenarios con el modo prendido contra el de siempre: calidad, costo, latencia)
   antes de prenderlo con clientes. Cuesta llamadas: decidir con Luis con qué motor y cuántas.
 - Ideas que quedaron fuera a propósito: perfiles por especialidad (ventas, soporte), respuestas por partes y

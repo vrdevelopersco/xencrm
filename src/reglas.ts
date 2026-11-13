@@ -338,6 +338,7 @@ registrarReglas(
 
     // ---------- Voz (voz/llamada.ts) ----------
     { id: 'voz.minutosMax', grupo: 'Voz', etiqueta: 'Duración máxima de una llamada', ayuda: 'Al llegar, la llamada se corta (lo pone el servidor). Cada minuto se paga.', tipo: 'numero', unidad: 'minutos', min: 1, max: 30, entero: true, defecto: 10 },
+    { id: 'voz.telefonoSimultaneas', grupo: 'Voz', etiqueta: 'Llamadas por teléfono a la vez', ayuda: 'Más que esto al mismo tiempo y la llamada se pasa al desvío (o se cuelga, si no hay). Cada minuto se paga.', tipo: 'numero', unidad: 'llamadas', min: 1, max: 50, entero: true, defecto: 3 },
     { id: 'voz.llamadasPorHora', grupo: 'Voz', etiqueta: 'Llamadas por hora de una misma conversación', ayuda: 'Más que esto en una hora y se le pide que escriba. Por dirección de red se permite el triple (varias personas tras una misma red).', tipo: 'numero', unidad: 'llamadas', min: 1, max: 30, entero: true, defecto: 4 },
 
     // ---------- Cuentas clave (crm/cuentas-clave.ts) ----------

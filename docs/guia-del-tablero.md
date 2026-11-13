@@ -571,6 +571,16 @@ celular. XENCRM la revisa cada 5 minutos. Si deja de responder, avisa en la camp
   tarjeta.
 - **Instagram** y **Messenger**: todavía no están; la tarjeta dice qué hace falta.
 - **Otros asistentes de IA (MCP)**: para que asistentes como Claude o ChatGPT consulten el catálogo.
+- **Llamadas desde el chat (voz)**: el botón «Hablar con…» de la ventana de chat. Está listo cuando hay llave de xAI
+  y un agente con «Voz».
+- **Teléfono (SIP)**: las llamadas a tu número las contesta un agente de voz. Funciona con 3CX o con cualquier
+  troncal SIP (Twilio, Telnyx…). La tarjeta trae lo que hay que copiar —el aviso de llamadas para xAI y el destino
+  SIP de la troncal— y, mientras falte algo, los pasos: registrar el número en xAI, la troncal en 3CX (hacia
+  `sip.voice.x.ai`, TLS), el desvío a tu central para pasar a una persona, y marcar «Teléfono» en un agente.
+
+Todo entra a la **Bandeja omnicanal**: cada conversación con la insignia de su canal (WhatsApp, chat del sitio,
+teléfono). Si la misma persona llegó por dos canales —llamó y también escribió por WhatsApp—, a la derecha sale
+«¿Es la misma persona?» con **Unir fichas**.
 
 ## Lo que sabe
 
@@ -630,6 +640,12 @@ que se dice queda escrito en la misma conversación: en el chat del cliente y en
 en la ficha queda la llamada con su duración. Puede consultar sus tickets y la información, abrir un ticket o pasar
 con una persona; para agendar, le dice que escoja el espacio en el chat. La llamada se corta sola al llegar al tiempo
 máximo (Reglas y umbrales › Voz) y cada minuto cuenta para el consumo de IA.
+
+**Por teléfono** es igual, pero desde el número del negocio: contesta el agente con «Teléfono», saluda, consulta,
+abre tickets y, si piden hablar con alguien, **transfiere la llamada** a la extensión o cola de tu central (3CX) que
+esté en el desvío. Si ya habló con ustedes por WhatsApp, el agente lo sabe. La llamada entra a la Bandeja con la
+insignia de teléfono; como a una llamada no se le escribe, en vez del cajón sale **Abrir su conversación de
+WhatsApp** (si la hay) o **Escribirle por WhatsApp**. Cada burbuja dice qué agente habló.
 
 ## Lo que el asistente nunca hace
 

@@ -3,13 +3,17 @@
 import { env } from '../config.js';
 import { getSetting, setSetting } from '../crm/settings.js';
 
-export type ChannelId = 'web' | 'whatsapp' | 'meta' | 'mcp';
+export type ChannelId = 'web' | 'whatsapp' | 'meta' | 'mcp' | 'voz' | 'telefono';
 
 const DEFAULTS: Record<ChannelId, () => boolean> = {
   web: () => true, // el chat del sitio; el servidor (y el tablero) dependen de WEB_ENABLED
   whatsapp: () => env.whatsappEnabled,
   meta: () => true, // si está configurado en .env, arranca encendido
   mcp: () => env.mcpEnabled,
+  // La voz (llamadas desde el chat) y el teléfono (SIP) arrancan prendidos: sin llave de xAI ni agente de voz no
+  // hacen nada, y con ellos lo natural es que funcionen. Se apagan desde Canales.
+  voz: () => true,
+  telefono: () => true,
 };
 
 export function channelOn(id: ChannelId): boolean {

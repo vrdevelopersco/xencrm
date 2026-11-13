@@ -122,6 +122,12 @@ export const env = {
   xaiApiKey: process.env.XAI_API_KEY || '',
   xaiRealtimeUrl: (process.env.XAI_REALTIME_URL || 'wss://api.x.ai/v1/realtime').replace(/\/$/, ''),
   xaiVoiceModel: process.env.XAI_VOICE_MODEL || 'grok-voice-latest',
+  // El teléfono por SIP (src/voz/telefono.ts): la API REST de xAI (colgar, transferir), el secreto con que xAI firma
+  // el aviso de cada llamada (el `dispatch_signing_secret`, whsec_…) y a dónde se transfiere para hablar con una
+  // persona (una extensión o cola de 3CX, «sip:100@empresa.3cx.us», o un número, «tel:+573001234567»).
+  xaiApiUrl: (process.env.XAI_API_URL || 'https://api.x.ai/v1').replace(/\/$/, ''),
+  xaiSipSecreto: process.env.XAI_SIP_SECRETO || '',
+  xaiSipDesvio: process.env.XAI_SIP_DESVIO || '',
   anthropicRoleModels: {
     light: process.env.ANTHROPIC_MODEL_LIGHT || '',
     heavy: process.env.ANTHROPIC_MODEL_HEAVY || 'claude-sonnet-5-5',

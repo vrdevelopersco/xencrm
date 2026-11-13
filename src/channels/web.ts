@@ -29,6 +29,7 @@ import { irseSiQuedaHuerfano } from '../huerfano.js';
 import { metaConfigured, mountMeta } from './meta.js';
 import { paginaConCsp } from '../cabeceras.js';
 import { adjuntarVoz, pedirLlamada, vozDisponible } from '../voz/llamada.js';
+import { atenderLlamadaTelefonica, avisoValido } from '../voz/telefono.js';
 import { nombreParaCanal } from '../agentico/agentes.js';
 import { INSTANCE, startPublicCheck } from './public-check.js';
 import { createMcpServer } from '../mcp/server.js';
@@ -294,6 +295,25 @@ app.post('/voz/llamada', async (c) => {
   const r = pedirLlamada({ sessionId, ip: clientIp(c) });
   if ('error' in r) return c.json({ error: r.error }, r.status);
   return c.json(r);
+});
+
+/**
+ * El aviso de xAI de que entró una llamada por teléfono (voz/telefono.ts). Se verifica la firma ANTES de leer nada;
+ * se contesta enseguida y la llamada se atiende aparte (xAI no espera a que el agente termine de saludar).
+ */
+app.post('/voz/sip', async (c) => {
+  const cuerpo = await c.req.text();
+  if (!avisoValido(cuerpo, { id: c.req.header('webhook-id'), ts: c.req.header('webhook-timestamp'), firma: c.req.header('webhook-signature') })) return c.json({ error: 'firma inválida' }, 401);
+  let aviso: { type?: string; data?: { call_id?: string; sip_headers?: { name?: string; value?: string }[] } };
+  try {
+    aviso = JSON.parse(cuerpo);
+  } catch {
+    return c.json({ error: 'cuerpo inválido' }, 400);
+  }
+  // Otros avisos de xAI se reciben y no hacen nada: contestar 200 evita que los reintente.
+  if (aviso.type !== 'realtime.call.incoming' || !aviso.data?.call_id) return c.json({ ok: true });
+  void atenderLlamadaTelefonica(aviso.data.call_id, aviso.data.sip_headers).catch((err: Error) => console.warn(`[telefono] ${err.message}`));
+  return c.json({ ok: true });
 });
 
 app.get('/widget.js', (c) => {

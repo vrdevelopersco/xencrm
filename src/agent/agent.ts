@@ -120,9 +120,10 @@ function recordCustomerMessage(userId: string, text: string, intent?: string, me
   emitEvent('message', userId, { id, role: 'user', author: 'customer', content: text, intent: intent ?? null, ts: Date.now(), media: media ?? null });
 }
 
-function recordBotReply(userId: string, text: string) {
-  const id = appendMessage(userId, 'assistant', text, undefined, 'bot');
-  emitEvent('message', userId, { id, role: 'assistant', author: 'bot', content: text, ts: Date.now(), turno: idDelTurno() });
+function recordBotReply(userId: string, text: string, agente: string | null = null) {
+  // Con varios agentes (agentico/agentes.ts), quién lo dijo: la conversación lo muestra en la burbuja.
+  const id = appendMessage(userId, 'assistant', text, undefined, 'bot', agente ?? undefined);
+  emitEvent('message', userId, { id, role: 'assistant', author: 'bot', by: agente, content: text, ts: Date.now(), turno: idDelTurno() });
 }
 
 // La huella de las instrucciones: ocho caracteres que cambian cuando cambia el prompt. No dice qué cambió, pero sí si
@@ -222,6 +223,8 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
     console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} en modo humano, sin respuesta automática${route === 'modo humano' ? '' : ` (${route})`}`);
     return { ...base, text: '', silent: true, intent: 'humano', engine: 'none', ms: Date.now() - started, ...extra, route };
   };
+  // El agente que atiende, si el negocio configuró varios (se sabe más abajo, al escoger la persona).
+  let quienAtiende: string | null = null;
   const finish = (answer: string, intent: Intent, engine: AgentReply['engine'], extra: Partial<AgentReply> = {}): AgentReply => {
     if (crossNote === undefined) crossNote = contact ? crossChannelGreeting(msg.userId) : null;
     const reply = crossNote ? `${crossNote}\n\n${answer}` : answer;
@@ -247,7 +250,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       console.log(`[agent] ${msg.channel}:${msg.userId.slice(0, 14)} propuesta lista, espera a una persona ${msProp}ms`);
       return { ...base, text: '', silent: true, intent, engine, ms: msProp, ...extra };
     }
-    recordBotReply(msg.userId, reply);
+    recordBotReply(msg.userId, reply, quienAtiende);
     scheduleAnalysis(msg.userId);
     const ms = Date.now() - started;
     // Para el monitor de una demostración en vivo: ver crm/vivo.ts. Va aquí, donde ya se sabe todo del turno, y
@@ -429,6 +432,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   // Quién atiende (agentico/agentes.ts): sin agentes configurados es el de siempre y la persona no cambia en nada.
   // Con varios, la de ese agente —su nombre, lo que atiende, sus instrucciones—, fija por agente para la caché.
   const asig = agenteParaMensaje(msg.userId, msg.channel, text);
+  if (asig.agente.id !== 'principal') quienAtiende = asig.agente.nombre;
   const persona = [personaPrompt(asig.agente.nombre), loSuyo(asig.agente)].filter(Boolean).join('\n\n');
   // Lo de dónde se dijo va con la nota del turno, no en la persona: la persona es idéntica para todos.
   let note: string | undefined = donde || undefined;

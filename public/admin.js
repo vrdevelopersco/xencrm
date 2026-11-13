@@ -170,7 +170,7 @@
   function short(id) { var m = /^(wa|meta|web|cli|mcp):(.*)$/.exec(id); if (!m) return id; var v = m[2].replace(/@.*$/, ''); return m[1] === 'web' ? 'Visitante del sitio · ' + v.slice(0, 4) : v; }
   /** El canal sin su dibujito, para donde el color ya lo pone otra cosa (el punto verde del modo fácil). */
   function canalSolo(ch) { return String(channelIcon(ch)).replace(/^[^\wÀ-ÿ]+\s*/, ''); }
-  function channelIcon(ch) { return { whatsapp: '🟢 WhatsApp', meta: '🟢 WhatsApp', web: '🌐 Web', cli: '⌨️ CLI', mcp: '🔌 MCP' }[ch] || ch; }
+  function channelIcon(ch) { return { whatsapp: '🟢 WhatsApp', meta: '🟢 WhatsApp', web: '🌐 Web', cli: '⌨️ CLI', mcp: '🔌 MCP', telefono: '📞 Teléfono' }[ch] || ch; }
   function nameOf(c) { return c.name || short(c.id); }
   // 🪤 Los datos que captura el análisis tienen nombre de variable (`ocasion`, `fecha_evento`, `talla_o_medidas`)
   // porque así los escribe el negocio en su configuración, y así salían en la ficha: en minúscula y sin tilde. Se
@@ -1280,7 +1280,7 @@
       recordarReciente(d.contact);
       anunciarme(id, d.presentes || []);
       // ¿Otra ficha de la misma persona? Se guarda para que el panel no la pierda al volver a pintarse.
-      api('/contacts/' + encodeURIComponent(id) + '/duplicates').then(function (l) { state.dups = { id: id, list: l }; renderDuplicates(l); });
+      api('/contacts/' + encodeURIComponent(id) + '/duplicates').then(function (l) { state.dups = { id: id, list: l }; renderDuplicates(l); avisoDeLlamada(); });
       bindArchive();
       var row = state.contacts.find(function (c) { return c.id === id; }); if (row) { row.unread = 0; renderRows(); updateBadges(); }
       // Retomar a un caliente: la conversación pasa a la persona y el borrador queda listo para ajustarlo y enviarlo.
@@ -1299,11 +1299,27 @@
     if (left < 3 * 3600000) return 'Responde pronto: WhatsApp deja escribirle solo hasta dentro de ' + Math.max(1, Math.round(left / 60000)) + ' min.';
     return '';
   }
+  // El teléfono (src/voz/telefono.ts): a una llamada no se le escribe. En vez del cajón, cómo seguirle: su otra
+  // conversación (WhatsApp, el chat del sitio) si el CRM ya la conoce por el número, o su WhatsApp directo.
+  function avisoDeLlamada() {
+    var d = state.detail, c = d && d.contact;
+    var porTelefono = Boolean(c && c.channel === 'telefono');
+    $('composer').classList.toggle('sin-texto', porTelefono);
+    if (!porTelefono) return;
+    var otra = state.dups && state.dups.id === c.id ? (state.dups.list || [])[0] : null;
+    var num = String(c.phone || '').replace(/\D/g, '');
+    $('window-warn').hidden = false;
+    $('window-warn').innerHTML = 'Esta conversación es de una llamada: por aquí no se le puede escribir. ' +
+      (otra ? '<button type="button" class="btn sm" id="tel-otra">Abrir su conversación de ' + esc(canalSolo(otra.contact.channel)) + '</button>'
+        : num ? '<a class="btn sm" target="_blank" rel="noopener noreferrer" href="https://wa.me/' + esc(num) + '">Escribirle por WhatsApp</a>' : '');
+    if ($('tel-otra')) $('tel-otra').onclick = function () { openContact(otra.contact.id); };
+  }
   function renderChat() {
     var d = state.detail; if (!d) return;
     var c = d.contact;
     var note = windowNote(d.replyWindow);
     $('window-warn').hidden = !note; $('window-warn').textContent = note;
+    avisoDeLlamada();
     $('chat-empty').hidden = true; $('chat-head').hidden = false; $('msgs').hidden = false; $('composer').hidden = false;
     $('chat-name').textContent = nameOf(c);
     $('chat-channel').textContent = channelIcon(c.channel);
@@ -1350,7 +1366,8 @@
     // 🪤 `by` es el nombre de quien contestó, y NO siempre lo escribe alguien de la casa: de un chat de WhatsApp
     // importado sale tal cual del archivo. Sin escapar, quien mandó ese chat ejecuta JavaScript en la pantalla
     // de quien atiende —y de ahí se lleva el token del tablero—. Comprobado: se ejecutaba.
-    var label = who === 'customer' ? 'Cliente' : who === 'human' ? (msg.by ? esc(msg.by) + ' (equipo)' : 'Equipo') : esc(state.agentName || 'Xen');
+    // Lo del asistente, con el nombre del agente que lo dijo si hay varios (msg.by); si no, el del negocio.
+    var label = who === 'customer' ? 'Cliente' : who === 'human' ? (msg.by ? esc(msg.by) + ' (equipo)' : 'Equipo') : esc(msg.by || state.agentName || 'Xen');
     // «¿por qué?»: el turno que produjo esta respuesta (src/crm/turnos.ts). Solo para quien administra, por ruido.
     var porQue = who === 'bot' && msg.turno && esAdmin()
       ? '<button class="por-que solo-completo" type="button" data-turno="' + esc(msg.turno) + '" aria-expanded="false">¿por qué?</button>' : '';
@@ -6400,6 +6417,7 @@
   function canalDeXen(ch) {
     if (ch === 'whatsapp' || ch === 'meta') return { k: 'wa', t: 'WhatsApp', ic: 'wa' };
     if (ch === 'web') return { k: 'web', t: 'Chat del sitio', ic: 'globo' };
+    if (ch === 'telefono') return { k: 'tel', t: 'Teléfono', ic: 'telefono' };
     return { k: 'otro', t: canalSolo(ch) || 'Otro canal', ic: 'burbuja' };
   }
   // «Sin asignar»: sin nadie en «Asignado a» (c.responsable), que es lo que pone quien la toma si no había nadie.
@@ -10922,7 +10940,7 @@
   // 🪤 Se arma al pintar, no al cargar: el vocabulario del negocio («Demos») llega después, con /me.
   var AG_AREAS = { ventas: 'Ventas', soporte: 'Soporte', informacion: 'Información' };
   Object.defineProperty(AG_AREAS, 'agenda', { enumerable: true, get: function () { return VOC.Citas; } });
-  var AG_CANALES = { whatsapp: 'WhatsApp', web: 'Chat del sitio', voz: 'Voz (llamadas)' };
+  var AG_CANALES = { whatsapp: 'WhatsApp', web: 'Chat del sitio', voz: 'Voz (desde el chat)', telefono: 'Teléfono (SIP)' };
   function agSlug(nombre, lista) {
     var base = String(nombre || 'agente').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'agente';
     if (base.length < 2) base = 'agente-' + base;
@@ -10933,7 +10951,7 @@
   function agFicha(a, i, puede) {
     var chips = function (lista, nombres) { return lista.map(function (x) { return '<span class="chip">' + esc(nombres[x] || x) + '</span>'; }).join(''); };
     return '<li class="ag-fila' + (a.activo ? '' : ' inactivo') + '"><div class="ag-quien"><b>' + esc(a.nombre) + '</b>' + (a.activo ? '' : ' <span class="chip">Pausado</span>') +
-      '<span class="ag-chips">' + chips(a.atiende, AG_AREAS) + '</span><span class="ag-chips">' + chips(a.canales, AG_CANALES) + (a.canales.indexOf('voz') >= 0 && a.voz ? '<span class="small muted">voz «' + esc(a.voz.voz) + '» · ' + esc(a.voz.idioma) + '</span>' : '') + '</span>' +
+      '<span class="ag-chips">' + chips(a.atiende, AG_AREAS) + '</span><span class="ag-chips">' + chips(a.canales, AG_CANALES) + ((a.canales.indexOf('voz') >= 0 || a.canales.indexOf('telefono') >= 0) && a.voz ? '<span class="small muted">voz «' + esc(a.voz.voz) + '» · ' + esc(a.voz.idioma) + '</span>' : '') + '</span>' +
       (a.instrucciones ? '<span class="small muted ag-instr">' + esc(a.instrucciones) + '</span>' : '') + '</div>' +
       (puede ? '<div class="ag-acc"><button type="button" class="btn sm" data-ag-editar="' + i + '">Editar</button><button type="button" class="btn sm" data-ag-quitar="' + i + '">Quitar</button></div>' : '') + '</li>';
   }
@@ -10942,7 +10960,7 @@
       return Object.keys(nombres).map(function (k) { return '<label class="ag-op"><input type="checkbox" name="' + grupo + '" value="' + k + '"' + (valores.indexOf(k) >= 0 ? ' checked' : '') + '> ' + esc(nombres[k]) + '</label>'; }).join('');
     };
     var voces = (AG.datos.voces || ['eve']).map(function (v) { return '<option value="' + esc(v) + '"' + ((a.voz && a.voz.voz) === v ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('');
-    var conVoz = a.canales.indexOf('voz') >= 0;
+    var conVoz = a.canales.indexOf('voz') >= 0 || a.canales.indexOf('telefono') >= 0;
     var err = AG.error;
     var campo = function (nombre) { return err && err.campo && err.campo.split('.').pop() === nombre; };
     return '<form class="ag-form" id="ag-form" novalidate>' +
@@ -10990,7 +11008,8 @@
     });
     var form = $('ag-form');
     if (!form) return;
-    form.querySelectorAll('input[name="canales"]').forEach(function (c) { c.onchange = function () { form.querySelector('.ag-voz').hidden = !form.querySelector('input[name="canales"][value="voz"]').checked; }; });
+    // La voz y el idioma, para los que hablan: la llamada desde el chat y el teléfono.
+    form.querySelectorAll('input[name="canales"]').forEach(function (c) { c.onchange = function () { form.querySelector('.ag-voz').hidden = !form.querySelector('input[name="canales"][value="voz"]:checked, input[name="canales"][value="telefono"]:checked'); }; });
     $('ag-cancelar').onclick = function () { AG.editando = null; AG.error = null; pintarAgentes(); };
     form.onsubmit = function (e) {
       e.preventDefault();
@@ -11001,7 +11020,7 @@
       a.canales = marcados('canales');
       a.instrucciones = $('ag-instr').value;
       a.activo = $('ag-activo').checked;
-      if (a.canales.indexOf('voz') >= 0) a.voz = { voz: $('ag-voz').value, idioma: $('ag-idioma').value.trim() || 'es-CO' }; else delete a.voz;
+      if (a.canales.indexOf('voz') >= 0 || a.canales.indexOf('telefono') >= 0) a.voz = { voz: $('ag-voz').value, idioma: $('ag-idioma').value.trim() || 'es-CO' }; else delete a.voz;
       if (!a.id) a.id = agSlug(a.nombre, lista);
       var nueva = lista.slice();
       if (ed.i < 0) nueva.push(a); else nueva[ed.i] = a;

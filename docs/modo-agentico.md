@@ -118,6 +118,47 @@ navegador ──(audio PCM16 24 kHz, /voz/ws)──▶ XENCRM ──(wss://api.x
   remuestreo a 24 kHz si hace falta, la voz en orden y sin huecos, errores en palabras (sin permiso, sin micrófono,
   sin cupo), Escape cuelga.
 
+## Teléfono por SIP (3CX y otros proveedores)
+
+Las llamadas al número del negocio las contesta un agente con el canal **Teléfono** (`voz/telefono.ts`), con el
+[SIP de xAI](https://docs.x.ai/developers/model-capabilities/audio/voice-agent/sip):
+
+```
+cliente ──▶ tu número (3CX, Twilio, Telnyx…) ──SIP──▶ sip:<número>@sip.voice.x.ai ──audio──▶ Grok
+                                                            │ aviso firmado (realtime.call.incoming)
+                                                            ▼
+                                 XENCRM /voz/sip ──▶ se une por call_id (wss, con la llave) y la controla
+```
+
+- **El audio no pasa por XENCRM**: va entre la troncal y xAI (el retraso, en lo mínimo). XENCRM pone instrucciones y
+  herramientas, guarda lo dicho, transfiere y cuelga por la API (`/realtime/calls/{id}/refer` y `/hangup`).
+- 🪤 **El aviso se verifica antes de nada** (Standard Webhooks: HMAC-SHA256 sobre «id.timestamp.cuerpo» con el
+  secreto `whsec_…` que xAI da una vez al registrar el número con `origin: byo_trunk`, en `XAI_SIP_SECRETO`), con
+  cinco minutos de margen y sin repetir un aviso ya visto. Sin firma buena, 401 y no se toca la llamada.
+- **Quién llama** sale del `From` SIP: la ficha es `tel:+57…` (canal `telefono`), con su número normalizado igual que
+  el de WhatsApp, así que el CRM la reconoce como la misma persona («¿Es la misma persona?» › Unir fichas) y el agente
+  sabe de qué habló por escrito. Número oculto: una ficha de esa llamada.
+- **La sesión de teléfono**: sin formato de audio (lo pone la troncal, G.711), con el idioma, «## Por teléfono»
+  (saludar primero, sin «déjalo en el chat», transferir, despedirse), sus herramientas sin `pedir_cita` y `colgar`.
+  XENCRM manda `response.create` para que conteste él.
+- **Pasar a una persona** transfiere la llamada (SIP REFER) a `XAI_SIP_DESVIO` —la extensión o cola de 3CX,
+  `sip:100@empresa.3cx.us`, o un número `tel:`— después de que diga «te comunico»; sin desvío, la ficha queda con el
+  equipo y el agente se despide. **Colgar**: se deja sonar la despedida y se cuelga por la API.
+- **Límites**: `voz.telefonoSimultaneas` (3) a la vez y `voz.minutosMax`; pasado el cupo, sin agente o con el tope
+  del mes, la llamada va al desvío o se cuelga (una llamada que nadie contesta es peor).
+- **3CX**: una troncal SIP genérica hacia `sip.voice.x.ai` (TLS 5061, o TCP), G.711, con la autenticación que se
+  registró en xAI (por IP o usuario y clave), y la regla de entrada del número hacia esa troncal. **Twilio, Telnyx**:
+  el número o su troncal elástica apuntando a `sip:<número>@sip.voice.x.ai;transport=tls`. La tarjeta Teléfono de
+  Canales trae esto mismo, con lo que hay que copiar.
+
+## El omnicanal
+
+Todos los canales entran a la misma Bandeja: WhatsApp (QR u oficial), el chat del sitio, las llamadas desde el chat
+(que quedan en la conversación del chat) y el teléfono (`tel:+57…`, con su insignia). Canales tiene una tarjeta por
+cada uno (estado, actividad, qué copiar, qué falta) y los dos de voz se prenden y apagan como los demás. Cada
+mensaje del asistente guarda qué agente lo dijo, y la burbuja lo muestra. A una llamada no se le escribe: en vez del
+cajón, su otra conversación o su WhatsApp.
+
 ## Lo que no está (todavía)
 
 - **Medirlo con un modelo de verdad.** Las pruebas (`pnpm test:agentico`) simulan la API; falta correr los escenarios
@@ -126,5 +167,8 @@ navegador ──(audio PCM16 24 kHz, /voz/ws)──▶ XENCRM ──(wss://api.x
   vive en el navegador de quien pregunta.
 - Herramientas con Ollama o Apple.
 - **La voz con una llave real de xAI**: está probada contra un Grok de mentira (el mismo protocolo, en las pruebas y en
-  Chrome con micrófono falso); falta una llamada de verdad. Tampoco hay voz por teléfono (SIP) ni en la burbuja que
-  se pega en otros sitios: solo en la ventana `/chat`.
+  Chrome con micrófono falso); falta una llamada de verdad. Tampoco hay voz en la burbuja que se pega en otros
+  sitios (sí en la ventana `/chat` y por teléfono).
+- **El teléfono con una troncal real** (3CX o un proveedor): probado contra la API de xAI simulada, con el formato de
+  firma de Standard Webhooks (las tres cabeceras de xAI coinciden con ese estándar, pero la página no lo nombra:
+  confirmarlo en la primera llamada). Tampoco hay llamadas salientes (el agente llamando al cliente).

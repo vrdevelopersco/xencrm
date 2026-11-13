@@ -1176,7 +1176,7 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
 
   app.post('/admin/api/channels/:id', async (c) => {
     const id = c.req.param('id') as ChannelId;
-    if (!['web', 'whatsapp', 'meta', 'mcp'].includes(id)) return c.json({ error: 'canal desconocido' }, 404);
+    if (!['web', 'whatsapp', 'meta', 'mcp', 'voz', 'telefono'].includes(id)) return c.json({ error: 'canal desconocido' }, 404);
     const body = (await c.req.json().catch(() => ({}))) as { on?: boolean };
     if (typeof body.on !== 'boolean') return c.json({ error: 'on requerido' }, 400);
     try {

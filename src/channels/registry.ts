@@ -8,6 +8,8 @@ import { grupos, modoCanal, soloEscucha, channelOn, setChannelOn, type ChannelId
 // tuviera WhatsApp encendido o no. Se carga cuando se enciende, no antes.
 import { whatsappStatus, qrSvg } from './whatsapp-estado.js';
 import { estadoPuente } from './puente.js';
+import { vozDisponible } from '../voz/llamada.js';
+import { telefonoListo } from '../voz/telefono.js';
 
 export type CardState = 'conectado' | 'conectando' | 'esperando_qr' | 'esperando' | 'sin_configurar' | 'apagado' | 'error' | 'conflicto' | 'no_disponible';
 
@@ -79,6 +81,56 @@ export function channelCards(): ChannelCard[] {
       env.publicUrl && env.allowedOrigins.includes('*')
         ? [`Cualquier sitio puede usar este chat. Para dejarlo solo en el de ${name} (${business.business.siteUrl}), avísanos.`]
         : [],
+  });
+
+  // Voz: llamadas desde la ventana de chat (src/voz/llamada.ts)
+  const vozOn = channelOn('voz');
+  const voz = vozDisponible();
+  cards.push({
+    id: 'voz',
+    name: 'Llamadas desde el chat (voz)',
+    about: `Un botón «Hablar con…» en la ventana de chat de ${name}: el cliente habla con un agente de voz de Grok y la conversación queda escrita aquí.`,
+    state: !vozOn ? 'apagado' : voz.ok ? 'conectado' : 'sin_configurar',
+    detail: vozOn && voz.ok ? `Atiende ${voz.agente}.` : vozOn ? voz.motivo : undefined,
+    on: vozOn,
+    canToggle: true,
+    ...stats('voz'),
+    copy: [{ label: 'Ventana de chat con el botón de llamar', value: `${base()}/chat` }],
+    steps: voz.ok || !vozOn ? [] : [
+      'Pon la llave de xAI en XAI_API_KEY (console.x.ai › API Keys). Eso lo hace quien administra XENCRM.',
+      'En Configuración › Agente › Agentes, marca «Voz» en el agente que va a atender las llamadas y escoge su voz.',
+    ],
+    warnings: env.publicUrl && !/^https:/.test(env.publicUrl) ? ['El micrófono solo funciona con https: sin él, el navegador no deja llamar.'] : [],
+  });
+
+  // Teléfono por SIP: 3CX, Twilio, Telnyx u otra troncal (src/voz/telefono.ts)
+  const telOn = channelOn('telefono');
+  const tel = telefonoListo();
+  cards.push({
+    id: 'telefono',
+    name: 'Teléfono (SIP)',
+    about: `Las llamadas al número de ${name} las contesta un agente de voz de Grok: consulta, abre tickets y pasa a una persona de tu central (3CX u otra) cuando hace falta. Funciona con cualquier troncal SIP.`,
+    state: !telOn ? 'apagado' : tel.ok ? (stats('telefono').lastInboundAt ? 'conectado' : 'esperando') : 'sin_configurar',
+    detail: telOn && tel.ok ? `Atiende ${tel.agente}.${stats('telefono').lastInboundAt ? '' : ' Todavía no ha entrado ninguna llamada.'}` : telOn ? tel.motivo : undefined,
+    on: telOn,
+    canToggle: true,
+    ...stats('telefono'),
+    copy: [
+      { label: 'Aviso de llamadas (webhook en xAI)', value: `${base()}/voz/sip` },
+      { label: 'Destino SIP de la troncal', value: 'sip:<tu número>@sip.voice.x.ai;transport=tls' },
+      ...(env.xaiSipDesvio ? [{ label: 'Desvío a una persona', value: env.xaiSipDesvio }] : []),
+    ],
+    steps: tel.ok || !telOn ? [] : [
+      'Registra tu número en xAI como troncal propia (origin «byo_trunk», en la API de números de xAI) con el aviso de llamadas de arriba. xAI devuelve UNA vez el secreto de firma (whsec_…): va en XAI_SIP_SECRETO.',
+      '3CX: en Troncales SIP agrega una troncal genérica hacia sip.voice.x.ai (TLS 5061, o TCP), G.711, con la autenticación que registraste en xAI (por IP o usuario y clave). En la regla de entrada de tu número, envía las llamadas a esa troncal.',
+      'Twilio, Telnyx u otro proveedor: apunta el número (o su troncal elástica) al destino SIP de arriba.',
+      'Para pasar a una persona: pon en XAI_SIP_DESVIO la extensión o cola de tu central (sip:100@empresa.3cx.us) o un número (tel:+57…).',
+      'En Configuración › Agente › Agentes, marca «Teléfono» en el agente que va a contestar.',
+    ],
+    warnings: [
+      ...(telOn && tel.ok && !env.xaiSipDesvio ? ['Sin desvío (XAI_SIP_DESVIO), «pasar a una persona» deja la ficha en manos del equipo pero no transfiere la llamada.'] : []),
+      ...(telOn && !env.publicUrl ? ['xAI necesita una dirección pública para avisar de las llamadas.'] : []),
+    ],
   });
 
   // WhatsApp por QR (Baileys)

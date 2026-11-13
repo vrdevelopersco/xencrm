@@ -21,7 +21,7 @@ import { getSetting, setSetting } from '../crm/settings.js';
 
 export const AREAS = ['ventas', 'soporte', 'agenda', 'informacion'] as const;
 export type Area = (typeof AREAS)[number];
-export const CANALES_DE_AGENTE = ['whatsapp', 'web', 'voz'] as const;
+export const CANALES_DE_AGENTE = ['whatsapp', 'web', 'voz', 'telefono'] as const;
 export type CanalDeAgente = (typeof CANALES_DE_AGENTE)[number];
 
 /** Las voces de Grok (GET /v1/tts/voices, consultado el 2026-11-13). La de fábrica es «eve». */
@@ -80,7 +80,8 @@ export function guardarAgentes(entrada: unknown): { agentes: Agente[] } | { erro
       return { error: `Agente ${i + 1}: ${p.message}`, campo: `agentes.${i}.${p.path.join('.')}` };
     }
     // Un agente de voz sin voz elegida toma la de fábrica.
-    const a = r.data.canales.includes('voz') && !r.data.voz ? { ...r.data, voz: Voz.parse({}) } : r.data;
+    const hablado = r.data.canales.includes('voz') || r.data.canales.includes('telefono');
+    const a = hablado && !r.data.voz ? { ...r.data, voz: Voz.parse({}) } : r.data;
     if (lista.some((x) => x.id === a.id)) return { error: `Agente ${i + 1}: ya hay otro con el id «${a.id}»`, campo: `agentes.${i}.id` };
     lista.push(a);
   }
@@ -133,7 +134,7 @@ function guardarAgenteDe(userId: string, agente: string, now: number): void {
   db().prepare('INSERT INTO agente_de_conversacion (user_id, agente, desde) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET agente = excluded.agente, desde = excluded.desde').run(userId, agente, now);
 }
 
-export const canalDeAgente = (canal: string): CanalDeAgente | null => (canal === 'whatsapp' || canal === 'meta' ? 'whatsapp' : canal === 'web' ? 'web' : canal === 'voz' ? 'voz' : null);
+export const canalDeAgente = (canal: string): CanalDeAgente | null => (canal === 'whatsapp' || canal === 'meta' ? 'whatsapp' : canal === 'web' ? 'web' : canal === 'voz' ? 'voz' : canal === 'telefono' ? 'telefono' : null);
 
 export interface Asignacion {
   agente: Agente;

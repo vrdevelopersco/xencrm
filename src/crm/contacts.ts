@@ -119,8 +119,9 @@ export function getContact(id: string): Contact | null {
  * Sirve para escribirle, llamarlo y para saber si dos fichas son la misma persona.
  */
 export function numeroNormalizado(id: string, phone: string | null): string | null {
-  const m = /^(?:wa:(\d{8,15})@s\.whatsapp\.net|meta:(\d{8,15}))$/.exec(id);
-  const raw = phone ?? (m ? (m[1] ?? m[2]!) : null);
+  // tel:+573001234567 es una llamada por teléfono (voz/telefono.ts): el mismo número que su WhatsApp.
+  const m = /^(?:wa:(\d{8,15})@s\.whatsapp\.net|meta:(\d{8,15})|tel:\+?(\d{8,15}))$/.exec(id);
+  const raw = phone ?? (m ? (m[1] ?? m[2] ?? m[3]!) : null);
   if (!raw) return null;
   let digits = raw.replace(/\D/g, '');
   // "300 123 4567" y "+57 300 123 4567" son el mismo número.

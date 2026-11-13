@@ -1837,7 +1837,7 @@ dialog.perdida input{width:100%}
 .fx-av.av-4{background:var(--fx-av-4-s);color:var(--fx-av-4-t)}.fx-av.av-5{background:var(--fx-av-5-s);color:var(--fx-av-5-t)}
 .fx-av.av-6{background:var(--fx-av-6-s);color:var(--fx-av-6-t)}
 .fx-canal-ins{position:absolute;right:-3px;bottom:-3px;display:grid;place-items:center;width:19px;height:19px;border-radius:999px;border:2px solid var(--fx-panel);background:var(--fx-canal-otro);color:#fff}
-.fx-canal-ins.fx-canal-wa{background:var(--fx-canal-wa)}.fx-canal-ins.fx-canal-web{background:var(--fx-canal-web)}
+.fx-canal-ins.fx-canal-wa{background:var(--fx-canal-wa)}.fx-canal-ins.fx-canal-web{background:var(--fx-canal-web)}.fx-canal-ins.fx-canal-tel{background:var(--fx-canal-tel)}
 .fx-canal-ins .fx-svg{width:11px;height:11px;stroke-width:2.2}
 :root[data-piel="xen"] #rows .row.sel .fx-canal-ins{border-color:var(--fx-suave)}
 .fx-svg{display:block;flex:0 0 auto}
@@ -2447,7 +2447,7 @@ dialog.perdida input{width:100%}
    insignia (dibujo blanco encima: WhatsApp 4.3:1, sitio 7.3:1; para un ícono basta 3:1). */
 :root[data-piel="xen"]{
   /* Los seis tonos de avatar (--fx-av-*) son los de Contactos, más abajo: uno solo para todo XENCRM. */
-  --fx-canal-wa:#128c4a;--fx-canal-web:#3f5a66;--fx-canal-otro:#5c7177;
+  --fx-canal-wa:#128c4a;--fx-canal-web:#3f5a66;--fx-canal-otro:#5c7177;--fx-canal-tel:#0b6aa2;
 }
 @media (prefers-reduced-motion:reduce){:root[data-piel="xen"] #rows .row,:root[data-piel="xen"] .fx-asig button{transition:none}}
 /* (fin de XEN · Bandeja omnicanal) */
@@ -4091,6 +4091,9 @@ dialog.perdida input{width:100%}
 :root[data-piel="xen"] .ag-voz-ok .fx-svg{width:15px;height:15px}
 :root[data-piel="xen"] .ag-voz-falta{padding:8px 10px;border-radius:var(--fx-r-md);background:var(--fx-ambar-s);color:var(--fx-ambar-t)}
 @media (max-width:900px){:root[data-piel="xen"] .ag-fila{flex-direction:column}}
+/* Una llamada por teléfono no recibe texto: sin cajón de responder (la nota interna sigue). */
+:root[data-piel="xen"] .composer.sin-texto #reply,:root[data-piel="xen"] .composer.sin-texto #send,:root[data-piel="xen"] .composer.sin-texto #adj-btn,:root[data-piel="xen"] .composer.sin-texto #composer-hint{display:none}
+:root[data-piel="xen"] .composer.sin-texto #window-warn{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 /* ===== fin de la piel de XENCRM ===== */
 </style>
 </head>

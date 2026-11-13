@@ -40,9 +40,9 @@ import { herramientasDe, INSTRUCCIONES_DEL_CLIENTE } from '../agentico/cliente.j
 import { definicion, ejecutarUna, type Contexto, type Herramienta } from '../agentico/nucleo.js';
 
 // ---------- ¿hay voz? ----------
-/** El agente que atiende por voz: el primero activo con el canal «voz». */
-export function agenteDeVoz(): Agente | null {
-  return agentes().find((a) => a.activo && a.canales.includes('voz')) ?? null;
+/** El agente que atiende por voz (o por teléfono): el primero activo con ese canal. */
+export function agenteDeVoz(canal: 'voz' | 'telefono' = 'voz'): Agente | null {
+  return agentes().find((a) => a.activo && a.canales.includes(canal)) ?? null;
 }
 
 /** Si se puede llamar ahora, y si no, por qué (dicho para el equipo; al cliente se le dice menos). */
@@ -50,6 +50,7 @@ export function vozDisponible(): { ok: boolean; motivo?: string; agente?: string
   const a = agenteDeVoz();
   if (!env.xaiApiKey) return { ok: false, motivo: 'Falta XAI_API_KEY en el .env (la llave de xAI para la voz de Grok).' };
   if (!a) return { ok: false, motivo: 'Ningún agente activo atiende por voz: marca «Voz» en uno (Configuración › Agentes).' };
+  if (!channelOn('voz')) return { ok: false, motivo: 'Las llamadas desde el chat están apagadas (Canales).' };
   if (!channelOn('web')) return { ok: false, motivo: 'El chat del sitio está apagado (Canales): la llamada se abre desde ahí.' };
   if (agotado()) return { ok: false, motivo: 'Se llegó al tope de gasto del mes.' };
   return { ok: true, agente: a.nombre };
@@ -127,29 +128,49 @@ Estás en una llamada: hablas, no escribes.
 - Para agendar ${V.una} ${V.cita}: consulta los espacios si te los pide, y dile que en el chat de esta ventana escoge y confirma (por voz no agendas).
 - Si no le entiendes, pídele que lo repita; no supongas.`;
 
+/** Por teléfono, lo mismo que por voz, más lo de una llamada de verdad: contestar, transferir y despedirse. */
+const POR_TELEFONO = `## Por teléfono
+Contestas una llamada telefónica.
+- Al contestar, saluda en una frase con tu nombre y el del negocio, y pregunta en qué ayudas.
+- No hay chat en esta llamada: lo que tendrías que «dejar en el chat» (un enlace, los espacios para escoger), ofrece mandárselo por WhatsApp a este mismo número o que alguien del equipo lo llame.
+- Para hablar con una persona del equipo usa pasar_a_persona: la llamada se transfiere.
+- Cuando el cliente se despida, despídete en una frase y usa colgar.`;
+
 /** Las instrucciones de la llamada: la persona del agente, lo suyo, cómo se habla por voz, sus herramientas y lo que sabe del negocio. */
-export function instruccionesDeVoz(a: Agente): string {
+export function instruccionesDeVoz(a: Agente, canal: 'voz' | 'telefono' = 'voz', quienLlama = ''): string {
   const hoja = businessSheet();
   const cabe = business.agent.fullInfoMaxTokens > 0 && hoja.tokens <= business.agent.fullInfoMaxTokens;
-  return [personaPrompt(a.nombre), loSuyo(a), POR_VOZ, INSTRUCCIONES_DEL_CLIENTE, cabe ? hoja.text : ''].filter(Boolean).join('\n\n');
+  // Por teléfono no hay chat al lado: fuera lo de «déjaselo en el chat», que lo dice POR_TELEFONO a su manera.
+  const porDonde = canal === 'telefono' ? `${POR_VOZ.replace(/\n- Para agendar[^\n]*/, '').replace(': di que se los dejas en el chat de esta misma ventana', '')}\n\n${POR_TELEFONO}` : POR_VOZ;
+  return [personaPrompt(a.nombre), loSuyo(a), porDonde, INSTRUCCIONES_DEL_CLIENTE, quienLlama, cabe ? hoja.text : ''].filter(Boolean).join('\n\n');
 }
 
-/** La sesión que se le manda a Grok al conectar (session.update). */
-export function sesionDeVoz(a: Agente, herramientas: Herramienta[]) {
+/** Las herramientas en el formato de Grok (la API de voz las quiere planas, sin el envoltorio de Chat Completions). */
+export function herramientasParaGrok(herramientas: Herramienta[]) {
+  return herramientas.map((h) => {
+    const d = definicion(h);
+    return { type: 'function', name: d.nombre, description: d.descripcion, parameters: d.parametros };
+  });
+}
+
+/**
+ * La sesión que se le manda a Grok al conectar (session.update). 🪤 Por teléfono no se dice el formato del audio:
+ * lo pone el proveedor (G.711 por SIP) y xAI lo une a la sesión por su cuenta; forzar PCM a 24 kHz ahí sería
+ * pelearse con la troncal.
+ */
+export function sesionDeVoz(a: Agente, herramientas: Herramienta[], canal: 'voz' | 'telefono' = 'voz', o: { quienLlama?: string; extras?: Record<string, unknown>[] } = {}) {
+  const transcripcion = { transcription: { language_hint: a.voz?.idioma ?? 'es-CO' } };
   return {
     type: 'session.update',
     session: {
-      instructions: instruccionesDeVoz(a),
+      instructions: instruccionesDeVoz(a, canal, o.quienLlama),
       voice: a.voz?.voz ?? 'eve',
       turn_detection: { type: 'server_vad' },
-      audio: {
-        input: { format: { type: 'audio/pcm', rate: 24000 }, transcription: { language_hint: a.voz?.idioma ?? 'es-CO' } },
-        output: { format: { type: 'audio/pcm', rate: 24000 } },
-      },
-      tools: herramientas.map((h) => {
-        const d = definicion(h);
-        return { type: 'function', name: d.nombre, description: d.descripcion, parameters: d.parametros };
-      }),
+      audio:
+        canal === 'telefono'
+          ? { input: transcripcion }
+          : { input: { format: { type: 'audio/pcm', rate: 24000 }, ...transcripcion }, output: { format: { type: 'audio/pcm', rate: 24000 } } },
+      tools: [...herramientasParaGrok(herramientas), ...(o.extras ?? [])],
     },
   };
 }
@@ -186,20 +207,22 @@ export function adjuntarVoz(servidor: Server): void {
 }
 
 /** Abre la conexión con Grok (con la llave, desde el servidor). Aparte para poder cambiarla en las pruebas. */
-export let conectarConGrok = (): WebSocket => new WebSocket(`${env.xaiRealtimeUrl}?model=${encodeURIComponent(env.xaiVoiceModel)}`, { headers: { Authorization: `Bearer ${env.xaiApiKey}` } });
-export function cambiarConexion(f: () => WebSocket): void {
+/** Con `callId`, se une a una llamada telefónica que ya entró por SIP (voz/telefono.ts); sin él, abre una sesión nueva. */
+export let conectarConGrok = (callId?: string): WebSocket =>
+  new WebSocket(callId ? `${env.xaiRealtimeUrl}?call_id=${encodeURIComponent(callId)}` : `${env.xaiRealtimeUrl}?model=${encodeURIComponent(env.xaiVoiceModel)}`, { headers: { Authorization: `Bearer ${env.xaiApiKey}` } });
+export function cambiarConexion(f: (callId?: string) => WebSocket): void {
   conectarConGrok = f;
 }
 
-function guardar(userId: string, rol: 'user' | 'assistant', texto: string, agente: string): void {
+export function guardar(userId: string, rol: 'user' | 'assistant', texto: string, agente: string): void {
   const limpio = texto.trim();
   if (!limpio) return;
-  const id = rol === 'user' ? appendMessage(userId, 'user', limpio, undefined, 'customer') : appendMessage(userId, 'assistant', limpio, undefined, 'bot');
+  const id = rol === 'user' ? appendMessage(userId, 'user', limpio, undefined, 'customer') : appendMessage(userId, 'assistant', limpio, undefined, 'bot', agente);
   if (rol === 'user') {
     const c = getContact(userId);
     if (c) updateContact(userId, { unread: c.unread + 1 }, { silent: true });
   }
-  emitEvent('message', userId, { id, role: rol, author: rol === 'user' ? 'customer' : 'bot', content: limpio, ts: Date.now(), voz: agente });
+  emitEvent('message', userId, { id, role: rol, author: rol === 'user' ? 'customer' : 'bot', ...(rol === 'assistant' ? { by: agente } : {}), content: limpio, ts: Date.now(), voz: agente });
 }
 
 export function atenderLlamada(cliente: WebSocket, b: Boleto): void {
