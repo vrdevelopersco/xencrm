@@ -31,3 +31,6 @@ DUNORKEY.env
 
 # respaldos que deja herramientas/migrar-a-xencrm.mjs (tienen las mismas llaves que la .env)
 *.antes-de-xencrm
+
+# credenciales sueltas (Firebase, superadmin): NUNCA subir, el repo es público
+docs/firebase.txt

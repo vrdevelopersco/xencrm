@@ -1,5 +1,27 @@
 # XENCRM · CRM conversacional con IA para WhatsApp
 
+## Resumen del proyecto
+
+XENCRM es un CRM conversacional para gestionar clientes, ventas y servicio desde WhatsApp y el chat de un sitio web. Combina una bandeja de atención, un agente de IA, seguimiento de prospectos, citas, tickets y métricas. Cada negocio puede configurar su propio flujo y operar en una instancia separada.
+
+### Stack tecnológico
+
+- **Aplicación:** TypeScript y Node.js 22.13 o superior, con pnpm; interfaz web en HTML, CSS y JavaScript.
+- **Datos y conocimiento:** SQLite por cliente, búsqueda de texto completo y recuperación de información para el agente (RAG).
+- **IA:** integración con OpenAI, Anthropic, Ollama y APIs compatibles con OpenAI; Apple Foundation Models mediante un componente Swift opcional.
+- **Canales e integración:** WhatsApp, chat web, calendario y servidor MCP.
+
+### Qué falta
+
+- Implementar el análisis de sentimiento por voz y definir la retención de los audios; las notas de voz ya pueden transcribirse.
+- Completar y validar los pendientes de despliegue e integraciones descritos en [el checkpoint](docs/checkpoint.md) y [la documentación de XENCRM](docs/xencrm.md).
+
+### Posibles evoluciones
+
+- Ampliar los canales e integraciones con herramientas comerciales y de atención.
+- Mejorar la analítica y las recomendaciones para ventas y servicio con datos históricos.
+- Facilitar el despliegue y la operación de múltiples negocios, manteniendo la separación de sus datos.
+
 **XENCRM es la siguiente generación del CRM conversacional de HRC** (hasta noviembre de 2026 se llamó aiva): el
 mismo motor —agente de IA, citas, puntaje, traspaso a una persona— con una interfaz rehecha para trabajar como un
 CRM de mensajería. Lo que cambia y por qué está en [`docs/xencrm.md`](docs/xencrm.md).
