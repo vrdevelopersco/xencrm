@@ -9,7 +9,7 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-11-13
 
-### Teléfono por SIP (3CX y otros) y el omnicanal
+### Teléfono por SIP (3CX y otros) y el omnicanal · `b58e0b8`
 Pedido por Luis: voz por teléfono, SIP, que se conecte con 3CX o algún proveedor, y armar el omnicanal (referencia:
 [`modo-agentico.md`](modo-agentico.md) › Teléfono por SIP y › El omnicanal).
 - **Teléfono** (`voz/telefono.ts`, con el SIP de xAI): la troncal manda la llamada a `sip:<número>@sip.voice.x.ai`,
