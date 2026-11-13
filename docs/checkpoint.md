@@ -3,7 +3,7 @@
 Dónde quedó el trabajo, para retomarlo sin releer la conversación. Se reescribe al cerrar cada sesión; el detalle de
 cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 
-## 2026-11-13 · Modo agéntico, varios agentes y voz con Grok
+## 2026-11-13 · Modo agéntico, varios agentes y voz con Grok · `244bf97`
 
 **Hecho** (detalle en `arreglos.md` › 2026-11-13 y la referencia en `modo-agentico.md`): el asistente puede usar
 herramientas con los clientes (apagado de fábrica) y el equipo tiene un copiloto en el tablero (prendido). Módulos

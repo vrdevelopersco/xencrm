@@ -9,7 +9,7 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-11-13
 
-### Varios agentes y voz con Grok
+### Varios agentes y voz con Grok · `244bf97`
 Pedido por Luis: configurar uno o varios agentes que atiendan varias cosas, y agentes conversacionales de voz como los
 de Grok (referencia: [`modo-agentico.md`](modo-agentico.md) › Varios agentes y › Voz con Grok).
 - **Agentes** (Configuración › Agente › Agentes): nombre, qué atiende, por dónde (WhatsApp, chat, voz), instrucciones
@@ -31,7 +31,7 @@ de Grok (referencia: [`modo-agentico.md`](modo-agentico.md) › Varios agentes y
   respuesta, colgar y el foco; y el panel de agentes con su error junto al campo. Pruebas: `pnpm test:agentes` (64).
 - **Falta**: una llamada con la llave real de xAI, la voz por teléfono (SIP) y en la burbuja de otros sitios.
 
-### Modo agéntico: herramientas con los clientes y un copiloto para el equipo
+### Modo agéntico: herramientas con los clientes y un copiloto para el equipo · `244bf97`
 El modelo puede pedir herramientas y el código decide y ejecuta (referencia: [`modo-agentico.md`](modo-agentico.md)).
 Decidido con Luis: **clientes y equipo**, y **actúa en lo seguro** (lo demás se propone para aprobar).
 - **Con los clientes** (apagado de fábrica, Configuración › Agente): en compras y preguntas, el asistente consulta los
