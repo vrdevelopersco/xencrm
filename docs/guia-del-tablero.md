@@ -103,7 +103,7 @@ Lo que hay que atender, ordenado por lo que cuesta dejarlo esperando. Cada fila 
   esperando el resultado de una que ya pasó (esos están arriba, en *¿Cómo les fue?*). Aquí entran por lo que
   llegaron a ser en la conversación, aunque ya se hayan enfriado: son justo los que hay que retomar. Cada uno
   trae dos botones: **Escribirle** abre su conversación, te la pasa a ti y deja un borrador listo con lo que él
-  mismo dijo ("lo de XENTRIS POS"), para que lo ajustes y lo envíes; **Dejarlo por ahora** lo saca de la
+  mismo dijo ("lo de la app de pedidos"), para que lo ajustes y lo envíes; **Dejarlo por ahora** lo saca de la
   lista una semana (si escribe antes, vuelve enseguida). Así la lista se puede vaciar y se puede confiar en ella.
 - **Sin leer, el asistente ya respondió**: para darles una mirada.
 

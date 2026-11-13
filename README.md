@@ -67,9 +67,9 @@ instancia —su base, su WhatsApp, su token, su dominio— y se operan todos des
 se dan de alta, se vigilan y se atienden. El embudo, los datos que captura y si agenda citas los pone cada negocio
 en su configuración: una boutique agenda, una financiera resuelve solicitudes, una litografía cotiza y produce.
 
-El ejemplo de XENCRM es **XENTRIS LLC**, una firma de software (ficticia) de Medellín: vende aplicaciones
-—XENTRIS POS (punto de venta), XENTRIS Field (equipos en campo) y XENTRIS Stock (inventario)— y desarrollo a la
-medida, y da soporte con SLA por planes (Básico, Pro, Enterprise): actualizaciones mensuales, mantenimientos con
+El ejemplo de XENCRM es **XENTRIS LLC**, un socio de tecnología, con la identidad y los servicios de xentris.tech:
+software y apps a la medida, nube e infraestructura, IA y automatización, y consultoría y transformación digital; y da
+soporte con SLA por planes (Básico, Pro, Enterprise): actualizaciones mensuales, mantenimientos con
 aviso y tickets con tiempos garantizados. El embudo es Nuevo → Calificado → Evaluando → Demo agendada → Ganado ·
 Perdido, y lo que agenda es una demo de producto por videollamada. Su configuración es la de la raíz y vive en
 `examples/xentris` (catálogo, conocimiento, diccionario, perfil, escenarios y 23 contactos de ejemplo con sus tickets).

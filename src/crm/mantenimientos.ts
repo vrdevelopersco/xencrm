@@ -67,9 +67,9 @@ const tokens = (s: string, genericas: string[]): string[] => sinTildes(s).split(
 
 /**
  * ¿La aplicación del cliente es la del mantenimiento? Según la regla:
- * - «palabras» (de fábrica): coincide si TODAS las palabras que distinguen al producto del mantenimiento («pos» en
- *   «XENTRIS POS») están en lo que dice la ficha. Así «XENTRIS POS + Stock» cuenta para POS y para Stock, y la marca
- *   sola no hace coincidir nada.
+ * - «palabras» (de fábrica): coincide si TODAS las palabras que distinguen al producto del mantenimiento («nube» e
+ *   «infraestructura» en «Nube e infraestructura») están en lo que dice la ficha. Así «Nube e infraestructura + IA y
+ *   automatización» cuenta para la nube y para la IA, y la marca sola no hace coincidir nada.
  * - «contiene»: el nombre entero del producto aparece en la ficha.
  * - «exacta»: la ficha dice exactamente el producto.
  * Un mantenimiento sin aplicación toca a todas, salvo que la regla diga que no.
@@ -542,7 +542,7 @@ export function limpiarActualizacion(b: DatosAct, parcial = false): Limpio<Parti
   if (b.producto !== undefined || !parcial) {
     const p = String(b.producto ?? '').replace(/\s+/g, ' ').trim();
     if (p.length < 2) return { error: 'falta la aplicación', campo: 'producto' };
-    // Se escribe como en la lista de aplicaciones si coincide: «xentris pos» y «XENTRIS POS» son la misma.
+    // Se escribe como en la lista de aplicaciones si coincide: «nube e infraestructura» y «Nube e infraestructura» son la misma.
     out.producto = (productos().find((x) => clave(x) === clave(p)) ?? p).slice(0, 80);
   }
   if (b.fecha !== undefined || !parcial) {

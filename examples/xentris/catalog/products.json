@@ -1,84 +1,89 @@
 [
  {
-  "id": "x-pos",
-  "name": "XENTRIS POS",
-  "description": "Punto de venta en la nube para tiendas y restaurantes: caja, facturación electrónica, inventario por sucursal y reportes en el celular.",
-  "category": "Aplicaciones",
-  "tags": [
-   "pos",
-   "punto de venta",
-   "caja",
-   "facturación",
-   "tienda",
-   "restaurante",
-   "sucursal"
-  ],
-  "url": "https://xentris.example/pos",
-  "inStock": true,
-  "specs": {
-   "Licencia": "por sucursal, mensual o anual",
-   "Incluye": "actualizaciones mensuales y soporte Básico",
-   "Implementación": "de 1 a 3 semanas",
-   "Precio": "según sucursales y plan; lo cotiza el equipo"
-  }
- },
- {
-  "id": "x-field",
-  "name": "XENTRIS Field",
-  "description": "App para equipos en campo: órdenes de servicio, rutas, fotos y firmas del cliente, funciona sin señal y sincroniza al volver.",
-  "category": "Aplicaciones",
-  "tags": [
-   "campo",
-   "técnicos",
-   "órdenes",
-   "rutas",
-   "servicio técnico",
-   "offline"
-  ],
-  "url": "https://xentris.example/field",
-  "inStock": true,
-  "specs": {
-   "Licencia": "por usuario",
-   "Incluye": "actualizaciones mensuales y soporte Básico",
-   "Precio": "según usuarios y plan; lo cotiza el equipo"
-  }
- },
- {
-  "id": "x-stock",
-  "name": "XENTRIS Stock",
-  "description": "Inventario y bodegas: entradas, salidas, lotes, vencimientos y alertas de reposición, integrado con XENTRIS POS.",
-  "category": "Aplicaciones",
-  "tags": [
-   "inventario",
-   "bodega",
-   "stock",
-   "lotes",
-   "reposición"
-  ],
-  "url": "https://xentris.example/stock",
-  "inStock": true,
-  "specs": {
-   "Licencia": "por bodega",
-   "Precio": "según bodegas y plan; lo cotiza el equipo"
-  }
- },
- {
-  "id": "x-medida",
-  "name": "Desarrollo a la medida",
-  "description": "Aplicaciones web y móviles hechas para el proceso de cada empresa, con integraciones a sus sistemas.",
+  "id": "x-software",
+  "name": "Software y apps a la medida",
+  "description": "Aplicaciones web y móviles hechas para cómo opera de verdad cada empresa, con integraciones a su ERP, su contabilidad o su facturación.",
   "category": "Servicios",
   "tags": [
-   "a la medida",
-   "desarrollo",
-   "integración",
+   "software",
    "app",
-   "software"
+   "aplicación",
+   "web",
+   "móvil",
+   "a la medida",
+   "integración",
+   "erp",
+   "facturación"
   ],
-  "url": "https://xentris.example/medida",
+  "url": "https://xentris.example/software",
   "inStock": true,
   "specs": {
-   "Cómo empieza": "una reunión de descubrimiento sin costo",
+   "Cómo empieza": "una sesión de descubrimiento sin costo",
+   "Entrega": "por fases, con algo funcionando en cada una",
    "Precio": "por proyecto, después del descubrimiento"
+  }
+ },
+ {
+  "id": "x-nube",
+  "name": "Nube e infraestructura",
+  "description": "Migración a la nube, servidores que crecen solos cuando hace falta, despliegues automáticos (DevOps), respaldos y monitoreo 24/7.",
+  "category": "Servicios",
+  "tags": [
+   "nube",
+   "cloud",
+   "servidores",
+   "devops",
+   "migración",
+   "respaldos",
+   "monitoreo",
+   "hosting"
+  ],
+  "url": "https://xentris.example/nube",
+  "inStock": true,
+  "specs": {
+   "Incluye": "monitoreo 24/7 y respaldos",
+   "Precio": "según la infraestructura y el plan de soporte; lo cotiza el equipo"
+  }
+ },
+ {
+  "id": "x-ia",
+  "name": "IA y automatización",
+  "description": "Agentes de IA y procesos automáticos que le ahorran horas al equipo: atención por WhatsApp, lectura de documentos, reportes y tareas repetidas.",
+  "category": "Servicios",
+  "tags": [
+   "ia",
+   "inteligencia artificial",
+   "agentes",
+   "automatización",
+   "chatbot",
+   "whatsapp",
+   "documentos",
+   "reportes"
+  ],
+  "url": "https://xentris.example/ia",
+  "inStock": true,
+  "specs": {
+   "Cómo empieza": "un piloto con un solo proceso",
+   "Precio": "por proyecto, después del descubrimiento"
+  }
+ },
+ {
+  "id": "x-consultoria",
+  "name": "Consultoría y transformación digital",
+  "description": "Estrategia, hoja de ruta y ciberseguridad para modernizar la empresa con foco, sin cambiarlo todo de una vez.",
+  "category": "Servicios",
+  "tags": [
+   "consultoría",
+   "estrategia",
+   "transformación digital",
+   "ciberseguridad",
+   "hoja de ruta",
+   "auditoría"
+  ],
+  "url": "https://xentris.example/consultoria",
+  "inStock": true,
+  "specs": {
+   "Entrega": "una hoja de ruta priorizada, con alcance, tiempos y presupuesto"
   }
  },
  {

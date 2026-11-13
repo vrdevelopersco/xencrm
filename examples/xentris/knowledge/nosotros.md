@@ -9,8 +9,7 @@ Cómo trabajamos:
 - **Entregamos por fases**, con resultados que se pueden medir en cada una.
 - **Sin amarrarte a un proveedor:** tecnología que tu equipo puede mantener, con el código y los accesos a tu nombre.
 
-Además de los proyectos a la medida, hacemos tres aplicaciones propias —XENTRIS POS, XENTRIS Field y XENTRIS
-Stock— y las acompañamos con soporte por planes, con tiempos garantizados (SLA).
+Lo que construimos lo acompañamos con soporte y monitoreo por planes, con tiempos garantizados (SLA).
 
 - Atención comercial: lunes a viernes, de 8:00 a. m. a 6:00 p. m.
 - Demos y sesiones de descubrimiento: 45 minutos por videollamada, con alguien del equipo. Se agendan por aquí.

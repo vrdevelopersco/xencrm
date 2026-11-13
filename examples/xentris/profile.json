@@ -1,7 +1,7 @@
 {
   "identity": {
     "name": "XENTRIS LLC",
-    "description": "Socio de tecnología: software y apps a la medida, nube, IA y automatización, y consultoría digital. Además, tres apps propias (punto de venta, campo e inventario) con soporte con SLA: actualizaciones mensuales, mantenimientos con aviso y tickets con tiempos garantizados.",
+    "description": "Socio de tecnología para empresas que quieren crecer: software y apps a la medida, nube e infraestructura, IA y automatización, y consultoría de transformación digital. Con soporte y monitoreo por planes con SLA: mantenimientos con aviso y tickets con tiempos garantizados.",
     "siteUrl": "https://xentris.example",
     "city": "Medellín"
   },
@@ -22,12 +22,12 @@
     "methods": "transferencia, tarjeta de crédito o débito automático; mensual o anual",
     "deposit": "La implementación se paga 50 % al empezar y 50 % al salir en vivo."
   },
-  "prices": "Las licencias dependen de sucursales, usuarios o bodegas y del plan de soporte: las cotiza el equipo comercial.",
+  "prices": "Cada proyecto se cotiza después de la sesión de descubrimiento, que no tiene costo; el soporte depende del plan. Lo cotiza el equipo.",
   "policies": "Los tiempos de soporte son los del plan de cada cliente (Básico, Pro o Enterprise). Las actualizaciones salen una vez al mes y los mantenimientos se avisan con la anticipación del plan.",
   "extras": [
     {
       "title": "Implementación",
-      "text": "De 1 a 3 semanas según sucursales y bodegas, con carga inicial y capacitación."
+      "text": "Por fases: los tiempos salen de la sesión de descubrimiento, y en cada fase queda algo funcionando."
     },
     {
       "title": "Planes de soporte",
@@ -35,7 +35,7 @@
     },
     {
       "title": "Actualizaciones",
-      "text": "Una vez al mes, con notas de la versión el día que sale."
+      "text": "Las soluciones que mantenemos se actualizan una vez al mes, con notas de la versión el día que sale."
     },
     {
       "title": "Garantía",

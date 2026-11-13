@@ -9246,7 +9246,7 @@
       return '<form class="xu-form" id="xu-form" aria-labelledby="xu-form-t" novalidate>' + cab(f.id ? 'Editar actualización' : 'Registrar una actualización', 'Cada aplicación tiene su cadencia; con esto se sabe si va al día.') + lista +
         '<div class="xu-campos">' +
           '<label class="xu-c"><span>Versión</span><input type="text" name="version" maxlength="30" placeholder="7.4" value="' + esc(b.version || '') + '"' + desc('version') + '>' + err('version') + '</label>' +
-          '<label class="xu-c xu-c-ancho"><span>Aplicación</span><input type="text" name="producto" list="xu-catalogo" maxlength="80" placeholder="XENTRIS POS" value="' + esc(b.producto || '') + '"' + desc('producto') + '>' + err('producto') + '</label>' +
+          '<label class="xu-c xu-c-ancho"><span>Aplicación</span><input type="text" name="producto" list="xu-catalogo" maxlength="80" placeholder="Nube e infraestructura" value="' + esc(b.producto || '') + '"' + desc('producto') + '>' + err('producto') + '</label>' +
           '<label class="xu-c"><span>Fecha</span><input type="date" name="fecha" value="' + esc(b.fecha || '') + '"' + desc('fecha') + '>' + err('fecha') + '</label>' +
           '<label class="xu-c"><span>Estado</span><select name="estado">' + ((XU.datos && XU.datos.estadosActualizacion) || []).map(function (x) { return '<option value="' + esc(x.id) + '"' + (b.estado === x.id ? ' selected' : '') + '>' + esc(x.nombre) + '</option>'; }).join('') + '</select></label>' +
           '<label class="xu-c xu-c-todo"><span>Qué trae <small>(opcional)</small></span><textarea name="notas" rows="2" maxlength="600">' + esc(b.notas || '') + '</textarea></label>' +
@@ -9256,7 +9256,7 @@
     var planes = b.planes || todosLosPlanes.map(function (p) { return p.id; });
     return '<form class="xu-form" id="xu-form" aria-labelledby="xu-form-t" novalidate>' + cab(f.id ? 'Editar mantenimiento' : 'Programar un mantenimiento', 'La hora es la del negocio. Cada plan pide su aviso: ' + xuAvisosDePlanes() + '.') + lista +
       '<div class="xu-campos">' +
-        '<label class="xu-c xu-c-todo"><span>Qué se va a hacer</span><input type="text" name="titulo" maxlength="120" placeholder="Migración de la base de XENTRIS POS" value="' + esc(b.titulo || '') + '"' + desc('titulo') + '>' + err('titulo') + '</label>' +
+        '<label class="xu-c xu-c-todo"><span>Qué se va a hacer</span><input type="text" name="titulo" maxlength="120" placeholder="Migración de la base de datos a la nube nueva" value="' + esc(b.titulo || '') + '"' + desc('titulo') + '>' + err('titulo') + '</label>' +
         '<label class="xu-c xu-c-ancho"><span>Aplicación <small>(vacío: todas)</small></span><input type="text" name="producto" list="xu-catalogo" maxlength="80" value="' + esc(b.producto || '') + '"></label>' +
         '<label class="xu-c"><span>Empieza</span><input type="datetime-local" name="inicio" value="' + esc(b.inicio || '') + '"' + desc('inicio') + '>' + err('inicio') + '</label>' +
         '<label class="xu-c"><span>Dura (minutos)</span><input type="number" name="duracionMin" min="5" max="4320" step="5" inputmode="numeric" value="' + esc(b.duracionMin || '') + '"' + desc('duracionMin') + '>' + err('duracionMin') + '</label>' +

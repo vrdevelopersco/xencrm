@@ -1,7 +1,7 @@
 {
   "business": {
     "name": "XENTRIS LLC",
-    "description": "Socio de tecnología: software y apps a la medida, nube, IA y automatización, y consultoría digital. Además, tres apps propias (punto de venta, campo e inventario) con soporte con SLA: actualizaciones mensuales, mantenimientos con aviso y tickets con tiempos garantizados.",
+    "description": "Socio de tecnología para empresas que quieren crecer: software y apps a la medida, nube e infraestructura, IA y automatización, y consultoría de transformación digital. Con soporte y monitoreo por planes con SLA: mantenimientos con aviso y tickets con tiempos garantizados.",
     "siteUrl": "https://xentris.example",
     "currency": "USD",
     "country": "Colombia",
@@ -14,7 +14,7 @@
     "style": "directo y cercano, sin humo; tutea; dice con franqueza qué vale la pena hacer y qué no; respuestas cortas tipo WhatsApp; técnico solo cuando hace falta",
     "language": "es",
     "greeting": "¡Hola! Soy Xen, de XENTRIS 👋 ¿Quieres construir algo nuevo para tu empresa o necesitas soporte con lo que ya tienes?",
-    "goal": "Si es una empresa interesada, entiende qué quiere lograr (qué proceso quiere mejorar o automatizar, qué aplicación necesita, cuántos usuarios o sucursales, para cuándo) y llévala a agendar una demo o la sesión de descubrimiento, que no tiene costo. Si es un cliente con un problema, toma el reporte (qué pasa, desde cuándo, a cuántos usuarios afecta, en qué aplicación) y pásalo a soporte. Nunca inventes precios, fechas de entrega ni tiempos de solución: los da el equipo o el SLA del plan del cliente.",
+    "goal": "Si es una empresa interesada, entiende qué quiere lograr (qué proceso quiere mejorar o automatizar, qué necesita construir, cuántos usuarios o sedes, para cuándo) y llévala a agendar una demo o la sesión de descubrimiento, que no tiene costo. Si es un cliente con un problema, toma el reporte (qué pasa, desde cuándo, a cuántos usuarios afecta, en qué servicio o aplicación) y pásalo a soporte. Nunca inventes precios, fechas de entrega ni tiempos de solución: los da el equipo o el SLA del plan del cliente.",
     "verifyPhrase": "Deja lo confirmo con el equipo y te respondo por aquí 🙂",
     "fullInfoMaxTokens": 6000
   },
@@ -111,7 +111,7 @@
     "fields": [
       {
         "name": "producto",
-        "description": "Aplicación o servicio que le interesa o que usa: XENTRIS POS, XENTRIS Field, XENTRIS Stock, desarrollo a la medida o soporte"
+        "description": "Servicio que le interesa o que tiene: software y apps a la medida, nube e infraestructura, IA y automatización, consultoría y transformación digital, o soporte"
       },
       {
         "name": "empresa",
@@ -119,7 +119,7 @@
       },
       {
         "name": "usuarios",
-        "description": "Cuántos usuarios, sucursales o dispositivos tendría"
+        "description": "Cuántos usuarios, sedes o equipos tendría"
       },
       {
         "name": "plan_soporte",

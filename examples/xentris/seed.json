@@ -6,11 +6,11 @@
   "sentiment": "positivo",
   "lastMinutesAgo": 35,
   "unread": 0,
-  "summary": "Gerente de Café Aroma (4 sucursales); quiere XENTRIS POS con inventario; demo agendada.",
+  "summary": "Gerente de Café Aroma (4 cafeterías); quiere una app de pedidos y fidelización conectada a su caja; demo agendada.",
   "data": {
-   "producto": "XENTRIS POS",
+   "producto": "Software y apps a la medida",
    "empresa": "Café Aroma",
-   "usuarios": "4 sucursales",
+   "usuarios": "4 cafeterías",
    "plazo": "enero",
    "valor": 4800,
    "ciudad": "Medellín"
@@ -24,11 +24,11 @@
   "messages": [
    {
     "role": "user",
-    "text": "Hola, tenemos 4 cafeterías y buscamos un punto de venta con inventario, ¿ustedes lo tienen?"
+    "text": "Hola, tenemos 4 cafeterías y queremos una app para pedidos y puntos de fidelidad, ¿ustedes hacen eso?"
    },
    {
     "role": "assistant",
-    "text": "¡Hola, Valentina! Sí: XENTRIS POS maneja caja, facturación electrónica e inventario por sucursal, y se integra con XENTRIS Stock. ¿Te muestro todo en una demo de 45 minutos?"
+    "text": "¡Hola, Valentina! Sí: hacemos apps a la medida y las conectamos con lo que ya usan, como su caja y su inventario. ¿Te muestro ejemplos y cómo lo haríamos en una demo de 45 minutos?"
    },
    {
     "role": "user",
@@ -48,9 +48,9 @@
   "sentiment": "neutral",
   "lastMinutesAgo": 180,
   "unread": 1,
-  "summary": "Coordinador de Logística Norte; 25 técnicos en campo; compara XENTRIS Field con otra opción; pidió precio.",
+  "summary": "Coordinador de Logística Norte; quiere automatizar la asignación de órdenes de 25 técnicos; compara con otra opción; pidió precio.",
   "data": {
-   "producto": "XENTRIS Field",
+   "producto": "IA y automatización",
    "empresa": "Logística Norte",
    "usuarios": "25 técnicos",
    "plazo": "este trimestre",
@@ -66,15 +66,15 @@
   "messages": [
    {
     "role": "user",
-    "text": "¿Cuánto cuesta XENTRIS Field para 25 técnicos?"
+    "text": "¿Cuánto cuesta automatizar la asignación de órdenes para 25 técnicos?"
    },
    {
     "role": "assistant",
-    "text": "El valor depende de los usuarios y el plan de soporte: lo cotiza el equipo comercial. ¿Te paso con ellos o prefieres ver una demo primero?"
+    "text": "Depende del proceso y de lo que haya que conectar: lo cotiza el equipo después de la sesión de descubrimiento, que no tiene costo. ¿Te la agendo o prefieres que te escriban del equipo?"
    },
    {
     "role": "user",
-    "text": "Estamos viendo otra app que es más barata, pásame la cotización"
+    "text": "Estamos viendo otra opción más barata, pásame la cotización"
    }
   ]
  },
@@ -85,9 +85,9 @@
   "sentiment": "positivo",
   "lastMinutesAgo": 4320,
   "unread": 0,
-  "summary": "Ferretería El Tornillo compró XENTRIS POS + Stock para 2 sucursales con soporte Pro.",
+  "summary": "Ferretería El Tornillo pasó su sistema a la nube y puso un asistente de IA para cotizaciones; 2 sucursales, soporte Pro.",
   "data": {
-   "producto": "XENTRIS POS + Stock",
+   "producto": "Nube e infraestructura + IA y automatización",
    "empresa": "Ferretería El Tornillo",
    "usuarios": "2 sucursales",
    "plan_soporte": "Pro",
@@ -100,31 +100,31 @@
   "messages": [
    {
     "role": "user",
-    "text": "Ya firmamos, ¿cuándo empieza la implementación?"
+    "text": "Ya firmamos, ¿cuándo empieza la migración?"
    },
    {
     "role": "assistant",
-    "text": "¡Bienvenidos! La implementación arranca el lunes; el equipo te escribe hoy con el plan."
+    "text": "¡Bienvenidos! La migración arranca el lunes; el equipo te escribe hoy con el plan."
    }
   ],
   "tickets": [
    {
-    "asunto": "No imprime la factura en la sucursal 2",
+    "asunto": "No carga el sistema en la sucursal 2",
     "tipo": "incidente",
     "prioridad": "alta",
     "estado": "en_progreso",
-    "producto": "XENTRIS POS",
+    "producto": "Nube e infraestructura",
     "haceHoras": 5,
     "primeraRespuestaEnMin": 40,
     "resueltoEnHoras": null,
     "asignado": "Laura"
    },
    {
-    "asunto": "Crear usuario para la nueva cajera",
+    "asunto": "Crear acceso para la nueva cajera",
     "tipo": "solicitud",
     "prioridad": "baja",
     "estado": "resuelto",
-    "producto": "XENTRIS POS",
+    "producto": "Nube e infraestructura",
     "haceHoras": 30,
     "primeraRespuestaEnMin": 120,
     "resueltoEnHoras": 6,
@@ -139,9 +139,9 @@
   "sentiment": "negativo",
   "lastMinutesAgo": 50,
   "unread": 2,
-  "summary": "Distribuidora Duarte (Enterprise): XENTRIS Field no sincroniza desde la actualización; 40 técnicos afectados; molesto.",
+  "summary": "Distribuidora Duarte (Enterprise): la app de campo que le hicimos no sincroniza desde la actualización; 40 técnicos afectados; molesto.",
   "data": {
-   "producto": "XENTRIS Field",
+   "producto": "Software y apps a la medida",
    "empresa": "Distribuidora Duarte",
    "usuarios": "40 técnicos",
    "plan_soporte": "Enterprise",
@@ -173,11 +173,11 @@
   "humanSinceMinutesAgo": 30,
   "tickets": [
    {
-    "asunto": "XENTRIS Field no sincroniza después de la actualización 4.12",
+    "asunto": "La app de campo no sincroniza después de la actualización 4.12",
     "tipo": "incidente",
     "prioridad": "critica",
     "estado": "abierto",
-    "producto": "XENTRIS Field",
+    "producto": "Software y apps a la medida",
     "haceHoras": 1.5,
     "primeraRespuestaEnMin": null,
     "resueltoEnHoras": null,
@@ -194,7 +194,7 @@
   "unread": 0,
   "summary": "Clínica Vida (Enterprise) con app a la medida; pide la ventana del mantenimiento de diciembre.",
   "data": {
-   "producto": "Desarrollo a la medida",
+   "producto": "Software y apps a la medida",
    "empresa": "Clínica Vida",
    "plan_soporte": "Enterprise",
    "valor": 24000
@@ -219,7 +219,7 @@
     "tipo": "mantenimiento",
     "prioridad": "media",
     "estado": "esperando_cliente",
-    "producto": "Desarrollo a la medida",
+    "producto": "Software y apps a la medida",
     "haceHoras": 20,
     "primeraRespuestaEnMin": 15,
     "resueltoEnHoras": null,
@@ -234,9 +234,9 @@
   "sentiment": "neutral",
   "lastMinutesAgo": 95,
   "unread": 1,
-  "summary": "Tienda de ropa con 1 local; pregunta si XENTRIS POS sirve con datáfono.",
+  "summary": "Tienda de ropa con 1 local; quiere un asistente de IA que conteste Instagram y WhatsApp.",
   "data": {
-   "producto": "XENTRIS POS",
+   "producto": "IA y automatización",
    "empresa": "Moda Castaño",
    "usuarios": "1 local"
   },
@@ -247,11 +247,11 @@
   "messages": [
    {
     "role": "user",
-    "text": "¿El POS funciona con mi datáfono?"
+    "text": "¿El asistente de IA puede contestar los mensajes de Instagram de mi tienda?"
    },
    {
     "role": "assistant",
-    "text": "Sí, se integra con los datáfonos más usados. ¿Qué marca tienes?"
+    "text": "Sí: se conecta a WhatsApp y a Instagram y contesta con la información de tu tienda. ¿Cuántos mensajes reciben al día?"
    }
   ]
  },
@@ -262,9 +262,9 @@
   "sentiment": "neutral",
   "lastMinutesAgo": 17280,
   "unread": 0,
-  "summary": "Agencia de viajes; eligió otra solución por precio.",
+  "summary": "Agencia de viajes; quería una hoja de ruta digital y eligió otra opción por precio.",
   "data": {
-   "producto": "Desarrollo a la medida",
+   "producto": "Consultoría y transformación digital",
    "empresa": "Viajes Paula",
    "motivo_perdida": "Precio"
   },
@@ -292,9 +292,9 @@
   "sentiment": "neutral",
   "lastMinutesAgo": 240,
   "unread": 1,
-  "summary": "Supermercados Ochoa (Básico): el reporte de ventas diario llega vacío.",
+  "summary": "Supermercados Ochoa (Básico): el reporte diario que sale de su servidor en la nube llega vacío.",
   "data": {
-   "producto": "XENTRIS POS",
+   "producto": "Nube e infraestructura",
    "empresa": "Supermercados Ochoa",
    "usuarios": "6 cajas",
    "plan_soporte": "Básico",
@@ -320,7 +320,7 @@
     "tipo": "incidente",
     "prioridad": "media",
     "estado": "abierto",
-    "producto": "XENTRIS POS",
+    "producto": "Nube e infraestructura",
     "haceHoras": 4,
     "primeraRespuestaEnMin": null,
     "resueltoEnHoras": null
@@ -340,7 +340,7 @@
   "messages": [
    {
     "role": "user",
-    "text": "Buenas, quiero información de sus aplicaciones"
+    "text": "Buenas, quiero información de sus servicios"
    }
   ]
  },
@@ -351,9 +351,9 @@
   "sentiment": "positivo",
   "lastMinutesAgo": 1560,
   "unread": 0,
-  "summary": "Constructora Lozano; 60 obreros; quiere XENTRIS Field con fotos y firmas; pidió propuesta.",
+  "summary": "Constructora Lozano; 60 capataces; quiere una app a la medida para fotos y firmas de avance de obra; pidió propuesta.",
   "data": {
-   "producto": "XENTRIS Field",
+   "producto": "Software y apps a la medida",
    "empresa": "Constructora Lozano",
    "usuarios": "60",
    "plazo": "febrero",
@@ -367,11 +367,11 @@
   "messages": [
    {
     "role": "user",
-    "text": "Necesitamos que los capataces suban fotos y firmas de avance de obra, ¿se puede?"
+    "text": "Necesitamos que los capataces suban fotos y firmas de avance de obra desde el celular, ¿lo pueden hacer?"
    },
    {
     "role": "assistant",
-    "text": "Sí: XENTRIS Field toma fotos, firmas y funciona sin señal. ¿Te preparo una propuesta para 60 usuarios?"
+    "text": "Sí: es una app a la medida que toma fotos y firmas, funciona sin señal y sincroniza al volver. ¿Te preparo una propuesta para 60 usuarios?"
    },
    {
     "role": "user",
@@ -386,9 +386,9 @@
   "sentiment": "positivo",
   "lastMinutesAgo": 75,
   "unread": 0,
-  "summary": "Panaderías Delicias (6 sucursales); quiere XENTRIS POS + Stock por los vencimientos; demo agendada.",
+  "summary": "Panaderías Delicias (6 sucursales); quiere que la IA prediga los pedidos para que no se venza producto; demo agendada.",
   "data": {
-   "producto": "XENTRIS POS + Stock",
+   "producto": "IA y automatización",
    "empresa": "Panaderías Delicias",
    "usuarios": "6 sucursales",
    "plazo": "antes de diciembre",
@@ -403,11 +403,11 @@
   "messages": [
    {
     "role": "user",
-    "text": "Buenas, tenemos 6 panaderías y se nos vence mucho producto, ¿su inventario maneja vencimientos?"
+    "text": "Buenas, tenemos 6 panaderías y se nos vence mucho producto, ¿ustedes pueden ayudarnos con eso?"
    },
    {
     "role": "assistant",
-    "text": "¡Hola, Natalia! Sí: XENTRIS Stock maneja lotes y vencimientos y te avisa antes de que se pierda el producto; con XENTRIS POS ves las ventas de las 6 sucursales en el celular. ¿Te lo muestro en una demo de 45 minutos?"
+    "text": "¡Hola, Natalia! Sí: con IA podemos predecir cuánto pedir en cada sucursal con sus ventas reales y avisar antes de que algo se venza. ¿Te lo muestro en una demo de 45 minutos?"
    },
    {
     "role": "user",
@@ -427,9 +427,9 @@
   "sentiment": "neutral",
   "lastMinutesAgo": 300,
   "unread": 0,
-  "summary": "Transportes Zapata; 15 conductores; quiere rutas y entregas firmadas en XENTRIS Field.",
+  "summary": "Transportes Zapata; 15 conductores; quiere una app a la medida para rutas y entregas firmadas.",
   "data": {
-   "producto": "XENTRIS Field",
+   "producto": "Software y apps a la medida",
    "empresa": "Transportes Zapata",
    "usuarios": "15 conductores",
    "plazo": "el otro mes"
@@ -441,11 +441,11 @@
   "messages": [
    {
     "role": "user",
-    "text": "Hola, ¿la app de campo sirve para que los conductores registren las entregas con firma?"
+    "text": "Hola, ¿pueden hacernos una app para que los conductores registren las entregas con firma?"
    },
    {
     "role": "assistant",
-    "text": "Sí, Hernán: con XENTRIS Field cada conductor ve su ruta, toma la firma y la foto de la entrega, y funciona sin señal. ¿Cuántos conductores serían?"
+    "text": "Sí, Hernán: hacemos apps a la medida donde cada conductor ve su ruta, toma la firma y la foto de la entrega, y funciona sin señal. ¿Cuántos conductores serían?"
    },
    {
     "role": "user",
@@ -460,9 +460,9 @@
   "sentiment": "positivo",
   "lastMinutesAgo": 140,
   "unread": 0,
-  "summary": "Droguerías Salud Total (9 sucursales); evalúa POS + Stock con integración a su ERP; la lleva Laura.",
+  "summary": "Droguerías Salud Total (9 sucursales); evalúa una hoja de ruta para conectar sus sucursales con su ERP; la lleva Laura.",
   "data": {
-   "producto": "XENTRIS POS + Stock",
+   "producto": "Consultoría y transformación digital",
    "empresa": "Droguerías Salud Total",
    "usuarios": "9 sucursales",
    "plazo": "primer trimestre",
@@ -476,11 +476,11 @@
   "messages": [
    {
     "role": "user",
-    "text": "Necesitamos que el POS se integre con nuestro ERP, ¿eso lo hacen?"
+    "text": "Necesitamos conectar las 9 sucursales con nuestro ERP y no sabemos por dónde empezar, ¿ustedes ayudan con eso?"
    },
    {
     "role": "assistant",
-    "text": "Sí, hacemos integraciones con los ERP más usados. Te paso con Laura, del equipo comercial, para revisar el tuyo."
+    "text": "Sí: armamos la hoja de ruta y hacemos las integraciones con los ERP más usados. Te paso con Laura, del equipo, para revisar el tuyo."
    },
    {
     "role": "assistant",
@@ -504,9 +504,9 @@
   "sentiment": "neutral",
   "lastMinutesAgo": 12960,
   "unread": 0,
-  "summary": "Taller Ramírez; se fue con otro proveedor que ya conocía.",
+  "summary": "Taller Ramírez; quería su app de órdenes de servicio y se quedó con el proveedor que ya conocía.",
   "data": {
-   "producto": "XENTRIS Field",
+   "producto": "Software y apps a la medida",
    "empresa": "Taller Ramírez",
    "motivo_perdida": "Se fue con otro"
   },
@@ -532,9 +532,9 @@
   "sentiment": "positivo",
   "lastMinutesAgo": 2880,
   "unread": 0,
-  "summary": "Hotel Mirador (Pro) con XENTRIS POS en restaurante y bar; pidió un usuario nuevo.",
+  "summary": "Hotel Mirador (Pro) con un asistente de IA para reservas y el restaurante; pidió que conteste también lo del bar.",
   "data": {
-   "producto": "XENTRIS POS",
+   "producto": "IA y automatización",
    "empresa": "Hotel Mirador",
    "usuarios": "2 puntos de venta",
    "plan_soporte": "Pro",
@@ -547,7 +547,7 @@
   "messages": [
    {
     "role": "user",
-    "text": "Hola, necesito crear un usuario para el nuevo mesero del bar"
+    "text": "Hola, necesito que el asistente también conteste lo del menú del bar"
    },
    {
     "role": "assistant",
@@ -555,18 +555,18 @@
    },
    {
     "role": "assistant",
-    "text": "Listo Mónica, ya quedó el usuario. Te mandé la clave temporal al correo.",
+    "text": "Listo Mónica, ya quedó cargado el menú del bar en el asistente.",
     "author": "human",
     "by": "Bryan"
    }
   ],
   "tickets": [
    {
-    "asunto": "Crear usuario para el mesero del bar",
+    "asunto": "Cargar el menú del bar en el asistente",
     "tipo": "solicitud",
     "prioridad": "baja",
     "estado": "cerrado",
-    "producto": "XENTRIS POS",
+    "producto": "IA y automatización",
     "haceHoras": 50,
     "primeraRespuestaEnMin": 35,
     "resueltoEnHoras": 2,
@@ -581,9 +581,9 @@
   "sentiment": "negativo",
   "lastMinutesAgo": 5760,
   "unread": 0,
-  "summary": "AgroCampo (Básico) con XENTRIS Stock; se quejó de que la respuesta a su ticket tardó más de lo prometido.",
+  "summary": "AgroCampo (Básico) con su inventario en la nube; se quejó de que la respuesta a su ticket tardó más de lo prometido.",
   "data": {
-   "producto": "XENTRIS Stock",
+   "producto": "Nube e infraestructura",
    "empresa": "AgroCampo",
    "usuarios": "2 bodegas",
    "plan_soporte": "Básico",
@@ -598,7 +598,7 @@
   "messages": [
    {
     "role": "user",
-    "text": "Reporté ayer que no cuadra el inventario de la bodega 2 y nadie me ha respondido"
+    "text": "Reporté ayer que el inventario de la bodega 2 no cuadra con la nube y nadie me ha respondido"
    },
    {
     "role": "assistant",
@@ -606,18 +606,18 @@
    },
    {
     "role": "assistant",
-    "text": "Esteban, soy Laura de soporte. Ya encontramos el traslado que quedó duplicado y quedó corregido. Perdona la demora.",
+    "text": "Esteban, soy Laura de soporte. Ya encontramos la sincronización que quedó duplicada y quedó corregida. Perdona la demora.",
     "author": "human",
     "by": "Laura"
    }
   ],
   "tickets": [
    {
-    "asunto": "El inventario de la bodega 2 no cuadra",
+    "asunto": "El inventario de la bodega 2 no cuadra con la nube",
     "tipo": "incidente",
     "prioridad": "media",
     "estado": "resuelto",
-    "producto": "XENTRIS Stock",
+    "producto": "Nube e infraestructura",
     "haceHoras": 100,
     "primeraRespuestaEnMin": 1320,
     "resueltoEnHoras": 30,
@@ -638,7 +638,7 @@
   "messages": [
    {
     "role": "user",
-    "text": "Hola, somos un colegio, ¿tienen algo para el control de la cafetería?"
+    "text": "Hola, somos un colegio, ¿pueden automatizar las matrículas y los pagos?"
    }
   ]
  },
@@ -649,9 +649,9 @@
   "sentiment": "positivo",
   "lastMinutesAgo": 1800,
   "unread": 0,
-  "summary": "FinTech Ruiz; app a la medida para originación de créditos; reunión de descubrimiento hecha; espera propuesta.",
+  "summary": "FinTech Ruiz; app a la medida para originación de créditos; sesión de descubrimiento hecha; espera propuesta.",
   "data": {
-   "producto": "Desarrollo a la medida",
+   "producto": "Software y apps a la medida",
    "empresa": "FinTech Ruiz",
    "plazo": "marzo",
    "valor": 35000
@@ -664,7 +664,7 @@
   "messages": [
    {
     "role": "user",
-    "text": "Gracias por la reunión de ayer, quedamos atentos a la propuesta"
+    "text": "Gracias por la sesión de ayer, quedamos atentos a la propuesta"
    },
    {
     "role": "assistant",
@@ -679,11 +679,11 @@
   "sentiment": "positivo",
   "lastMinutesAgo": 7200,
   "unread": 0,
-  "summary": "Óptica Visión (Pro); pidió actualizar sus 3 cajas a POS 7.3, hecho a tiempo.",
+  "summary": "Óptica Visión (Pro); pidió pasar el correo y los archivos de sus 3 sedes a la nube, hecho a tiempo.",
   "data": {
-   "producto": "XENTRIS POS",
+   "producto": "Nube e infraestructura",
    "empresa": "Óptica Visión",
-   "usuarios": "3 cajas",
+   "usuarios": "3 sedes",
    "plan_soporte": "Pro",
    "valor": 4300
   },
@@ -694,7 +694,7 @@
   "messages": [
    {
     "role": "user",
-    "text": "¿Me ayudan a pasar las cajas a la versión nueva? Quiero lo del cierre por turno"
+    "text": "¿Me ayudan a pasar el correo y los archivos de las 3 sedes a la nube?"
    },
    {
     "role": "assistant",
@@ -707,11 +707,11 @@
   ],
   "tickets": [
    {
-    "asunto": "Actualizar 3 cajas a XENTRIS POS 7.3",
+    "asunto": "Pasar el correo y los archivos de las 3 sedes a la nube",
     "tipo": "actualizacion",
     "prioridad": "media",
     "estado": "cerrado",
-    "producto": "XENTRIS POS",
+    "producto": "Nube e infraestructura",
     "haceHoras": 120,
     "primeraRespuestaEnMin": 60,
     "resueltoEnHoras": 20,
@@ -726,9 +726,9 @@
   "sentiment": "neutral",
   "lastMinutesAgo": 200,
   "unread": 1,
-  "summary": "Restaurante La Brasa (2 locales); pregunta por propinas y división de cuenta en el POS.",
+  "summary": "Restaurante La Brasa (2 locales); quiere que el asistente de IA tome pedidos a domicilio por WhatsApp.",
   "data": {
-   "producto": "XENTRIS POS",
+   "producto": "IA y automatización",
    "empresa": "Restaurante La Brasa",
    "usuarios": "2 locales"
   },
@@ -739,11 +739,11 @@
   "messages": [
    {
     "role": "user",
-    "text": "¿El POS deja dividir la cuenta y manejar propinas?"
+    "text": "¿El asistente puede tomar pedidos a domicilio por WhatsApp?"
    },
    {
     "role": "assistant",
-    "text": "Las propinas y la división de cuenta llegan en la versión 7.4, este mes. ¿Quieres verlo en una demo cuando salga?"
+    "text": "Los pedidos a domicilio por WhatsApp llegan en la versión 7.4 del asistente, este mes. ¿Quieres verlo en una demo cuando salga?"
    },
    {
     "role": "user",
@@ -758,9 +758,9 @@
   "sentiment": "neutral",
   "lastMinutesAgo": 45,
   "unread": 1,
-  "summary": "Grupo Echeverri (Enterprise); 12 sucursales con POS; reporta que la facturación electrónica rechaza documentos.",
+  "summary": "Grupo Echeverri (Enterprise); 12 sucursales con la integración de facturación que le hicimos; reporta que rechaza documentos.",
   "data": {
-   "producto": "XENTRIS POS",
+   "producto": "Software y apps a la medida",
    "empresa": "Grupo Echeverri",
    "usuarios": "12 sucursales",
    "plan_soporte": "Enterprise",
@@ -792,18 +792,18 @@
     "tipo": "incidente",
     "prioridad": "alta",
     "estado": "en_progreso",
-    "producto": "XENTRIS POS",
+    "producto": "Software y apps a la medida",
     "haceHoras": 6.5,
     "primeraRespuestaEnMin": 18,
     "resueltoEnHoras": null,
     "asignado": "Bryan"
    },
    {
-    "asunto": "Agregar la sucursal 13 al POS",
+    "asunto": "Agregar la sucursal 13 a la integración",
     "tipo": "solicitud",
     "prioridad": "baja",
     "estado": "abierto",
-    "producto": "XENTRIS POS",
+    "producto": "Software y apps a la medida",
     "haceHoras": 26,
     "primeraRespuestaEnMin": 90,
     "resueltoEnHoras": null,
@@ -818,9 +818,9 @@
   "sentiment": "neutral",
   "lastMinutesAgo": 21600,
   "unread": 0,
-  "summary": "Spa Serena; le pareció caro para un solo local.",
+  "summary": "Spa Serena; quería un asistente de IA para agendar y le pareció caro para un solo local.",
   "data": {
-   "producto": "XENTRIS POS",
+   "producto": "IA y automatización",
    "empresa": "Spa Serena",
    "motivo_perdida": "Precio"
   },
@@ -848,9 +848,9 @@
   "sentiment": "positivo",
   "lastMinutesAgo": 260,
   "unread": 0,
-  "summary": "Logística Express; 30 mensajeros; demo de XENTRIS Field agendada para la próxima semana.",
+  "summary": "Logística Express; 30 mensajeros; demo agendada para ver una app de rutas a la medida la próxima semana.",
   "data": {
-   "producto": "XENTRIS Field",
+   "producto": "Software y apps a la medida",
    "empresa": "Logística Express",
    "usuarios": "30 mensajeros",
    "plazo": "enero",
@@ -864,11 +864,11 @@
   "messages": [
    {
     "role": "user",
-    "text": "Queremos ver cómo funciona lo de las rutas para 30 mensajeros"
+    "text": "Queremos ver cómo funcionaría una app de rutas para 30 mensajeros"
    },
    {
     "role": "assistant",
-    "text": "¡Con gusto, Tomás! Te muestro rutas, firmas y fotos en una demo de 45 minutos. ¿El martes a las 9:00 a. m.?"
+    "text": "¡Con gusto, Tomás! Te muestro cómo hacemos apps de rutas con firmas y fotos en una demo de 45 minutos. ¿El martes a las 9:00 a. m.?"
    },
    {
     "role": "user",

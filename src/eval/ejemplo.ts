@@ -60,7 +60,7 @@ check('🪤 el ejemplo de antes ya no está (examples/dunor)', !existsSync('exam
 
 console.log('— Lo que sabe, completo');
 const productos = JSON.parse(readFileSync(ejemplo.sources.productsFile!, 'utf8')) as { name: string; category: string }[];
-check('el catálogo: las tres aplicaciones, el desarrollo a la medida y los tres planes de soporte', ['XENTRIS POS', 'XENTRIS Field', 'XENTRIS Stock', 'Desarrollo a la medida', 'Soporte Básico', 'Soporte Pro', 'Soporte Enterprise'].every((n) => productos.some((p) => p.name === n)), productos.map((p) => p.name).join(','));
+check('el catálogo: los cuatro servicios de xentris.tech y los tres planes de soporte', ['Software y apps a la medida', 'Nube e infraestructura', 'IA y automatización', 'Consultoría y transformación digital', 'Soporte Básico', 'Soporte Pro', 'Soporte Enterprise'].every((n) => productos.some((p) => p.name === n)), productos.map((p) => p.name).join(','));
 const conocimiento = readdirSync(ejemplo.sources.knowledgeDir!).filter((f) => f.endsWith('.md'));
 check('el conocimiento: nosotros, productos, soporte y SLA, implementación, precios y preguntas de soporte', ['nosotros.md', 'productos.md', 'soporte-y-sla.md', 'implementacion.md', 'precios.md', 'preguntas-frecuentes.md'].every((f) => conocimiento.includes(f)), conocimiento.join(','));
 const sla = readFileSync(join(ejemplo.sources.knowledgeDir!, 'soporte-y-sla.md'), 'utf8');
@@ -71,7 +71,7 @@ check('el perfil, sin huecos (nada queda «por confirmar»)', pendingFields(perf
 const dicc = JSON.parse(readFileSync(ejemplo.dictionaryFile!, 'utf8')) as { topics: { query: string }[]; offerVerbs: string[] };
 check('el diccionario habla de software: SLA, mantenimientos, actualizaciones, tickets', ['SLA', 'mantenimientos', 'actualizaciones', 'reportar'].every((q) => dicc.topics.some((t) => t.query.includes(q))), dicc.topics.map((t) => t.query).join(' | '));
 const escenarios = JSON.parse(readFileSync(ejemplo.evalFile!, 'utf8')) as { name: string }[];
-check('los escenarios: venta de POS con demo, precio, una falla que pasa a soporte y el SLA del plan', escenarios.length >= 4 && /POS/.test(escenarios[0]!.name) && escenarios.some((e) => /soporte/.test(e.name)) && escenarios.some((e) => /SLA/.test(e.name)), escenarios.map((e) => e.name).join(' · '));
+check('los escenarios: una app a la medida con demo, precio, una falla que pasa a soporte y el SLA del plan', escenarios.length >= 4 && /a la medida/.test(escenarios[0]!.name) && escenarios.some((e) => /soporte/.test(e.name)) && escenarios.some((e) => /SLA/.test(e.name)), escenarios.map((e) => e.name).join(' · '));
 
 console.log('— La semilla promete lo que tiene');
 type Ticket = { asunto: string; tipo?: string; prioridad?: string; estado?: string; producto?: string; haceHoras: number; primeraRespuestaEnMin?: number | null; resueltoEnHoras?: number | null; asignado?: string };

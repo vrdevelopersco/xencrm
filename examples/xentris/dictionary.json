@@ -64,23 +64,25 @@
         "dian",
         "factura electronica"
       ],
-      "query": "XENTRIS POS facturación electrónica"
+      "query": "integración con facturación electrónica"
     },
     {
       "keywords": [
-        "datafono",
-        "datáfono",
-        "pasarela"
+        "servidor",
+        "hosting",
+        "aws",
+        "google cloud"
       ],
-      "query": "XENTRIS POS datáfonos"
+      "query": "Nube e infraestructura"
     },
     {
       "keywords": [
-        "sin señal",
-        "offline",
-        "sin internet"
+        "chatbot",
+        "bot",
+        "agente de ia",
+        "automatizar"
       ],
-      "query": "XENTRIS Field funciona sin señal"
+      "query": "IA y automatización"
     },
     {
       "keywords": [

@@ -30,8 +30,8 @@ Cada paso es: escribes desde el celular y muestras lo que pasa en el tablero.
 **1. Llega un cliente.** Desde el chat del sitio: *"hola, buenas tardes"*.
 → Suena la campana, la conversación aparece sola en Conversaciones y en Hoy. Sin recargar nada.
 
-**2. Pregunta por lo que vende el negocio.** *"tenemos 4 cafeterías y buscamos un punto de venta con inventario"*.
-→ Responde con lo que XENTRIS ofrece (XENTRIS POS + Stock), sin inventar precios, y ofrece la demo. Muestra en la
+**2. Pregunta por lo que vende el negocio.** *"tenemos 4 cafeterías y queremos una app de pedidos conectada a la caja"*.
+→ Responde con lo que XENTRIS ofrece (software y apps a la medida), sin inventar precios, y ofrece la demo. Muestra en la
 ficha (derecha) cómo ya capturó **producto**, **empresa** y **usuarios** sin preguntarlos.
 
 **2b. Un cliente reporta una falla.** *"la app de campo no sincroniza y tengo 40 técnicos parados"*.

@@ -60,10 +60,10 @@ check('las de opciones traen sus opciones', lista.filter((r) => r.tipo === 'opci
 check('🪤 no se le escapa cómo se lee del archivo (es interno)', lista.every((r) => !('archivo' in r)));
 const ids = new Set(lista.map((r) => r.id));
 check('nada de negocio fijo: aviso por plan, cadencia general y por aplicación, gracia, aplicaciones, estados, afectados, plantilla, cuándo cuenta, quién programa, periodo',
-  ['mant.planes', 'mant.avisoHoras.Básico', 'mant.avisoHoras.Pro', 'mant.avisoHoras.Enterprise', 'mant.cadenciaDias', 'mant.cadenciaDias.XENTRIS POS', 'mant.toleranciaDias', 'mant.productos', 'mant.estadoMant.programado', 'mant.estadoAct.publicada',
+  ['mant.planes', 'mant.avisoHoras.Básico', 'mant.avisoHoras.Pro', 'mant.avisoHoras.Enterprise', 'mant.cadenciaDias', 'mant.cadenciaDias.IA y automatización', 'mant.toleranciaDias', 'mant.productos', 'mant.estadoMant.programado', 'mant.estadoAct.publicada',
     'mant.afectados.roles', 'mant.afectados.etapas', 'mant.afectados.campoPlan', 'mant.afectados.campoProducto', 'mant.afectados.comparacion', 'mant.afectados.palabrasGenericas', 'mant.afectados.sinProductoTocaATodos', 'mant.afectados.incluirArchivados',
     'mant.aviso.plantilla', 'mant.aviso.cuentaAl', 'mant.quienPrograma', 'mant.periodoDias'].every((id) => ids.has(id)), [...ids].join(', '));
-check('las aplicaciones de fábrica son las del catálogo, sin los planes de soporte', JSON.stringify(R.productos()) === JSON.stringify(['XENTRIS POS', 'XENTRIS Field', 'XENTRIS Stock', 'Desarrollo a la medida']), JSON.stringify(R.productos()));
+check('los servicios de fábrica son los del catálogo, sin los planes de soporte', JSON.stringify(R.productos()) === JSON.stringify(['Software y apps a la medida', 'Nube e infraestructura', 'IA y automatización', 'Consultoría y transformación digital']), JSON.stringify(R.productos()));
 check('el archivo valida lo que trae (una cadencia de 0 días no pasa)', !BusinessConfigSchema.safeParse({ ...base, servicio: { mantenimientos: { cadenciaDias: 0 } } }).success);
 check('🪤 y conserva lo de otras pantallas en servicio (servicio.sla)', (BusinessConfigSchema.parse({ ...base, servicio: { sla: { planes: [{ id: 'oro', nombre: 'Oro' }] } } }).servicio as Record<string, unknown>).sla !== undefined);
 
@@ -72,8 +72,8 @@ g = R.guardarReglas({ 'mant.avisoHoras.Pro': 12, 'mant.avisoHoras.Enterprise': '
 check('si una no sirve, no se guarda ninguna y se dice cuál', 'error' in g && g.campo === 'mant.avisoHoras.Enterprise' && origen('mant.avisoHoras.Pro').valor === 60, JSON.stringify(g));
 g = R.guardarReglas({ 'mant.aviso.plantilla': 'Hola {cliente}, el {dia}' });
 check('una variable que no existe en la plantilla se rechaza diciendo cuáles hay', 'error' in g && /\{cliente\}/.test(g.error) && /\{primerNombre\}/.test(g.error));
-g = R.guardarReglas({ 'mant.productos': 'XENTRIS POS\n  XENTRIS POS \n\nXENTRIS Field' });
-check('una lista se limpia (renglones, espacios, repetidos)', 'ok' in g && JSON.stringify(R.productos()) === JSON.stringify(['XENTRIS POS', 'XENTRIS Field']));
+g = R.guardarReglas({ 'mant.productos': 'IA y automatización\n  IA y automatización \n\nNube e infraestructura' });
+check('una lista se limpia (renglones, espacios, repetidos)', 'ok' in g && JSON.stringify(R.productos()) === JSON.stringify(['IA y automatización', 'Nube e infraestructura']));
 R.guardarReglas({ 'mant.productos': null });
 g = R.guardarReglas({ 'mant.planes': '' });
 check('sin planes no se puede', 'error' in g);
@@ -88,9 +88,9 @@ check('el plan se lee como lo escriba la gente («plan pro», «ENTERPRISE», «
 check('un plan que no existe no se inventa', M.planDe('Oro', planes) === null && M.planDe('', planes) === null);
 check('🪤 el de nombre más largo primero («Pro Plus» no se lee como «Pro»)', M.planDe('Pro Plus', [...planes, { id: 'pro_plus', nombre: 'Pro Plus', avisoHoras: 24 }])?.nombre === 'Pro Plus');
 const reglaBase = R.reglaAfectados();
-check('por palabras: «XENTRIS POS + Stock» cuenta para POS y para Stock', M.productoCoincide('XENTRIS POS', 'XENTRIS POS + Stock', reglaBase) && M.productoCoincide('XENTRIS Stock', 'XENTRIS POS + Stock', reglaBase));
-check('🪤 la marca sola no hace coincidir nada', !M.productoCoincide('XENTRIS Field', 'XENTRIS POS', reglaBase));
-check('«contiene» y «exacta» comparan como dicen', M.productoCoincide('XENTRIS POS', 'Usa XENTRIS POS en caja', { ...reglaBase, comparacion: 'contiene' }) && !M.productoCoincide('XENTRIS POS', 'XENTRIS POS + Stock', { ...reglaBase, comparacion: 'exacta' }) && M.productoCoincide('XENTRIS POS', 'xentris pos', { ...reglaBase, comparacion: 'exacta' }));
+check('por palabras: «Nube e infraestructura + IA y automatización» cuenta para la nube y para la IA', M.productoCoincide('Nube e infraestructura', 'Nube e infraestructura + IA y automatización', reglaBase) && M.productoCoincide('IA y automatización', 'Nube e infraestructura + IA y automatización', reglaBase));
+check('🪤 la marca sola no hace coincidir nada', !M.productoCoincide('XENTRIS Nube e infraestructura', 'XENTRIS IA y automatización', reglaBase));
+check('«contiene» y «exacta» comparan como dicen', M.productoCoincide('Nube e infraestructura', 'Tiene Nube e infraestructura en sus sedes', { ...reglaBase, comparacion: 'contiene' }) && !M.productoCoincide('Nube e infraestructura', 'Nube e infraestructura + IA y automatización', { ...reglaBase, comparacion: 'exacta' }) && M.productoCoincide('Nube e infraestructura', 'nube e infraestructura', { ...reglaBase, comparacion: 'exacta' }));
 check('un mantenimiento sin aplicación toca a todas, salvo que la regla diga que no', M.productoCoincide('', 'lo que sea', reglaBase) && !M.productoCoincide('', 'lo que sea', { ...reglaBase, sinProductoTocaATodos: false }));
 
 console.log('— La demostración (servicio.json junto a la semilla)');
@@ -99,7 +99,7 @@ check('uno avisado a tiempo, uno tarde y uno atrasado, sin inventar mensajes', /
 const vida = porTitulo('Clínica');
 const horaVida = new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', hour: 'numeric', minute: '2-digit', hourCycle: 'h23' }).format(vida.inicio);
 check('🪤 la ventana de Clínica Vida es la que se le dijo a Sofía (11 p. m. a 2 a. m., hora del negocio), no una inventada', horaVida === '23:00' && vida.duracionMin === 180, horaVida);
-check('afectados: los ganados con ese plan y esa aplicación (Laura y Juan Pablo en POS; Camilo en Field)', /Laura Gómez/.test(estadosDe('Migración')) && /Juan Pablo Ochoa/.test(estadosDe('Migración')) && !/Camilo/.test(estadosDe('Migración')) && /Camilo Duarte/.test(estadosDe('Parche')));
+check('afectados: los ganados con ese plan y ese servicio (Laura y Juan Pablo en la nube; Camilo en su app a la medida)', /Laura Gómez/.test(estadosDe('Migración')) && /Juan Pablo Ochoa/.test(estadosDe('Migración')) && !/Camilo/.test(estadosDe('Migración')) && /Camilo Duarte/.test(estadosDe('Parche')));
 
 console.log('— Cambiar una regla cambia el resultado');
 R.guardarReglas({ 'mant.avisoHoras.Enterprise': 24 });
@@ -107,20 +107,20 @@ check('Enterprise con 24 h de aviso: el parche (en 70 h) pasa de atrasado a por 
 R.guardarReglas({ 'mant.avisoHoras.Enterprise': null });
 check('y al volver a fábrica (7 días), atrasado otra vez', /atrasado/.test(estadosDe('Parche')));
 R.guardarReglas({ 'mant.afectados.comparacion': 'exacta' });
-check('con comparación exacta, «XENTRIS POS + Stock» ya no cuenta para la migración de POS', !/Laura/.test(estadosDe('Migración')) && /Juan Pablo/.test(estadosDe('Migración')), estadosDe('Migración'));
+check('con comparación exacta, «Nube e infraestructura + IA y automatización» ya no cuenta para la migración a la nube', !/Laura/.test(estadosDe('Migración')) && /Juan Pablo/.test(estadosDe('Migración')), estadosDe('Migración'));
 R.guardarReglas({ 'mant.afectados.comparacion': null });
 R.guardarReglas({ 'mant.afectados.campoPlan': 'producto' });
 check('si el plan se lee de otro dato de la ficha, nadie tiene plan y nadie queda afectado', M.afectadosDe(porTitulo('Migración')).length === 0);
 R.guardarReglas({ 'mant.afectados.campoPlan': null, 'mant.afectados.roles': [], 'mant.afectados.etapas': ['demo_agendada'] });
 check('quién cuenta como cliente: sin el papel «ganado», los clientes dejan de recibir avisos', M.afectadosDe(porTitulo('Migración')).length === 0);
 R.guardarReglas({ 'mant.afectados.roles': null, 'mant.afectados.etapas': null });
-const pos = M.actualizacionesPorProducto().find((p) => p.producto === 'XENTRIS POS')!;
-check('cadencia del archivo (20 días): POS, con la última hace 18, va al día', pos.alDia === true && pos.cadenciaDias === 20, JSON.stringify({ d: pos.diasDesdeLaUltima, c: pos.cadenciaDias }));
-R.guardarReglas({ 'mant.cadenciaDias.XENTRIS POS': 10 });
-check('una cadencia propia para POS (10 días): va atrasada', M.actualizacionesPorProducto().find((p) => p.producto === 'XENTRIS POS')!.alDia === false);
+const pos = M.actualizacionesPorProducto().find((p) => p.producto === 'IA y automatización')!;
+check('cadencia del archivo (20 días): IA y automatización, con la última hace 18, va al día', pos.alDia === true && pos.cadenciaDias === 20, JSON.stringify({ d: pos.diasDesdeLaUltima, c: pos.cadenciaDias }));
+R.guardarReglas({ 'mant.cadenciaDias.IA y automatización': 10 });
+check('una cadencia propia para IA y automatización (10 días): va atrasada', M.actualizacionesPorProducto().find((p) => p.producto === 'IA y automatización')!.alDia === false);
 R.guardarReglas({ 'mant.toleranciaDias': 10 });
-check('con 10 días de gracia, al día otra vez', M.actualizacionesPorProducto().find((p) => p.producto === 'XENTRIS POS')!.alDia === true);
-R.guardarReglas({ 'mant.cadenciaDias.XENTRIS POS': null, 'mant.toleranciaDias': null });
+check('con 10 días de gracia, al día otra vez', M.actualizacionesPorProducto().find((p) => p.producto === 'IA y automatización')!.alDia === true);
+R.guardarReglas({ 'mant.cadenciaDias.IA y automatización': null, 'mant.toleranciaDias': null });
 R.guardarReglas({ 'mant.estadoMant.hecho': 'Terminado' });
 check('el nombre de un estado se cambia sin tocar lo guardado', R.estadosDeMantenimiento().find((e) => e.id === 'hecho')?.nombre === 'Terminado' && porTitulo('Cambio de servidores').papel === 'hecho');
 R.guardarReglas({ 'mant.estadoMant.hecho': null });
@@ -169,7 +169,7 @@ console.log('— El cumplimiento que lee SLA (forma exacta)');
 const c = M.cumplimiento(30);
 check('las llaves son exactamente las acordadas', JSON.stringify(Object.keys(c)) === '["periodoDias","mantenimientos","actualizaciones"]' && JSON.stringify(Object.keys(c.mantenimientos)) === '["total","avisadosATiempo","sinAviso","proximos"]' && JSON.stringify(Object.keys(c.actualizaciones)) === '["publicadasEnPeriodo","productosAtrasados"]', JSON.stringify(c));
 check('los números de la demostración: 1 en el periodo (avisado tarde: ni a tiempo ni sin aviso), 3 próximos', c.mantenimientos.total === 1 && c.mantenimientos.avisadosATiempo === 0 && c.mantenimientos.sinAviso === 0 && c.mantenimientos.proximos === 3, JSON.stringify(c.mantenimientos));
-check('Stock atrasada con sus días (cadencia del archivo: 20)', c.actualizaciones.productosAtrasados.some((p) => p.producto === 'XENTRIS Stock' && p.diasDesdeLaUltima === 46) && c.actualizaciones.publicadasEnPeriodo === 2, JSON.stringify(c.actualizaciones));
+check('la nube, atrasada con sus días (cadencia del archivo: 20)', c.actualizaciones.productosAtrasados.some((p) => p.producto === 'Nube e infraestructura' && p.diasDesdeLaUltima === 46) && c.actualizaciones.publicadasEnPeriodo === 2, JSON.stringify(c.actualizaciones));
 
 console.log('— Quién puede qué (candado y servidor)');
 check('con el candado, avisar es de todos', frenoDelCandado('mantenimientos/3/avisos/preparar', 'POST', 'asesor', 'facil') === null && frenoDelCandado('mantenimientos/3/avisos/wa%3A1/avisado', 'POST', 'asesor', 'facil') === null);
@@ -181,7 +181,7 @@ R.guardarReglas({ 'mant.quienPrograma': null });
 const app = new Hono();
 mountAdmin(app as never);
 const T = { 'x-admin-token': process.env.ADMIN_TOKEN!, 'content-type': 'application/json' };
-const nuevo = { titulo: 'Ventana de prueba', producto: 'XENTRIS POS', inicio: now + 10 * DIA, duracionMin: 60, planes: ['Pro'] };
+const nuevo = { titulo: 'Ventana de prueba', producto: 'IA y automatización', inicio: now + 10 * DIA, duracionMin: 60, planes: ['Pro'] };
 check('un asesor no programa (aunque no haya candado)', (await app.request('/admin/api/mantenimientos', { method: 'POST', headers: { ...T, 'x-xencrm-rol': 'asesor' }, body: JSON.stringify(nuevo) })).status === 403);
 check('quien administra sí', (await app.request('/admin/api/mantenimientos', { method: 'POST', headers: T, body: JSON.stringify(nuevo) })).status === 201);
 const malo = await app.request('/admin/api/mantenimientos', { method: 'POST', headers: T, body: JSON.stringify({ ...nuevo, duracionMin: 2 }) });

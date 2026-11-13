@@ -12,7 +12,7 @@
 // fuera «Pro» del otro.
 //
 // 🪤 La lista de reglas se arma cada vez (no es una constante): los planes, los productos y los estados vienen de la
-// configuración, y cada uno trae su propia regla (`mant.avisoHoras.Pro`, `mant.cadenciaDias.XENTRIS POS`…).
+// configuración, y cada uno trae su propia regla (`mant.avisoHoras.Pro`, `mant.cadenciaDias.Nube e infraestructura`…).
 import { readFileSync } from 'node:fs';
 import { business } from '../config.js';
 import { getDb } from '../rag/store.js';
@@ -234,7 +234,7 @@ function defs(): Def[] {
         { valor: 'contiene', etiqueta: 'Contiene: el nombre entero del producto aparece en la ficha' },
         { valor: 'exacta', etiqueta: 'Exacta: la ficha dice exactamente el producto' },
       ],
-      ayuda: 'Con «por palabras», «XENTRIS POS + Stock» cuenta para un mantenimiento de POS y para uno de Stock, y la marca sola no hace coincidir nada.',
+      ayuda: 'Con «por palabras», «Nube e infraestructura + IA y automatización» cuenta para un mantenimiento de la nube y para uno de IA, y la marca sola no hace coincidir nada.',
       defecto: FABRICA.afectados.comparacion, archivo: () => af.comparacion,
     },
     { id: 'mant.afectados.palabrasGenericas', grupo: 'Mantenimientos', etiqueta: 'Palabras que no distinguen un producto', tipo: 'lista', ayuda: 'Se ignoran al comparar por palabras: la marca y los conectores. Una por renglón.', defecto: palabrasGenericasDeFabrica(), archivo: () => af.palabrasGenericas },

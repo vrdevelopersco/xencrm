@@ -41,8 +41,9 @@ enlaces directos (`#v=tickets`, `#v=prospectos`).
 
 ### El ejemplo XENTRIS LLC, con la identidad de xentris.tech
 Socio de tecnología: software y apps a la medida, nube, IA y automatización y consultoría; su proceso (descubrimiento
-sin costo → estrategia → construcción por fases → evolución) y su tono (directo, sin amarrar a un proveedor). Las tres
-apps de ficción (POS, Field, Stock) siguen: las usan las pruebas y la demostración.
+sin costo → estrategia → construcción por fases → evolución) y su tono (directo, sin amarrar a un proveedor). Y después, sus
+servicios reales en vez de las tres apps de ficción (POS, Field, Stock): el catálogo, la demostración (23 historias,
+mantenimientos y actualizaciones por servicio), el conocimiento, los escenarios y las pruebas.
 
 **Batería: 3537 bien, 0 fallas.**
 

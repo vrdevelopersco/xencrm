@@ -169,7 +169,8 @@ Pruebas nuevas: `test:bandeja`, `test:contactos`, `test:sentimiento`, `test:mode
 ## Servicio y el ejemplo de XENTRIS LLC (2026-11-11, tercera ronda)
 
 El ejemplo de XENCRM deja de ser DUNOR (una boutique) y pasa a ser **XENTRIS LLC**, una firma de software: vende
-aplicaciones (XENTRIS POS, Field y Stock), desarrollo a la medida y **soporte con SLA** (actualizaciones mensuales,
+los servicios de xentris.tech (software y apps a la medida, nube e infraestructura, IA y automatización, consultoría y
+transformación digital) y **soporte con SLA** (actualizaciones mensuales,
 mantenimientos programados con aviso, tickets con tiempos garantizados por plan). Está en `examples/xentris/` y es la
 configuración de la raíz. El embudo: Nuevo → Calificado → Evaluando → Demo agendada → Ganado · Perdido.
 

@@ -2,8 +2,8 @@
  "_ayuda": "Mantenimientos y actualizaciones de la demostración (Servicio). Formato en docs/xencrm.md › «Servicio».",
  "mantenimientos": [
   {
-   "titulo": "Migración de la base de XENTRIS POS",
-   "producto": "XENTRIS POS",
+   "titulo": "Migración de la base de datos a la nube nueva",
+   "producto": "Nube e infraestructura",
    "inicioEnHoras": 60,
    "duracionMin": 120,
    "avisoHorasAntes": 72,
@@ -15,8 +15,8 @@
    "estado": "programado"
   },
   {
-   "titulo": "Parche de seguridad de XENTRIS Field",
-   "producto": "XENTRIS Field",
+   "titulo": "Parche de seguridad de la app de campo",
+   "producto": "Software y apps a la medida",
    "inicioEnHoras": 70,
    "duracionMin": 60,
    "avisoHorasAntes": null,
@@ -29,7 +29,7 @@
   },
   {
    "titulo": "Ventana mensual de Clínica Vida",
-   "producto": "Desarrollo a la medida",
+   "producto": "Software y apps a la medida",
    "inicioEnHoras": 768,
    "hora": "23:00",
    "duracionMin": 180,
@@ -41,8 +41,8 @@
    "notas": "La ventana que pidió Sofía para avisar a los médicos: de 11 p. m. a 2 a. m."
   },
   {
-   "titulo": "Cambio de servidores de XENTRIS Field",
-   "producto": "XENTRIS Field",
+   "titulo": "Cambio de servidores del monitoreo",
+   "producto": "Nube e infraestructura",
    "inicioEnHoras": -30,
    "duracionMin": 90,
    "avisoHorasAntes": 20,
@@ -57,30 +57,30 @@
  "actualizaciones": [
   {
    "version": "4.12",
-   "producto": "XENTRIS Field",
+   "producto": "Software y apps a la medida",
    "haceDias": 1,
-   "notas": "Sincronización más rápida y fotos comprimidas.",
+   "notas": "App de campo: sincronización más rápida y fotos comprimidas.",
    "estado": "publicada"
   },
   {
    "version": "7.3",
-   "producto": "XENTRIS POS",
+   "producto": "IA y automatización",
    "haceDias": 18,
-   "notas": "Factura electrónica 2.1 y cierre de caja por turno.",
+   "notas": "El asistente lee facturas de proveedores en PDF y las deja listas para contabilidad.",
    "estado": "publicada"
   },
   {
    "version": "2.5",
-   "producto": "XENTRIS Stock",
+   "producto": "Nube e infraestructura",
    "haceDias": 46,
-   "notas": "Alertas de vencimiento por lote.",
+   "notas": "Alertas del monitoreo por WhatsApp.",
    "estado": "publicada"
   },
   {
    "version": "7.4",
-   "producto": "XENTRIS POS",
+   "producto": "IA y automatización",
    "enDias": 12,
-   "notas": "Propinas y división de cuenta.",
+   "notas": "Pedidos a domicilio por WhatsApp, con el menú de cada local.",
    "estado": "planeada"
   }
  ]

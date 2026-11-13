@@ -402,7 +402,7 @@ export const BusinessConfigSchema = z.object({
           /** Cada cuánto debe salir una actualización, en días, y los días de gracia antes de llamarla atrasada. */
           cadenciaDias: z.number().min(1).max(730).optional(),
           toleranciaDias: z.number().min(0).max(365).optional(),
-          /** Una cadencia distinta por aplicación ({"XENTRIS Stock": 45}). */
+          /** Una cadencia distinta por aplicación ({"Nube e infraestructura": 45}). */
           cadenciaPorProducto: z.record(z.string(), z.number().min(1).max(730)).optional(),
           /** Las aplicaciones (de fábrica: las del catálogo sin los planes de soporte). */
           productos: z.array(z.string().trim().min(1).max(80)).optional(),

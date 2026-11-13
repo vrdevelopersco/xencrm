@@ -15,7 +15,7 @@ XENTRIS con la identidad de xentris.tech. **Batería: 3537 bien, 0 fallas.**
 - Configurar `PROSPECTOS_CLIENTE` en el despliegue (el slug del CRM que recibe los registros) y pasar el dominio a
   `pnpm paquete` (ya no hay uno por defecto).
 - Pendiente de decidir con Luis: el calendario más rico (timeline detallado, tarjetas con más datos, panel «Hoy»,
-  anuncios); y si las apps de ficción de XENTRIS (POS, Field, Stock) se cambian por sus cuatro líneas de servicio reales.
+  anuncios);.
 - `pnpm test:scenarios` tiene un caso que depende de la fecha («después del puente festivo de octubre»): falla pasado
   octubre. No está en `pnpm test`.
 
