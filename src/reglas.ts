@@ -332,6 +332,14 @@ registrarReglas(
     { id: 'agenda.casiLlenoPct', grupo: 'Agenda', etiqueta: '«Casi lleno» desde', ayuda: `Qué parte del cupo de un día tiene que estar tomada para que el calendario lo anuncie como casi lleno. Lleno del todo se anuncia siempre.`, ...PCT, min: 50, max: 99, entero: true, defecto: 80 },
     { id: 'agenda.diasCupo', grupo: 'Agenda', etiqueta: 'Días de cupo en el panel', ayuda: `Cuántos días que se atienden muestra el panel «Hoy» del calendario con lo que les queda libre.`, tipo: 'numero', unidad: 'días', min: 1, max: 14, entero: true, defecto: 5 },
 
+    // ---------- Modo agéntico (agentico/nucleo.ts) ----------
+    { id: 'agentico.pasos', grupo: 'Modo agéntico', etiqueta: 'Pasos por turno', ayuda: 'Cuántas veces puede el agente pedir herramientas antes de contestar con lo que ya tiene. Cada paso es una llamada al modelo.', tipo: 'numero', unidad: 'pasos', min: 1, max: 8, entero: true, defecto: 4 },
+    { id: 'agentico.topeTurnoUsd', grupo: 'Modo agéntico', etiqueta: 'Tope de gasto por turno', ayuda: 'Lo más que puede gastar el agente en un mensaje. Al pasarlo contesta con lo que ya sabe. Aparte del tope del mes.', tipo: 'numero', unidad: 'USD', min: 0.01, max: 1, defecto: 0.1 },
+
+    // ---------- Voz (voz/llamada.ts) ----------
+    { id: 'voz.minutosMax', grupo: 'Voz', etiqueta: 'Duración máxima de una llamada', ayuda: 'Al llegar, la llamada se corta (lo pone el servidor). Cada minuto se paga.', tipo: 'numero', unidad: 'minutos', min: 1, max: 30, entero: true, defecto: 10 },
+    { id: 'voz.llamadasPorHora', grupo: 'Voz', etiqueta: 'Llamadas por hora de una misma conversación', ayuda: 'Más que esto en una hora y se le pide que escriba. Por dirección de red se permite el triple (varias personas tras una misma red).', tipo: 'numero', unidad: 'llamadas', min: 1, max: 30, entero: true, defecto: 4 },
+
     // ---------- Cuentas clave (crm/cuentas-clave.ts) ----------
     { id: 'kam.diasAtencion', grupo: 'Cuentas clave', etiqueta: 'Atención desde', ayuda: 'Días sin hablar para que una cuenta clave pase a «Atención».', ...DIAS, defecto: 21 },
     { id: 'kam.diasRiesgo', grupo: 'Cuentas clave', etiqueta: 'En riesgo desde', ayuda: 'Días sin hablar para que una cuenta clave pase a «En riesgo».', ...DIAS, defecto: 45 },

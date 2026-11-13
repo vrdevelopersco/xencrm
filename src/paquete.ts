@@ -951,6 +951,31 @@ const servidor = http.createServer(async (pide, responde) => {
  * Mientras los de adentro no estén, el enrutador contesta «todavía está arrancando», que es la verdad y dura
  * unos segundos. Eso es mucho mejor que no contestar.
  */
+// La llamada de voz (src/voz/llamada.ts) sube a WebSocket: el enrutador le pasa la conexion al cliente que le toca,
+// tal cual, en los dos sentidos. Solo /voz/ws; cualquier otro pedido de subir a WebSocket se corta.
+servidor.on('upgrade', (pide, enchufe, cabeza) => {
+  const { puerto, ruta, prefijo } = haciaDonde(pide.url || '/');
+  if (!prefijo || !/^\/voz\/ws(\?|$)/.test(ruta)) { enchufe.destroy(); return; }
+  const salida = http.request(conDestino(comoLlego(puerto), puerto, { path: ruta, method: 'GET', headers: paraAdentro(pide.headers, puerto) }));
+  salida.on('upgrade', (r, adentro, cabezaDeAdentro) => {
+    const lineas = ['HTTP/1.1 101 Switching Protocols'];
+    for (const k of Object.keys(r.headers)) lineas.push(k + ': ' + r.headers[k]);
+    enchufe.write(lineas.join('\r\n') + '\r\n\r\n');
+    if (cabezaDeAdentro && cabezaDeAdentro.length) enchufe.write(cabezaDeAdentro);
+    if (cabeza && cabeza.length) adentro.write(cabeza);
+    adentro.pipe(enchufe);
+    enchufe.pipe(adentro);
+    adentro.on('error', () => enchufe.destroy());
+    enchufe.on('error', () => adentro.destroy());
+    adentro.on('close', () => enchufe.destroy());
+    enchufe.on('close', () => adentro.destroy());
+  });
+  // Lo de adentro dijo que no (un boleto vencido): se le pasa la respuesta, sin cuerpo, y se cierra.
+  salida.on('response', (r) => { enchufe.end('HTTP/1.1 ' + r.statusCode + ' ' + (r.statusMessage || '') + '\r\nconnection: close\r\ncontent-length: 0\r\n\r\n'); r.resume(); });
+  salida.on('error', () => enchufe.destroy());
+  salida.end();
+});
+
 servidor.listen(PUERTO, () => {
   console.log('[xencrm] escuchando en ' + PUERTO);
 });

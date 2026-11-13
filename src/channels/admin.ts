@@ -5,7 +5,12 @@ import type { Hono } from 'hono';
 import type { HttpBindings } from '@hono/node-server';
 import { streamSSE } from 'hono/streaming';
 import { business, env } from '../config.js';
-import { engineStatus, roleLabel, ROLES } from '../llm/engines.js';
+import { conHerramientas, engineStatus, fallbackOrder, iaAgotada, roleEngine, roleLabel, ROLES } from '../llm/engines.js';
+import { TopeAlcanzado } from '../crm/presupuesto.js';
+import { agenticoConClientes, copilotoEncendido, ponerAgentico } from '../agentico/nucleo.js';
+import { preguntarAlCopiloto, SinMotorConHerramientas } from '../agentico/equipo.js';
+import { agentePrincipal, agentesConfigurados, AREAS, CANALES_DE_AGENTE, guardarAgentes, VOCES_GROK } from '../agentico/agentes.js';
+import { vozDisponible } from '../voz/llamada.js';
 import { countDocs, getDb } from '../rag/store.js';
 import { borrarNotaInterna, guardarNotaInterna, notasInternas } from '../rag/interno.js';
 import { retratoDelNegocio } from '../rag/retrato.js';
@@ -1813,8 +1818,65 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
       publicUrl: env.publicUrl || `http://localhost:${env.port}`,
       // Si deja respuestas listas cuando la conversación la lleva una persona (crm/propuestas.ts).
       sugiereConPersona: sugiereConPersona(),
+      // El modo agéntico (src/agentico/): si está prendido con los clientes y en el copiloto, y si hay con qué. Con
+      // los clientes valen los motores de responder; el copiloto usa el del rol pesado y sus respaldos.
+      agentico: {
+        clientes: agenticoConClientes(),
+        equipo: copilotoEncendido(),
+        clientesPueden: conHerramientas(roleEngine('light')) || conHerramientas(roleEngine('heavy')),
+        copilotoPuede: fallbackOrder(roleEngine('heavy')).some(conHerramientas),
+      },
     }),
   );
+
+  /**
+   * Prender o apagar el modo agéntico (src/agentico/). Con los clientes cambia lo que les pasa —abrir tickets, pasar
+   * a una persona— y cuesta más por mensaje; por eso es de quien administra: no está en lo que el candado deja.
+   */
+  app.put('/admin/api/agent/agentico', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { clientes?: unknown; equipo?: unknown };
+    if (typeof body.clientes !== 'boolean' && typeof body.equipo !== 'boolean') return c.json({ error: 'clientes o equipo (true o false)' }, 400);
+    ponerAgentico({ clientes: typeof body.clientes === 'boolean' ? body.clientes : undefined, equipo: typeof body.equipo === 'boolean' ? body.equipo : undefined });
+    return c.json({ ok: true, agentico: { clientes: agenticoConClientes(), equipo: copilotoEncendido() } });
+  });
+
+  /**
+   * Los agentes del negocio (agentico/agentes.ts): uno o varios, con lo que atiende cada uno y por dónde, y la voz.
+   * Sin ninguno configurado atiende el de siempre (`principal`). Guardarlos es de quien administra (el candado no
+   * deja el PUT): cambia quién le contesta a los clientes.
+   */
+  app.get('/admin/api/agentes', (c) =>
+    c.json({ agentes: agentesConfigurados(), principal: agentePrincipal(), areas: AREAS, canales: CANALES_DE_AGENTE, voces: VOCES_GROK, voz: vozDisponible() }),
+  );
+  app.put('/admin/api/agentes', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { agentes?: unknown };
+    const r = guardarAgentes(body.agentes);
+    if ('error' in r) return c.json(r, 400);
+    return c.json({ agentes: r.agentes, voz: vozDisponible() });
+  });
+
+  /**
+   * El copiloto del equipo (agentico/equipo.ts). La conversación la manda el navegador entera (es de quien pregunta,
+   * no del CRM). Lo que hace o propone sale en la respuesta; las propuestas se aprueban llamando a la ruta que traen,
+   * que es la de siempre, con sus validaciones y su candado.
+   */
+  app.post('/admin/api/copiloto', async (c) => {
+    if (!copilotoEncendido()) return c.json({ error: 'El copiloto está apagado: se prende en Configuración › Agente.' }, 409);
+    const body = (await c.req.json().catch(() => ({}))) as { mensajes?: unknown };
+    const mensajes = (Array.isArray(body.mensajes) ? body.mensajes : [])
+      .filter((m): m is { rol: 'usuario' | 'xen'; texto: string } => Boolean(m) && (m.rol === 'usuario' || m.rol === 'xen') && typeof m.texto === 'string' && m.texto.trim().length > 0)
+      .map((m) => ({ rol: m.rol, texto: m.texto.trim().slice(0, 4000) }));
+    if (!mensajes.length || mensajes[mensajes.length - 1]!.rol !== 'usuario') return c.json({ error: 'Escribe la pregunta.' }, 400);
+    if (iaAgotada()) return c.json({ error: 'Se llegó al tope de gasto del mes: el copiloto vuelve el mes que viene (o cuando suban el tope).' }, 409);
+    try {
+      return c.json(await preguntarAlCopiloto({ mensajes, quien: quienHace(c, undefined, 'el equipo'), rol: rolDe(c), modo: modoDelTablero() }));
+    } catch (err) {
+      if (err instanceof SinMotorConHerramientas) return c.json({ error: err.message }, 409);
+      if (err instanceof TopeAlcanzado) return c.json({ error: 'Se llegó al tope de gasto del mes: el copiloto vuelve el mes que viene (o cuando suban el tope).' }, 409);
+      console.warn('[copiloto]', (err as Error).message);
+      return c.json({ error: 'El copiloto no pudo contestar ahora. Vuelve a intentar en un momento.' }, 502);
+    }
+  });
 
   /**
    * Que XENCRM acompañe cuando la lleva una persona: lo que el cliente pregunte y XENCRM sepa, queda redactado encima

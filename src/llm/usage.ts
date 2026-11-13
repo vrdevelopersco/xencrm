@@ -6,7 +6,7 @@ import { idDelTurno } from '../crm/turnos.js';
 /** light/heavy = responder; gate = clasificar; analysis = ficha y puntaje; when = interpretar fechas. */
 // `consulta` es aparte para que se vea cuánto cuesta lo que pregunta el equipo, que no es lo que gasta
 // atendiendo clientes. Mezclarlo escondería las dos cosas: parecería que atender cuesta más de lo que cuesta.
-export type Task = 'light' | 'heavy' | 'gate' | 'analysis' | 'when' | 'embeddings' | 'consulta' | 'transcripcion';
+export type Task = 'light' | 'heavy' | 'gate' | 'analysis' | 'when' | 'embeddings' | 'consulta' | 'transcripcion' | 'agente' | 'copiloto' | 'voz';
 
 export interface UsageTag {
   task?: Task;
@@ -54,7 +54,7 @@ const PRICES: Record<string, { input: number; cached: number; output: number; wr
  * Los motores que cobran. Los de la máquina (Ollama, Apple, LM Studio) cuestan 0 y no tienen tope. El compatible
  * cuenta como de pago aunque no se sepa su precio: su total sale «sin precio» en vez de en cero.
  */
-const DE_PAGO = new Set(['openai', 'anthropic', 'compat']);
+const DE_PAGO = new Set(['openai', 'anthropic', 'compat', 'xai']);
 
 /** El nombre del modelo sin la fecha de la versión: «gpt-5.4-2026-03-05» y «claude-haiku-4-5-20251001» cobran como su familia. */
 const familia = (model: string) => model.replace(/-\d{4}-\d{2}-\d{2}$/, '').replace(/-\d{8}$/, '');
@@ -68,6 +68,10 @@ const familia = (model: string) => model.replace(/-\d{4}-\d{2}-\d{2}$/, '').repl
  * puede dejar encendido. Consultado el 2026-10-08.
  */
 const POR_MINUTO: Record<string, number> = {
+  // Voz con Grok, de habla a habla. US$ 0,08 el minuto según la tabla de xAI citada por terceros (2026-11-13; la
+  // página oficial no da la cifra en la referencia): revisar en docs.x.ai › pricing antes de presupuestar.
+  'grok-voice-latest': 0.08,
+  'grok-voice-3.0': 0.08,
   'gpt-4o-mini-transcribe': 0.003,
   'gpt-4o-transcribe': 0.006,
   'whisper-1': 0.006,

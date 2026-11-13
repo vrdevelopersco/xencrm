@@ -29,6 +29,9 @@ importers:
       qrcode-terminal:
         specifier: ^0.12.0
         version: 0.12.0
+      ws:
+        specifier: 8.21.3
+        version: 8.21.3
       zod:
         specifier: ^4.6.1
         version: 4.6.1

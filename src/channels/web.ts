@@ -28,6 +28,8 @@ import { leerAdjunto, TOPE_ARCHIVO } from '../crm/adjuntos.js';
 import { irseSiQuedaHuerfano } from '../huerfano.js';
 import { metaConfigured, mountMeta } from './meta.js';
 import { paginaConCsp } from '../cabeceras.js';
+import { adjuntarVoz, pedirLlamada, vozDisponible } from '../voz/llamada.js';
+import { nombreParaCanal } from '../agentico/agentes.js';
 import { INSTANCE, startPublicCheck } from './public-check.js';
 import { createMcpServer } from '../mcp/server.js';
 
@@ -275,6 +277,25 @@ app.get('/brand/logo', (c) => {
   return c.body(new Uint8Array(logo.body), 200, { 'content-type': logo.type, 'cache-control': 'public, max-age=3600', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'" });
 });
 
+// ---------- Voz (src/voz/llamada.ts) ----------
+// Los dos archivos de la llamada: el cliente y el procesador del micrófono (un AudioWorklet, que se carga por URL).
+for (const archivo of ['voz.js', 'voz-procesador.js']) {
+  app.get(`/${archivo}`, (c) => c.body(readFileSync(new URL(`../../public/${archivo}`, import.meta.url), 'utf8'), 200, { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'public, max-age=300' }));
+}
+
+/**
+ * El chat pide una llamada: un boleto firmado, de un solo uso, que dura un minuto, para abrir /voz/ws. Con la misma
+ * sesión del chat, así lo que se diga queda en la misma conversación.
+ */
+app.post('/voz/llamada', async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { sessionId?: unknown } | null;
+  const sessionId = typeof body?.sessionId === 'string' && SESSION_RE.test(body.sessionId) ? body.sessionId : null;
+  if (!sessionId) return c.json({ error: 'Falta la sesión del chat.' }, 400);
+  const r = pedirLlamada({ sessionId, ip: clientIp(c) });
+  if ('error' in r) return c.json({ error: r.error }, r.status);
+  return c.json(r);
+});
+
 app.get('/widget.js', (c) => {
   const b = burbujaDe();
   // Fuera de horario la burbuja no se pinta: se devuelve un archivo que no hace nada. Es a propósito que sea
@@ -284,7 +305,8 @@ app.get('/widget.js', (c) => {
     return c.body('/* fuera del horario de atención */', 200, { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'public, max-age=60' });
   }
   const js = readFileSync(new URL('../../public/widget.js', import.meta.url), 'utf8')
-    .replace('__AGENT_NAME__', business.agent.name)
+    // Saluda el agente que atiende el chat (agentico/agentes.ts): el mismo que va a contestar.
+    .replace('__AGENT_NAME__', nombreParaCanal('web'))
     .replace('__STORE_NAME__', business.business.name)
     .replace('__BRAND_COLOR__', business.brand.color)
     .replace('__BRAND_LOGO__', logoUrl() ?? '')
@@ -347,9 +369,23 @@ app.get('/chat', (c) => {
       // mandar a la gente a una puerta que no existe.
       `<div class="cerrado"><h2>Ahora mismo no estamos en el chat</h2><p>${escaparHtml(v.cerradaDice || business.business.humanContact || 'Vuelve en un rato y con gusto te atendemos.')}</p></div>`;
 
+  // La llamada de voz, si el negocio tiene un agente de voz (Configuración › Agentes) y la llave de xAI.
+  const voz = prendido ? vozDisponible() : { ok: false };
+  const icono = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>';
+  const vozBoton = voz.ok && voz.agente
+    ? `<button class="llamar" id="voz-llamar" type="button" data-agente="${escaparHtml(voz.agente)}" hidden>${icono}<span>Hablar con ${escaparHtml(voz.agente)}</span></button>`
+    : '';
+  const vozFranja = voz.ok
+    ? '<div class="llamada" id="voz-llamada" role="region" aria-label="Llamada de voz" hidden><span class="onda" aria-hidden="true"><i></i><i></i><i></i></span><span class="estado" id="voz-estado" role="status"></span><span class="tiempo" id="voz-tiempo">0:00</span><button class="colgar" id="voz-colgar" type="button">Colgar</button></div>\n<script src="voz.js" defer></script>'
+    : '';
+  // 🪤 El micrófono está cerrado para todas las páginas (borde.cjs): esta lo pide con una marca de adentro que el
+  // enrutador cambia por microphone=(self) y quita antes de salir. Solo aquí y solo con la voz disponible.
+  if (voz.ok) c.header('x-xencrm-microfono', 'si');
   const html = readFileSync(new URL('../../public/chat.html', import.meta.url), 'utf8')
+    .replaceAll('__VOZ_BOTON__', vozBoton)
+    .replaceAll('__VOZ_FRANJA__', vozFranja)
     .replaceAll('__STORE_NAME__', escaparHtml(v.titulo || business.business.name))
-    .replaceAll('__AGENT_NAME__', escaparHtml(business.agent.name))
+    .replaceAll('__AGENT_NAME__', escaparHtml(nombreParaCanal('web')))
     .replaceAll('__BRAND_COLOR__', /^#[0-9a-fA-F]{6}$/.test(business.brand.color) ? business.brand.color : '#2f7d4f')
     .replaceAll('__MARCA__', marca)
     .replaceAll('__ESTADO__', estado)
@@ -392,6 +428,7 @@ function abrirPuertaDeServicio(): void {
   }
   const puerta = createAdaptorServer({ fetch: app.fetch });
   puerta.on('error', (e: Error) => console.error(`[web] no pude abrir el socket ${ruta}: ${e.message}`));
+  adjuntarVoz(puerta as unknown as import('node:http').Server); // el enrutador entra por aquí: la voz también
   puerta.listen(ruta, () => console.log(`[web] y también por ${ruta}`));
 }
 
@@ -427,6 +464,8 @@ export function startWeb() {
     // Que no abra el puerto ya no es motivo para morirse: con la puerta de servicio abierta se sigue
     // atendiendo, y el enrutador entra por ahí. Antes esto tumbaba el proceso y el lanzador lo reintentaba
     // cada cinco segundos, en bucle, sin que nadie viera por qué.
+    // La voz sube a WebSocket por /voz/ws (src/voz/llamada.ts).
+    adjuntarVoz(servidor as unknown as import('node:http').Server);
     servidor.on('error', (e: Error) => {
       console.error(`[web] no pude abrir el puerto ${env.port}: ${e.message}`);
       enPie();

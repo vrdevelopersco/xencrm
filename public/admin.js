@@ -3336,7 +3336,7 @@
 
   // ---------- agente ----------
   function usd(n) { return n === null || n === undefined ? 's/p' : '$' + (n < 0.01 ? n.toFixed(4) : n < 1 ? n.toFixed(3) : n.toFixed(2)); }
-  var TASKS = { light: 'Responder (liviano)', heavy: 'Responder (pesado)', gate: 'Clasificar mensaje', analysis: 'Análisis y puntaje', when: 'Interpretar fechas' };
+  var TASKS = { light: 'Responder (liviano)', heavy: 'Responder (pesado)', gate: 'Clasificar mensaje', analysis: 'Análisis y puntaje', when: 'Interpretar fechas', agente: 'Responder con herramientas', copiloto: 'Copiloto del equipo' };
   // El mes y su tope (src/crm/presupuesto.ts). Aquí solo se lee: el tope lo pone quien administra XENCRM.
   var TOPE_DICE = {
     aviso: 'Al 90 % empieza a ahorrar.',
@@ -3917,7 +3917,7 @@
       var ap = a.appointments;
       $('agent').innerHTML =
         '<div class="panel"><b>' + esc(a.agent.name) + '</b> · asistente de <b>' + esc(a.business.name) + '</b><div class="muted">' + esc(a.business.description) + '</div><div class="small">Estilo: ' + esc(a.agent.style) + '</div><div class="small">Contacto humano que ofrece: ' + esc(a.business.humanContact) + '</div></div>' +
-        sugierePanel(a) +
+        sugierePanel(a) + agenticoPanel(a) + agentesPanel() +
         '<div class="panel"><b>Motores</b><ul>' + eng + '</ul><div class="small muted">Modo: ' + esc(a.roles.mode) + ' · liviano: ' + esc(a.roles.light) + ' · pesado: ' + esc(a.roles.heavy) + ' · gate: ' + esc(a.roles.gate) + ' · análisis: ' + esc(a.roles.analysis) + '</div><div class="small muted">Modelos: ' + esc(a.models.chat) + ' · embeddings ' + esc(a.models.embed) + ' · nube ' + esc(a.models.openai) + '</div></div>' +
         '<div class="panel"><b>' + VOC.Citas + '</b>' + (ap.enabled ? '<div class="small">' + esc(ap.service) + (ap.location ? ' en ' + esc(ap.location) : '') + ' · ' + ap.durationMin + ' min · días ' + ap.days.join(',') + ' · ' + ap.hours.map(function (h) { return h[0] + '–' + h[1]; }).join(', ') + ' · zona ' + esc(a.timezone) + '</div>' : '<div class="muted small">Desactivadas (appointments.enabled en xencrm.config.json)</div>') + '</div>' +
         '<div class="panel"><b>Análisis comercial</b><div class="small">Campos capturados además de los básicos: ' + a.crmFields.map(function (f) { return '<code>' + esc(f.name) + '</code>'; }).join(' ') + '</div></div>' +
@@ -3925,6 +3925,8 @@
         backupPanel(bk, ret) + usagePanel(usage, tope) + calendarPanel(calCfg) + '<div class="panel" id="miss-panel"></div><div class="panel" id="dict-panel"></div>';
       bindBackup();
       bindSugiere(a);
+      bindAgentico(a);
+      cargarAgentes();
       loadMissesPanel(a);
       loadDictionaryPanel(a);
       $('feed-copy').onclick = function () {
@@ -5708,6 +5710,7 @@
       if ($('fx-logo')) $('fx-logo').textContent = (me.business || 'A').trim().charAt(0).toUpperCase();
       pintarQuienSoy();
       state.bizName = me.business; state.agentName = me.agent; state.agendaQue = me.agenda || '';
+      if ($('fx-copiloto-t')) $('fx-copiloto-t').textContent = 'Pregúntale a ' + (state.agentName || 'Xen');
       ponerVocabulario(me.interfaz); pintarVocabulario();
       // 🪤 El asistente no siempre se llama Xen (el de DUNOR en el paquete se llama Arthur): lo que el HTML trae escrito
       // con «Xen» se cambia aquí, al saberse el nombre. Lo que pinta el JavaScript usa state.agentName.
@@ -10713,6 +10716,318 @@
   // (fin de XEN · Reglas y umbrales)
 
   // Las reglas primero, después el tablero (ver arrancarConReglas).
+
+  // Configuración › Agente › Modo agéntico (src/agentico/): con los clientes y el copiloto del equipo, cada uno con su
+  // interruptor. Prenderlo es de quien administra (el candado no deja el PUT); a los demás se les dice cómo está.
+  function agenticoPanel(a) {
+    var g = a.agentico || {}, ag = esc(a.agent.name || 'Xen'), puede = !enCandado();
+    var fila = function (cual, on, titulo, dice, falta) {
+      return '<div class="agentico-fila"><div><b>' + titulo + '</b><span class="small muted">' + dice + '</span>' + (falta ? '<span class="small agentico-falta">' + falta + '</span>' : '') + '</div>' +
+        (puede ? '<button class="btn sm' + (on ? '' : ' primary') + '" data-agentico="' + cual + '" aria-pressed="' + on + '">' + (on ? 'Apagar' : 'Prender') + '</button>' : '<span class="chip">' + (on ? 'Prendido' : 'Apagado') + '</span>') + '</div>';
+    };
+    return '<div class="panel" id="agentico-panel"><b>Modo agéntico</b>' +
+      '<p class="small muted">' + ag + ' usa herramientas: consulta lo que necesita, hace lo seguro y propone lo demás. Cada paso queda en las trazas.</p>' +
+      fila('clientes', g.clientes === true, 'Con los clientes', g.clientes
+        ? 'En WhatsApp y el chat del sitio, ' + ag + ' consulta los tickets, ' + VOC.la + ' ' + VOC.cita + ' y los mantenimientos de quien escribe; abre un ticket cuando reporta una falla y pasa a una persona cuando hace falta. Cuesta algo más por mensaje.'
+        : ag + ' contesta como siempre, sin herramientas.', g.clientesPueden === false ? 'Necesita OpenAI, Claude o una API compatible en el rol de responder (Modelos de IA).' : '') +
+      fila('equipo', g.equipo !== false, 'Copiloto del equipo', g.equipo !== false
+        ? 'El botón «Pregúntale a ' + ag + '» de arriba: consulta el CRM, crea tickets y notas, y propone lo demás para que lo apruebes.'
+        : 'El botón de arriba avisa que está apagado.', g.copilotoPuede === false ? 'Necesita OpenAI, Claude o una API compatible (Modelos de IA).' : '') +
+      '<p class="small muted">Hasta ' + R('agentico.pasos', 4) + ' pasos y ' + new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'USD' }).format(R('agentico.topeTurnoUsd', 0.1)) + ' por mensaje, aparte del tope del mes (Reglas y umbrales › Modo agéntico).</p>' +
+      '<div class="small" role="status" id="agentico-msg"></div></div>';
+  }
+  function bindAgentico(a) {
+    document.querySelectorAll('#agentico-panel [data-agentico]').forEach(function (b) {
+      b.onclick = function () {
+        var cual = b.getAttribute('data-agentico'), cuerpo = {};
+        cuerpo[cual] = b.getAttribute('aria-pressed') !== 'true';
+        b.disabled = true;
+        api('/agent/agentico', { method: 'PUT', body: cuerpo }).then(function (r) {
+          if (!r || r.error) { b.disabled = false; $('agentico-msg').textContent = 'No se pudo: ' + ((r && r.error) || 'sin respuesta'); return; }
+          a.agentico = Object.assign({}, a.agentico, r.agentico);
+          $('agentico-panel').outerHTML = agenticoPanel(a);
+          bindAgentico(a);
+          $('agentico-msg').textContent = cual === 'clientes' ? (r.agentico.clientes ? 'Prendido con los clientes.' : 'Apagado con los clientes.') : (r.agentico.equipo ? 'Copiloto prendido.' : 'Copiloto apagado.');
+        }).catch(function () { b.disabled = false; $('agentico-msg').textContent = 'No se pudo: revisa la conexión.'; });
+      };
+    });
+  }
+
+  // ===== XEN · El copiloto del equipo (modo agéntico, src/agentico/equipo.ts) =====
+  // Una conversación al lado del tablero: se le pregunta por el CRM y consulta, hace lo seguro (crear un ticket,
+  // anotar) y propone lo demás. Cada propuesta trae la ruta de la API que la hace; aprobarla es llamar esa ruta, la
+  // misma del botón de siempre, con sus validaciones y su candado. La conversación es de quien pregunta: vive en
+  // este navegador (sessionStorage) y se manda entera en cada pregunta.
+  var COP = { mensajes: [], ocupado: false, estado: null };
+  try { COP.mensajes = JSON.parse(sessionStorage.getItem(LLAVE('copiloto')) || '[]') || []; } catch (e) { COP.mensajes = []; }
+  function copGuardar() { try { sessionStorage.setItem(LLAVE('copiloto'), JSON.stringify(COP.mensajes.slice(-30))); } catch (e) {} }
+  function copAgente() { return state.agentName || 'Xen'; }
+  // Lo que escribe el modelo, sin HTML: párrafos, listas con guion y **negritas**. Todo pasa por esc() antes.
+  function copTexto(t) {
+    var html = '', lista = false;
+    var negrita = function (s) { return s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>'); };
+    String(t || '').split('\n').forEach(function (l) {
+      var m = /^\s*(?:[-•*]|\d+[.)])\s+(.*)$/.exec(l);
+      if (m) { if (!lista) { html += '<ul>'; lista = true; } html += '<li>' + negrita(esc(m[1])) + '</li>'; return; }
+      if (lista) { html += '</ul>'; lista = false; }
+      if (l.trim()) html += '<p>' + negrita(esc(l)) + '</p>';
+    });
+    return html + (lista ? '</ul>' : '');
+  }
+  // Lo que consultó (las de leer): para decir de dónde salió la respuesta. Lo que hizo ya sale como «hecho».
+  var COP_HERR = { buscar_contactos: 'contactos', ver_contacto: 'una ficha', 'citas': VOC.citas, tickets: 'tickets', mantenimientos: 'mantenimientos', pendientes_de_hoy: 'lo pendiente', cupo_de_la_agenda: 'el cupo' };
+  function copEnlace(e) {
+    var que = e.tipo === 'ticket' ? 'Abrir ' + e.nombre : 'Ficha de ' + e.nombre;
+    return '<button type="button" class="cop-enlace" data-tipo="' + esc(e.tipo) + '" data-eid="' + esc(e.id) + '">' + svgXen(e.tipo === 'ticket' ? 'ticket' : 'contacto') + '<span>' + esc(que) + '</span></button>';
+  }
+  function copMensaje(m, i) {
+    if (m.rol === 'usuario') return '<div class="cop-msj yo"><p>' + esc(m.texto) + '</p></div>';
+    if (m.error) return '<div class="cop-msj xen error" role="alert"><p><b>No pude contestar.</b> ' + esc(m.error) + '</p>' + (m.irAConfig ? '<button type="button" class="btn sm" data-cop-config>Ir a Configuración › Agente</button>' : '<button type="button" class="btn sm" data-cop-reintentar="' + i + '">Reintentar</button>') + '</div>';
+    var hechos = (m.hechos || []).map(function (h) { return '<li class="cop-hecho">' + svgXen('check') + '<span>' + esc(h.resumen) + '</span>' + (h.enlace ? copEnlace(h.enlace) : '') + '</li>'; }).join('');
+    var props = (m.propuestas || []).map(function (p, j) {
+      var est = p.estado || 'pendiente';
+      var pie = est === 'hecha' ? '<span class="cop-est ok">' + svgXen('check') + 'Hecho</span>'
+        : est === 'descartada' ? '<span class="cop-est">Descartada</span>'
+        : '<button type="button" class="btn sm primary" data-cop-hacer="' + i + ':' + j + '">' + (p.herramienta === 'mensaje_al_cliente' ? 'Enviar mensaje' : 'Hacerlo') + '</button><button type="button" class="btn sm" data-cop-descartar="' + i + ':' + j + '">Descartar</button>' + (p.error ? '<span class="cop-est mal" role="alert">' + esc(p.error) + '</span>' : '');
+      return '<li class="cop-prop' + (est !== 'pendiente' ? ' ' + est : '') + '"><span class="cop-prop-t">' + svgXen('chispa') + '<span><b>Propuesto</b> · ' + esc(p.resumen) + '</span></span><span class="cop-prop-acc">' + pie + '</span></li>';
+    }).join('');
+    // Los enlaces de lo que la respuesta nombra (TK-0003, «Camilo Duarte»), no de todo lo que consultó: una búsqueda
+    // de tickets trae seis, y seis botones debajo de una respuesta que habla de uno no ayudan a nadie.
+    var enlaces = (m.enlaces || []).filter(function (e) { return e.nombre && String(m.texto || '').indexOf(e.nombre) >= 0 && !(m.hechos || []).concat(m.propuestas || []).some(function (h) { return h.enlace && h.enlace.id === e.id && h.enlace.tipo === e.tipo; }); }).slice(0, 4).map(copEnlace).join('');
+    var consulto = (m.llamadas || []).filter(function (l) { return l.ok && COP_HERR[l.nombre]; }).map(function (l) { return COP_HERR[l.nombre]; });
+    consulto = consulto.filter(function (x, k) { return consulto.indexOf(x) === k; });
+    return '<div class="cop-msj xen">' + copTexto(m.texto) +
+      (hechos ? '<ul class="cop-hechos">' + hechos + '</ul>' : '') +
+      (props ? '<ul class="cop-props">' + props + '</ul>' : '') +
+      (enlaces ? '<div class="cop-enlaces">' + enlaces + '</div>' : '') +
+      (consulto.length || m.agotado ? '<p class="cop-meta">' + (consulto.length ? 'Consultó ' + esc(consulto.join(', ')) + '.' : '') + (m.agotado ? ' Contestó con lo que alcanzó a revisar.' : '') + '</p>' : '') + '</div>';
+  }
+  function copSugerencias() {
+    var s = ['¿Qué tengo pendiente hoy?', '¿Qué tickets están vencidos o en riesgo?', '¿Qué ' + VOC.citas + ' hay esta semana?', '¿Quiénes son los prospectos calientes sin asignar?'];
+    return '<div class="cop-vacio"><p><b>Pregúntale a ' + esc(copAgente()) + ' por tu CRM.</b> Consulta contactos, tickets, ' + esc(VOC.citas) + ' y mantenimientos; crea tickets y notas, y te propone lo demás para que lo apruebes.</p>' +
+      '<div class="cop-sug">' + s.map(function (t) { return '<button type="button" class="cop-chip" data-cop-sug="' + esc(t) + '">' + esc(t) + '</button>'; }).join('') + '</div></div>';
+  }
+  function pintarCopiloto() {
+    var hilo = $('cop-hilo');
+    // 🪤 Repintar borra el botón que se acaba de tocar («Hacerlo», «Descartar»): el foco se iría al <body> y con él
+    // Escape y el teclado. Si estaba en el hilo, vuelve al campo de la pregunta.
+    var teniaFoco = hilo.contains(document.activeElement);
+    if (COP.estado === 'apagado') {
+      hilo.innerHTML = '<div class="cop-vacio"><p><b>El copiloto está apagado.</b> ' + (enCandado() ? 'Lo prende quien administra XENCRM.' : 'Se prende en Configuración › Agente.') + '</p>' + (enCandado() ? '' : '<button type="button" class="btn sm" data-cop-config>Ir a Configuración › Agente</button>') + '</div>';
+    } else {
+      hilo.innerHTML = (COP.mensajes.length ? COP.mensajes.map(copMensaje).join('') : copSugerencias()) +
+        (COP.ocupado ? '<div class="cop-msj xen cargando" aria-busy="true"><span class="fx-esq fx-esq-linea" style="width:70%"></span><span class="fx-esq fx-esq-linea" style="width:90%"></span><span class="cop-meta">Consultando el CRM…</span></div>' : '');
+    }
+    $('cop-enviar').disabled = COP.ocupado || COP.estado === 'apagado';
+    $('cop-texto').disabled = COP.estado === 'apagado';
+    hilo.scrollTop = hilo.scrollHeight;
+    if (teniaFoco && !$('cop-texto').disabled) $('cop-texto').focus();
+    hilo.querySelectorAll('[data-cop-sug]').forEach(function (b) { b.onclick = function () { copPreguntar(b.getAttribute('data-cop-sug')); }; });
+    hilo.querySelectorAll('[data-cop-config]').forEach(function (b) { b.onclick = function () { copCerrar(); go('agent'); }; });
+    hilo.querySelectorAll('[data-cop-reintentar]').forEach(function (b) {
+      b.onclick = function () {
+        var i = Number(b.getAttribute('data-cop-reintentar'));
+        COP.mensajes.splice(i, 1);
+        copPedir();
+      };
+    });
+    hilo.querySelectorAll('.cop-enlace').forEach(function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-eid');
+        if (b.getAttribute('data-tipo') === 'ticket') abrirTicket(Number(id)); else abrirPerfil(id);
+      };
+    });
+    hilo.querySelectorAll('[data-cop-hacer]').forEach(function (b) {
+      b.onclick = function () {
+        var ij = b.getAttribute('data-cop-hacer').split(':'), p = COP.mensajes[Number(ij[0])].propuestas[Number(ij[1])];
+        b.disabled = true;
+        // Aprobar es llamar la ruta que trae, la de siempre: valida, firma con tu nombre y respeta el candado.
+        api('/' + p.ruta.ruta, { method: p.ruta.metodo, body: p.ruta.cuerpo || {} }).then(function (r) {
+          if (r && r.error) { p.error = r.error; }
+          else { p.estado = 'hecha'; delete p.error; toast('Hecho: ' + p.resumen); }
+          copGuardar(); pintarCopiloto();
+        }).catch(function () { p.error = 'No se pudo: revisa la conexión.'; copGuardar(); pintarCopiloto(); });
+      };
+    });
+    hilo.querySelectorAll('[data-cop-descartar]').forEach(function (b) {
+      b.onclick = function () { var ij = b.getAttribute('data-cop-descartar').split(':'); COP.mensajes[Number(ij[0])].propuestas[Number(ij[1])].estado = 'descartada'; copGuardar(); pintarCopiloto(); };
+    });
+  }
+  function copPedir() {
+    COP.ocupado = true; pintarCopiloto();
+    var mensajes = COP.mensajes.filter(function (m) { return !m.error; }).map(function (m) { return { rol: m.rol, texto: m.texto || '' }; });
+    fetch(BASE + '/admin/api/copiloto', { method: 'POST', headers: Object.assign({ 'content-type': 'application/json', 'x-admin-token': state.token }, state.name ? { 'x-xencrm-quien': encodeURIComponent(state.name) } : {}), body: JSON.stringify({ mensajes: mensajes }) })
+      .then(function (res) {
+        if (res.status === 401) { showLogin('Token inválido'); throw new Error('401'); }
+        return res.json().then(function (r) { return { status: res.status, r: r }; });
+      })
+      .then(function (x) {
+        COP.ocupado = false;
+        if (x.status === 409 && /apagado/.test((x.r && x.r.error) || '')) { COP.estado = 'apagado'; pintarCopiloto(); return; }
+        if (x.status >= 400 || !x.r || x.r.error) COP.mensajes.push({ rol: 'xen', error: (x.r && x.r.error) || 'El servidor no contestó.', irAConfig: x.status === 409 && /Modelos de IA/.test((x.r && x.r.error) || '') });
+        else COP.mensajes.push({ rol: 'xen', texto: x.r.texto, hechos: x.r.hechos, propuestas: (x.r.propuestas || []).map(function (p) { return Object.assign({}, p, { estado: 'pendiente' }); }), enlaces: x.r.enlaces, llamadas: x.r.llamadas, agotado: x.r.agotado });
+        copGuardar(); pintarCopiloto();
+      })
+      .catch(function (e) {
+        COP.ocupado = false;
+        if (String(e && e.message) !== '401') COP.mensajes.push({ rol: 'xen', error: 'Revisa la conexión y vuelve a intentar.' });
+        pintarCopiloto();
+      });
+  }
+  function copPreguntar(texto) {
+    texto = String(texto || '').trim();
+    if (!texto || COP.ocupado) return;
+    COP.mensajes.push({ rol: 'usuario', texto: texto });
+    $('cop-texto').value = '';
+    copGuardar();
+    copPedir();
+  }
+  function copAbrir() {
+    var dlg = $('dlg-copiloto');
+    $('cop-t').textContent = 'Pregúntale a ' + copAgente();
+    if (!dlg.open) dlg.show();
+    $('fx-copiloto').setAttribute('aria-expanded', 'true');
+    COP.estado = null;
+    pintarCopiloto();
+    $('cop-texto').focus();
+  }
+  function copCerrar() {
+    var dlg = $('dlg-copiloto');
+    if (dlg.open) dlg.close();
+    $('fx-copiloto').setAttribute('aria-expanded', 'false');
+    $('fx-copiloto').focus();
+  }
+  $('fx-copiloto').onclick = function () { if ($('dlg-copiloto').open) copCerrar(); else copAbrir(); };
+  $('cop-cerrar').onclick = copCerrar;
+  $('cop-nueva').onclick = function () { if (COP.ocupado) return; COP.mensajes = []; copGuardar(); pintarCopiloto(); $('cop-texto').focus(); };
+  $('cop-form').onsubmit = function (e) { e.preventDefault(); copPreguntar($('cop-texto').value); };
+  // Enter pregunta; Mayúsculas+Enter, otra línea. Escape cierra (un <dialog> abierto con show() no lo hace solo).
+  $('cop-texto').onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); copPreguntar($('cop-texto').value); } };
+  // En el documento y no en el diálogo: si el foco quedó fuera (en el tablero de al lado), Escape igual lo cierra.
+  // No si hay un modal encima (la ficha, un ticket): ese Escape es suyo.
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || !$('dlg-copiloto').open) return;
+    var modal = false;
+    try { modal = Boolean(document.querySelector('dialog:modal')); } catch (err) {}
+    if (modal) return;
+    e.preventDefault();
+    copCerrar();
+  });
+
+
+  // ===== XEN · Los agentes del negocio (src/agentico/agentes.ts) =====
+  // Uno o varios: quién atiende qué y por dónde, con su voz si atiende llamadas. Sin ninguno configurado atiende el
+  // de siempre. Se guarda la lista entera (todo o nada) y el servidor dice qué campo no sirve.
+  var AG = { datos: null, editando: null, error: null };
+  // 🪤 Se arma al pintar, no al cargar: el vocabulario del negocio («Demos») llega después, con /me.
+  var AG_AREAS = { ventas: 'Ventas', soporte: 'Soporte', informacion: 'Información' };
+  Object.defineProperty(AG_AREAS, 'agenda', { enumerable: true, get: function () { return VOC.Citas; } });
+  var AG_CANALES = { whatsapp: 'WhatsApp', web: 'Chat del sitio', voz: 'Voz (llamadas)' };
+  function agSlug(nombre, lista) {
+    var base = String(nombre || 'agente').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'agente';
+    if (base.length < 2) base = 'agente-' + base;
+    var id = base, n = 2;
+    while (lista.some(function (a) { return a.id === id; })) id = base + '-' + n++;
+    return id;
+  }
+  function agFicha(a, i, puede) {
+    var chips = function (lista, nombres) { return lista.map(function (x) { return '<span class="chip">' + esc(nombres[x] || x) + '</span>'; }).join(''); };
+    return '<li class="ag-fila' + (a.activo ? '' : ' inactivo') + '"><div class="ag-quien"><b>' + esc(a.nombre) + '</b>' + (a.activo ? '' : ' <span class="chip">Pausado</span>') +
+      '<span class="ag-chips">' + chips(a.atiende, AG_AREAS) + '</span><span class="ag-chips">' + chips(a.canales, AG_CANALES) + (a.canales.indexOf('voz') >= 0 && a.voz ? '<span class="small muted">voz «' + esc(a.voz.voz) + '» · ' + esc(a.voz.idioma) + '</span>' : '') + '</span>' +
+      (a.instrucciones ? '<span class="small muted ag-instr">' + esc(a.instrucciones) + '</span>' : '') + '</div>' +
+      (puede ? '<div class="ag-acc"><button type="button" class="btn sm" data-ag-editar="' + i + '">Editar</button><button type="button" class="btn sm" data-ag-quitar="' + i + '">Quitar</button></div>' : '') + '</li>';
+  }
+  function agFormulario(a) {
+    var marcar = function (grupo, valores, nombres) {
+      return Object.keys(nombres).map(function (k) { return '<label class="ag-op"><input type="checkbox" name="' + grupo + '" value="' + k + '"' + (valores.indexOf(k) >= 0 ? ' checked' : '') + '> ' + esc(nombres[k]) + '</label>'; }).join('');
+    };
+    var voces = (AG.datos.voces || ['eve']).map(function (v) { return '<option value="' + esc(v) + '"' + ((a.voz && a.voz.voz) === v ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('');
+    var conVoz = a.canales.indexOf('voz') >= 0;
+    var err = AG.error;
+    var campo = function (nombre) { return err && err.campo && err.campo.split('.').pop() === nombre; };
+    return '<form class="ag-form" id="ag-form" novalidate>' +
+      '<label for="ag-nombre">Nombre</label><input id="ag-nombre" maxlength="40" autocomplete="off" value="' + esc(a.nombre) + '" placeholder="Sofía"' + (campo('nombre') ? ' aria-invalid="true" aria-describedby="ag-error"' : '') + '>' +
+      '<fieldset><legend>Qué atiende</legend>' + marcar('atiende', a.atiende, AG_AREAS) + '</fieldset>' +
+      '<fieldset><legend>Por dónde</legend>' + marcar('canales', a.canales, AG_CANALES) + '</fieldset>' +
+      '<div class="ag-voz"' + (conVoz ? '' : ' hidden') + '><label for="ag-voz">Voz de Grok</label><select id="ag-voz">' + voces + '</select>' +
+      '<label for="ag-idioma">Idioma de quien llama</label><input id="ag-idioma" maxlength="5" autocomplete="off" value="' + esc((a.voz && a.voz.idioma) || 'es-CO') + '" placeholder="es-CO"></div>' +
+      '<label for="ag-instr">Instrucciones (opcional)</label><textarea id="ag-instr" rows="3" maxlength="1500" placeholder="Cómo atiende: el tono, qué ofrece primero, qué no hace…">' + esc(a.instrucciones || '') + '</textarea>' +
+      '<label class="ag-op"><input type="checkbox" id="ag-activo"' + (a.activo ? ' checked' : '') + '> Activo</label>' +
+      (err ? '<p class="ag-error" id="ag-error" role="alert" tabindex="-1">' + esc(err.error) + '</p>' : '') +
+      '<div class="feed-row"><button type="submit" class="btn primary">Guardar agente</button><button type="button" class="btn" id="ag-cancelar">Cancelar</button></div></form>';
+  }
+  function agentesPanel() {
+    var d = AG.datos;
+    if (!d) return '<div class="panel" id="agentes-panel"><b>Agentes</b><span class="fx-esq fx-esq-linea" style="width:60%"></span></div>';
+    var puede = !enCandado(), lista = d.agentes;
+    var voz = d.voz || {};
+    var estadoVoz = voz.ok ? '<p class="ag-voz-ok small">' + svgXen('check') + 'La voz está lista: ' + esc(voz.agente) + ' atiende llamadas desde la ventana de chat (botón «Hablar con ' + esc(voz.agente) + '»).</p>'
+      : lista.some(function (a) { return a.canales.indexOf('voz') >= 0; }) ? '<p class="ag-voz-falta small">' + esc(voz.motivo || 'La voz no está disponible.') + '</p>' : '';
+    var cuerpo = AG.editando !== null
+      ? agFormulario(AG.editando.agente)
+      : '<ul class="ag-lista">' + (lista.length ? lista.map(function (a, i) { return agFicha(a, i, puede); }).join('') : '<li class="ag-fila"><div class="ag-quien"><b>' + esc(d.principal.nombre) + '</b><span class="small muted">El de siempre: atiende todo por WhatsApp y el chat del sitio. Agrega agentes para repartir el trabajo o atender por voz.</span></div></li>') + '</ul>' +
+        (puede ? '<div class="feed-row"><button type="button" class="btn" id="ag-agregar">Agregar un agente</button></div>' : '');
+    return '<div class="panel" id="agentes-panel"><b>Agentes</b><p class="small muted">Quién atiende a tus clientes, qué y por dónde. Cada conversación queda con un agente; si el cliente cambia de tema a algo que atiende otro, lo toma ese y se presenta.</p>' + estadoVoz + cuerpo + '<div class="small" role="status" id="ag-msg"></div></div>';
+  }
+  function pintarAgentes() {
+    if (!$('agentes-panel')) return;
+    $('agentes-panel').outerHTML = agentesPanel();
+    var lista = AG.datos ? AG.datos.agentes : [];
+    if ($('ag-agregar')) $('ag-agregar').onclick = function () {
+      // El primero hereda el nombre del de siempre: lo normal es partir de él y repartir.
+      var nombre = lista.length ? '' : AG.datos.principal.nombre;
+      AG.editando = { i: -1, agente: { id: '', nombre: nombre, activo: true, atiende: ['informacion'], canales: ['whatsapp', 'web'], instrucciones: '' } };
+      AG.error = null; pintarAgentes(); $('ag-nombre').focus();
+    };
+    document.querySelectorAll('#agentes-panel [data-ag-editar]').forEach(function (b) {
+      b.onclick = function () { var i = Number(b.getAttribute('data-ag-editar')); AG.editando = { i: i, agente: JSON.parse(JSON.stringify(lista[i])) }; AG.error = null; pintarAgentes(); $('ag-nombre').focus(); };
+    });
+    document.querySelectorAll('#agentes-panel [data-ag-quitar]').forEach(function (b) {
+      b.onclick = function () {
+        var i = Number(b.getAttribute('data-ag-quitar')), nueva = lista.filter(function (_, k) { return k !== i; });
+        agGuardar(nueva, 'Quitado: ' + lista[i].nombre + '.' + (nueva.length ? '' : ' Vuelve a atender ' + AG.datos.principal.nombre + ', el de siempre.'));
+      };
+    });
+    var form = $('ag-form');
+    if (!form) return;
+    form.querySelectorAll('input[name="canales"]').forEach(function (c) { c.onchange = function () { form.querySelector('.ag-voz').hidden = !form.querySelector('input[name="canales"][value="voz"]').checked; }; });
+    $('ag-cancelar').onclick = function () { AG.editando = null; AG.error = null; pintarAgentes(); };
+    form.onsubmit = function (e) {
+      e.preventDefault();
+      var marcados = function (g) { return Array.prototype.map.call(form.querySelectorAll('input[name="' + g + '"]:checked'), function (x) { return x.value; }); };
+      var ed = AG.editando, a = ed.agente;
+      a.nombre = $('ag-nombre').value.trim();
+      a.atiende = marcados('atiende');
+      a.canales = marcados('canales');
+      a.instrucciones = $('ag-instr').value;
+      a.activo = $('ag-activo').checked;
+      if (a.canales.indexOf('voz') >= 0) a.voz = { voz: $('ag-voz').value, idioma: $('ag-idioma').value.trim() || 'es-CO' }; else delete a.voz;
+      if (!a.id) a.id = agSlug(a.nombre, lista);
+      var nueva = lista.slice();
+      if (ed.i < 0) nueva.push(a); else nueva[ed.i] = a;
+      agGuardar(nueva, 'Guardado: ' + a.nombre + '.');
+    };
+  }
+  function agGuardar(nueva, dice) {
+    api('/agentes', { method: 'PUT', body: { agentes: nueva } }).then(function (r) {
+      if (!r || r.error) {
+        AG.error = r && r.error ? r : { error: 'No se pudo guardar.' };
+        pintarAgentes();
+        // El foco al campo que no sirve si se sabe cuál (el nombre); si no, al aviso, que se lee entero.
+        var invalido = document.querySelector('#ag-form [aria-invalid="true"]');
+        if (invalido) invalido.focus(); else if ($('ag-error')) $('ag-error').focus();
+        return;
+      }
+      AG.datos.agentes = r.agentes; AG.datos.voz = r.voz; AG.editando = null; AG.error = null;
+      pintarAgentes();
+      $('ag-msg').textContent = dice;
+      toast(dice);
+    }).catch(function () { AG.error = { error: 'No se pudo guardar: revisa la conexión. Lo que escribiste sigue ahí.' }; pintarAgentes(); });
+  }
+  function cargarAgentes() {
+    api('/agentes').then(function (d) { if (d && !d.error) { AG.datos = d; pintarAgentes(); } }).catch(function () { if ($('agentes-panel')) $('agentes-panel').innerHTML = '<b>Agentes</b><p class="small" role="alert">No se pudieron cargar los agentes. <button type="button" class="btn sm" id="ag-reintentar">Reintentar</button></p>'; if ($('ag-reintentar')) $('ag-reintentar').onclick = cargarAgentes; });
+  }
+
   arrancarConReglas();
 })();
 

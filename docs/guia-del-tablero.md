@@ -516,6 +516,18 @@ Nada se guarda sin validar, y antes de pisar el archivo queda una copia del ante
 
 ## Agente
 
+- **Modo agéntico**: dos interruptores. **Con los clientes** (apagado de fábrica): en WhatsApp y el chat del sitio el
+  asistente consulta los tickets, la cita y los mantenimientos de quien escribe, abre un ticket cuando reporta una
+  falla y pasa a una persona cuando hace falta; cuesta algo más por mensaje. **Copiloto del equipo** (prendido de
+  fábrica): el botón «Pregúntale a Xen» de arriba. Los prende y los apaga quien administra XENCRM. Los límites —pasos
+  y gasto por mensaje— están en Reglas y umbrales › Modo agéntico.
+- **Agentes**: quién atiende a tus clientes. Sin ninguno, atiende el asistente de siempre todo por WhatsApp y el chat.
+  Con **Agregar un agente** le pones nombre, qué atiende (ventas, soporte, demos o citas, información), por dónde
+  (WhatsApp, chat del sitio, voz) e instrucciones propias («ofrece primero el descubrimiento sin costo»). Cada
+  conversación queda con un agente; si el cliente cambia a un tema que lleva otro, lo toma ese y se presenta. Un agente
+  con **Voz** atiende llamadas desde la ventana de chat (botón «Hablar con…»): eliges su voz de Grok y el idioma de
+  quien llama. Arriba dice si la voz está lista o qué le falta (la llave de xAI la pone quien administra XENCRM). Lo
+  edita quien administra.
 - **Respaldo de la base**: cuándo fue la última copia y el botón para hacer una ya. Si tu negocio tiene retención,
   dice también cada cuánto se anonimizan o se borran las conversaciones quietas y cuántas fueron la última vez.
   Quien tiene una cita por delante nunca entra. La retención la pone quien administra XENCRM.
@@ -590,6 +602,35 @@ desde el tablero (solo quien administra). Manda lo último. Cada pantalla dice d
 - **Preguntas frecuentes**.
 - **Lo que el asistente nunca hace**.
 
+## Pregúntale a Xen (el copiloto)
+
+El botón violeta de arriba abre una conversación al lado del tablero, sin dejar lo que estás mirando. Pregúntale por
+tu CRM en tus palabras: «¿qué tengo pendiente hoy?», «¿qué tickets Enterprise están vencidos?», «¿quiénes son los
+calientes sin asignar?», «anota en la ficha de Duarte que pidió la demo de rutas».
+
+- **Consulta** contactos, fichas, citas, tickets, mantenimientos, lo pendiente de hoy y el cupo de la agenda, y te
+  dice de dónde salió la respuesta («Consultó tickets»).
+- **Hace al momento** solo dos cosas: crear un ticket y anotar una nota. Salen con un chulo verde y quedan firmadas
+  «Tu nombre (con Xen)».
+- **Propone** lo demás —mover de etapa, asignar, agendar, cambiar un ticket, preparar los avisos de un mantenimiento,
+  escribirle a un cliente— en tarjetas violetas con **Hacerlo** (o **Enviar mensaje**) y **Descartar**. Nada de eso
+  pasa hasta que lo apruebas, y al aprobar pasa por el mismo camino que el botón de siempre: si no puedes hacerlo
+  desde la pantalla, tampoco por aquí.
+- **Nunca le escribe a un cliente por su cuenta.**
+- Los botones de abajo abren la ficha o el ticket que nombra la respuesta.
+
+La conversación es tuya: vive en este navegador y se borra al cerrar la pestaña (o con el botón de empezar otra).
+Escape lo cierra. En el celular ocupa la pantalla.
+
+## Llamadas de voz
+
+Si un agente atiende por voz, la ventana de chat del negocio (`/chat`) tiene arriba **Hablar con…**. El cliente da
+permiso para el micrófono y habla con el agente como por teléfono; si habla encima, el agente se calla y escucha. Lo
+que se dice queda escrito en la misma conversación: en el chat del cliente y en la Bandeja, como cualquier mensaje, y
+en la ficha queda la llamada con su duración. Puede consultar sus tickets y la información, abrir un ticket o pasar
+con una persona; para agendar, le dice que escoja el espacio en el chat. La llamada se corta sola al llegar al tiempo
+máximo (Reglas y umbrales › Voz) y cada minuto cuenta para el consumo de IA.
+
 ## Lo que el asistente nunca hace
 
 - Inventar precios, fechas, políticas o productos. Lo que no sabe, lo verifica con el equipo.
@@ -597,5 +638,7 @@ desde el tablero (solo quien administra). Manda lo último. Cada pantalla dice d
 - Cancelar o mover una cita sin que el cliente lo confirme.
 - Escribirle por WhatsApp oficial a alguien fuera de las 24 horas sin plantilla.
 - Seguir respondiendo cuando una persona del equipo tomó la conversación.
+- En el modo agéntico: decir que abrió un ticket que no abrió, mirar los datos de otro cliente o hacer algo más que
+  lo seguro (abrir un ticket, pasar a una persona); agendar sigue siendo del flujo de citas, con confirmación.
 - Guardar una clave o una tarjeta. Si alguien la escribe, en la conversación sale «omitido» y el asistente le pide
   que no la mande por el chat. El correo y el teléfono sí se guardan, que son los que hacen falta para la cita.

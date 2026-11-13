@@ -4002,6 +4002,95 @@ dialog.perdida input{width:100%}
 @keyframes xu-brillo{50%{opacity:.45}}
 /* (fin de XEN · Mantenimientos y actualizaciones) */
 
+/* ---------- El copiloto del equipo y el panel «Modo agéntico» (2026-11-13) ----------
+   El violeta de la IA (--fx-ia): en XENCRM es lo que propone la inteligencia artificial y alguien decide. El botón
+   no compite con «Crear» (que es la acción del tablero): va en el tono suave de la IA. */
+:root[data-piel="xen"] .fx-btn-cop{background:var(--fx-ia-s);color:var(--fx-ia-t);box-shadow:inset 0 0 0 1px var(--fx-ia-borde)}
+:root[data-piel="xen"] .fx-btn-cop:hover{background:color-mix(in srgb,var(--fx-ia) 12%,var(--fx-ia-s))}
+:root[data-piel="xen"] .fx-btn-cop[aria-expanded="true"]{box-shadow:inset 0 0 0 2px var(--fx-ia)}
+:root[data-piel="xen"] .fx-btn-cop .ic{color:var(--fx-ia)}
+:root[data-piel="xen"] dialog.copiloto[open]{position:fixed;inset:72px 16px 16px auto;z-index:65;display:flex;flex-direction:column;width:min(420px,calc(100vw - 32px));max-height:none;height:auto;margin:0;padding:0;border:1px solid var(--fx-borde);border-radius:var(--fx-r-xl);background:var(--fx-panel);color:var(--fx-t0);box-shadow:var(--fx-sombra-pop)}
+:root[data-piel="xen"] .cop-cab{display:flex;align-items:center;gap:10px;padding:12px 10px 12px 16px;border-bottom:1px solid var(--fx-borde)}
+:root[data-piel="xen"] .cop-marca{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:50%;background:var(--fx-ia-s);color:var(--fx-ia)}
+:root[data-piel="xen"] .cop-titulo{display:flex;flex-direction:column;flex:1;min-width:0}
+:root[data-piel="xen"] .cop-titulo b{font:700 15px/1.25 var(--fx-display)}
+:root[data-piel="xen"] .cop-titulo span{font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .cop-hilo{display:flex;flex-direction:column;gap:14px;flex:1;min-height:0;overflow:auto;padding:16px}
+:root[data-piel="xen"] .cop-msj{font-size:14px;line-height:1.5}
+:root[data-piel="xen"] .cop-msj p{margin:0 0 6px}
+:root[data-piel="xen"] .cop-msj p:last-child{margin-bottom:0}
+:root[data-piel="xen"] .cop-msj ul{margin:0 0 6px;padding-left:18px}
+:root[data-piel="xen"] .cop-msj.yo{align-self:flex-end;max-width:85%;padding:8px 12px;border-radius:var(--fx-r-lg) var(--fx-r-lg) 4px var(--fx-r-lg);background:var(--fx-suave);color:var(--fx-suave-t)}
+:root[data-piel="xen"] .cop-msj.xen{align-self:stretch;color:var(--fx-t0)}
+:root[data-piel="xen"] .cop-msj.error{padding:10px 12px;border:1px solid var(--fx-ambar-borde);border-radius:var(--fx-r-md);background:var(--fx-ambar-s);color:var(--fx-ambar-t)}
+:root[data-piel="xen"] .cop-msj.error .btn{margin-top:8px}
+:root[data-piel="xen"] .cop-msj.cargando{display:flex;flex-direction:column;gap:6px}
+:root[data-piel="xen"] .cop-meta{margin:6px 0 0;font-size:12px;color:var(--fx-t2)}
+:root[data-piel="xen"] .cop-hechos,:root[data-piel="xen"] .cop-props{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+:root[data-piel="xen"] .cop-hecho{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13px;color:var(--fx-verde-t)}
+:root[data-piel="xen"] .cop-hecho .fx-svg{width:15px;height:15px}
+:root[data-piel="xen"] .cop-prop{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--fx-ia-borde);border-radius:var(--fx-r-md);background:var(--fx-ia-s)}
+:root[data-piel="xen"] .cop-prop-t{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--fx-t0)}
+:root[data-piel="xen"] .cop-prop-t b{color:var(--fx-ia-t)}
+:root[data-piel="xen"] .cop-prop-t .fx-svg{width:15px;height:15px;margin-top:2px;color:var(--fx-ia)}
+:root[data-piel="xen"] .cop-prop-acc{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+:root[data-piel="xen"] .cop-prop.hecha,:root[data-piel="xen"] .cop-prop.descartada{background:var(--fx-panel);border-color:var(--fx-borde)}
+:root[data-piel="xen"] .cop-prop.descartada .cop-prop-t{color:var(--fx-t2);text-decoration:line-through}
+:root[data-piel="xen"] .cop-est{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;color:var(--fx-t2)}
+:root[data-piel="xen"] .cop-est.ok{color:var(--fx-verde-t)}
+:root[data-piel="xen"] .cop-est.mal{font-weight:500;color:var(--fx-rojo-t)}
+:root[data-piel="xen"] .cop-est .fx-svg{width:14px;height:14px}
+:root[data-piel="xen"] .cop-enlaces{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+:root[data-piel="xen"] .cop-enlace{display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:0 10px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-pill);background:var(--fx-panel);color:var(--fx-t1);font:500 12.5px/1 var(--fx-letra);cursor:pointer}
+:root[data-piel="xen"] .cop-enlace:hover{background:var(--fx-hover)}
+:root[data-piel="xen"] .cop-enlace .fx-svg{width:14px;height:14px}
+:root[data-piel="xen"] .cop-vacio{display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.5;color:var(--fx-t1)}
+:root[data-piel="xen"] .cop-vacio p{margin:0}
+:root[data-piel="xen"] .cop-vacio b{color:var(--fx-t0)}
+:root[data-piel="xen"] .cop-sug{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+:root[data-piel="xen"] .cop-chip{min-height:36px;padding:6px 12px;border:1px solid var(--fx-ia-borde);border-radius:var(--fx-r-pill);background:var(--fx-panel);color:var(--fx-ia-t);font:500 13px/1.3 var(--fx-letra);text-align:left;cursor:pointer}
+:root[data-piel="xen"] .cop-chip:hover{background:var(--fx-ia-s)}
+:root[data-piel="xen"] .cop-form{display:flex;align-items:flex-end;gap:8px;padding:12px 16px 8px;border-top:1px solid var(--fx-borde)}
+:root[data-piel="xen"] .cop-form textarea{flex:1;min-width:0;min-height:44px;max-height:160px;resize:vertical;padding:10px 12px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-md);background:var(--fx-panel);color:var(--fx-t0);font:14px/1.4 var(--fx-letra)}
+:root[data-piel="xen"] .cop-form .btn{min-height:44px}
+:root[data-piel="xen"] .cop-pie{margin:0;padding:0 16px 12px;font-size:12px;color:var(--fx-t2)}
+:root[data-piel="xen"] dialog.copiloto button:focus-visible,:root[data-piel="xen"] dialog.copiloto textarea:focus-visible{outline:2px solid var(--fx-ia);outline-offset:2px}
+:root[data-piel="xen"] #agentico-panel .agentico-fila{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] #agentico-panel .agentico-fila>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+:root[data-piel="xen"] #agentico-panel .agentico-fila .btn{flex:none}
+:root[data-piel="xen"] #agentico-panel .agentico-falta{color:var(--fx-ambar-t)}
+:root[data-piel="xen"] #agentico-panel>p{margin:6px 0}
+@media (max-width:900px){
+  :root[data-piel="xen"] .fx-btn-cop{width:40px;padding:0}
+  :root[data-piel="xen"] .fx-btn-cop span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+  :root[data-piel="xen"] dialog.copiloto[open]{inset:0;width:100%;height:100dvh;border:0;border-radius:0}
+  :root[data-piel="xen"] #agentico-panel .agentico-fila{flex-direction:column;align-items:flex-start}
+}
+/* ---------- Configuración › Agente › Agentes (2026-11-13) ---------- */
+:root[data-piel="xen"] #agentes-panel>p{margin:6px 0}
+:root[data-piel="xen"] .ag-lista{list-style:none;margin:8px 0;padding:0;display:flex;flex-direction:column}
+:root[data-piel="xen"] .ag-fila{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .ag-fila.inactivo .ag-quien>b{color:var(--fx-t2)}
+:root[data-piel="xen"] .ag-quien{display:flex;flex-direction:column;gap:6px;min-width:0}
+:root[data-piel="xen"] .ag-quien>b{font-size:15px}
+:root[data-piel="xen"] .ag-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+:root[data-piel="xen"] .ag-instr{overflow-wrap:anywhere}
+:root[data-piel="xen"] .ag-acc{display:flex;gap:8px;flex:none}
+:root[data-piel="xen"] .ag-form{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-top:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .ag-form label:not(.ag-op){font-size:12.5px;color:var(--fx-t2);margin-top:6px}
+:root[data-piel="xen"] .ag-form input:not([type=checkbox]),:root[data-piel="xen"] .ag-form select,:root[data-piel="xen"] .ag-form textarea{width:100%;max-width:480px}
+:root[data-piel="xen"] .ag-form input[aria-invalid="true"]{border-color:var(--fx-rojo)}
+:root[data-piel="xen"] .ag-form fieldset{margin:6px 0 0;padding:0;border:0;display:flex;flex-wrap:wrap;gap:6px 16px}
+:root[data-piel="xen"] .ag-form legend{width:100%;margin-bottom:4px;padding:0;font-size:12.5px;color:var(--fx-t2)}
+:root[data-piel="xen"] .ag-op{display:inline-flex;align-items:center;gap:6px;min-height:36px;font-size:14px;color:var(--fx-t0);cursor:pointer}
+:root[data-piel="xen"] .ag-op input{width:18px;height:18px;accent-color:var(--fx-acento)}
+:root[data-piel="xen"] .ag-voz{display:flex;flex-direction:column;gap:6px}
+:root[data-piel="xen"] .ag-voz[hidden]{display:none}
+:root[data-piel="xen"] .ag-error{margin:6px 0 0;padding:8px 10px;border-radius:var(--fx-r-md);background:var(--fx-rojo-s);color:var(--fx-rojo-t);font-size:13px}
+:root[data-piel="xen"] .ag-voz-ok{display:flex;align-items:center;gap:6px;color:var(--fx-verde-t)}
+:root[data-piel="xen"] .ag-voz-ok .fx-svg{width:15px;height:15px}
+:root[data-piel="xen"] .ag-voz-falta{padding:8px 10px;border-radius:var(--fx-r-md);background:var(--fx-ambar-s);color:var(--fx-ambar-t)}
+@media (max-width:900px){:root[data-piel="xen"] .ag-fila{flex-direction:column}}
 /* ===== fin de la piel de XENCRM ===== */
 </style>
 </head>
@@ -4101,6 +4190,8 @@ dialog.perdida input{width:100%}
           <button role="menuitem" data-crear="cita"><i class="ic" data-ic="calendar"></i><span data-voc="{Cita}">Cita</span></button>
         </div>
       </div>
+      <!-- El copiloto del equipo (modo agéntico, agentico/equipo.ts): una conversación al lado, sin dejar lo que se está mirando. -->
+      <button class="fx-btn fx-btn-cop" id="fx-copiloto" aria-haspopup="dialog" aria-controls="dlg-copiloto" aria-expanded="false"><i class="ic" data-ic="chispa"></i><span id="fx-copiloto-t">Copiloto</span></button>
       <button class="fx-ico" id="fx-ayuda" aria-label="Ayuda"><i class="ic" data-ic="help"></i></button>
       <button class="fx-ico fx-campana" id="fx-campana" aria-label="Notificaciones"><i class="ic" data-ic="bell"></i><span class="fx-punto" id="fx-punto" hidden></span></button>
       <div class="fx-crear">
@@ -4486,6 +4577,22 @@ dialog.perdida input{width:100%}
     </section>
 
     <!-- La ficha de una persona. Se abre desde Clientes; el chat está a un botón, no de golpe. -->
+    <!-- El copiloto: no es modal (se abre con show()), así se puede seguir usando el tablero mientras contesta. -->
+    <dialog id="dlg-copiloto" class="copiloto" aria-labelledby="cop-t">
+      <div class="cop-cab">
+        <span class="cop-marca" aria-hidden="true"><i class="ic" data-ic="chispa"></i></span>
+        <div class="cop-titulo"><b id="cop-t">Copiloto</b><span id="cop-sub">Consulta el CRM, hace lo seguro y te propone lo demás.</span></div>
+        <button type="button" class="fx-ico" id="cop-nueva" aria-label="Empezar otra conversación" title="Empezar otra conversación"><i class="ic" data-ic="volver"></i></button>
+        <button type="button" class="fx-ico" id="cop-cerrar" aria-label="Cerrar"><i class="ic" data-ic="cerrar"></i></button>
+      </div>
+      <div class="cop-hilo" id="cop-hilo" role="log" aria-live="polite" aria-relevant="additions"></div>
+      <form class="cop-form" id="cop-form">
+        <label class="sr-only" for="cop-texto">Tu pregunta</label>
+        <textarea id="cop-texto" rows="2" maxlength="2000" placeholder="Pregunta por clientes, tickets, la agenda…" autocomplete="off"></textarea>
+        <button class="btn primary" id="cop-enviar" type="submit">Preguntar</button>
+      </form>
+      <p class="cop-pie">Lo que hace queda firmado con tu nombre. Lo que propone no pasa hasta que lo apruebas.</p>
+    </dialog>
     <dialog id="dlg-perfil" class="perfil ficha" aria-labelledby="pf-nombre">
       <div class="perfil-cab">
         <span class="ficha-ini" id="pf-ini" aria-hidden="true"></span>

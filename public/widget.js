@@ -118,6 +118,21 @@
   var sessionId = null;
   try { sessionId = localStorage.getItem(KEY); } catch (e) {}
 
+  // La llamada de voz (voz.js, en la ventana del chat) es la MISMA conversación: si todavía no había sesión, la
+  // voz la crea y la anuncia aquí; lo que se dice en la llamada llega como mensajes, igual que lo escrito.
+  window.addEventListener('xencrm-voz', function (e) {
+    var d = e.detail || {};
+    if (d.sessionId && !sessionId) { sessionId = d.sessionId; connectStream(); }
+    if (d.texto) addMsg(d.texto, d.de === 'cliente' ? 'me' : 'bot', d.de === 'cliente' ? 'customer' : 'bot');
+    if (d.sistema && msgs) {
+      var aviso = document.createElement('div');
+      aviso.className = 'xencrm-m bot xencrm-sys';
+      aviso.textContent = d.sistema;
+      msgs.appendChild(aviso);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+  });
+
   var stream = null;
   function connectStream() {
     if (stream || !sessionId || typeof EventSource === 'undefined') return;

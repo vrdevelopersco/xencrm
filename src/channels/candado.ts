@@ -39,6 +39,9 @@ const PUEDE_CAMBIAR: Array<[string, RegExp]> = [
   // Lo que XENCRM le pregunta al equipo en Hoy, y lo que propone contestar cuando la conversación la lleva alguien.
   ['POST', /^verifications\/[^/]+\/(answer|dismiss)$/],
   ['POST', /^propuestas\/[^/]+\/(enviar|descartar)$/],
+  // Preguntarle al copiloto es atender. Lo que el copiloto haga o proponga pide su propio permiso con la ruta que
+  // hace lo mismo (agentico/nucleo.ts), así que por aquí no se abre nada que el candado cierre.
+  ['POST', /^copiloto$/],
   // Avisar de un mantenimiento a los clientes afectados (dejar el aviso listo en su conversación, o decir que se avisó
   // por otro medio) es atender. Programarlo, cambiarlo o publicar una actualización es operación: queda para quien
   // administra, como lo demás que no está en esta lista (crm/mantenimientos.ts).

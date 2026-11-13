@@ -5,6 +5,7 @@ import { chat, checkOllama, type ChatMessage } from './ollama.js';
 import { apple, AppleError, type SchemaSpec } from './apple.js';
 import { openaiChat, openaiEffort, openaiModel, probeCompatible, probeOpenAI } from './openai.js';
 import { anthropicChat, anthropicModel, probeAnthropic } from './anthropic.js';
+import { claudeConHerramientas, openaiConHerramientas, type EntradaHerramientas, type RespuestaHerramientas } from './herramientas.js';
 import { EngineError } from './errors.js';
 import { env } from '../config.js';
 import { emitEvent } from '../crm/events.js';
@@ -361,6 +362,29 @@ export async function generate(engine: Engine, input: GenerateInput): Promise<st
     }
     markUp(engine);
     return out;
+  } catch (err) {
+    if (isOutage(engine, err)) markDown(engine, (err as Error).message);
+    throw err;
+  }
+}
+
+/**
+ * Los motores que saben llamar herramientas (el modo agéntico, src/agentico/). LM Studio y el compatible, según el
+ * modelo que sirvan: si la API las rechaza, el turno vuelve al recorrido de siempre.
+ */
+export const conHerramientas = (e: Engine): boolean => COMPATIBLES.has(e) || e === 'anthropic';
+
+/** Una vuelta del bucle agéntico con este motor: con el tope de gasto y el aviso de caída, igual que `generate`. */
+export async function conversarConHerramientas(engine: Engine, entrada: Omit<EntradaHerramientas, 'modelo'> & { role?: Role }): Promise<RespuestaHerramientas> {
+  if (!conHerramientas(engine)) throw new EngineError(engine, 'sin_herramientas', `${engine} no llama herramientas`);
+  if (DE_PAGO.has(engine) && agotado()) throw new TopeAlcanzado();
+  try {
+    const r =
+      engine === 'anthropic'
+        ? await claudeConHerramientas({ ...entrada, modelo: anthropicModel(entrada.role) })
+        : await openaiConHerramientas({ ...entrada, modelo: engine === 'openai' ? openaiModel(entrada.role) : '' }, aCompatible(engine));
+    markUp(engine);
+    return r;
   } catch (err) {
     if (isOutage(engine, err)) markDown(engine, (err as Error).message);
     throw err;

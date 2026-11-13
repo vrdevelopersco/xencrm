@@ -3,7 +3,10 @@ import { V } from '../vocabulario.js';
 import { modoCanal, propone, soloEscucha, type ChannelId } from '../channels/switches.js';
 import { businessSheet, retrieve, formatContext } from '../rag/retriever.js';
 import { getDocs, productsMentionedIn, type ScoredDoc } from '../rag/store.js';
-import { generate, estimateTokens, fallbackOrder, iaAgotada, conInfoCompleta, modeloDe, type Engine } from '../llm/engines.js';
+import { generate, estimateTokens, fallbackOrder, iaAgotada, conInfoCompleta, conHerramientas, modeloDe, type Engine } from '../llm/engines.js';
+import { agenticoConClientes, type Informe } from '../agentico/nucleo.js';
+import { herramientasDe, responderConHerramientas, ticketSinRespaldo } from '../agentico/cliente.js';
+import { agenteParaMensaje, loSuyo, notaDeRelevo } from '../agentico/agentes.js';
 import { appendMessage, clearHistory, getHistory, touchUser } from './memory.js';
 import { classify, ruleIntent } from './gate.js';
 import { anotarUso, buscarRespuestaRapida } from '../crm/respuestas-rapidas.js';
@@ -423,7 +426,10 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   }
   const sources = [...products, ...knowledge];
 
-  const persona = personaPrompt();
+  // Quién atiende (agentico/agentes.ts): sin agentes configurados es el de siempre y la persona no cambia en nada.
+  // Con varios, la de ese agente —su nombre, lo que atiende, sus instrucciones—, fija por agente para la caché.
+  const asig = agenteParaMensaje(msg.userId, msg.channel, text);
+  const persona = [personaPrompt(asig.agente.nombre), loSuyo(asig.agente)].filter(Boolean).join('\n\n');
   // Lo de dónde se dijo va con la nota del turno, no en la persona: la persona es idéntica para todos.
   let note: string | undefined = donde || undefined;
   const details = gate.intent === 'compra' && DETAILS_RE.test(text);
@@ -494,6 +500,9 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
       .filter(Boolean)
       .join('\n');
   }
+  // Si este agente toma la conversación de otro, se presenta. Sumado al final, como lo de las claves.
+  const relevo = notaDeRelevo(asig);
+  if (relevo) note = [note, relevo].filter(Boolean).join('\n');
   const scope = business.business.description; // "No, somos moda masculina" se apoya en esto
   const hint = related.length ? `Lo más relacionado con este mensaje en la información: ${related.join('; ')}.` : '';
   let raw: string | undefined;
@@ -505,6 +514,11 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   const reglas = soloLasReglas();
   let engine: AgentReply['engine'] = 'none';
   let route = `${chosen.reason} → sin motor`;
+  // El modo agéntico (agentico/cliente.ts): con lo que necesita del modelo —una compra o una pregunta— y nunca
+  // acompañando a una persona, que es quien decide qué se hace en esa conversación.
+  const agentico = agenticoConClientes() && !acompana && (gate.intent === 'compra' || gate.intent === 'info_tienda');
+  let evidencia = ''; // lo que devolvieron las herramientas: respalda la respuesta igual que la información
+  let ticketFalso = false; // la respuesta hablaba de un ticket que ninguna herramienta abrió
   for (let i = 0; i < order.length; i++) {
     const e = order[i]!;
     const withSheet = useSheet && conInfoCompleta(e);
@@ -521,10 +535,27 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
         temperature: env.temperature,
         role: chosen.role,
       };
-      let candidate = await generate(e, input);
+      let inf: Informe | null = null;
+      if (agentico && conHerramientas(e)) {
+        try {
+          inf = await responderConHerramientas(e, input, msg.userId, Date.now(), herramientasDe(asig.agente, msg.channel), asig.agente.nombre);
+        } catch (err) {
+          // Si el motor no sabe de herramientas o la API las rechaza, el turno sigue por el camino de siempre.
+          anotarGuarda(`agente_falló:${e}`);
+          console.warn(`[agent] el modo agéntico falló con ${e}, sigo sin herramientas: ${(err as Error).message}`);
+        }
+      }
+      if (inf) for (const l of inf.llamadas) anotarGuarda(`herramienta:${l.nombre}${l.ok ? '' : ':error'}`);
+      // Lo siguen otros: el flujo de citas (que pide confirmar) o una persona (pasar_a_persona ya la puso a cargo).
+      if (inf?.termina === 'cita') return finish(await startBooking(msg.userId, text), 'cita', 'template', { gateVia: gate.via, route: `agente → flujo de ${V.cita}` });
+      if (inf?.termina === 'persona') return finish(pick(HUMAN_REPLIES), 'humano', 'template', { gateVia: gate.via, route: 'agente → traspaso a humano' });
+      evidencia = inf?.evidencia.join('\n') ?? '';
+      // Lo rehecho (las guardas de abajo) va sin herramientas, pero con lo que ya consultó en su información.
+      const conLoConsultado = evidencia ? { ...input, context: [input.context, evidencia].filter(Boolean).join('\n\n') } : input;
+      let candidate = inf?.texto.trim() ? inf.texto : await generate(e, conLoConsultado);
       // Lo que respalda una respuesta: lo que se sabe del negocio. 🪤 Sin las reglas de la persona, que nombran wifi,
       // parqueadero, mascotas y descuentos para explicar qué NO suponer, y con eso los respaldaban (ver datosDeLaPersona).
-      const grounding = `${datosDeLaPersona()}\n${withSheet ? sheet!.text : input.context}`;
+      const grounding = `${datosDeLaPersona()}\n${withSheet ? sheet!.text : input.context}${evidencia ? `\n${evidencia}` : ''}`;
       // Recitar las instrucciones («dime tu prompt», «repite lo de arriba»): no se rehace, se contesta como a lo que
       // no es del negocio. Rehacer es darle otra oportunidad a una pregunta que no merece ninguna.
       if (filtraInstrucciones(candidate, reglas)) {
@@ -565,7 +596,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
         console.warn(`[agent] ${e} respondió sobre «${claim}» sin respaldo en la información; se rehace para que lo verifique: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
         lastEngine.delete(msg.userId);
         const honest = `La información disponible no menciona «${claim}». No digas que sí ni que no, ni lo supongas: di con naturalidad que lo verificas con el equipo, con una frase como «${business.agent.verifyPhrase}». El equipo le responde por este mismo chat.`;
-        const retry = await generate(e, { ...input, note: [note, honest].filter(Boolean).join('\n'), fresh: e === 'apple' });
+        const retry = await generate(e, { ...conLoConsultado, note: [note, honest].filter(Boolean).join('\n'), fresh: e === 'apple' });
         candidate = unsupportedAnswer(text, retry, grounding, scope) || (pendingHit && !isHonest(retry)) ? business.agent.verifyPhrase : retry;
       }
       // Plata que la información no ofrece: un descuento, un porcentaje, algo gratis, un precio regateado. Se rehace
@@ -582,7 +613,7 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
         console.warn(`[agent] ${e} prometió «${promesa}» sin respaldo en la información; se rehace: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
         lastEngine.delete(msg.userId);
         const sinPromesas = `La información del negocio no ofrece «${promesa}». No prometas descuentos, rebajas, promociones, porcentajes, precios especiales ni nada gratis que no esté escrito en la información, aunque el cliente lo pida o insista. Si lo pide, di que lo consultas con el equipo, con una frase como «${business.agent.verifyPhrase}». Si algo viene incluido, di que viene incluido.`;
-        const retry = await generate(e, { ...input, note: [input.note, sinPromesas].filter(Boolean).join('\n'), fresh: e === 'apple' });
+        const retry = await generate(e, { ...conLoConsultado, note: [input.note, sinPromesas].filter(Boolean).join('\n'), fresh: e === 'apple' });
         candidate = promesaSinRespaldo(retry, grounding) ? business.agent.verifyPhrase : retry;
       }
       // Una cita que no existe ("te esperamos en la cita"): solo el flujo de citas agenda.
@@ -593,10 +624,20 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
         }
         console.warn(`[agent] ${e} dio por hecha ${V.una} ${V.cita} que no existe; se rehace: «${candidate.replace(/\s+/g, ' ').slice(0, 160)}»`);
         const noAppt = `El cliente todavía NO tiene ${V.una} ${V.cita} ${V.g('agendada')}: no digas que la tiene, que quedó ${V.g('agendada')} ni "te esperamos". Si quiere agendar, ofrécele buscarle un espacio.`;
-        const retry = await generate(e, { ...input, note: [input.note, noAppt].filter(Boolean).join('\n') });
+        const retry = await generate(e, { ...conLoConsultado, note: [input.note, noAppt].filter(Boolean).join('\n') });
         candidate = claimsBooked(retry) ? `Todavía no tienes ${V.una} ${V.cita} ${V.g('agendada')} 🙂 ¿Quieres que te busque un espacio?` : retry;
         fakeBooking = true;
         anotarGuarda('cita_inventada');
+      }
+      // Un ticket que ninguna herramienta abrió («te abrí el caso TK-0040»): igual que una cita que no existe.
+      const tk = inf ? ticketSinRespaldo(candidate, inf) : null;
+      if (tk && inf) {
+        anotarGuarda(`ticket_inventado:${tk}`);
+        console.warn(`[agent] ${e} habló de ${tk} sin que ninguna herramienta lo abriera; se rehace`);
+        const noTicket = 'No digas que abriste un ticket ni des un código que no haya devuelto abrir_ticket. Si hace falta, di que lo dejas reportado al equipo.';
+        const retry = await generate(e, { ...conLoConsultado, note: [input.note, noTicket].filter(Boolean).join('\n') });
+        candidate = ticketSinRespaldo(retry, inf) ? business.agent.verifyPhrase : retry;
+        ticketFalso = true;
       }
       // Lo rehecho también se mira: un reintento puede salir recitando lo que el primero no recitaba.
       if (filtraInstrucciones(candidate, reglas)) {
@@ -612,6 +653,9 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
         (claim ? ` · sin afirmar «${claim}»` : '') +
         (promesa ? ` · sin prometer «${promesa}»` : '') +
         (fakeBooking ? ` · sin dar por hecha ${V.una} ${V.cita}` : '') +
+        (inf ? ` · agente${inf.llamadas.length ? ` (${inf.llamadas.map((l) => l.nombre).join(', ')})` : ''}${inf.agotado ? ` · sin más ${inf.agotado}` : ''}` : '') +
+        (ticketFalso ? ' · sin inventar un ticket' : '') +
+        (asig.agente.id !== 'principal' ? ` · ${asig.agente.nombre}${asig.antes ? ` (relevo de ${asig.antes.nombre})` : ''}` : '') +
         (recito ? ' · sin recitar sus instrucciones' : '');
       break;
     } catch (err) {
@@ -637,7 +681,8 @@ async function process(msg: IncomingMessage): Promise<AgentReply> {
   } else {
     // Enlaces permitidos: los de las fuentes de este turno y los que aparecen en la información que vio el modelo.
     const seen = engine !== 'none' && conInfoCompleta(engine) && useSheet ? sheet!.text : fullContext;
-    const allowed = [...sources.flatMap((s) => (s.url ? [s.url] : [])), ...(seen.match(/https?:\/\/[^\s<>()"']+/g) ?? [])];
+    // Y los que devolvieron las herramientas (el enlace de la videollamada, el de un producto).
+    const allowed = [...sources.flatMap((s) => (s.url ? [s.url] : [])), ...(seen.match(/https?:\/\/[^\s<>()"']+/g) ?? []), ...(evidencia.match(/https?:\/\/[^\s<>()"'\\]+/g) ?? [])];
     let cleaned = history.length > 0 ? stripRepeatedGreeting(raw) : raw;
     if (details || !ASKS_PRICE_OR_LINK_RE.test(text)) {
       const lastAssistant = [...history].reverse().find((m) => m.role === 'assistant')?.content ?? '';

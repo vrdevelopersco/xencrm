@@ -9,6 +9,54 @@ El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero
 
 ## 2026-11-13
 
+### Varios agentes y voz con Grok
+Pedido por Luis: configurar uno o varios agentes que atiendan varias cosas, y agentes conversacionales de voz como los
+de Grok (referencia: [`modo-agentico.md`](modo-agentico.md) › Varios agentes y › Voz con Grok).
+- **Agentes** (Configuración › Agente › Agentes): nombre, qué atiende, por dónde (WhatsApp, chat, voz), instrucciones
+  y voz. Sin configurar, el de siempre y nada cambia (🪤 una prueba compara la persona). Cada conversación queda con
+  un agente; si el tema es de otro, lo toma ese y se presenta. Sus herramientas salen de lo que atiende, y lo que
+  abre lo firma él. El chat saluda con el que lo atiende.
+- **Voz** (Voice Agent API de xAI, `XAI_API_KEY`): «Hablar con Eve» en la ventana de chat. 🪤 XENCRM hace de puente
+  (`/voz/ws`): el token efímero de xAI no fija las instrucciones, así que dárselo al navegador era regalar minutos.
+  Boleto firmado de un solo uso, freno por conversación y por red, tope de minutos puesto por el servidor, herramientas
+  con `ejecutarUna` (las mismas reglas que el texto; sin agendar por voz), cada frase guardada en la misma
+  conversación, el consumo en minutos y la llamada en la historia de la ficha.
+- 🪤 El micrófono estaba cerrado para todo (`permissions-policy`, y bien): la página del chat con voz lo pide con una
+  marca de adentro que el borde cambia por `microphone=(self)` y quita. 🪤 El enrutador del paquete no pasaba
+  WebSockets: ahora pasa `/<cliente>/voz/ws`, y solo eso. 🪤 `ws` pasa a dependencia directa (ya venía con WhatsApp; sin
+  `@types/ws`, sus tipos mínimos van en `src/tipos/ws.d.ts`).
+- `ejecutarUna` sale del bucle (`nucleo.ts`) para que texto y voz atiendan las herramientas igual.
+- Visto en Chrome con un Grok de mentira (el mismo protocolo, en local) y micrófono falso, a 1280 y 390: el saludo de
+  Mateo, la llamada con Eve, la transcripción en el chat, el ticket TK-0011 firmado «Eve (voz)», el tono de la
+  respuesta, colgar y el foco; y el panel de agentes con su error junto al campo. Pruebas: `pnpm test:agentes` (64).
+- **Falta**: una llamada con la llave real de xAI, la voz por teléfono (SIP) y en la burbuja de otros sitios.
+
+### Modo agéntico: herramientas con los clientes y un copiloto para el equipo
+El modelo puede pedir herramientas y el código decide y ejecuta (referencia: [`modo-agentico.md`](modo-agentico.md)).
+Decidido con Luis: **clientes y equipo**, y **actúa en lo seguro** (lo demás se propone para aprobar).
+- **Con los clientes** (apagado de fábrica, Configuración › Agente): en compras y preguntas, el asistente consulta los
+  tickets, la cita y los mantenimientos de quien escribe, busca en el catálogo y la información, abre un ticket
+  (firmado «Xen (agente)», y no dos por el mismo problema), pasa a una persona o le pasa la conversación al flujo de
+  citas. 🪤 Ninguna herramienta recibe *de quién*: lo pone el código desde la conversación. 🪤 La guarda nueva
+  `ticketSinRespaldo` rehace una respuesta que da un código que nadie devolvió o dice «te abrí un ticket» sin
+  haberlo abierto; lo que devolvieron las herramientas respalda la respuesta igual que la información.
+- **El copiloto** (botón «Pregúntale a Xen», prendido de fábrica): consulta contactos, fichas, citas, tickets,
+  mantenimientos, lo pendiente y el cupo; crea tickets y notas («Laura (con Xen)»); propone mover de etapa, asignar,
+  agendar, cambiar un ticket, preparar avisos y escribirle a un cliente, en tarjetas que se aprueban con un clic.
+  🪤 Aprobar es llamar la ruta que trae la propuesta, la de siempre: misma validación, misma firma, mismo candado.
+  🪤 Una herramienta propuesta no tiene `ejecutar`: no puede hacer nada aunque el modelo insista. 🪤 El copiloto
+  nunca le escribe a un cliente.
+- **Acotado**: `agentico.pasos` (4) y `agentico.topeTurnoUsd` (US$ 0,10), con una última vuelta sin herramientas;
+  aparte del tope del mes. Lo mismo dos veces en un turno se hace una vez.
+- `llm/herramientas.ts` habla los dos formatos (Chat Completions y Messages API) desde pasos neutros, así el respaldo
+  sigue el turno. 🪤 Chat Completions rechaza `tools: []`. 🪤 Para JavaScript la «í» de «abrí» no es letra: `\b`
+  después del verbo no casaba «abrí un ticket».
+- Visto en Chrome con un OpenAI de mentira que pide herramientas reales sobre los datos de XENTRIS: preguntar,
+  aprobar, descartar, Escape y el foco (🪤 repintar borraba el botón tocado y el foco se iba al `<body>`, con él
+  Escape), a 1440 y 390, contraste ≥ 5:1 en claro y oscuro. Pruebas: `pnpm test:agentico` (53 comprobaciones).
+  🪤 `arrancarConReglas();` tiene que ser lo último del tablero (una prueba lo vigila): lo nuevo va antes.
+- **Falta**: medirlo con un modelo de verdad contra el recorrido de siempre antes de prenderlo con clientes.
+
 ### El calendario más completo: timeline, tarjetas, panel «Hoy» y anuncios · `2512ce5`
 Las cuatro ideas que quedaron pendientes, juntas (detalle en `guia-del-tablero.md` › Citas y `arquitectura.md` › Citas):
 - **Timeline**: rayas cada media hora (cada cuarto con citas cortas), la hora de 64 px y cada cita con su duración

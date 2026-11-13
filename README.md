@@ -10,9 +10,12 @@ XENCRM es un CRM conversacional para gestionar clientes, ventas y servicio desde
 - **Datos y conocimiento:** SQLite por cliente, búsqueda de texto completo y recuperación de información para el agente (RAG).
 - **IA:** integración con OpenAI, Anthropic, Ollama y APIs compatibles con OpenAI; Apple Foundation Models mediante un componente Swift opcional.
 - **Canales e integración:** WhatsApp, chat web, calendario y servidor MCP.
+- **Modo agéntico:** el asistente puede usar herramientas con los clientes (consultar sus tickets y su cita, abrir un ticket, pasar a una persona) y el equipo tiene un copiloto en el tablero que consulta el CRM, hace lo seguro y propone lo demás para aprobar. Se configuran **varios agentes** (qué atiende cada uno y por dónde) y **agentes de voz** con Grok (xAI) que atienden llamadas desde el chat del sitio. Ver [`docs/modo-agentico.md`](docs/modo-agentico.md).
 
 ### Qué falta
 
+- Medir el modo agéntico con un modelo real contra el recorrido de siempre (calidad, costo y latencia) antes de prenderlo con clientes.
+- Probar la voz con una llave real de xAI (está probada contra un Grok de mentira con el mismo protocolo) y llevarla al teléfono (SIP) y a la burbuja de otros sitios.
 - Implementar el análisis de sentimiento por voz y definir la retención de los audios; las notas de voz ya pueden transcribirse.
 - Completar y validar los pendientes de despliegue e integraciones descritos en [el checkpoint](docs/checkpoint.md) y [la documentación de XENCRM](docs/xencrm.md).
 

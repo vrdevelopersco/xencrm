@@ -86,7 +86,12 @@ function blindar(cabeceras) {
   // El servidor no se presenta: qué programa y qué versión es lo primero que mira quien busca un fallo conocido.
   delete fuera.server;
   delete fuera['x-powered-by'];
+  // La única puerta para el micrófono: la ventana de chat con la llamada de voz prendida (src/voz/llamada.ts) lo
+  // pide con esta marca. La pone el de adentro en su RESPUESTA —un navegador no puede ponerla— y se quita aquí.
+  const pideMicrofono = fuera['x-xencrm-microfono'] === 'si' && /text\/html/i.test(String(fuera['content-type'] || ''));
+  delete fuera['x-xencrm-microfono'];
   Object.assign(fuera, DE_SIEMPRE);
+  if (pideMicrofono) fuera['permissions-policy'] = DE_SIEMPRE['permissions-policy'].replace('microphone=()', 'microphone=(self)');
   if (!fuera['x-frame-options']) fuera['x-frame-options'] = 'DENY';
   if (!fuera['content-security-policy'] && !/text\/html/i.test(String(fuera['content-type'] || ''))) fuera['content-security-policy'] = SIN_PAGINA;
   if (!fuera['cache-control']) fuera['cache-control'] = 'no-store';

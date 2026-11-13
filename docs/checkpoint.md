@@ -3,6 +3,23 @@
 Dónde quedó el trabajo, para retomarlo sin releer la conversación. Se reescribe al cerrar cada sesión; el detalle de
 cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 
+## 2026-11-13 · Modo agéntico, varios agentes y voz con Grok
+
+**Hecho** (detalle en `arreglos.md` › 2026-11-13 y la referencia en `modo-agentico.md`): el asistente puede usar
+herramientas con los clientes (apagado de fábrica) y el equipo tiene un copiloto en el tablero (prendido). Módulos
+nuevos: `src/llm/herramientas.ts` y `src/agentico/` (`nucleo.ts`, `cliente.ts`, `equipo.ts`); rutas `PUT
+/agent/agentico` y `POST /copiloto`; reglas `agentico.pasos` y `agentico.topeTurnoUsd`; prueba `pnpm test:agentico`.
+Después, en la misma sesión: **varios agentes** (Configuración › Agente › Agentes: qué atiende cada uno y por dónde,
+con relevo) y **voz con Grok** (llamadas desde `/chat`, XENCRM de puente en `/voz/ws`, `XAI_API_KEY`); módulos
+`agentico/agentes.ts` y `voz/llamada.ts`, prueba `pnpm test:agentes`. **Batería: 3731 bien, 0 fallas.**
+
+**Para retomar:**
+- Una llamada con la llave real de xAI (`XAI_API_KEY`): hasta ahora, contra un Grok de mentira con el mismo protocolo.
+- Medirlo con un modelo real (los escenarios con el modo prendido contra el de siempre: calidad, costo, latencia)
+  antes de prenderlo con clientes. Cuesta llamadas: decidir con Luis con qué motor y cuántas.
+- Ideas que quedaron fuera a propósito: perfiles por especialidad (ventas, soporte), respuestas por partes y
+  memoria del copiloto en el servidor.
+
 ## 2026-11-13 · El calendario más completo · `2512ce5`
 
 **Las cuatro ideas del calendario, hechas** (detalle y porqués en `arreglos.md` › 2026-11-13; cómo se usa en

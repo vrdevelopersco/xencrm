@@ -100,7 +100,9 @@ y por qué.
 | Carpeta | Qué hay |
 |---|---|
 | `src/agent/` | `agent.ts` (el recorrido), `gate.ts` (clasificador), `router.ts` (motor por turno), `prompts.ts` (persona y reglas), `format.ts` (guardas y post-proceso), `dictionary.ts` (diccionario y expresiones), `teach.ts` (enseñar una frase), `memory.ts` (historial) |
-| `src/llm/` | `engines.ts` (roles, respaldo y operaciones), `openai.ts` (modelo por rol, razonamiento, caché), `ollama.ts`, `apple.ts` + `sidecar/`, `usage.ts` (consumo y costos) |
+| `src/llm/` | `engines.ts` (roles, respaldo y operaciones), `openai.ts` (modelo por rol, razonamiento, caché), `ollama.ts`, `apple.ts` + `sidecar/`, `usage.ts` (consumo y costos), `herramientas.ts` (llamar herramientas con OpenAI y Claude) |
+| `src/agentico/` | `nucleo.ts` (tipos, interruptores, `ejecutarUna` y el bucle), `cliente.ts` (las herramientas del asistente con los clientes), `equipo.ts` (las del copiloto), `agentes.ts` (los agentes del negocio: quién atiende qué y por dónde) |
+| `src/voz/` | `llamada.ts` (llamadas con Grok: el boleto, el puente `/voz/ws`, la sesión, las herramientas y la transcripción); en el navegador, `public/voz.js` y `public/voz-procesador.js` |
 | `src/rag/` | `store.ts` (SQLite: tablas, vectores, FTS5, migraciones), `retriever.ts` (búsqueda y ficha completa), `ingest.ts` (catálogo, markdown, sitio, Shopify, perfil), `profile-index.ts` |
 | `src/crm/` | `contacts.ts`, `merge.ts` (fichas de la misma persona en dos canales), `analyzer.ts` (análisis y puntaje), `score.ts` (el puntaje se enfría solo), `cross.ts` (la misma persona por dos canales), `followup.ts` (posponer seguimiento), `export.ts` (CSV), `signals.ts` (datos exactos por código), `recap.ts`, `appointments.ts` (agenda y zona horaria), `when.ts` (fechas y franjas), `booking.ts` (flujo de citas), `reminders.ts` (recordatorio de la cita), `calendar.ts` + `busy.ts` (iCalendar), `verifications.ts`, `misses.ts` (frases que no entendimos), `outbox.ts` (enviar al cliente, ventana de 24 h, plantillas), `notifications.ts`, `events.ts` (bus en memoria), `settings.ts`, `retencion.ts` (conversaciones viejas), `proximo.ts` (el próximo paso de cada ficha, con reglas y sin modelo), `fijados.ts` (las fichas que cada quien fija, por su nombre) |
 | `src/channels/` | `web.ts` (servidor, widget, página demo), `admin.ts` (API del tablero y SSE), `whatsapp.ts` (Baileys), `meta.ts` (Cloud API) + `meta-credentials.ts`, `registry.ts` + `switches.ts` (Canales), `calendar.ts` (rutas públicas), `public-check.ts` (¿responde la dirección pública?) |
@@ -417,6 +419,16 @@ no entra a los otros ni sabiéndose la dirección.
   el cupo de `agenda.diasCupo` días). Rutas: `/admin/api/agenda`, `/agenda/hoy` y `/agenda/cierres` (esta última,
   fuera de lo que el candado deja cambiar).
 
+## Modo agéntico
+
+El modelo pide herramientas y el código decide y ejecuta. Dos agentes con la misma maquinaria: con los clientes
+(dentro de `agent.ts`, en lugar de `generate` para compras y preguntas) y el copiloto del equipo (`POST /copiloto`).
+Todo en [`modo-agentico.md`](modo-agentico.md): decisiones, reglas (el contexto lo pone el código, tres efectos
+garantizados por el tipo, permisos por la ruta equivalente y el candado, topes de pasos y de gasto, la guarda
+`ticketSinRespaldo`), los **varios agentes** (`agentico/agentes.ts`, tabla `agente_de_conversacion`) y la **voz con
+Grok** (`voz/llamada.ts`: XENCRM hace de puente en `/voz/ws`; el enrutador del paquete pasa ese WebSocket), y lo que
+falta.
+
 ## Turnos
 
 Cada mensaje que atiende el agente corre dentro de un **turno** (`crm/turnos.ts`), con un identificador que viaja
@@ -466,6 +478,8 @@ no con `npx tsx src/eval/x.ts` (esa usaría la configuración de la raíz).
 | `pnpm test:when` | fechas, franjas y muletillas | no |
 | `pnpm test:calendar` | iCalendar, suscripción y calendarios que bloquean | no |
 | `pnpm test:agenda` | festivos, días bloqueados, cupo, anuncios, panel «Hoy», enlace de la videollamada | no |
+| `pnpm test:agentico` | herramientas en los dos formatos, el bucle y sus topes, el agente del cliente, el copiloto y su ruta | no (simula la API) |
+| `pnpm test:agentes` | los agentes y el relevo, la voz: boleto, freno, sesión, una llamada con un Grok de mentira, el WebSocket, la página, el micrófono y el enrutador | no (simula xAI) |
 | `pnpm test:signals` | teléfono, correo, presupuesto, cortesías | no |
 | `pnpm test:gate` | cobertura de las reglas del clasificador | no |
 | `pnpm test:booking` | el flujo de citas con muletillas; falla si llamó al modelo | no |

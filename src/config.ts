@@ -118,6 +118,10 @@ export const env = {
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   anthropicBaseUrl: (process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1').replace(/\/$/, ''),
   anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5',
+  // Voz con Grok (xAI Voice Agent API, src/voz/): la llave se queda en el servidor, que hace de puente.
+  xaiApiKey: process.env.XAI_API_KEY || '',
+  xaiRealtimeUrl: (process.env.XAI_REALTIME_URL || 'wss://api.x.ai/v1/realtime').replace(/\/$/, ''),
+  xaiVoiceModel: process.env.XAI_VOICE_MODEL || 'grok-voice-latest',
   anthropicRoleModels: {
     light: process.env.ANTHROPIC_MODEL_LIGHT || '',
     heavy: process.env.ANTHROPIC_MODEL_HEAVY || 'claude-sonnet-5-5',
