@@ -268,6 +268,20 @@ export function getDb(): DatabaseSync {
       actualizado INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS tickets_user ON tickets(user_id);
+    -- Ventas › Prospectos: quien se registró en la portada o en la puerta de la consola. Una fila por ficha; su
+    -- estado (nuevo, contactado, en_embudo, descartado) es de aquí, no del embudo. Ver crm/prospectos.ts.
+    CREATE TABLE IF NOT EXISTS prospectos (
+      user_id TEXT PRIMARY KEY,
+      empresa TEXT NOT NULL DEFAULT '',
+      interes TEXT NOT NULL DEFAULT '',
+      desde TEXT NOT NULL DEFAULT 'portada',
+      estado TEXT NOT NULL DEFAULT 'nuevo',
+      creado INTEGER NOT NULL,
+      ultimo_registro INTEGER NOT NULL,
+      veces INTEGER NOT NULL DEFAULT 1,
+      actualizado INTEGER NOT NULL,
+      por TEXT NOT NULL DEFAULT ''
+    );
   `);
   migrate(db);
   loadVectors();

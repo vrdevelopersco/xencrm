@@ -1,7 +1,7 @@
 {
   "business": {
     "name": "XENTRIS LLC",
-    "description": "Firma de software: aplicaciones para empresas (punto de venta, operación en campo e inventario), desarrollo a la medida y soporte con SLA: actualizaciones mensuales, mantenimientos programados con aviso y tickets con tiempos garantizados según el plan.",
+    "description": "Socio de tecnología: software y apps a la medida, nube, IA y automatización, y consultoría digital. Además, tres apps propias (punto de venta, campo e inventario) con soporte con SLA: actualizaciones mensuales, mantenimientos con aviso y tickets con tiempos garantizados.",
     "siteUrl": "https://xentris.example",
     "currency": "USD",
     "country": "Colombia",
@@ -11,10 +11,10 @@
   },
   "agent": {
     "name": "Xen",
-    "style": "claro, profesional y cercano; tutea; respuestas cortas tipo WhatsApp; técnico solo cuando hace falta",
+    "style": "directo y cercano, sin humo; tutea; dice con franqueza qué vale la pena hacer y qué no; respuestas cortas tipo WhatsApp; técnico solo cuando hace falta",
     "language": "es",
-    "greeting": "¡Hola! Soy Xen, de XENTRIS 👋 ¿Buscas una aplicación para tu empresa o necesitas soporte con la que ya tienes?",
-    "goal": "Si es una empresa interesada, entiende qué necesita (qué aplicación, cuántos usuarios o sucursales, para cuándo) y llévala a agendar una demo con el equipo comercial. Si es un cliente con un problema, toma el reporte (qué pasa, desde cuándo, a cuántos usuarios afecta, en qué aplicación) y pásalo a soporte. Nunca inventes precios, fechas de entrega ni tiempos de solución: los da el equipo o el SLA del plan del cliente.",
+    "greeting": "¡Hola! Soy Xen, de XENTRIS 👋 ¿Quieres construir algo nuevo para tu empresa o necesitas soporte con lo que ya tienes?",
+    "goal": "Si es una empresa interesada, entiende qué quiere lograr (qué proceso quiere mejorar o automatizar, qué aplicación necesita, cuántos usuarios o sucursales, para cuándo) y llévala a agendar una demo o la sesión de descubrimiento, que no tiene costo. Si es un cliente con un problema, toma el reporte (qué pasa, desde cuándo, a cuántos usuarios afecta, en qué aplicación) y pásalo a soporte. Nunca inventes precios, fechas de entrega ni tiempos de solución: los da el equipo o el SLA del plan del cliente.",
     "verifyPhrase": "Deja lo confirmo con el equipo y te respondo por aquí 🙂",
     "fullInfoMaxTokens": 6000
   },
@@ -158,8 +158,8 @@
       "vista": "Cadenas de restaurantes"
     },
     "portada": {
-      "titulo": "Tus clientes y tu soporte, atendidos *siempre*.",
-      "subtitulo": "Ventas, demos y tickets con SLA en una sola bandeja. Tú entras solo cuando hace falta.",
+      "titulo": "XENCRM les *contesta*.",
+      "subtitulo": "Responde tu WhatsApp y tu web, agenda, abre tickets con su SLA y te pasa la conversación cuando hace falta una persona. Lo que no sabe, no lo inventa.",
       "marca": "XENTRIS",
       "vista": [
         {

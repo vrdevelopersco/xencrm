@@ -112,7 +112,8 @@ import {
 } from '../crm/mantenimientos-reglas.js';
 import { sentimiento } from '../crm/sentimiento.js';
 import { cambiarReglas, ponerRegla, regla, registro, valoresDeReglas } from '../reglas.js';
-import { cambiarTicket, capasDe, configSla, crearTicket, FABRICA as SLA_DE_FABRICA, guardarConfigSla, listarTickets, olvidarConfigDelTablero, puede as puedeEnSla, reglasSla, slaDelPeriodo, verTicket, vistaDeConfig } from '../crm/tickets.js';
+import { cambiarProspecto, listarProspectos, registrarProspecto } from '../crm/prospectos.js';
+import { cambiarTicket, capasDe, configSla, crearTicket, FABRICA as SLA_DE_FABRICA, guardarConfigSla, listarTickets, olvidarConfigDelTablero, puede as puedeEnSla, reglasSla, slaDelPeriodo, tableroDeTickets, verTicket, vistaDeConfig } from '../crm/tickets.js';
 
 /**
  * Lo que el tablero enseña de cada contacto además de la ficha: temperatura, recap (hechos de la ficha + próxima
@@ -1552,6 +1553,20 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     const cfg = configSla();
     return c.json({ tickets: listarTickets({ contacto: contacto || undefined, dias }), config: vistaDeConfig(cfg), puede: { crear: puedeEnSla(cfg.permisos.crear, rolDe(c)), mover: puedeEnSla(cfg.permisos.mover, rolDe(c)) }, ahora: Date.now() });
   });
+  /**
+   * Los tickets como tablero (kanban): una columna por estado de la configuración, en su orden, con su total y sus
+   * tickets por urgencia del SLA. Las columnas que cierran traen solo los de los últimos `dias` (30). Filtros:
+   * `prioridad`, `plan` (o `__sin`), `asignado` (o `__nadie`) y `tope` por columna (100). Para mover una tarjeta no
+   * hay ruta nueva: es el PATCH de /tickets/:id con `{ estado }`, con su permiso, su reloj y su historia.
+   * 🪤 Va ANTES de /tickets/:id: si no, «tablero» se toma como el id de un ticket y contesta 404.
+   */
+  app.get('/admin/api/tickets/tablero', (c) => {
+    const ahora = Date.now();
+    const cfg = configSla();
+    const r = tableroDeTickets({ dias: Number(c.req.query('dias') ?? 30), tope: Number(c.req.query('tope') ?? 100), prioridad: c.req.query('prioridad'), plan: c.req.query('plan'), asignado: c.req.query('asignado'), now: ahora });
+    if ('error' in r) return c.json(r, 400);
+    return c.json({ ...r, config: vistaDeConfig(cfg), puede: { crear: puedeEnSla(cfg.permisos.crear, rolDe(c)), mover: puedeEnSla(cfg.permisos.mover, rolDe(c)) }, ahora });
+  });
   app.get('/admin/api/tickets/:id', (c) => {
     const t = verTicket(Number(c.req.param('id')));
     return t ? c.json(t) : c.json({ error: 'ese ticket no existe' }, 404);
@@ -1573,6 +1588,30 @@ export function mountAdmin(app: Hono<{ Bindings: HttpBindings }>) {
     } catch (err) {
       const msg = (err as Error).message;
       return c.json({ error: msg }, msg === 'ese ticket no existe' ? 404 : 400);
+    }
+  });
+  /**
+   * Ventas › Prospectos (crm/prospectos.ts): quien dejó sus datos en el registro de la portada o de la puerta de la
+   * consola. El POST no lo llama el tablero: lo llama la consola, que recibe el registro público (POST /api/prospecto,
+   * con su freno y su trampa para bots) y lo pasa aquí con el token. El tablero lista y mueve.
+   */
+  app.get('/admin/api/prospectos', (c) => c.json(listarProspectos({ estado: c.req.query('estado') })));
+  app.post('/admin/api/prospectos', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    try {
+      const r = registrarProspecto({ nombre: String(body.nombre ?? ''), whatsapp: String(body.whatsapp ?? ''), empresa: String(body.empresa ?? ''), interes: String(body.interes ?? ''), desde: String(body.desde ?? '') });
+      return c.json(r, r.yaExistia ? 200 : 201);
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  });
+  app.patch('/admin/api/prospectos/:id', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    try {
+      return c.json(cambiarProspecto(c.req.param('id'), body, quienHace(c, body.by)));
+    } catch (err) {
+      const msg = (err as Error).message;
+      return c.json({ error: msg }, msg === 'ese prospecto no existe' ? 404 : 400);
     }
   });
   app.get('/admin/api/sla', (c) => c.json({ ...slaDelPeriodo(Number(c.req.query('dias') ?? 30) || 30), config: vistaDeConfig() }));

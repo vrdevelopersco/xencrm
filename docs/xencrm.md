@@ -1,6 +1,6 @@
 # XENCRM: la siguiente generación
 
-XENCRM es la siguiente generación del CRM conversacional de HRC, que hasta noviembre de 2026 se llamó aiva (mismo
+XENCRM es la siguiente generación de un CRM conversacional que hasta noviembre de 2026 se llamó aiva (mismo
 código, misma historia de git). Este documento es la
 referencia de su interfaz: el brief, los tokens, el vocabulario y lo que hace cada pantalla. Las reglas de
 `diseno-tablero.md` (jerarquía, puntaje, quién habla, contraste, colores de dato, trampas) siguen mandando; lo que

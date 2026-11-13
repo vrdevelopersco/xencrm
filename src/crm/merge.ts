@@ -63,6 +63,10 @@ export function mergeContacts(keepId: string, dropId: string, by?: string): Cont
     for (const t of TABLES) db.prepare(`UPDATE ${t} SET user_id = ? WHERE user_id = ?`).run(keepId, dropId);
     // 🪤 La cuenta clave no va en TABLES: su llave es la ficha, y si las dos lo eran, mover la de la otra chocaría.
     unirCuentasClave(keepId, dropId);
+    // El prospecto (crm/prospectos.ts) tampoco: una fila por ficha. Si solo la otra lo era, pasa a esta; si las dos,
+    // se queda el de esta y el de la otra se borra.
+    db.prepare('UPDATE OR IGNORE prospectos SET user_id = ? WHERE user_id = ?').run(keepId, dropId);
+    db.prepare('DELETE FROM prospectos WHERE user_id = ?').run(dropId);
     const data = { ...drop.data, ...keep.data }; // lo de la ficha que se conserva manda
     const tags = [...new Set([...keep.tags, ...drop.tags])];
     const notes = [keep.notes, drop.notes].map((n) => n.trim()).filter(Boolean).join('\n');

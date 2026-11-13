@@ -19,9 +19,9 @@ necesita alguna de estas cuatro:
 |---|---|---|---|
 | **daia** | `bpo-demo` · Micro | Dos HTML servidos por Caddy | **Sí, hoy mismo.** Es un sitio estático; Caddy solo está para TLS y una clave, y eso Hostinger lo da. Ni siquiera necesita "web app": va como sitio. |
 | **votantes** | principal · A1 1/6 | FastAPI (Python 3.13) + SQLite + Tailwind | **Sí, si el plan corre Python.** Sin base servidor ni tareas de fondo. Es el candidato bueno. |
-| **hrc-check** | principal · Micro | Node + Python, base servidor, contenedores | No. Varios servicios. |
+| **check** | principal · Micro | Node + Python, base servidor, contenedores | No. Varios servicios. |
 | **confia** | principal · E3 **pagada** | Node con base servidor y conexión viva | No. Y es la única que cuesta dinero: ahí sí vale la pena mirar si se puede achicar. |
-| **hrcerp** | principal · A1 1/6 | Node + Python, base servidor, navegador/visión, contenedores | No. Es la más pesada de todas. |
+| **erp** | principal · A1 1/6 | Node + Python, base servidor, navegador/visión, contenedores | No. Es la más pesada de todas. |
 | **bpo-demo** (callqa) | `bpo-demo` · Micro | Copilot de traducción simultánea: audio en tiempo real por WebSocket | No, y de las que menos: vive o muere por la latencia y la conexión abierta. |
 
 ## Qué se gana moviendo las dos que sí

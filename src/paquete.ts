@@ -1,13 +1,14 @@
 // Arma UN paquete para subir XENCRM a una plataforma de apps (Hostinger y parecidas), con todos los clientes bajo
 // un solo dominio y separados por ruta:
 //
-//     xencrm.hrctechnologies.com/            → la portada: qué es XENCRM
-//     xencrm.hrctechnologies.com/consola     → la consola (vigilancia y atención)
-//     xencrm.hrctechnologies.com/confia/     → el tablero y el chat de CONFIA
-//     xencrm.hrctechnologies.com/hrc/        → los de HRC
+//     tu-dominio.com/            → la portada: qué es XENCRM
+//     tu-dominio.com/consola     → la consola (vigilancia y atención)
+//     tu-dominio.com/confia/     → el tablero y el chat de CONFIA
+//     tu-dominio.com/atlas/      → los de ATLAS
 //
-//   pnpm paquete                       usa xencrm.hrctechnologies.com
 //   pnpm paquete midominio.com
+//   XENCRM_DOMINIO=midominio.com pnpm paquete
+//   (sin dominio no arma nada: un paquete con el dominio equivocado sube y falla en silencio)
 //
 // Por qué un solo paquete y no uno por cliente: en estas plataformas cada app es un despliegue, un dominio y un
 // juego de variables. Con cinco clientes eso son seis. Aquí se sube una vez y adentro `app.js` levanta un
@@ -28,7 +29,11 @@ import { business } from './config.js';
 import { pintarPortada } from './portada.js';
 import { leerIndice, rutas, type ClienteRef } from './clientes.js';
 
-const DOMINIO = (process.argv[2] ?? 'xencrm.hrctechnologies.com').replace(/^https?:\/\//, '').replace(/\/$/, '');
+const DOMINIO = (process.argv[2] ?? process.env.XENCRM_DOMINIO ?? '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+if (!DOMINIO) {
+  console.error('Falta el dominio: pnpm paquete tu-dominio.com (o XENCRM_DOMINIO=tu-dominio.com en el entorno).');
+  process.exit(1);
+}
 const SALIDA = resolve('paquetes');
 const PUERTO_INTERNO = 4100; // los procesos de adentro; nadie los ve desde afuera
 
@@ -1198,6 +1203,6 @@ ${clientes.map((c) => `     https://${DOMINIO}/${c.slug}/${' '.repeat(Math.max(1
   En el panel:  Node 24 · compilar "npm install --omit=dev" · iniciar "npm start"
   Las variables de entorno están en el LEEME.txt de adentro; sin ellas no arranca.
 
-  Quién ha entrado a la consola, ya subido:  pnpm salud ${DOMINIO === 'xencrm.hrctechnologies.com' ? '' : DOMINIO}
+  Quién ha entrado a la consola, ya subido:  pnpm salud ${DOMINIO}
   (lee el token de ${ARCHIVO_TOKEN_SALUD.replace(homedir(), '~')})
 `);

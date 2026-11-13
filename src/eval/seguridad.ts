@@ -76,7 +76,7 @@ check('y el mensaje no delata si el usuario existe o no', malo.cuerpo.error === 
 
 const suyo = await entrar('agente', 'clave-de-prueba-1');
 check('con la clave buena, entra', suyo.status === 200 && Boolean(suyo.sesion));
-// 🪤 Estándar de HRC, sección B: si el cuerpo trae la sesión, alguien la guarda (la consola lo hacía, en el
+// 🪤 Estándar de seguridad, sección B: si el cuerpo trae la sesión, alguien la guarda (la consola lo hacía, en el
 // almacenamiento del navegador, donde la lee cualquier guion que llegue a correr en la página).
 check('🪤 y el cuerpo NO trae la sesión: solo la galleta', suyo.cuerpo.sesion === undefined, JSON.stringify(suyo.cuerpo).slice(0, 120));
 const sesion = suyo.sesion;

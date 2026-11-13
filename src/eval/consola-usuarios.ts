@@ -20,7 +20,7 @@ const check = (name: string, ok: boolean, detail = '') => {
 };
 
 crearCliente({ nombre: 'CONFIA FINTECH', slug: 'confia', puerto: 39101, plantilla: 'soporte' });
-crearCliente({ nombre: 'HRC TECHNOLOGIES', slug: 'hrc', puerto: 39102, plantilla: 'soporte' });
+crearCliente({ nombre: 'ATLAS SOPORTE', slug: 'atlas', puerto: 39102, plantilla: 'soporte' });
 
 // --- usuarios y claves ---
 const ana = crearUsuario({ usuario: 'ana', nombre: 'Ana Soporte', clave: 'clave-larga-1', rol: 'asesor', clientes: ['confia'] });
@@ -35,8 +35,8 @@ check('no se repite el usuario', (() => { try { crearUsuario({ usuario: 'ana', c
 
 const jefe = crearUsuario({ usuario: 'jefe', nombre: 'Luis', clave: 'clave-larga-3', rol: 'super' });
 check('un super-admin no se amarra a clientes', jefe.clientes.length === 0);
-check('y alcanza a todos', alcanza(jefe, 'confia') && alcanza(jefe, 'hrc'));
-check('quien atiende, solo a los suyos', alcanza(ana, 'confia') && !alcanza(ana, 'hrc'));
+check('y alcanza a todos', alcanza(jefe, 'confia') && alcanza(jefe, 'atlas'));
+check('quien atiende, solo a los suyos', alcanza(ana, 'confia') && !alcanza(ana, 'atlas'));
 
 // --- sesiones ---
 const s = abrirSesion(ana);
@@ -44,8 +44,8 @@ check('la sesión devuelve a quien entró', sesionDe(s)?.usuario === 'ana');
 check('una sesión que no existe no vale', sesionDe('inventada') === null);
 check('la sesión vence', sesionDe(s, Date.now() + 13 * 3600_000) === null); // y al vencer se borra
 const s2 = abrirSesion(ana);
-actualizarUsuario('ana', { clientes: ['confia', 'hrc'] });
-check('si le cambian los clientes, la sesión lo ve al instante', sesionDe(s2)?.clientes.join() === 'confia,hrc', JSON.stringify(sesionDe(s2)));
+actualizarUsuario('ana', { clientes: ['confia', 'atlas'] });
+check('si le cambian los clientes, la sesión lo ve al instante', sesionDe(s2)?.clientes.join() === 'confia,atlas', JSON.stringify(sesionDe(s2)));
 actualizarUsuario('ana', { activo: false });
 check('a quien desactivan, se le cierra la sesión', sesionDe(s2) === null);
 actualizarUsuario('ana', { activo: true, clientes: ['confia'] });
@@ -70,7 +70,7 @@ check('solo ve los clientes que atiende', suyos.clientes.map((f) => f.cliente.sl
 const todos = (await (await maestra('/api/clientes')).json()) as { clientes: { cliente: { slug: string } }[] };
 check('la llave maestra los ve todos', todos.clientes.length === 2);
 
-check('no puede hablar por un cliente ajeno', (await comoAna('/api/c/hrc/stats')).status === 403);
+check('no puede hablar por un cliente ajeno', (await comoAna('/api/c/atlas/stats')).status === 403);
 check('por el suyo sí lo intenta (la instancia está apagada)', (await comoAna('/api/c/confia/stats')).status === 502);
 check('no da de alta clientes', (await comoAna('/api/clientes', { method: 'POST', body: JSON.stringify({ nombre: 'Otro' }) })).status === 403);
 check('no ve el equipo', (await comoAna('/api/usuarios')).status === 403);
@@ -110,29 +110,29 @@ check('el super-admin sí ve el equipo', (await (await maestra('/api/usuarios'))
 // --- un cliente puede vivir en otra máquina: la consola le habla por su URL ---
 const { urlDe, crearCliente: crear2 } = await import('../clientes.js');
 check('en esta máquina, la consola le habla por su puerto', urlDe({ puerto: 3007 }) === 'http://localhost:3007');
-crear2({ nombre: 'Cliente Lejano', slug: 'lejano', puerto: 39103, base: 'https://lejano.hrctechnologies.com/' });
+crear2({ nombre: 'Cliente Lejano', slug: 'lejano', puerto: 39103, base: 'https://lejano.ejemplo.com/' });
 const lejano = (await import('../clientes.js')).leerIndice().find((c) => c.slug === 'lejano')!;
-check('si vive en otra parte, por su URL (sin la barra del final)', urlDe(lejano) === 'https://lejano.hrctechnologies.com', urlDe(lejano));
+check('si vive en otra parte, por su URL (sin la barra del final)', urlDe(lejano) === 'https://lejano.ejemplo.com', urlDe(lejano));
 
 // --- dar de baja un cliente no puede dejar usuarios a la deriva ---
 const { darDeBajaCliente, leerIndice: indice } = await import('../clientes.js');
 const { quitarClienteDeUsuarios, usuariosSinClientes } = await import('../consola-usuarios.js');
-crearUsuario({ usuario: 'dos.clientes', clave: 'clave-larga-4', rol: 'agente', clientes: ['confia', 'hrc'] });
-crearUsuario({ usuario: 'solo.hrc', clave: 'clave-larga-5', rol: 'agente', clientes: ['hrc'] });
+crearUsuario({ usuario: 'dos.clientes', clave: 'clave-larga-4', rol: 'agente', clientes: ['confia', 'atlas'] });
+crearUsuario({ usuario: 'solo.atlas', clave: 'clave-larga-5', rol: 'agente', clientes: ['atlas'] });
 
 check('no se puede asignar un cliente que no existe', (() => { try { crearUsuario({ usuario: 'malo', clave: 'clave-larga-6', clientes: ['no-existe'] }); return false; } catch (e) { return /no existe el cliente/.test((e as Error).message); } })());
-check('ni al cambiarle los clientes a alguien', (() => { try { actualizarUsuario('solo.hrc', { clientes: ['fantasma'] }); return false; } catch { return true; } })());
+check('ni al cambiarle los clientes a alguien', (() => { try { actualizarUsuario('solo.atlas', { clientes: ['fantasma'] }); return false; } catch { return true; } })());
 
-const baja = darDeBajaCliente('hrc', new Date('2026-09-23T12:00:00Z'));
-check('el cliente sale del índice', !indice().some((c) => c.slug === 'hrc'));
-check('pero su carpeta se guarda, no se borra', /_dados-de-baja\/hrc-2026-09-23/.test(baja.guardadoEn) && existsSync(baja.guardadoEn), baja.guardadoEn);
-const limpieza = quitarClienteDeUsuarios('hrc');
-check('a los que lo atendían se les quita de su lista', limpieza.tocados.sort().join() === 'dos.clientes,solo.hrc', limpieza.tocados.join());
+const baja = darDeBajaCliente('atlas', new Date('2026-09-23T12:00:00Z'));
+check('el cliente sale del índice', !indice().some((c) => c.slug === 'atlas'));
+check('pero su carpeta se guarda, no se borra', /_dados-de-baja\/atlas-2026-09-23/.test(baja.guardadoEn) && existsSync(baja.guardadoEn), baja.guardadoEn);
+const limpieza = quitarClienteDeUsuarios('atlas');
+check('a los que lo atendían se les quita de su lista', limpieza.tocados.sort().join() === 'dos.clientes,solo.atlas', limpieza.tocados.join());
 check('a quien no lo atendía no se le toca nada', leerUsuarios().find((u) => u.usuario === 'ana')?.clientes.join() === 'confia');
 check('quien tenía otro cliente lo conserva', leerUsuarios().find((u) => u.usuario === 'dos.clientes')?.clientes.join() === 'confia');
-check('a quien se quedó sin ninguno se le desactiva el acceso', limpieza.desactivados.join() === 'solo.hrc' && leerUsuarios().find((u) => u.usuario === 'solo.hrc')?.activo === false, JSON.stringify(limpieza));
-check('y queda a la vista para reasignarlo', usuariosSinClientes().some((u) => u.usuario === 'solo.hrc'));
-check('el desactivado ya no entra', verificar('solo.hrc', 'clave-larga-5') === null);
+check('a quien se quedó sin ninguno se le desactiva el acceso', limpieza.desactivados.join() === 'solo.atlas' && leerUsuarios().find((u) => u.usuario === 'solo.atlas')?.activo === false, JSON.stringify(limpieza));
+check('y queda a la vista para reasignarlo', usuariosSinClientes().some((u) => u.usuario === 'solo.atlas'));
+check('el desactivado ya no entra', verificar('solo.atlas', 'clave-larga-5') === null);
 check('al super-admin no se le toca la lista vacía', leerUsuarios().find((u) => u.usuario === 'jefe')?.activo !== false);
 check('dar de baja algo que no existe avisa', (() => { try { darDeBajaCliente('nadie'); return false; } catch { return true; } })());
 
@@ -188,8 +188,8 @@ check('🪤 volver al verde agua no lo guarda: «el de siempre» queda siguiendo
 // administra XENCRM. Se prueba por HTTP, que es por donde llegaría alguien queriendo pasarse.
 crear2({ nombre: 'Atelier Demo', slug: 'atelier', puerto: 39104, plantilla: 'soporte' });
 crearUsuario({ usuario: 'dueno', nombre: 'Dueño de Atelier Demo', clave: 'clave-dueno-1', rol: 'admin', clientes: ['atelier'] });
-crearUsuario({ usuario: 'luis', nombre: 'Luis HRC', correo: 'luis@hrc.co', clave: 'clave-luis-1', rol: 'super' });
-crearUsuario({ usuario: 'mixto', nombre: 'Atiende dos', correo: 'mixto@hrc.co', clave: 'clave-mixto-1', rol: 'asesor', clientes: ['atelier', 'confia'] });
+crearUsuario({ usuario: 'luis', nombre: 'Luis Admin', correo: 'luis@ejemplo.co', clave: 'clave-luis-1', rol: 'super' });
+crearUsuario({ usuario: 'mixto', nombre: 'Atiende dos', correo: 'mixto@ejemplo.co', clave: 'clave-mixto-1', rol: 'asesor', clientes: ['atelier', 'confia'] });
 const como = async (usuario: string, clave: string) => {
   const r = await app.request('http://local/api/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ usuario, clave }) });
   const sesion = /xencrm_consola=([^;]*)/.exec(r.headers.get('set-cookie') ?? '')?.[1] ?? '';

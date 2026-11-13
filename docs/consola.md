@@ -157,6 +157,26 @@ cada petición y el tablero entra con tu sesión. No hay que volver a identifica
 Quien atiende a un cliente entra al suyo y a ningún otro, ni sabiéndose la dirección. «Salir» devuelve a la
 consola, que es de donde se vino.
 
+### Tickets y prospectos de cada cliente
+
+La fila de cada cliente dice cuántos tickets tiene abiertos, en riesgo y con el SLA vencido (lo lee de su
+`/admin/api/sla`), y cuántos prospectos sin atender. Un ticket vencido es un aviso urgente y un prospecto sin atender
+uno medio. Los botones **Tickets** y **Prospectos** abren su tablero directo en esa pantalla (`/c/<cliente>/admin#v=tickets`;
+el tablero abre la vista que diga `#v=`).
+
+## El registro de la portada: prospectos
+
+La portada (la raíz del dominio) y la puerta de la consola tienen un registro, «Pruébalo con tu negocio» / «Pedir una
+demo»: nombre, WhatsApp, negocio y qué quiere resolver, con el permiso para escribirle. Lo recibe la consola en
+`POST /api/prospecto` —la única ruta suya que se usa sin haber entrado— y lo pasa al CRM del cliente que diga
+**`PROSPECTOS_CLIENTE`** (su slug), por su ruta del tablero y con su token. Ahí queda en Ventas › Prospectos.
+
+- Sin `PROSPECTOS_CLIENTE` el registro contesta que no está abierto (503) y no guarda nada.
+- Frena las ráfagas: 5 registros por dirección cada 15 minutos y 120 en total por hora.
+- A un bot (llenó el campo trampa, que una persona no ve, o lo mandó en menos de 2,5 s) se le contesta igual que a
+  una persona y no se guarda nada: un «rechazado» le enseñaría a esquivar la trampa.
+- La validación vive en `src/prospecto-publico.ts`; el CRM, en `src/crm/prospectos.ts`. Pruebas: `pnpm test:prospectos`.
+
 ## Quién entra y qué ve
 
 | Rol | Para quién | Qué puede |

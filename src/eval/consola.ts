@@ -27,6 +27,20 @@ check('un cliente que no contesta es lo más urgente', caido.length === 1 && cai
 check('y el aviso no suena a catástrofe', /guardad/i.test(caido[0]?.detalle ?? '') && !/no responde|apagada/i.test(caido[0]?.titulo ?? ''), caido[0]?.detalle ?? '');
 check('y no inventa lo que no puede saber', caido.length === 1);
 
+// Servicio y prospectos de cada cliente (2026-11-12): un ticket con el SLA vencido es una promesa rota a quien paga
+// un plan, y un prospecto sin atender se enfría. Los dos salen del estado, como lo demás.
+const conSoporte = ticketsDe(ref('soporte', 'media'), { arriba: true, soporte: { abiertos: 5, enRiesgo: 1, incumplidos: 2 }, prospectosNuevos: 1 });
+check('los tickets vencidos son un aviso urgente, con dónde verlos', conSoporte.some((t) => t.urgencia === 'alta' && /2 tickets con el SLA vencido/.test(t.titulo) && /Servicio › Tickets/.test(t.detalle)), JSON.stringify(conSoporte));
+check('y un prospecto sin atender, uno de urgencia media', conSoporte.some((t) => t.urgencia === 'media' && /1 prospecto sin atender/.test(t.titulo)));
+check('sin vencidos ni prospectos, nada de eso', !ticketsDe(ref('tranquilo', 'media'), { arriba: true, soporte: { abiertos: 3, enRiesgo: 0, incumplidos: 0 }, prospectosNuevos: 0 }).length);
+{
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../../public/consola.html', import.meta.url), 'utf8');
+  const tablero = readFileSync(new URL('../../public/admin.js', import.meta.url), 'utf8');
+  check('la tarjeta de cada cliente lleva directo a sus Tickets y sus Prospectos', /#v=tickets/.test(html) && /#v=prospectos/.test(html) && /'tickets vencidos'/.test(html));
+  check('y el tablero abre la pantalla que dice #v=, si existe', /\/\^#v=\(\[a-z-\]\+\)\$\//.test(tablero) && /document\.getElementById\('view-' \+ v\[1\]\)\) \{ go\(v\[1\]\)/.test(tablero));
+}
+
 // Lo prometido y lo cumplido: si alguien lleva esperando más de lo que el negocio prometió, eso va arriba del
 // todo. Es lo único de esta pantalla que se arregla ahora mismo, contestando.
 const tarde = ticketsDe(ref('lento', 'alta'), { arriba: true, acuerdoMin: 15, peorEsperaMin: 48, esperandoAhora: 2 });

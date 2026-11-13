@@ -93,7 +93,7 @@ Nada de esto es explotable hoy por un desconocido, pero conviene tenerlo escrito
   🪤 **Si algún día se pone Cloudflare delante** (es la vía para el WAF), la lectura cambia el MISMO día: hoy
   `borde.cjs` tira `cf-connecting-ip` porque cualquiera la puede mandar; con Cloudflare, esa pasa a ser la buena,
   pero solo si la petición viene de sus rangos. Migrar sin eso deja las barreras por dirección esquivables con una
-  cabecera, y nada avisa. Lo midió AIVA-CRYPTO en HRC-Check (su proxy hoy limpia la cabecera; con un proxy de
+  cabecera, y nada avisa. Lo midió una auditoría externa en otro producto (su proxy hoy limpia la cabecera; con un proxy de
   confianza delante, deja de hacerlo).
 - **No hay tope de tamaño de cuerpo** en ninguna ruta: se lee entero y se mide después.
 - **`style-src 'unsafe-inline'`, aceptado.** La CSP no deja correr ningún guion sin huella, pero sí estilos en
@@ -111,8 +111,8 @@ Nada de esto es explotable hoy por un desconocido, pero conviene tenerlo escrito
 
 ## El blindaje (2026-11-07)
 
-Se midió XENCRM en producción con el verificador del estándar de HRC (`~/proyectos/AUDITORIA-SEGURIDAD.md`), que
-nació de una auditoría externa de HRC-Check, y se miró además lo que se aprende de XENCRM sin entrar. El usuario lo
+Se midió XENCRM en producción con el verificador del estándar de seguridad (`~/proyectos/AUDITORIA-SEGURIDAD.md`), que
+nació de una auditoría externa, y se miró además lo que se aprende de XENCRM sin entrar. El usuario lo
 pidió así: «blindarme ante ingeniería inversa necia». Antes: la portada **7 MAL** y la consola **5 MAL**. En el ZIP,
 antes de subir: la portada **0 MAL**. En producción, con el verificador ya corregido: portada y consola **9 OK · 1
 MAL**; el MAL es el `server: hcdn` del alojamiento, que desde aquí no se quita. Pruebas en `pnpm test:blindaje`; el

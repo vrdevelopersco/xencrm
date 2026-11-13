@@ -44,7 +44,7 @@ const conVoc = (src: string) => src.replace(/get (\w+)\(\) \{ return VOC\.(\w+);
 const grupos = [...conVoc(menu).matchAll(/grupo: '([^']+)', items: \[([^\]]*)\]/g)].map((g) => ({ grupo: g[1], items: [...g[2]!.matchAll(/view: '([a-z]+)', lbl: '([^']+)'/g)].map((m) => [m[1], m[2]]) }));
 check('el mapa de Dynamics 365: Mi trabajo, Clientes, Ventas, Rendimiento', grupos.map((g) => g.grupo).join(',') === 'Mi trabajo,Clientes,Ventas,Rendimiento', grupos.map((g) => g.grupo).join(','));
 check('Mi trabajo: Inicio, Bandeja omnicanal, Lista de trabajo, Citas', grupos[0]?.items.map((x) => x[1]).join(',') === 'Inicio,Bandeja omnicanal,Lista de trabajo,Citas');
-check('Clientes: Contactos y Cuentas clave · Ventas: Embudo, Tratos, Ventas · Rendimiento: KPIs y metas, Optimización de ventas, Analítica', grupos[1]?.items.map((x) => x[1]).join(',') === 'Contactos,Cuentas clave' && grupos[2]?.items.map((x) => x[1]).join(',') === 'Embudo,Tratos,Ventas' && grupos[3]?.items.map((x) => x[1]).join(',') === 'KPIs y metas,Optimización de ventas,Analítica');
+check('Clientes: Contactos y Cuentas clave · Ventas: Prospectos, Embudo, Tratos, Ventas · Rendimiento: KPIs y metas, Optimización de ventas, Analítica', grupos[1]?.items.map((x) => x[1]).join(',') === 'Contactos,Cuentas clave' && grupos[2]?.items.map((x) => x[1]).join(',') === 'Prospectos,Embudo,Tratos,Ventas' && grupos[3]?.items.map((x) => x[1]).join(',') === 'KPIs y metas,Optimización de ventas,Analítica');
 const vistas = grupos.flatMap((g) => g.items.map((x) => x[0]!));
 check('🪤 cada puerta lleva a una pantalla que existe (ninguna nueva: son las de siempre)', vistas.every((v) => html.includes(`id="view-${v}"`)), vistas.join(','));
 const cerradas = /var VISTAS_DE_QUIEN_ADMINISTRA = \{([^}]*)\}/.exec(js)?.[1] ?? '';
@@ -78,6 +78,8 @@ const lee: Record<string, string[]> = {
   sla: ['sla', 'sla/config', 'tickets/1'],
   // XEN · Mantenimientos y actualizaciones
   mantenimientos: ['mantenimientos', 'mantenimientos/cumplimiento'],
+  // XEN · Prospectos
+  prospectos: ['prospectos'],
   // (fin de las pantallas de la suite)
 };
 for (const v of [...vistas, 'tickets', 'sla', 'mantenimientos']) {

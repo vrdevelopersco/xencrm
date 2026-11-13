@@ -673,6 +673,75 @@ export function verTicket(id: number, now = Date.now()): (Ticket & { historia: {
   return { ...vistaDe(f, now), historia };
 }
 
+// ---------- El tablero (kanban) ----------
+
+/** La columna de los tickets cuyo estado se quitó de la configuración: así no se pierden de vista. */
+export const SIN_ESTADO = '__sin_estado';
+/** Los filtros que no son un id: «sin plan» y «sin asignar» (los mismos valores que usa la lista del tablero). */
+export const SIN_PLAN = '__sin';
+export const SIN_ASIGNAR = '__nadie';
+
+export interface ColumnaDeTickets {
+  /** El id del estado, o SIN_ESTADO. */
+  id: string;
+  nombre: string;
+  cierra: boolean;
+  pausa: boolean;
+  /** Cuántos tickets hay en la columna con estos filtros, aunque por el tope no vengan todos. */
+  total: number;
+  /** Por urgencia del SLA, como la lista (los terminados, del más reciente al más viejo). */
+  tickets: Ticket[];
+}
+
+export interface FiltrosDelTablero {
+  /** Cuántos días de terminados traen las columnas que cierran (de 1 a 365; 30 si no se dice). */
+  dias?: number;
+  /** Cuántos tickets trae cada columna, como máximo (de 1 a 500; 100 si no se dice). */
+  tope?: number;
+  prioridad?: string;
+  /** El id de un plan, o SIN_PLAN. */
+  plan?: string;
+  /** Un nombre (sin importar mayúsculas), o SIN_ASIGNAR. */
+  asignado?: string;
+  now?: number;
+}
+
+/**
+ * Los tickets como tablero (kanban): una columna por estado, en el orden de la configuración, aunque esté vacía (es
+ * donde se suelta una tarjeta). Las columnas que cierran traen solo los terminados de los últimos `dias`: si no,
+ * «Cerrado» crece para siempre. Moverlos no tiene función aparte: es `cambiarTicket` con `{ estado }`.
+ *
+ * 🪤 Un ticket cuyo estado se quitó de la configuración no desaparece: va a la columna «Sin estado», al final, y solo
+ * si hay alguno.
+ */
+export function tableroDeTickets(opts: FiltrosDelTablero = {}): { columnas: ColumnaDeTickets[]; dias: number; tope: number } | { error: string; campo: string } {
+  const cfg = configSla();
+  const entre = (v: unknown, defecto: number, max: number) => Math.min(max, Math.max(1, Math.round(Number(v) || defecto)));
+  const dias = entre(opts.dias, 30, 365);
+  const tope = entre(opts.tope, 100, 500);
+  const prioridad = String(opts.prioridad ?? '').trim();
+  const plan = String(opts.plan ?? '').trim();
+  const asignado = String(opts.asignado ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+  if (prioridad && !cfg.prioridades.some((p) => p.id === prioridad)) return { error: 'esa prioridad no existe', campo: 'prioridad' };
+  if (plan && plan !== SIN_PLAN && !cfg.planes.some((p) => p.id === plan)) return { error: 'ese plan no existe', campo: 'plan' };
+  const pasa = (t: Ticket) =>
+    (!prioridad || t.prioridad === prioridad) &&
+    (!plan || (plan === SIN_PLAN ? t.plan === null : t.plan === plan)) &&
+    (!asignado || (asignado === SIN_ASIGNAR ? !t.asignado : (t.asignado ?? '').trim().toLowerCase() === asignado));
+
+  const columnas: ColumnaDeTickets[] = cfg.estados.map((e) => ({ id: e.id, nombre: e.nombre, cierra: e.cierra, pausa: e.pausa, total: 0, tickets: [] }));
+  const porEstado = new Map(columnas.map((c) => [c.id, c]));
+  let sinEstado: ColumnaDeTickets | null = null;
+  for (const t of listarTickets({ dias, now: opts.now })) {
+    if (!pasa(t)) continue;
+    const col = porEstado.get(t.estado) ?? (sinEstado ??= { id: SIN_ESTADO, nombre: 'Sin estado', cierra: false, pausa: false, total: 0, tickets: [] });
+    col.total++;
+    if (col.tickets.length < tope) col.tickets.push(t);
+  }
+  if (sinEstado) columnas.push(sinEstado);
+  return { columnas, dias, tope };
+}
+
 // ---------- Crear y cambiar ----------
 
 const texto = (v: unknown, max: number) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);

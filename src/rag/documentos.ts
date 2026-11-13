@@ -135,8 +135,8 @@ export async function guardarDocumento(nombre: string, texto: string, titulo = '
   // El indexador saca el título del primer encabezado, así que se le pone si el texto no trae uno.
   //
   // 🪤 Y antes de caer en el nombre del archivo, se mira la primera línea del documento. Casi todos los Word que
-  // sube un negocio empiezan por su propio título —«Servicios de HRC TECHNOLOGIES»— y usar en su lugar el nombre
-  // del archivo convierte eso en «servicios hrc», que es peor para quien busca y peor para el modelo. El nombre
+  // sube un negocio empiezan por su propio título —«Servicios de XENTRIS LLC»— y usar en su lugar el nombre
+  // del archivo convierte eso en «servicios xentris», que es peor para quien busca y peor para el modelo. El nombre
   // del archivo es el último recurso, no el primero.
   let conTitulo: string;
   if (/^#\s+/m.test(limpio)) {
@@ -145,7 +145,7 @@ export async function guardarDocumento(nombre: string, texto: string, titulo = '
     const primera = deLaPrimeraLinea(limpio);
     const cabeza = titulo || primera || legible(nombre);
     // Si el título SALE de la primera línea, esa línea se asciende: dejarla también en el cuerpo la repetiría
-    // entera —«# Servicios de HRC» y debajo «Servicios de HRC»—, que es ruido en la pantalla y un fragmento
+    // entera —«# Servicios de XENTRIS» y debajo «Servicios de XENTRIS»—, que es ruido en la pantalla y un fragmento
     // peor para buscar.
     const cuerpo = !titulo && primera ? limpio.slice(limpio.indexOf('\n') + 1).trim() : limpio;
     conTitulo = `# ${cabeza}\n\n${cuerpo}`;

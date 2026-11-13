@@ -15,6 +15,7 @@ import { anotarAcceso, navegadorDe, tapado, type Acceso } from './accesos.js';
 import { actualizarCliente, CLIENTES_DIR, crearCliente, darDeBajaCliente, leerIndice, llamarACliente, PLANTILLAS, puertoLibre, tokenDe, urlDe, type ClienteRef } from './clientes.js';
 import { cabecerasDeSiempre, cspDePagina, soloDesdeAqui } from './cabeceras.js';
 import { anotarFalloDeIngreso, avisoDeFreno, entroBien, frenoDelIngreso } from './ingreso.js';
+import { frenoDelProspecto, revisarProspecto } from './prospecto-publico.js';
 import { abrirSesion, ACENTOS, actualizarComo, alcanza, borrarComo, cambiarLoMio, COLORES, colorDe, cerrarSesion, crearComo, equipoPara, leerUsuarios, manejaEquipo, quitarClienteDeUsuarios, sesionDe, usuariosSinClientes, verificar, type UsuarioPublico } from './consola-usuarios.js';
 import { irseSiQuedaHuerfano } from './huerfano.js';
 import { deDondeViene, guardarLibretaConfig, libretaConfig } from './crm/libreta-config.js';
@@ -83,6 +84,10 @@ export interface EstadoCliente {
   version?: string;
   /** Cómo entra su equipo al tablero: con el modo fácil, y su candado, o viéndolo todo (channels/candado.ts). */
   modo?: 'facil' | 'completo';
+  /** Servicio › Tickets (crm/tickets.ts): los abiertos, y de esos cuántos están en riesgo o ya vencieron su SLA. */
+  soporte?: { abiertos: number; enRiesgo: number; incumplidos: number } | null;
+  /** Ventas › Prospectos sin atender (crm/prospectos.ts): quien se registró y nadie le ha escrito. */
+  prospectosNuevos?: number;
 }
 
 const pesoUrgencia = { alta: 3, media: 2, baja: 1 } as const;
@@ -129,6 +134,14 @@ export function ticketsDe(cliente: ClienteRef, e: EstadoCliente): Ticket[] {
     else if (p.nivel === 'ahorro') t.push({ urgencia: 'media', titulo: `Gasto de IA al ${p.porcentaje} %: ahorrando`, detalle: `${cuanto} Lo específico ya lo contesta el modelo de responder; al 100 % deja de usar la IA de pago.` });
     else if (p.nivel === 'aviso') t.push({ urgencia: 'baja', titulo: `Gasto de IA al ${p.porcentaje} % del tope`, detalle: `${cuanto} Al 90 % empieza a ahorrar.` });
   }
+  // Tickets con el SLA vencido: es lo que se le prometió a un cliente que paga por un plan, y ya se pasó.
+  const vencidos = e.soporte?.incumplidos ?? 0;
+  if (vencidos) {
+    t.push({ urgencia: 'alta', titulo: `${vencidos} ticket${vencidos === 1 ? '' : 's'} con el SLA vencido`, detalle: 'Están abiertos y ya pasaron su plazo. Se ven en su tablero, en Servicio › Tickets.' });
+  }
+  if (e.prospectosNuevos) {
+    t.push({ urgencia: 'media', titulo: `${e.prospectosNuevos} prospecto${e.prospectosNuevos === 1 ? '' : 's'} sin atender`, detalle: 'Dejaron sus datos en el registro y esperan que les escriban. Están en Ventas › Prospectos.' });
+  }
   if (e.porVerificar) {
     t.push({ urgencia: 'media', titulo: `${e.porVerificar} pregunta${e.porVerificar === 1 ? '' : 's'} sin responder`, detalle: 'El asistente no supo y el cliente está esperando la respuesta del equipo.' });
   }
@@ -169,7 +182,7 @@ const pedir = async (cliente: ClienteRef, ruta: string, token: string, ms = 2500
 export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
   const token = tokenDe(cliente.slug);
   if (!token) return { arriba: false };
-  const [me, stats, hoy, canales, gasto, tiempos, tope] = await Promise.all([
+  const [me, stats, hoy, canales, gasto, tiempos, tope, sla, prospectos] = await Promise.all([
     pedir(cliente, '/admin/api/me', token, 1500),
     pedir(cliente, '/admin/api/stats', token),
     pedir(cliente, '/admin/api/today', token),
@@ -177,6 +190,10 @@ export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
     pedir(cliente, '/admin/api/usage?days=30', token),
     pedir(cliente, '/admin/api/tiempos?dias=7', token),
     pedir(cliente, '/admin/api/presupuesto', token),
+    // 🪤 /sla y no /tickets: /sla ya trae contados los abiertos y los que urgen ahora; /tickets arma cada ticket con
+    // su reloj, y pedirlo por cada cliente cada minuto pesa.
+    pedir(cliente, '/admin/api/sla?dias=30', token),
+    pedir(cliente, '/admin/api/prospectos?estado=nuevo', token),
   ]);
   if (!me) return { arriba: false };
   const lista = (x: unknown) => (Array.isArray(x) ? x.length : 0);
@@ -225,6 +242,13 @@ export async function estadoDe(cliente: ClienteRef): Promise<EstadoCliente> {
     llegaronACita,
     ganadas,
     efectividad: total ? Math.round((100 * (llegaronACita + ganadas)) / total) : null,
+    soporte: sla
+      ? (() => {
+          const ahora = (Array.isArray(sla.ahora) ? sla.ahora : []) as { sla?: { estado?: string } }[];
+          return { abiertos: Number(sla.abiertos ?? 0), enRiesgo: ahora.filter((t) => t.sla?.estado === 'en_riesgo').length, incumplidos: ahora.filter((t) => t.sla?.estado === 'incumplido').length };
+        })()
+      : null,
+    prospectosNuevos: Number((prospectos?.cuentas as { nuevo?: number } | undefined)?.nuevo ?? 0),
   };
 }
 
@@ -310,7 +334,7 @@ const SUPER_DE_EMERGENCIA: UsuarioPublico = {
 const porHttps = (c: Context) => c.req.header('x-forwarded-proto') === 'https' || c.req.url.startsWith('https:');
 const galletaDe = (c: Context) => getCookie(c, GALLETA);
 // `Strict`: el navegador no la manda en nada que nazca en otro sitio. Interfaz y API comparten origen, así que eso
-// cierra además las peticiones disparadas desde otra página (estándar de HRC, sección B), y queda soloDesdeAqui
+// cierra además las peticiones disparadas desde otra página (estándar de seguridad, sección B), y queda soloDesdeAqui
 // detrás por si acaso.
 const ponerGalleta = (c: Context, sesion: string) =>
   setCookie(c, GALLETA, sesion, { path: '/', httpOnly: true, sameSite: 'Strict', secure: porHttps(c), maxAge: 12 * 60 * 60 });
@@ -480,18 +504,9 @@ export function mountConsola(app: Hono) {
     return c.html(pagina.html);
   };
   app.get('/', puerta);
-  // La misma puerta donde la pone el despliegue (xencrm.hrctechnologies.com/consola), para que mandar aquí funcione
+  // La misma puerta donde la pone el despliegue (tu-dominio.com/consola), para que mandar aquí funcione
   // igual con el enrutador del paquete y con la consola corriendo sola.
   app.get('/consola', puerta);
-
-  // El logo de la casa. En el despliegue lo sirve el enrutador, pero la consola también corre sola (pnpm consola)
-  // y ahí nadie más lo serviría.
-  app.get('/hrc-technologies.png', (c) =>
-    c.body(readFileSync(new URL('../public/hrc-technologies.png', import.meta.url)), 200, {
-      'content-type': 'image/png',
-      'cache-control': 'public, max-age=86400',
-    }),
-  );
 
   // Entrar con usuario y clave; la llave maestra (CONSOLA_TOKEN) sigue valiendo como super-admin.
   //
@@ -535,6 +550,41 @@ export function mountConsola(app: Hono) {
     if (quien) anotar(c, { tipo: 'salio', usuario: nombreDe(quien) });
     cerrarSesion(c.req.header('x-consola-sesion') ?? galletaDe(c));
     quitarGalleta(c);
+    return c.json({ ok: true });
+  });
+
+  /**
+   * El registro de la portada y de la puerta («Pruébalo con tu negocio»): público, sin sesión. Se revisa y se frena
+   * aquí (prospecto-publico.ts) y se pasa al CRM que recibe los prospectos —el cliente PROSPECTOS_CLIENTE— por su
+   * ruta del tablero, con su token: ahí queda en Ventas › Prospectos con su ficha y su WhatsApp.
+   *
+   * 🪤 Va ANTES del candado de /api/*: es la única ruta de la consola que se usa sin haber entrado.
+   */
+  app.post('/api/prospecto', async (c) => {
+    const slug = (process.env.PROSPECTOS_CLIENTE ?? '').trim().toLowerCase();
+    const destino = slug ? leerIndice().find((x) => x.slug === slug) : undefined;
+    if (!destino) return c.json({ error: 'Por ahora el registro no está abierto.' }, 503);
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    const revision = revisarProspecto(body);
+    if ('bot' in revision) return c.json({ ok: true });
+    if ('error' in revision) return c.json(revision, 400);
+    const espera = frenoDelProspecto(deDonde(c));
+    if (espera !== null) {
+      c.header('retry-after', String(espera));
+      return c.json({ error: 'Llegaron muchos registros seguidos desde aquí. Prueba de nuevo en unos minutos.' }, 429);
+    }
+    try {
+      const r = await llamarACliente(destino, '/admin/api/prospectos', {
+        method: 'POST',
+        headers: { 'x-admin-token': tokenDe(destino.slug), 'content-type': 'application/json' },
+        body: JSON.stringify(revision.ok),
+        esperaMs: 8000,
+      });
+      if (r.status !== 200 && r.status !== 201) throw new Error(`contestó ${r.status}`);
+    } catch (e) {
+      console.error('[consola] el registro no llegó a', destino.slug, '→', (e as Error).message);
+      return c.json({ error: 'No pudimos guardar tu registro ahora. Inténtalo en un minuto.' }, 502);
+    }
     return c.json({ ok: true });
   });
 

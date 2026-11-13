@@ -4,7 +4,7 @@
 // pide /_salud al servidor con él y pinta la bitácora de accesos en hora de Colombia. El token va en una cabecera,
 // nunca en la dirección: lo que va en la dirección queda escrito en los registros de cualquier servidor de paso.
 //
-//   pnpm salud                          xencrm.hrctechnologies.com, últimos 50 movimientos
+//   pnpm salud tu-dominio.com           los últimos 50 movimientos (o XENCRM_DOMINIO en el entorno)
 //   pnpm salud --usuario dueno.dunor    solo lo de esa persona
 //   pnpm salud --seguir                 se queda mirando y pinta lo nuevo cada 20 segundos
 //   pnpm salud http://localhost:3500    un paquete levantado aquí para probarlo
@@ -16,7 +16,11 @@ const args = process.argv.slice(2);
 const opcion = (nombre) => { const i = args.indexOf(`--${nombre}`); return i >= 0 ? args[i + 1] : undefined; };
 const bandera = (nombre) => args.includes(`--${nombre}`);
 const sueltos = args.filter((a, i) => !a.startsWith('--') && !['--usuario', '--n'].includes(args[i - 1]));
-const destino = sueltos[0] || 'xencrm.hrctechnologies.com';
+const destino = sueltos[0] || process.env.XENCRM_DOMINIO || '';
+if (!destino) {
+  console.error('Falta el dominio: pnpm salud tu-dominio.com (o XENCRM_DOMINIO=tu-dominio.com en el entorno).');
+  process.exit(1);
+}
 const base = (/^https?:\/\//.test(destino) ? destino : `https://${destino}`).replace(/\/+$/, '');
 const n = Math.min(Number(opcion('n')) || 50, 2000);
 const usuario = opcion('usuario') || '';

@@ -14,6 +14,7 @@ XENCRM es un CRM conversacional para gestionar clientes, ventas y servicio desde
 ### Qué falta
 
 - Implementar el análisis de sentimiento por voz y definir la retención de los audios; las notas de voz ya pueden transcribirse.
+- Un calendario más completo: timeline detallado, tarjetas de cita con más datos, un panel «Hoy» y avisos en la agenda.
 - Completar y validar los pendientes de despliegue e integraciones descritos en [el checkpoint](docs/checkpoint.md) y [la documentación de XENCRM](docs/xencrm.md).
 
 ### Posibles evoluciones
@@ -22,7 +23,7 @@ XENCRM es un CRM conversacional para gestionar clientes, ventas y servicio desde
 - Mejorar la analítica y las recomendaciones para ventas y servicio con datos históricos.
 - Facilitar el despliegue y la operación de múltiples negocios, manteniendo la separación de sus datos.
 
-**XENCRM es la siguiente generación del CRM conversacional de HRC** (hasta noviembre de 2026 se llamó aiva): el
+**XENCRM es la siguiente generación de un CRM conversacional** (hasta noviembre de 2026 se llamó aiva): el
 mismo motor —agente de IA, citas, puntaje, traspaso a una persona— con una interfaz rehecha para trabajar como un
 CRM de mensajería. Lo que cambia y por qué está en [`docs/xencrm.md`](docs/xencrm.md).
 

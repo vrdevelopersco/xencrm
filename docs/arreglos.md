@@ -7,6 +7,45 @@ ya definitivo.
 El detalle técnico vive en [`arquitectura.md`](arquitectura.md), lo del tablero en
 [`guia-del-tablero.md`](guia-del-tablero.md) y las reglas de diseño en [`diseno-tablero.md`](diseno-tablero.md).
 
+## 2026-11-12
+
+### Publicado como `vrdevelopersco/xencrm`, sin marca de terceros
+El repositorio pasa a ser público, con el historial reescrito: unas pruebas usaban usuario y clave sacados de un chat
+real (ahora son de ficción) y el autor de los commits es el correo noreply de GitHub. Y XENCRM ya no lleva marca de
+terceros: ni el logo de imagen, ni el «producto de», ni sus correos ni su dominio por defecto
+(`pnpm paquete` y `pnpm salud` piden el dominio; `security.txt` usa `security@` el dominio desplegado).
+
+### Tickets como tablero (kanban)
+Servicio › Tickets se ve como lista o como tablero: una columna por estado de la configuración, por urgencia del SLA,
+con arrastrar y soltar y «Mover…» (teclado, lector de pantalla, celular). `GET /admin/api/tickets/tablero` con filtros;
+mover es el PATCH de siempre. 🪤 La ruta va antes de `/tickets/:id`, o «tablero» se toma por un id. 🪤 `.board` viene
+de Tratos con `flex:1;min-height:0`: dentro de `.pad` se encogía y en el celular quedaba en una raya de 30 px.
+
+### La portada y la puerta, con olas · registro de prospectos
+Las dos con el mismo fondo: olas de gelatina en el degradado de la marca, en movimiento lento y desenfocadas (canvas a
+media resolución, quietas con «reducir movimiento», paradas cuando no se ven), y vidrio encima. La portada atrapa:
+titular que rota (contesta · agenda · cotiza · atiende), una conversación que se escribe sola y el registro; la puerta
+es una tarjeta con «Entrar | Pedir una demo». El registro llega a Ventas › Prospectos (ver `consola.md`). 🪤 El código
+de las olas es idéntico en `inicio.html` y `consola.html`, y una prueba lo vigila. 🪤 En la portada `.cab` chocaba con
+la fila `.vf.cab` de la vista de ejemplo; en la consola `.tarjeta` ya existía (las filas de clientes).
+
+### Configuración en dos paneles · y el Guardar de SLA y tickets
+Menú en íconos y, al lado, el árbol de funciones con lo que trae cada una y un buscador (la columna `#subnav`, que en
+esta piel medía cero). El negocio y Perfil dejan de ser un diálogo —que además se quedaba abierto al cambiar de
+opción— y son pantallas. 🪤 **Guardar de SLA y tickets corría el de Mantenimientos**: los dos bloques declaraban
+`var XC`, `xcLeer`, `xcEnganchar` y `xcGuardar` en el mismo ámbito y ganaba el último. El de SLA ahora es `XCS`/`xcs…`.
+
+### La consola: tickets y prospectos de cada cliente
+Su fila dice tickets abiertos, en riesgo y vencidos (de `/admin/api/sla`) y prospectos sin atender, con avisos y
+enlaces directos (`#v=tickets`, `#v=prospectos`).
+
+### El ejemplo XENTRIS LLC, con la identidad de xentris.tech
+Socio de tecnología: software y apps a la medida, nube, IA y automatización y consultoría; su proceso (descubrimiento
+sin costo → estrategia → construcción por fases → evolución) y su tono (directo, sin amarrar a un proveedor). Las tres
+apps de ficción (POS, Field, Stock) siguen: las usan las pruebas y la demostración.
+
+**Batería: 3537 bien, 0 fallas.**
+
 ## 2026-11-11
 
 ### Servicio con SLA, todo configurable y el ejemplo XENTRIS LLC · `0e9ccb2` … `2d7c011`
@@ -104,7 +143,7 @@ nota 🪤; lo de servicio de cada cliente da 404, también disfrazado.
 
 ### Blindaje contra quien desarma XENCRM desde fuera · `3c96d5d`
 El usuario lo pidió así: «blindarme ante ingeniería inversa necia». Se midió producción con el verificador del
-estándar de HRC (`~/proyectos/AUDITORIA-SEGURIDAD.md`, salido de la auditoría externa de HRC-Check) y se miró lo que
+estándar de seguridad (`~/proyectos/AUDITORIA-SEGURIDAD.md`, salido de una auditoría externa) y se miró lo que
 se aprende de XENCRM sin entrar. Antes: portada **7 MAL**, consola **5 MAL**. En el ZIP: portada **0 MAL**. El detalle,
 fila por fila, en `seguridad.md` › «El blindaje».
 - **El código ya no se regala**: `/dunor/admin.js` (387 KB, con todos sus comentarios) se bajaba sin clave. El
@@ -335,7 +374,7 @@ si dice algo, con la misma regla que ya tenía la lista de conversaciones:
 
 El canal salió de la tarjeta. Pasó de unos 170 px a entre 108 y 129.
 - 🪤 **«Mover…» no se quitó**, aunque era lo que más pesaba. Existe porque en el celular no se puede arrastrar
-  (con HRCAPOLO, 2026-09-21). Quedó compacto, al pie, y con 44 px al tacto.
+  (con la revisión de UX, 2026-09-21). Quedó compacto, al pie, y con 44 px al tacto.
 - **Sin precios**, arriba salían dos cifras diciendo «Sin precios». Ahora sale una sola, **Valor en juego**, con
   **Cargar precios**, que lleva a Lo que sabe. «Ponderado por puntaje» pasó a «Probable, según el puntaje».
 - 🪤 **La insignia de Seguimientos** solo se llenaba al entrar a Seguimientos, así que quien no entraba nunca veía
@@ -477,7 +516,7 @@ El usuario subió el paquete en la tarde. `/_salud` contesta `53693f6` en Node 2
 cuatro procesos vivos, sin caídas y con un solo arranque cada uno. La portada, la consola y los tres tableros
 responden 200. El primer vistazo dio otra hora de arranque, cuatro segundos antes: es el doble arranque del
 alojamiento que explica `desplegar.md`, y después se quedó quieto. Los avisos de DUNOR, sin mensajes hace 3 días, y
-de HRC, sin mensajes hace 17, vienen de antes del despliegue: no los causó este cambio.
+de ATLAS, sin mensajes hace 17, vienen de antes del despliegue: no los causó este cambio.
 
 ### Los fijados en la base de cada cliente · `0f4c870`
 Vivían en el navegador y no seguían a nadie a otro computador. Ahora van en `settings` con el nombre con el que
@@ -619,7 +658,7 @@ de agentes sobre inyección de prompt: un descuento, un porcentaje, algo gratis 
 información no ofrece no sale, una respuesta que recita las instrucciones se cambia por una fija, y el nombre y la
 información entran como datos. `pnpm test:inyeccion` (65 casos) pasa el recorrido entero con un modelo falso que
 siempre se deja convencer; quitar cualquiera de las cinco defensas la hace fallar. Sobre 93 respuestas reales de
-DUNOR, HRC y CONFIA, ninguna queda marcada de más. Escenarios de DUNOR con Gemma, porque OpenAI no estaba
+DUNOR, ATLAS y CONFIA, ninguna queda marcada de más. Escenarios de DUNOR con Gemma, porque OpenAI no estaba
 disponible: 38 de 40, y los dos que fallan ya fallaban (la retención de citas del 3 de octubre cambió el texto de
 cancelar).
 
@@ -670,9 +709,9 @@ lo que estabas haciendo, con los campos cortos en dos columnas.
 La bandeja era una lista donde todo pesaba igual. Ahora tres columnas —piden una persona, no supo, esperan
 respuesta— con su cuenta, lo que más ha esperado arriba, y la conversación en un panel al lado.
 
-### La consola y la portada, con la marca de HRC · `26183ff`, `f99de66`
-La portada salió calcada de otros sitios de la casa y en oscuro; rehecha en claro con Figtree, el dorado y el
-logo. La consola iba por su lado: entrar es una pantalla partida, y los clientes pasan de tarjetas a filas con su
+### La consola y la portada, con la marca de la casa · `26183ff`, `f99de66`
+La portada salió calcada de otros sitios de la casa y en oscuro; rehecha en claro con Figtree y el
+dorado. La consola iba por su lado: entrar es una pantalla partida, y los clientes pasan de tarjetas a filas con su
 vistazo.
 
 🪤 De ahí salieron dos trampas de CSS que dan el mismo síntoma: un `display` suelto le gana al `display:none` que
@@ -761,7 +800,7 @@ todo y maneja el equipo; quien atiende un cliente solo ve —y solo le suena— 
 proxy filtrados; 403 si intenta otro). Cuando entra algo nuevo de los tuyos suena un pito, el número queda en el
 título y en segundo plano sale notificación del navegador. `pnpm test:usuarios` (25 casos), `test:consola` (26) y
 28 suites. Probado de verdad: una pregunta de un cliente de CONFIA FINTECH respondida desde la consola le llegó a
-su chat, y el usuario de soporte de HRC recibe 403 al intentar ver CONFIA.
+su chat, y el usuario de soporte de ATLAS recibe 403 al intentar ver CONFIA.
 
 ### Consola del super-admin · `7272210`
 Con varios clientes hacía falta verlos a todos y poder dar de alta uno nuevo. `pnpm consola` muestra una tarjeta
@@ -974,7 +1013,7 @@ WhatsApp oficial se verifican con Meta antes de guardarse y quedan en `.env`, no
 `pnpm test:profile`, `pnpm test:meta`.
 
 ### Material del tablero y colores de dato · `ff49b97`, `2fd47a1`, `b353804`, `13cc8f4`, `cfe7d3a`, `107f4c6`
-Con criterio de HRCAPOLO: marco de cartulina en las tarjetas del pipeline, campos hundidos, foco sólido que cumple
+Con criterio de la revisión de UX: marco de cartulina en las tarjetas del pipeline, campos hundidos, foco sólido que cumple
 3:1 (antes daba ~1,9:1), «Mover a…» para cambiar de etapa sin arrastrar (en el celular arrastrar no funciona con el
 dedo) y colores de dato (`--cita`, `--si`) separados del acento de marca. La temperatura pasó a los colores del
 veredicto: el mismo 100 se veía rojo en la tarjeta y verde en la barra, y el rojo de "caliente" era el de "Perdido".

@@ -29,6 +29,8 @@ const PUEDE_CAMBIAR: Array<[string, RegExp]> = [
   // políticas del SLA no: son lo que se le promete a cada plan, y eso lo cambia quien administra.
   ['POST', /^tickets$/],
   ['PATCH', /^tickets\/\d+$/],
+  // Mover un prospecto (contactado, al embudo, descartado) también es atender (crm/prospectos.ts).
+  ['PATCH', /^prospectos\/[^/]+$/],
   ['DELETE', /^contacts\/[^/]+\/notas\/[^/]+$/],
   ['POST', /^contacts\/[^/]+\/mensajes\/[^/]+\/reintentar$/],
   ['POST', /^appointments$/],

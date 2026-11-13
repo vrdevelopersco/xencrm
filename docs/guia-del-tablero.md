@@ -280,6 +280,19 @@ Contactos, Tratos y Embudo comparten la misma forma de filtrar, como en Dynamics
 - **Guardar vista** le pone nombre a lo que tienes filtrado (hasta 20 por persona; se guardan en tu navegador).
 - En **Tratos** puedes cambiar entre **Tablero** y **Lista**.
 
+## Prospectos
+
+Ventas › Prospectos: quien dejó su nombre y su WhatsApp en el registro de la portada de XENCRM o de la puerta de la
+consola («Pruébalo con tu negocio», «Pedir una demo»). Llega al instante, ya como ficha de WhatsApp con su negocio y
+lo que quiere resolver, y el menú lleva la cuenta de los nuevos.
+
+- Las cifras de arriba filtran: *Nuevos*, *Contactados*, *En el embudo*, *Descartados*.
+- **Escribirle** abre su conversación. **Marcar contactado**, **Pasar al embudo** (lo lleva de la etapa de entrada a
+  la primera activa, para que aparezca en Tratos) y **Descartar** cambian su estado y quedan en su historia.
+- Si alguien se registra otra vez no se duplica: es la misma ficha, dice cuántas veces se registró y, si estaba
+  descartado, vuelve a *Nuevos*.
+- Solo lo recibe el CRM que la consola tenga configurado para eso (`PROSPECTOS_CLIENTE`, ver `consola.md`).
+
 ## Embudo
 
 Cuántos tratos **llegaron** a cada etapa (o más allá), qué parte pasa a la siguiente, cuántos están **hoy** en cada
@@ -374,6 +387,13 @@ con palabra e ícono: *A tiempo*, *En riesgo* (gastó el 75 % de su tiempo), *In
 - Vistas: *Abiertos*, *Mis tickets*, *Sin asignar*, *En riesgo*, *Incumplidos*, *Terminados*; filtros por prioridad,
   plan y asignado.
 - Al abrir un ticket cambias su estado, prioridad o quién lo lleva, y ves su historia.
+- **Lista | Tablero** (arriba a la derecha; se recuerda): el tablero es un kanban con una columna por estado, en el
+  orden de Configuración › SLA y tickets. Dentro de cada columna, primero lo que más urge según el SLA. Para mover un
+  ticket se arrastra la tarjeta a otra columna, o se usa **Mover…** en la tarjeta (con teclado y en el celular): es lo
+  mismo que cambiarle el estado al abrirlo, con su permiso, su reloj y su historia. Las columnas que cierran
+  (*Resuelto*, *Cerrado*) muestran los últimos 30 días. Si se quita un estado que tenía tickets, esos tickets aparecen
+  en una columna *Sin estado* para moverlos a uno que exista. Para otros sistemas: `GET /admin/api/tickets/tablero`
+  (filtros `prioridad`, `plan`, `asignado`, `dias`, `tope`).
 - El reloj corre solo en el horario de soporte (o 24/7 si el plan lo dice). *Esperando al cliente* pausa el reloj de
   la solución. La primera respuesta cuenta con el primer mensaje de una persona del equipo después de abrirlo (el
   asistente no cuenta), con **Marcar como respondido** o al cerrarlo.
@@ -393,6 +413,14 @@ actualizaciones. Los objetivos se ven aquí y se cambian en **Configuración ›
 - **Actualizaciones** por aplicación: la última versión, hace cuánto, la próxima y si va al día con su cadencia.
 - **Programar mantenimiento** y **Registrar actualización** son de quien administra (se puede abrir al equipo).
 
+
+## Configuración
+
+Al elegir **Configuración** en el selector de área, el menú de la izquierda se queda en íconos y aparecen dos
+paneles: a la izquierda las funciones, en grupos (El negocio · El asistente y la IA · Canales · Servicio · Sistema),
+cada una con lo que trae en una línea y con un buscador («whatsapp», «horario», «IA»…; Enter abre la primera); a la
+derecha, la función elegida. Todo en la misma página: **El negocio** y **Perfil** ya no se abren en un diálogo
+encima. Al volver a Ventas o Servicio, el menú queda como lo tenías. En el celular las funciones están en el menú.
 
 ## Perfil
 

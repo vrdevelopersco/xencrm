@@ -11,7 +11,7 @@
 > vigentes las reglas de jerarquía, puntaje, quién habla, contraste, toque y las trampas. Lo último está al final,
 > en «El orden de un CRM». **Antes de describir cómo se ve una pantalla, se toma una captura de la de verdad.**
 
-Revisado con HRCAPOLO (sesión de UX) el 2026-09-11. Todo lo de abajo está medido con contraste WCAG compuesto,
+Revisado en una sesión de UX el 2026-09-11. Todo lo de abajo está medido con contraste WCAG compuesto,
 no a ojo. Si tocas un color, vuelve a medir (el script está en el historial: luminancia relativa + composición alfa).
 
 ## Jerarquía
@@ -42,7 +42,7 @@ no a ojo. Si tocas un color, vuelve a medir (el script está en el historial: lu
   conversación entra en "esperan tu respuesta".
 - Un estado se nombra por lo que el sistema sabe, no por lo que parece obvio. Cuando el bot pasa la conversación al
   equipo, human_by guarda "bot" (quién la pasó), pero nadie la ha tomado: el tablero dice "La lleva el equipo" hasta
-  que una persona responda, nunca "La lleva bot" (2026-09-21, con HRCAPOLO).
+  que una persona responda, nunca "La lleva bot" (2026-09-21, con la revisión de UX).
 
 ## Vidrio (liquid glass)
 Relleno rgba translúcido + `backdrop-filter: blur(24px) saturate(170%)` (barra) / `blur(20px) saturate(160%)` (resto),
@@ -73,7 +73,7 @@ fondos pesimistas (negro puro bajo el panel claro, blanco puro bajo el oscuro).
 ## Toque
 Área mínima de 44 × 44 px en botones de navegación en celular (padding invisible con pseudo-elemento), corte único en 900 px.
 
-## Material (capa 3): profundidad, tacto y grano — 2026-09-21, con criterio de HRCAPOLO
+## Material (capa 3): profundidad, tacto y grano — 2026-09-21, con criterio de la revisión de UX
 El usuario no quiere un tablero plano: las piezas tienen grosor y se hunden al presionarlas, y hay grano de vidrio
 y cartulina. Probado en tres piezas: botón primario, switch "Responde: Xen | Tú" y citas del calendario.
 
@@ -143,9 +143,9 @@ y `--ring` (botones, switch, tarjetas) es un filo del color del panel más la ma
 fondo, incluido el botón primario. El texto de ejemplo de los campos usa `--muted` (5.6:1 claro, 7.4:1 oscuro); el
 texto escrito en oscuro queda a 15:1.
 
-Con esto queda recorrido el orden de HRCAPOLO (chips → marco del pipeline → campos). Las burbujas del chat siguen planas.
+Con esto queda recorrido el orden de la revisión de UX (chips → marco del pipeline → campos). Las burbujas del chat siguen planas.
 
-### Colores de dato aparte del acento (2026-09-21, pregunta de HRCAPOLO)
+### Colores de dato aparte del acento (2026-09-21, pregunta de la revisión de UX)
 La etapa "Cita agendada", la etiqueta "Tiene cita" y las citas del calendario usaban `--brand`, el mismo acento de
 los botones; el "Sí" del veredicto y la zona "prospecto" de la barra de probabilidad, también. Si el acento cambia
 (otra marca, otro tema), una etapa cambiaría de significado sin querer. Ahora los datos llevan su token: `--cita`
@@ -157,14 +157,14 @@ Temperatura y veredicto eran el mismo puntaje (0–100, cortes en 60 y 30, `temp
 detalle, **verde**. Peor: el rojo de "caliente" (el mejor prospecto) era el mismo de "Perdido" (el peor). Se unificó
 por el veredicto: caliente usa `--si` (verde), tibio el ámbar de "posible", frío el gris de "sin señales". El rojo
 queda solo para perdido y errores. Las palabras siguen siendo dos ("caliente" en tarjetas, avisos y Hoy; "prospecto
-claro" en la ficha); el color ya no las contradice. Por criterio de HRCAPOLO las palabras **no** se unifican: el
+claro" en la ficha); el color ya no las contradice. Por criterio de la revisión de UX las palabras **no** se unifican: el
 color es lo que tiene que ser uno solo; "caliente" es lenguaje de momento (tarjetas, avisos, Hoy: mirar ahora) y
 "prospecto claro" es lenguaje de juicio (la ficha: evaluar con calma). Como puente, la ficha dice bajo la barra
 "Probabilidad 100 (en tarjetas y avisos: caliente)": nombra el mismo número en el otro vocabulario, sin inventar una
 explicación del puntaje (no es de actividad: sale de las señales de compra de la conversación). "Frío" se muestra
 con tilde (el valor interno sigue siendo `frio`).
 
-### Cambiar de etapa sin arrastrar (2026-09-21, pregunta de HRCAPOLO)
+### Cambiar de etapa sin arrastrar (2026-09-21, pregunta de la revisión de UX)
 Solo se podía arrastrando con el mouse (o desde la ficha del contacto). En el celular, arrastrar no funciona con el
 dedo, así que desde el teléfono el tablero no dejaba mover nada. Cada tarjeta tiene ahora «Mover a…», una lista
 nativa (teclado, lector de pantalla y selector del teléfono) con las otras etapas: 32 px con mouse y 44 px con el
@@ -182,8 +182,8 @@ Decisiones:
 ## La marca de la casa (2026-09-25)
 
 Hasta aquí cada pantalla se había diseñado sola: la portada por un lado, la consola por otro, el tablero por otro.
-Se sentía cambiar de aplicación al pasar de una a otra. Ahora las tres hablan el lenguaje de
-**hrctechnologies.com**, que es de donde viene el producto:
+Se sentía cambiar de aplicación al pasar de una a otra. Ahora las tres hablan el mismo
+lenguaje de marca:
 
 | | Valor |
 |---|---|
@@ -191,15 +191,14 @@ Se sentía cambiar de aplicación al pasar de una a otra. Ahora las tres hablan 
 | Papel | `#f6f5f1` claro · `#14120d` oscuro |
 | Tinta | `#14110c` claro · `#f0ece4` oscuro |
 | Acento | **dorado** `#7b660f` claro · `#e2c04c` oscuro |
-| Dorado vivo | `#f1cb05`, el del chip del logo: solo en manchas pequeñas, nunca debajo de texto |
+| Dorado vivo | `#f1cb05`: solo en manchas pequeñas, nunca debajo de texto |
 | Línea | `#e8e4da` claro · `#2e2a22` oscuro |
 
 El **verde se queda donde significa algo** —confirmado, cita cumplida— y no como acento: un dato no debe cambiar de
 sentido porque cambie la marca. Es la misma regla de «colores de dato aparte del acento», ahora que el acento
 cambió de verdad.
 
-El logo de HRC viene blanco sobre transparente (solo sirve en oscuro); para fondo claro hay una versión con el
-texto en tinta y el chip con su dorado intacto, en `public/hrc-technologies.png`.
+La marca es la palabra XENCRM, sin logo de imagen (desde el 2026-11-12, sin ninguna marca de terceros).
 
 ### Contrastes medidos (2026-09-25)
 
@@ -216,7 +215,7 @@ texto en tinta y el chip con su dorado intacto, en `public/hrc-technologies.png`
 ### El modo oscuro, ya renderizado y medido (2026-10-01)
 
 Hasta hoy los valores de oscuro estaban **calculados, no vistos**: el tablero fija el tema al arrancar y pisa lo que
-uno ponga a mano en una maqueta. HRCAPOLO se negó a validarlos por eso, y tenía razón.
+uno ponga a mano en una maqueta. La revisión de UX se negó a validarlos por eso, y tenía razón.
 
 Ya está pintado, con Chrome de verdad: entrar, darle al 🌙 hasta que `data-theme` diga `dark`, ir a Prospectos, y
 medir **sobre los píxeles**: se oculta el texto (`color:transparent`), se captura, y se busca dentro del recuadro de
@@ -465,7 +464,7 @@ Reglas:
 - 🪤 **Lo que se pinta con JavaScript reescribe la clase.** La línea del puntaje de la cabecera tenía
   `solo-completo` en el HTML y `renderChat` le ponía `className` entero: el modo fácil la seguía enseñando. Se vio
   en la captura, no en las pruebas; `test:revision` vigila ahora ese caso.
-- **Sin decir nada, completo.** HRC y CONFIA siguen como estaban; DUNOR se pone en fácil desde su tablero.
+- **Sin decir nada, completo.** ATLAS y CONFIA siguen como estaban; DUNOR se pone en fácil desde su tablero.
 
 ### El candado (2026-11-03)
 

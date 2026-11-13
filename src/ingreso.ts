@@ -2,7 +2,7 @@
 //
 // Esta puerta abre la consola, y la consola alcanza el tablero de TODOS los clientes: sin freno, la única defensa
 // sería la longitud de la clave, y en un rato se prueban miles. Tres barreras, porque ninguna sirve sola (estándar
-// de HRC, ~/proyectos/AUDITORIA-SEGURIDAD.md, sección C) y el hueco está justo en medio:
+// de seguridad, ~/proyectos/AUDITORIA-SEGURIDAD.md, sección C) y el hueco está justo en medio:
 //
 //   - Por DIRECCIÓN: 10 fallos en 15 minutos. Frena a quien martillea desde una conexión.
 //   - Por dirección Y CUENTA: 5 fallos en un minuto. Es la que falta siempre: el cupo por dirección deja repartir

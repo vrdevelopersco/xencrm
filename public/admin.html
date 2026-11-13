@@ -8,7 +8,7 @@
 <title>XENCRM · Tablero</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- Figtree, la letra de la casa (HRC), para leer; Bricolage Grotesque, con carácter, solo para títulos y cifras grandes. -->
+<!-- Figtree, la letra de la casa, para leer; Bricolage Grotesque, con carácter, solo para títulos y cifras grandes. -->
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f5f6f8;--panel:#fff;--glass:#fff;--glass-strong:#fff;--glass-overlay:#fff;--glass-border:#e4e7ec;--glass-inset:none;--glass-shadow:0 1px 2px rgba(16,24,40,.05);--blob1:transparent;--blob2:transparent;--blob3:transparent;--line:#e4e7ec;--text:#101828;--muted:#667085;--brand:#2563eb;--brand-soft:#eff6ff;--cita:#2563eb;--cita-soft:#eff6ff;--si:#15803d;--si-soft:#ecfdf3;--warn:#b54708;--warn-soft:#fffaeb;--bad:#b42318;--bad-soft:#fef3f2;--ok:#15803d;--ok-soft:#ecfdf3;--me:#eff6ff;--bot:#f5f6f8;--human:#fffaeb;--papel-bloc:#fff;--shadow:0 1px 2px rgba(16,24,40,.05)}
@@ -484,7 +484,7 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-o
    Las piezas tienen grosor y se hunden al presionarlas; el grano es el del vidrio y la cartulina.
    El relieve acompaña, nunca es la única señal: cada estado cambia también color, texto o peso.
    Contrastes medidos: texto sobre marca 6.1:1 (claro) y 8.6:1 (oscuro); "Tú" 11.4:1 en ambos.
-   Reglas (con HRCAPOLO): todo relleno de color lleva su --on-* medido; la textura va en lo que se toca o se
+   Reglas: todo relleno de color lleva su --on-* medido; la textura va en lo que se toca o se
    escanea, nunca en lo que se lee de corrido; el grabado se valida al tamaño real (solo en el botón primario). */
 :root{
   --on-brand:#fff;--brand-deep:#5d4c0b;--on-bad:#fff;
@@ -3540,6 +3540,36 @@ dialog.perdida input{width:100%}
 :root[data-piel="xen"] input[aria-invalid="true"],:root[data-piel="xen"] select[aria-invalid="true"]{border-color:var(--fx-rojo-t);box-shadow:0 0 0 1px var(--fx-rojo-t)}
 :root[data-piel="xen"] #view-tickets .pad,:root[data-piel="xen"] #view-sla .pad,:root[data-piel="xen"] #view-cfg-sla .pad{display:flex;flex-direction:column}
 :root[data-piel="xen"] #view-tickets.active,:root[data-piel="xen"] #view-sla.active,:root[data-piel="xen"] #view-cfg-sla.active{overflow:auto}
+/* Tickets › Tablero: las columnas y tarjetas de Tratos (.board, .col, .card), con el color de lo que HACE cada estado
+   (el de un ticket nuevo, sigue, pausa el reloj, cierra) y en cada tarjeta la franja del SLA, como en la lista. */
+:root[data-piel="xen"] .xt-acciones .xt-modo{margin-left:auto}
+/* 🪤 `flex:none`: .board viene de Tratos con `flex:1;min-height:0`, y aquí vive dentro de .pad (columna flex que se
+   desplaza): se encogía al espacio que sobraba y en el celular quedaba en una raya de 30 px. Toma la altura de lo suyo. */
+:root[data-piel="xen"] .xt-tablero{flex:none;padding:2px 2px 14px;gap:12px;align-items:flex-start;scroll-padding-inline:2px}
+:root[data-piel="xen"] .xt-tablero>.col{--tone:var(--fx-t3);--tone-s:var(--fx-hover);--tone-t:var(--fx-t2);flex:0 0 288px;width:288px;min-width:288px;max-height:min(72vh,760px)}
+:root[data-piel="xen"] .xt-tablero>.col.vacia{flex:0 0 220px;width:220px;min-width:220px}
+:root[data-piel="xen"] .xt-tablero>.col[data-xt-tipo=curso]{--tone:var(--fx-cielo);--tone-s:var(--fx-cielo-s);--tone-t:var(--fx-cielo-t)}
+:root[data-piel="xen"] .xt-tablero>.col[data-xt-tipo=pausa]{--tone:var(--fx-indigo);--tone-s:var(--fx-indigo-s);--tone-t:var(--fx-indigo-t)}
+:root[data-piel="xen"] .xt-tablero>.col[data-xt-tipo=cierra]{--tone:var(--fx-verde);--tone-s:var(--fx-verde-s);--tone-t:var(--fx-verde-t)}
+:root[data-piel="xen"] .xt-tablero>.col[data-xt-tipo=sin]{border-style:dashed}
+:root[data-piel="xen"] .xt-tablero .col.vacia .cards::after{content:"Sin tickets en este estado"}
+:root[data-piel="xen"] .xt-col-nota{margin-left:auto;font-size:12px;font-weight:600;color:var(--fx-t3);white-space:nowrap}
+:root[data-piel="xen"] .xt-tarjeta .body{display:flex;flex-direction:column;gap:8px;padding:12px 12px 12px 15px}
+:root[data-piel="xen"] .xt-tarjeta .body::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:4px;border-radius:0 4px 4px 0;background:var(--fx-borde)}
+:root[data-piel="xen"] .xt-tarjeta.s-incumplido .body::before{background:var(--fx-rojo)}
+:root[data-piel="xen"] .xt-tarjeta.s-en_riesgo .body::before{background:var(--fx-ambar)}
+:root[data-piel="xen"] .xt-tarjeta.s-a_tiempo .body::before,:root[data-piel="xen"] .xt-tarjeta.s-cumplido .body::before{background:var(--fx-verde)}
+:root[data-piel="xen"] .xt-tarjeta .xt-abrir{flex-direction:column;align-items:flex-start;gap:2px;border-radius:4px}
+:root[data-piel="xen"] .xt-tarjeta .xt-abrir b{font-size:14px;line-height:1.35}
+:root[data-piel="xen"] .xt-tarjeta .xt-abrir:focus-visible{outline:none;box-shadow:var(--ring)}
+:root[data-piel="xen"] .xt-tarjeta .xt-f-quien{font-size:13px}
+:root[data-piel="xen"] .xt-tarjeta .xt-reloj{font-size:12.5px}
+:root[data-piel="xen"] .xt-t-pie{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-width:0}
+:root[data-piel="xen"] .xt-t-pie .xt-asig{font-size:12.5px;min-width:0}
+:root[data-piel="xen"] .xt-t-pie .card-move{margin:0 0 0 auto;max-width:100%}
+:root[data-piel="xen"] .xt-tarjeta:not([draggable]){cursor:pointer}
+:root[data-piel="xen"] .xt-tarjeta[aria-busy="true"]{opacity:.55;pointer-events:none}
+:root[data-piel="xen"] .xt-col-mas{align-self:flex-start;margin:2px 4px 4px;font-size:12.5px}
 @media (max-width:1100px){
   :root[data-piel="xen"] .xs-dos{grid-template-columns:minmax(0,1fr)}
   :root[data-piel="xen"] .xs-mant{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -3558,13 +3588,72 @@ dialog.perdida input{width:100%}
   :root[data-piel="xen"] .xs-tabla .num{text-align:left}
   :root[data-piel="xen"] .xc-item{align-items:stretch}
   :root[data-piel="xen"] .xc-mover{margin-left:0}
+  /* En el celular, una columna casi a todo el ancho y que crece con la página: dos barras de desplazamiento anidadas
+     con el dedo no se usan. */
+  :root[data-piel="xen"] .xt-tablero>.col,:root[data-piel="xen"] .xt-tablero>.col.vacia{flex:0 0 82vw;width:82vw;min-width:82vw;max-height:none}
+  :root[data-piel="xen"] .xt-acciones .xt-modo{margin-left:0}
 }
 @media (pointer:coarse){
   :root[data-piel="xen"] .xt-vistas button{min-height:44px}
+  :root[data-piel="xen"] .xt-t-pie .card-move{min-height:44px;font-size:14px}
   :root[data-piel="xen"] .xc-mover .fx-ico{width:44px;height:44px;flex:0 0 44px}
 }
 @media (prefers-reduced-motion:reduce){:root[data-piel="xen"] .xt-esq{animation:none}:root[data-piel="xen"] .xt-fila,:root[data-piel="xen"] button.xt-cifra{transition:none}}
 /* (fin de XEN · Tickets y SLA) */
+/* ---------- XEN · Prospectos (Ventas › Prospectos) ---------- */
+/* Las cifras, la lista y los estados vacío y de error son los de Tickets (.xt-…): aquí solo lo propio de una fila. */
+:root[data-piel="xen"] #view-prospectos .pad{display:flex;flex-direction:column}
+:root[data-piel="xen"] .xp-fila{cursor:default}
+:root[data-piel="xen"] .xp-fila::before{background:var(--fx-acento)}
+:root[data-piel="xen"] .xp-quien{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-width:0;font-size:15px;color:var(--fx-t0)}
+:root[data-piel="xen"] .xp-quien b{font-weight:700;overflow-wrap:anywhere}
+:root[data-piel="xen"] .xp-empresa{font-size:13.5px;font-weight:600;color:var(--fx-t2);overflow-wrap:anywhere}
+:root[data-piel="xen"] .xp-datos{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:13.5px;color:var(--fx-t1)}
+:root[data-piel="xen"] .xp-datos .ic{width:15px;height:15px;margin-right:4px;vertical-align:-2px;color:var(--fx-t3)}
+:root[data-piel="xen"] .xp-interes{padding:1px 9px;border-radius:var(--fx-r-pill);background:var(--fx-suave);border:1px solid var(--fx-suave-borde);color:var(--fx-suave-t);font-size:12px;font-weight:700}
+:root[data-piel="xen"] .xp-cuando{color:var(--fx-t2)}
+:root[data-piel="xen"] .xp-acciones{display:flex;flex-wrap:wrap;gap:8px}
+:root[data-piel="xen"] .xp-acciones .ic{width:15px;height:15px}
+@media (pointer:coarse){:root[data-piel="xen"] .xp-acciones .btn{min-height:44px}}
+/* (fin de XEN · Prospectos) */
+/* ---------- XEN · Configuración en dos paneles ---------- */
+/* El panel de funciones es la columna #subnav (grid-column 2), que en esta piel medía cero. Solo en escritorio: en
+   el celular las funciones están en el cajón del menú. */
+@media (min-width:901px){
+  :root[data-piel="xen"] .app[data-subnav="si"]{--subnav:300px}
+}
+:root[data-piel="xen"] .app>.subnav{background:var(--fx-panel);border-right:1px solid var(--fx-borde);box-shadow:none;padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column}
+:root[data-piel="xen"] .app[data-subnav="no"]>.subnav{display:none}
+:root[data-piel="xen"] .subnav>h2,:root[data-piel="xen"] .subnav>.biz{display:none}
+:root[data-piel="xen"] .subnav #subnav-cuerpo{display:flex;flex-direction:column;flex:1;min-height:0}
+:root[data-piel="xen"] .subnav #subnav-cfg{display:flex;flex-direction:column;flex:1;min-height:0}
+:root[data-piel="xen"] .subnav #subnav-cfg[hidden]{display:none}
+:root[data-piel="xen"] .xcfg-cab{display:flex;flex-direction:column;gap:12px;padding:22px 18px 14px;border-bottom:1px solid var(--fx-borde-2)}
+:root[data-piel="xen"] .xcfg-titulo{font-family:var(--fx-display);font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--fx-t0)}
+:root[data-piel="xen"] .xcfg-buscar input{width:100%;min-height:40px;padding:0 14px;border:1px solid var(--fx-borde);border-radius:var(--fx-r-md);background:var(--fx-panel-2);color:var(--fx-t0);font:inherit;font-size:14px}
+:root[data-piel="xen"] .xcfg-buscar input:focus{outline:none;border-color:var(--fx-acento);box-shadow:var(--fx-anillo)}
+:root[data-piel="xen"] .xcfg-arbol{flex:1;min-height:0;overflow:auto;padding:8px 10px 18px}
+:root[data-piel="xen"] .xcfg-grupo{display:flex;flex-direction:column;gap:2px;margin-top:10px}
+:root[data-piel="xen"] .xcfg-grupo[hidden]{display:none}
+:root[data-piel="xen"] .xcfg-grupo-t{padding:4px 10px;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fx-t3)}
+:root[data-piel="xen"] .subnav .xcfg-item{display:flex;align-items:flex-start;gap:12px;width:100%;padding:9px 10px;border:0;border-radius:var(--fx-r-md);background:none;box-shadow:none;color:var(--fx-t1);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+:root[data-piel="xen"] .subnav .xcfg-item[hidden]{display:none}
+:root[data-piel="xen"] .subnav .xcfg-item:hover{background:var(--fx-hover);box-shadow:none}
+:root[data-piel="xen"] .subnav .xcfg-item .ic{width:18px;height:18px;flex:0 0 18px;margin-top:1px;color:var(--fx-t3)}
+:root[data-piel="xen"] .subnav .xcfg-item.active{background:var(--fx-suave);box-shadow:inset 3px 0 0 var(--fx-acento);color:var(--fx-t0);font-weight:400}
+:root[data-piel="xen"] .subnav .xcfg-item.active .ic{color:var(--fx-acento)}
+:root[data-piel="xen"] .subnav .xcfg-item:focus-visible{outline:none;box-shadow:var(--fx-anillo)}
+:root[data-piel="xen"] .xcfg-txt{display:flex;flex-direction:column;gap:1px;min-width:0}
+:root[data-piel="xen"] .xcfg-lbl{font-weight:600;color:var(--fx-t0)}
+:root[data-piel="xen"] .xcfg-txt small{font-size:12.5px;line-height:1.35;color:var(--fx-t2)}
+:root[data-piel="xen"] .subnav .xcfg-item .estado-modo{margin-left:auto;font-size:12px;font-weight:700;color:var(--fx-t2)}
+:root[data-piel="xen"] .xcfg-nada{margin:0;padding:0 18px 14px;font-size:13px;color:var(--fx-t2)}
+:root[data-piel="xen"] .xcfg-nada:empty{display:none}
+/* El Negocio y Perfil, ya fuera del diálogo: los mismos paneles, a lo ancho de la pantalla. */
+:root[data-piel="xen"] #vista-negocio>.cfg-pane,:root[data-piel="xen"] #vista-profile>.cfg-pane{max-width:960px}
+:root[data-piel="xen"] #vista-negocio .card,:root[data-piel="xen"] #vista-profile .card{padding:20px 22px}
+:root[data-piel="xen"] #vista-negocio h2.h,:root[data-piel="xen"] #vista-profile h2.h{margin:0 0 14px}
+/* (fin de XEN · Configuración en dos paneles) */
 
 /* ---------- XEN · Mantenimientos y actualizaciones (agente de Mantenimientos) ---------- */
 /* La pantalla (Servicio › Mantenimientos y actualizaciones) y sus reglas (Configuración). Ver crm/mantenimientos.ts. */
@@ -4169,6 +4258,18 @@ dialog.perdida input{width:100%}
       <div class="pad" id="help"></div>
     </section>
     <!-- La guía de inicio: lo que falta para que el asistente atienda solo. La marca el servidor (crm/guia.ts). -->
+    <!-- XEN · Configuración en dos paneles: El negocio y Perfil, que antes eran un diálogo (#dlg-config). Sus paneles
+         (#negocio, #profile) se mudan aquí al arrancar. -->
+    <section class="view" id="view-negocio">
+      <div class="topbar"><h1>El negocio</h1><span class="grow"></span></div>
+      <div class="pad" id="vista-negocio"></div>
+    </section>
+    <section class="view" id="view-profile">
+      <div class="topbar"><h1>Perfil del negocio</h1><span class="grow"></span></div>
+      <div class="pad" id="vista-profile"></div>
+    </section>
+    <!-- (fin de XEN · Configuración en dos paneles) -->
+
     <section class="view" id="view-guia">
       <div class="topbar"><h1>Guía de inicio</h1><span class="muted small" id="guia-sub"></span></div>
       <div class="pad" id="guia"></div>
@@ -4263,10 +4364,19 @@ dialog.perdida input{width:100%}
     </dialog>
 
     <!-- ===== XEN · el área Servicio (Dynamics 365 Customer Service): cada pantalla la llena su agente ===== -->
+    <section class="view" id="view-prospectos">
+      <div class="topbar"><h1>Prospectos</h1><span class="grow"></span></div>
+      <!-- XEN · Prospectos: quien se registró en la portada o en la puerta de la consola (crm/prospectos.ts) -->
+      <div class="pad" id="xp-prospectos"></div>
+      <!-- (fin de XEN · Prospectos) -->
+    </section>
+
     <section class="view" id="view-tickets">
       <div class="topbar"><h1>Tickets</h1><span class="grow"></span></div>
       <!-- XEN · Tickets y SLA: el marcado de Tickets va aquí -->
       <div class="pad" id="xt-tickets"></div>
+      <!-- Lo que pasó al mover una tarjeta del tablero, para un lector de pantalla (fuera de #xt-tickets: no se redibuja). -->
+      <div class="sr-only" id="xt-tab-status" role="status"></div>
       <!-- (fin de XEN · Tickets) -->
     </section>
 

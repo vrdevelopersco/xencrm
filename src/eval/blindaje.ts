@@ -1,6 +1,6 @@
 // Pruebas del blindaje contra quien desarma la aplicación desde fuera: pnpm test:blindaje
 //
-// Sale del estándar de seguridad de HRC (~/proyectos/AUDITORIA-SEGURIDAD.md) medido contra XENCRM en producción
+// Sale del estándar de seguridad (~/proyectos/AUDITORIA-SEGURIDAD.md) medido contra XENCRM en producción
 // el 2026-11-07: sin una cabecera en la portada, el código entero del tablero y de la consola servido a quien no
 // había entrado, /_salud contando versión y clientes sin token, la dirección de quien llama tomada de lo que él
 // mismo escribe, y un freno de intentos que olvidaba todo en cada despliegue.

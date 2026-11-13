@@ -2,7 +2,7 @@
 //
 // El enrutador es el único sitio por donde pasa cada respuesta —la portada, los archivos sueltos, /_salud, lo de
 // cada cliente, la consola, la pantalla de «Arrancando»—, así que una regla puesta aquí no se olvida en ninguna
-// ruta. Medido el 2026-11-07 con el verificador del estándar de HRC (~/proyectos/AUDITORIA-SEGURIDAD.md): la
+// ruta. Medido el 2026-11-07 con el verificador del estándar de seguridad (~/proyectos/AUDITORIA-SEGURIDAD.md): la
 // consola traía sus cabeceras y la portada ninguna, porque cada página se las ponía por su cuenta.
 //
 // Va en CommonJS y aparte del lanzador por dos razones: el lanzador es una plantilla de texto (un acento grave la
@@ -170,7 +170,8 @@ function sinSuplantar(cabeceras, ip) {
 function securityTxt(host, contacto, armadoEl) {
   const desde = Date.parse(armadoEl || '') || Date.now();
   return [
-    'Contact: ' + (contacto || 'mailto:laft@hrctechnologies.com'),
+    // Sin contacto configurado (SEGURIDAD_CONTACTO), el buzón de siempre del propio dominio.
+    'Contact: ' + (contacto || 'mailto:security@' + host),
     'Expires: ' + new Date(desde + 365 * 864e5).toISOString(),
     'Preferred-Languages: es, en',
     'Canonical: https://' + host + '/.well-known/security.txt',

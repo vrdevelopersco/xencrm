@@ -54,12 +54,12 @@ check('sin pistas, día primero (como se escribe acá)', ordenDeFechas('[7/2/26,
 
 // --- traer un chat ---
 const chat = [
-  '[11/08/26, 6:24:41 p. m.] ~ HRC Tech: Usuario: admin@nomina-ejemplo.co',
+  '[11/08/26, 6:24:41 p. m.] ~ Soporte Atlas: Usuario: admin@nomina-ejemplo.co',
   'Pass: Clave-ejemplo-2026',
   '[11/08/26, 6:25:10 p. m.] ~ Mario Gómez: perfecto, gracias',
-  '[18/08/26, 2:34:42 p. m.] ~ HRC Tech: <Multimedia omitido>',
+  '[18/08/26, 2:34:42 p. m.] ~ Soporte Atlas: <Multimedia omitido>',
   '[25/08/26, 9:00:00 a. m.] ~ Mario Gómez: ¿me ayudan con un reporte?',
-  '[25/08/26, 9:05:00 a. m.] ~ HRC Tech: claro que sí, ya lo reviso',
+  '[25/08/26, 9:05:00 a. m.] ~ Soporte Atlas: claro que sí, ya lo reviso',
 ].join('\n');
 
 // Una conversación DE VERDAD, que es la que no se puede tocar.
@@ -68,13 +68,13 @@ getDb().prepare("INSERT INTO messages (user_id, role, content, ts) VALUES (?, 'u
 const realesAntes = listContacts({ limit: 100 }).length;
 
 check('al principio no hay ninguna importada', cuantas() === 0);
-const r = importarChat(chat, { nombre: 'HRC Gráficas', delNegocio: ['~ HRC Tech'] });
-check('crea la ficha con el prefijo que la delata', r.id === `${PREFIJO}hrc-graficas` && cuantas() === 1, r.id);
+const r = importarChat(chat, { nombre: 'Gráficas Atlas', delNegocio: ['~ Soporte Atlas'] });
+check('crea la ficha con el prefijo que la delata', r.id === `${PREFIJO}graficas-atlas` && cuantas() === 1, r.id);
 check('trae los mensajes y deja fuera los de sistema', r.mensajes === 4, String(r.mensajes));
 check('sabe cuáles escribió el negocio', r.delNegocio === 2, String(r.delNegocio));
 check('la ficha queda con el nombre del chat y la fecha del último mensaje', (() => {
   const f = listContacts({ limit: 100 }).find((c) => c.id === r.id);
-  return Boolean(f) && f!.name === 'HRC Gráficas' && f!.lastMessageAt === r.hasta;
+  return Boolean(f) && f!.name === 'Gráficas Atlas' && f!.lastMessageAt === r.hasta;
 })());
 check('las fechas son de este año, no del futuro', new Date(r.hasta!).getFullYear() === 2026 && r.hasta! <= Date.now(), new Date(r.hasta!).toISOString());
 
@@ -82,8 +82,8 @@ check('las fechas son de este año, no del futuro', new Date(r.hasta!).getFullYe
 // existe. La columna se elige por rol, nunca por el nombre de la etapa.
 const { business } = await import('../config.js');
 const rolDe = (id: string) => business.crm.stages.find((e) => e.id === id)?.rol;
-const viejito = importarChat(chat, { nombre: 'Chat dormido', delNegocio: ['~ HRC Tech'], ahora: new Date('2026-11-30').getTime() });
-const fresco = importarChat(chat, { nombre: 'Chat vivo', delNegocio: ['~ HRC Tech'], ahora: new Date('2026-08-26').getTime() });
+const viejito = importarChat(chat, { nombre: 'Chat dormido', delNegocio: ['~ Soporte Atlas'], ahora: new Date('2026-11-30').getTime() });
+const fresco = importarChat(chat, { nombre: 'Chat vivo', delNegocio: ['~ Soporte Atlas'], ahora: new Date('2026-08-26').getTime() });
 const etapaDe = (id: string) => listContacts({ limit: 100 }).find((c) => c.id === id)!.stage;
 check('un chat que se apagó hace meses entra cerrado, no como nuevo', rolDe(etapaDe(viejito.id)) === 'ganado', etapaDe(viejito.id));
 check('y uno que sigue vivo, como activo', rolDe(etapaDe(fresco.id)) === 'activo', etapaDe(fresco.id));
@@ -92,16 +92,16 @@ check('pero si le dicen la etapa, manda esa', (() => {
   return etapaDe(puesto.id) === business.crm.stages[0]!.id;
 })());
 quitar();
-importarChat(chat, { nombre: 'HRC Gráficas', delNegocio: ['~ HRC Tech'] });
+importarChat(chat, { nombre: 'Gráficas Atlas', delNegocio: ['~ Soporte Atlas'] });
 
 const msgs = getMessages(r.id, 50);
 const delNegocio = msgs.filter((m) => m.role === 'assistant');
 check('🪤 lo que escribió el equipo NO queda como si lo hubiera dicho el asistente', delNegocio.every((m) => (m as { author?: string }).author === 'human'), JSON.stringify(delNegocio[0]));
-check('y queda con el nombre de quien contestó', delNegocio.every((m) => (m as { by?: string }).by === '~ HRC Tech'), JSON.stringify(delNegocio[0]));
+check('y queda con el nombre de quien contestó', delNegocio.every((m) => (m as { by?: string }).by === '~ Soporte Atlas'), JSON.stringify(delNegocio[0]));
 check('🪤 ninguna credencial quedó guardada', !JSON.stringify(msgs).includes('Clave-ejemplo-2026') && !JSON.stringify(msgs).includes('admin@nomina-ejemplo.co'), JSON.stringify(msgs[0]));
 
 // Importar dos veces no deja la conversación repetida.
-importarChat(chat, { nombre: 'HRC Gráficas', delNegocio: ['~ HRC Tech'] });
+importarChat(chat, { nombre: 'Gráficas Atlas', delNegocio: ['~ Soporte Atlas'] });
 check('importar dos veces no duplica', cuantas() === 1 && getMessages(r.id, 50).length === 4, `${cuantas()} fichas, ${getMessages(r.id, 50).length} mensajes`);
 
 check('un archivo que no es un chat se rechaza', (() => {

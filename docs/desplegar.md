@@ -4,7 +4,7 @@ Un solo despliegue atiende a todos los clientes, separados por ruta. Se arma con
 `paquetes/xencrm.zip` que se sube tal cual al panel.
 
 ```
-pnpm paquete                       usa xencrm.hrctechnologies.com
+pnpm paquete tu-dominio.com        (o XENCRM_DOMINIO en el entorno; sin dominio no arma nada)
 pnpm paquete midominio.com
 ```
 
@@ -17,7 +17,7 @@ pnpm paquete midominio.com
 | `/dunor/` | El chat del sitio de ese cliente. Su tablero se abre desde la consola (`/c/dunor/admin`): por `/dunor/admin` ya no se sirve (2026-11-07, ver `seguridad.md`). |
 | `/.well-known/security.txt` | A quién escribirle si alguien encuentra un fallo (RFC 9116). |
 | `/_salud` | Sin token, solo `{"ok":true}`. Con su token (`pnpm salud`), el diagnóstico entero. |
-| `/confia/`, `/hrc/`, … | Igual, uno por cliente dado de alta. |
+| `/confia/`, `/atlas/`, … | Igual, uno por cliente dado de alta. |
 
 Adentro corre **un proceso por cliente** —cada uno con su base, su WhatsApp y su configuración— más uno para la
 consola, y delante un enrutador que reparte por el primer tramo de la ruta y le quita el prefijo al de adentro.
@@ -74,7 +74,11 @@ Opcionales del blindaje (2026-11-07; el porqué en `seguridad.md` › «El blind
   `tuPeticion` enseña la cadena entera.
 - `TABLERO_DIRECTO=si` — vuelve a abrir el tablero de cada cliente por `/<cliente>/admin` con su token. Sin esto,
   solo se abre desde la consola.
-- `SEGURIDAD_CONTACTO` — a quién escribir según `security.txt` (por defecto, el de HRC: `laft@hrctechnologies.com`).
+- `SEGURIDAD_CONTACTO` — a quién escribir según `security.txt` (por defecto, `security@` el dominio desplegado).
+- `PROSPECTOS_CLIENTE` — el slug del cliente cuyo CRM recibe los registros de la portada y de la puerta de la
+  consola (Ventas › Prospectos). Sin esto, el registro dice que no está abierto. Ver `consola.md`.
+- `XENCRM_DOMINIO` — en la máquina donde se arma el paquete, el dominio si no se pasa como argumento
+  (`pnpm paquete tu-dominio.com`). Sin ninguno de los dos, `pnpm paquete` y `pnpm salud` no arrancan.
 - `XENCRM_SIN_AFINAR=1` — al ARMAR el ZIP (no en el panel): deja el código servido legible, con sus comentarios,
   para mirar un fallo en el servidor.
 
@@ -114,7 +118,7 @@ cd /tmp && rm -rf prueba && mkdir prueba && cd prueba
 unzip -q ~/proyectos/xencrm/paquetes/xencrm.zip
 ln -s ~/proyectos/xencrm/node_modules node_modules
 PORT=3500 XENCRM_DATOS=/tmp/prueba-datos OPENAI_API_KEY=sk-de-prueba \
-  CONSOLA_TOKEN=x TOKEN_DUNOR=x TOKEN_CONFIA=x TOKEN_HRC=x node app.js
+  CONSOLA_TOKEN=x TOKEN_DUNOR=x TOKEN_CONFIA=x TOKEN_ATLAS=x node app.js
 ```
 
 Para probarlo **como lo arranca la plataforma** —que es distinto— se le hace `require()` desde CommonJS, igual
@@ -172,7 +176,7 @@ persona (último ingreso, cuántas veces, fallos desde entonces) y las últimas 
 Nació el 2026-10-19: se le pasó su acceso a DUNOR y no había forma de saber si habían entrado.
 
 ```
-pnpm salud                          xencrm.hrctechnologies.com, en hora de Colombia
+pnpm salud tu-dominio.com           en hora de Colombia (o XENCRM_DOMINIO en el entorno)
 pnpm salud --usuario dueno.dunor    solo lo de esa persona
 pnpm salud --seguir                 se queda mirando y pinta lo nuevo cada 20 segundos
 pnpm salud --json                   la respuesta tal cual
@@ -273,7 +277,7 @@ mismo problema y por eso enseñaba los tres clientes como «sin conexión» mien
 
 ```
 escuchando:  4100 → 127.0.0.1   4101 → 127.0.0.1   4102 → 127.0.0.1   4103 → 127.0.0.1
-por:         confia=socket  dunor=socket  hrc=socket  consola=socket
+por:         confia=socket  dunor=socket  atlas=socket  consola=socket
 ```
 
 El sistema confirmando que los cuatro escuchan en `127.0.0.1`, y los cuatro alcanzables **solo** por socket. Ahí

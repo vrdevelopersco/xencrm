@@ -87,7 +87,7 @@ en 4100»— o al padre —que decía «ECONNREFUSED»—, se le preguntó **al 
 
 ```
 escuchando:  4100 → 127.0.0.1   4101 → 127.0.0.1   4102 → 127.0.0.1   4103 → 127.0.0.1
-por:         confia=socket  dunor=socket  hrc=socket  consola=socket
+por:         confia=socket  dunor=socket  atlas=socket  consola=socket
 ```
 
 Los cuatro escuchando donde debían. Los cuatro alcanzables solo por socket de archivo. Con eso se acabó la

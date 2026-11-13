@@ -3,6 +3,22 @@
 Dónde quedó el trabajo, para retomarlo sin releer la conversación. Se reescribe al cerrar cada sesión; el detalle de
 cada cambio está en [`arreglos.md`](arreglos.md), con su commit.
 
+## 2026-11-12, al cerrar · XENCRM público
+
+**El repositorio es `vrdevelopersco/xencrm` (público)**, con el historial reescrito; su estado y cómo se publicó están
+en `checkpoint_repo.md` (sin seguimiento, en la raíz). Lo de esta sesión, con su porqué, en `arreglos.md` › 2026-11-12:
+tickets como tablero, la portada y la puerta con olas y registro, Ventas › Prospectos, Configuración en dos paneles (y
+el arreglo del Guardar de SLA), tickets y prospectos de cada cliente en la consola, sin marca de terceros y el ejemplo
+XENTRIS con la identidad de xentris.tech. **Batería: 3537 bien, 0 fallas.**
+
+**Para retomar:**
+- Configurar `PROSPECTOS_CLIENTE` en el despliegue (el slug del CRM que recibe los registros) y pasar el dominio a
+  `pnpm paquete` (ya no hay uno por defecto).
+- Pendiente de decidir con Luis: el calendario más rico (timeline detallado, tarjetas con más datos, panel «Hoy»,
+  anuncios); y si las apps de ficción de XENTRIS (POS, Field, Stock) se cambian por sus cuatro líneas de servicio reales.
+- `pnpm test:scenarios` tiene un caso que depende de la fecha («después del puente festivo de octubre»): falla pasado
+  octubre. No está en `pnpm test`.
+
 ## 2026-11-11, al cerrar · XENCRM
 
 **Esta carpeta es XENCRM**, la siguiente generación de aiva: una copia de su repositorio (mismo historial hasta
@@ -53,7 +69,7 @@ raíz y puede fallar: usar `pnpm test:x`.
   desde aquí**: las sesiones copiadas son las de aiva y conectarlas podría cerrar las de producción.
 - Lo de afuera que todavía se llama aiva, y que el código ya no nombra: el repositorio de GitHub (`origin`), la carpeta
   de llaves `~/aiva-credenciales` (las herramientas ahora buscan `~/xencrm-credenciales`, que no existe) y el dominio
-  de producción (el ZIP ahora arma `xencrm.hrctechnologies.com`, que no existe todavía). Decide el usuario: crear el
+  de producción (el ZIP se arma con el dominio que se le pase: `pnpm paquete tu-dominio.com`). Decide el usuario: crear el
   repositorio y el dominio de XENCRM.
 - Lo abierto de la interfaz está en `xencrm.md` › «Lo que queda abierto»: el Copiloto todavía sin los tickets en
   riesgo, los avisos de mantenimiento al unir fichas, pronombres de «cita» en algunas respuestas al cliente, cuatro
@@ -62,4 +78,4 @@ raíz y puede fallar: usar `pnpm test:x`.
 - Sentimiento por voz: falta el modelo que escuche el audio. La pantalla no muestra cifras hasta entonces.
 - `docs/firebase.txt` (sin seguir en git) tiene claves en texto plano: sacarlo de la carpeta.
 - De aiva siguen valiendo, para cuando XENCRM tenga clientes: el respaldo con Claude sin llave en producción, Google
-  Sheets de DUNOR, los WhatsApp de DUNOR y HRC sin vincular (ver el checkpoint del 10-nov en el historial de git).
+  Sheets de DUNOR, los WhatsApp de DUNOR y ATLAS sin vincular (ver el checkpoint del 10-nov en el historial de git).
